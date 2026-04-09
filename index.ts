@@ -22,14 +22,29 @@ export {
   ModelDBClient,
   RuntimeModel,
   RuntimeRelation,
+  HydratedEntity,
   ReadonlyModelEntity,
   type RuntimeContext,
   type ReadonlyAvailableRelation,
   configureModelDBRuntime,
   resolveModelDBStorageRoot,
   type ModelDBRuntimeConfig,
+  type QueryExecuteOptions,
+  type RelationEmptyReason,
+  type RelateDiagnostic,
+  type HydrationContext,
+  resolveRelationOnRegistry,
+  targetModelName,
+  type ResolvedRelation,
+  type ResolvedDirection,
+  QueryChain,
+  RelateFilterBuilder,
+  normalizeOperator,
+  type LocalFilterState,
+  type QueryStartSpec,
+  type ScalarOperator,
+  type AtomicPredicate,
 } from './runtime/index.js';
-export { QueryChain } from './runtime/query.js';
 export type { RuntimeAvailableRelation } from './runtime/model-runtime.js';
 export type { DataReader, IndexReader } from './common/provider.js';
 

@@ -10,6 +10,15 @@ import type { ModelRecord, RelationDefinition } from './types.js';
 export interface DataReader {
   getByIds(modelName: string, ids: string[]): Promise<ModelRecord[]>;
   getAll(modelName: string): Promise<ModelRecord[]>;
+  /**
+   * Optional: stream `.mld` until `record[field] === value` (strict `===`), then stop.
+   * Used by {@link QueryChain} for `where(field, 'eq', value)` without loading the full file.
+   */
+  findFirstByFieldEq?(
+    modelName: string,
+    field: string,
+    value: unknown,
+  ): Promise<ModelRecord | undefined>;
 }
 
 /**

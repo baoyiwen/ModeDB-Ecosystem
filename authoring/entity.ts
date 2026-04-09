@@ -43,9 +43,9 @@ export class ModelEntity extends RuntimeModel {
   }
 
   /**
-   * Start a lazy query chain from this model and the given ids.
+   * Start a lazy query chain from this model. Omit `ids` to scan all rows of this model (then narrow with `.where()`).
    */
-  override query(ids: string[]): QueryChain {
+  override query(ids?: readonly string[]): QueryChain {
     return super.query(ids);
   }
 

@@ -185,7 +185,8 @@ Zone.updateFields(new Set(['code', 'label']));
 const pump = await Pump.insert({ name: '主循环泵-1', zoneCode: 'Z-A' });
 
 const allPumps = await Pump.all();
-const zones = await Pump.find([pump._id]).relate('located_in').execute();
+const zoneRows = await Pump.find([pump._id]).relate('located_in').execute();
+const zones = zoneRows.map((h) => h.getData());
 
 const relations = Pump.getAvailableRelations();
 ```
@@ -229,12 +230,28 @@ await locRel.clear();
 
 绑定后需 **`await engine.flushAll()`**（或至少 flush 索引并写 manifest）再交给只读客户端连接。
 
-### 6. 链式查询（QueryChain）
+### 6. 链式查询（QueryChain）与 HydratedEntity
 
-Authoring 与 Runtime 共用同一 **`QueryChain`** 实现，底层只依赖 **`DataReader` / `IndexReader`** 接口。
+Authoring 与 Runtime 共用同一 **`QueryChain`** 实现，底层只依赖 **`DataReader` / `IndexReader`** 接口。 **`execute()`** 返回 **`HydratedEntity[]`**：用 **`getData()`** 取与 `.mld` 一致的原始行；**`execute({ includeRelates: true })`** 时返回**起点模型**根节点，并在每条边上填充 **`getRelate(关系名)`** 嵌套子实体。若 **`getRelate` 为空**，可调用 **`explainRelate(关系名)`**（或查看 **`getRelateDiagnostic`**) 区分 **`NOT_REGISTERED`** / **`NO_LINK_IN_INDEX`** / **`FILTERED_OUT_ORPHAN`**（索引有 id 但 `.mld` 缺行）/ **`FILTERED_OUT_WHERE`**（数据已加载但被 `where` / `filter` 全部筛掉）。
+
+**组合过滤**：`model.query()` 不传 id 表示从该模型全表起步；**`.where(field, operator, value)`** 可多段 AND，**`.or()`** 开启 OR 组；**`.filter(fn)`** 自定义谓词；**`.relate(name, (b) => b.where(...))`** 在跳转后对**目标模型**再过滤。对 **`_id`** / **`id`** 的单条件 **`eq`** 在 Runtime 会走 **`getByIds` / 流式首行匹配**，避免无谓全表读。
 
 ```typescript
-const results = await Pump.find([pumpId]).relate('located_in').execute();
+const hydrated = await Pump.find([pumpId]).relate('located_in').execute();
+const results = hydrated.map((h) => h.getData());
+
+// 全表起步 + 多条件 + 关联目标过滤（与治理端 schema 一致的业务字段）
+const filtered = await client
+  .model('Zone')
+  .query()
+  .where('level', 'eq', 1)
+  .relate('has_pump', (p) => p.where('status', 'eq', 'active').and('power', '>', 50))
+  .execute();
+
+const roots = await Pump.find([pumpId]).relate('located_in').execute({ includeRelates: true });
+console.log(roots[0]?.toNested());
+
+const why = await hydrated[0]?.explainRelate('some_rel');
 ```
 
 ### 7. Runtime / ModelDBClient — 第三方只读接入
@@ -245,7 +262,9 @@ import { ModelDBClient } from 'mode-db-engine';
 const client = await ModelDBClient.connect('pipe');
 const PumpRO = client.model('Pump');
 
-const rows = await PumpRO.query([somePumpId]).relate('located_in').execute();
+const rows = (await PumpRO.query([somePumpId]).relate('located_in').execute()).map((h) =>
+  h.getData(),
+);
 ```
 
 - **`connect(atlasName)`**：读取 `atlas-manifest.json`，用只读 Reader 打开该图谱下的 `.mld` / `.rid`。
@@ -347,11 +366,11 @@ mode-db-engine/
 
 根入口 `index.ts` 主要导出（完整列表以源码为准）：
 
-| 类别        | 导出                                                                                                                                |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 治理        | `AuthoringEngine`, `Engine`, `ModelDBAdmin`, `AtlasRegistry`, `ModelEntity`, `RelationEntity`, `ModelStorage`, `RelationIndexer`    |
-| 运行时      | `ModelDBClient`, `Runtime`, `RuntimeModel`, `RuntimeRelation`, `QueryChain`, `configureModelDBRuntime`, `resolveModelDBStorageRoot` |
-| 类型 / 协议 | `ModelRegistry`, `PathResolver`, manifest 常量与解析函数，`DataReader`, `IndexReader`，各类 `export type { … }` 与错误类            |
+| 类别        | 导出                                                                                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 治理        | `AuthoringEngine`, `Engine`, `ModelDBAdmin`, `AtlasRegistry`, `ModelEntity`, `RelationEntity`, `ModelStorage`, `RelationIndexer`                                                                  |
+| 运行时      | `ModelDBClient`, `Runtime`, `RuntimeModel`, `RuntimeRelation`, `HydratedEntity`, `QueryChain`, `RelateFilterBuilder`, `normalizeOperator`, `configureModelDBRuntime`, `resolveModelDBStorageRoot` |
+| 类型 / 协议 | `ModelRegistry`, `PathResolver`, manifest 常量与解析函数，`DataReader`, `IndexReader`，各类 `export type { … }` 与错误类                                                                          |
 
 ---
 

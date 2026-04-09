@@ -30,8 +30,19 @@ export class RuntimeModel {
     return this.registry.getInheritanceChain(this.name).slice(1);
   }
 
-  query(ids: string[]): QueryChain {
-    return new QueryChain(this.registry, this.indexReader, this.dataReader, this.name, ids);
+  /**
+   * @param ids 省略或 `undefined` 表示从该模型**全表**起步（再结合 {@link QueryChain.where} 等缩小）。
+   */
+  query(ids?: readonly string[]): QueryChain {
+    if (ids === undefined) {
+      return new QueryChain(this.registry, this.indexReader, this.dataReader, this.name, {
+        kind: 'all',
+      });
+    }
+    return new QueryChain(this.registry, this.indexReader, this.dataReader, this.name, {
+      kind: 'ids',
+      ids: [...ids],
+    });
   }
 
   find(ids: string[]): QueryChain {

@@ -139,6 +139,45 @@ export class ModelStorage implements DataReader {
     return results;
   }
 
+  async findFirstByFieldEq(
+    modelName: string,
+    field: string,
+    value: unknown,
+  ): Promise<ModelRecord | undefined> {
+    this.resolveSchema(modelName);
+    const filePath = this.filePath(modelName);
+
+    let stream: ReturnType<typeof createReadStream> | undefined;
+    try {
+      stream = createReadStream(filePath, 'utf-8');
+    } catch (err) {
+      throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
+    }
+
+    const rl = createInterface({ input: stream, crlfDelay: Infinity });
+
+    try {
+      for await (const line of rl) {
+        const trimmed = line.trim();
+        if (trimmed.length === 0) {
+          continue;
+        }
+        const record = JSON.parse(trimmed) as ModelRecord;
+        const v = (record as Record<string, unknown>)[field];
+        if (v === value) {
+          return record;
+        }
+      }
+    } catch (err) {
+      if (isNodeError(err) && err.code === 'ENOENT') {
+        return undefined;
+      }
+      throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, { cause: err });
+    }
+
+    return undefined;
+  }
+
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------

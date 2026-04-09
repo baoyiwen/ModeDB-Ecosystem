@@ -21,6 +21,10 @@
     "format:check": "prettier --check \"**/*.{js,ts,json,md}\"",
     "typecheck": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "first-run": "tsx test/first_run.ts",
+    "audit": "tsx test/logic_closure_audit.ts",
+    "integrity": "tsx test/logic_integrity.ts",
+    "query-filters": "tsx test/query_filters.ts",
     "prepare": "husky",
     "check": "npm run typecheck && npm run lint && npm run format:check"
   },

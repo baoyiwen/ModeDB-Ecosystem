@@ -174,7 +174,7 @@ async function main(): Promise<void> {
 
   const authoredFwd = await Pump.find([pump1._id]).relate('located_in').execute();
   assert(authoredFwd.length === 1, 'Authoring：Pump → Zone 查询为 1 条');
-  assert(authoredFwd[0]._id === zoneA._id, 'Authoring：绑定目标为分区 Z-A');
+  assert(authoredFwd[0].getData()._id === zoneA._id, 'Authoring：绑定目标为分区 Z-A');
 
   // ═══════════════════════════════════════════════════════════════════════
   // 4. Runtime：第三方 connect('pipe') + 链式查询 + 无 insert
@@ -188,7 +188,24 @@ async function main(): Promise<void> {
   const rtPump = client.model('Pump');
   const chainRows = await rtPump.query([pump1._id]).relate('located_in').execute();
   assert(chainRows.length === 1, 'Runtime：query([id]).relate("located_in").execute() 返回 1 行');
-  assert(chainRows[0]._id === zoneA._id, 'Runtime：链式查询命中同一 Zone');
+  assert(chainRows[0].getData()._id === zoneA._id, 'Runtime：链式查询命中同一 Zone');
+
+  console.log('\n  [关键信息] HydratedEntity（Runtime 链式查询末端）');
+  const hz = chainRows[0]!;
+  console.log(`    模型名: ${hz.getModelName()}`);
+  console.log(`    getData(): ${JSON.stringify(hz.getData())}`);
+  console.log(
+    `    getRelates 键: [${[...hz.getRelates().keys()].join(', ') || '—'}]（扁平 execute 通常为空）`,
+  );
+  const dFake = await hz.explainRelate('nonexistent_relation');
+  console.log(`    explainRelate("nonexistent_relation"): ${JSON.stringify(dFake)}`);
+
+  const withTree = await rtPump
+    .query([pump1._id])
+    .relate('located_in')
+    .execute({ includeRelates: true });
+  console.log('  [关键信息] includeRelates: 根实体 toNested()');
+  console.log(JSON.stringify(withTree[0]?.toNested(), null, 2));
 
   const rtAsRecord = rtPump as unknown as Record<string, unknown>;
   assert(typeof rtAsRecord['insert'] === 'undefined', 'Runtime：ModelEntity 无 insert');

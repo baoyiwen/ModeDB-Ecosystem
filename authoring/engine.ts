@@ -183,7 +183,10 @@ export class AuthoringEngine {
   }
 
   query(modelName: string, ids: string[]): QueryChain {
-    return new QueryChain(this.registry, this.indexer, this.storage, modelName, ids);
+    return new QueryChain(this.registry, this.indexer, this.storage, modelName, {
+      kind: 'ids',
+      ids,
+    });
   }
 
   /**
