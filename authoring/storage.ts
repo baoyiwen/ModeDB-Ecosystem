@@ -1,49 +1,43 @@
 import { createReadStream } from 'node:fs';
 import { mkdir, appendFile } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
-import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { ModelSchema, ModelRecord } from './types.js';
-import { ModelNotRegisteredError, FileIOError } from './errors.js';
-
-const DATA_ROOT = join(process.cwd(), 'data', 'models');
+import type { ModelSchema, ModelRecord } from '../common/types.js';
+import type { DataReader } from '../common/provider.js';
+import type { PathResolver } from '../src/common/PathResolver.js';
+import { ModelNotRegisteredError, FileIOError } from '../common/errors.js';
 
 /**
  * Physical storage layer for model data.
  *
- * Each model is persisted as a JSONL file (`data/models/{modelName}.mld`).
+ * All paths come from `PathResolver` — no hard-coded directories.
+ * Model files: `<STORAGE_ROOT>/<atlas>/models/{modelName}.mld`.
  * Records are append-only; every line is a self-contained JSON object
  * containing only schema-declared fields plus engine metadata (`_id`, `_createdAt`).
+ *
+ * Implements {@link DataReader} so the runtime layer can consume read
+ * operations without access to write methods.
  */
-export class ModelStorage {
+export class ModelStorage implements DataReader {
   private readonly schemas = new Map<string, ModelSchema>();
 
-  /**
-   * Register a model schema so the storage layer knows which fields to persist.
-   *
-   * @param schema - The model schema definition.
-   * @throws {Error} If a schema with the same name is already registered.
-   */
+  constructor(private readonly paths: PathResolver) {}
+
   registerSchema(schema: ModelSchema): void {
     if (this.schemas.has(schema.name)) {
-      throw new Error(`Schema "${schema.name}" is already registered.`);
+      return;
     }
     this.schemas.set(schema.name, schema);
   }
 
-  /**
-   * Append a new record to the model's `.mld` file.
-   *
-   * The data is sanitized against the registered schema — only declared fields
-   * are persisted, enforcing model purity. An `_id` (UUIDv4) and `_createdAt`
-   * (ISO-8601) are generated automatically.
-   *
-   * @param modelName - Name of the registered model.
-   * @param data - Raw data object. Unknown fields are silently stripped.
-   * @returns The persisted record including generated metadata.
-   * @throws {ModelNotRegisteredError} If `modelName` has no registered schema.
-   * @throws {FileIOError} If the write operation fails.
-   */
+  updateSchema(name: string, fields: ReadonlySet<string>): void {
+    const schema = this.schemas.get(name);
+    if (!schema) {
+      throw new ModelNotRegisteredError(name);
+    }
+    schema.fields = fields;
+  }
+
   async insert(modelName: string, data: Record<string, unknown>): Promise<ModelRecord> {
     const schema = this.resolveSchema(modelName);
     const clean = this.sanitize(data, schema);
@@ -66,18 +60,38 @@ export class ModelStorage {
     return record;
   }
 
-  /**
-   * Retrieve records by their IDs using streaming line-by-line reads.
-   *
-   * Only matching records are loaded into memory, keeping the footprint
-   * proportional to the result set rather than the file size.
-   *
-   * @param modelName - Name of the registered model.
-   * @param ids - Array of `_id` values to look up.
-   * @returns Array of matching records (order not guaranteed).
-   * @throws {ModelNotRegisteredError} If `modelName` has no registered schema.
-   * @throws {FileIOError} If the file cannot be read.
-   */
+  async getAll(modelName: string): Promise<ModelRecord[]> {
+    this.resolveSchema(modelName);
+    const results: ModelRecord[] = [];
+    const filePath = this.filePath(modelName);
+
+    let stream: ReturnType<typeof createReadStream> | undefined;
+    try {
+      stream = createReadStream(filePath, 'utf-8');
+    } catch (err) {
+      throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
+    }
+
+    const rl = createInterface({ input: stream, crlfDelay: Infinity });
+
+    try {
+      for await (const line of rl) {
+        const trimmed = line.trim();
+        if (trimmed.length === 0) {
+          continue;
+        }
+        results.push(JSON.parse(trimmed) as ModelRecord);
+      }
+    } catch (err) {
+      if (isNodeError(err) && err.code === 'ENOENT') {
+        return [];
+      }
+      throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, { cause: err });
+    }
+
+    return results;
+  }
+
   async getByIds(modelName: string, ids: string[]): Promise<ModelRecord[]> {
     this.resolveSchema(modelName);
 
@@ -137,7 +151,6 @@ export class ModelStorage {
     return schema;
   }
 
-  /** Strip any key not declared in the schema's field set. */
   private sanitize(data: Record<string, unknown>, schema: ModelSchema): Record<string, unknown> {
     const clean: Record<string, unknown> = {};
     for (const key of Object.keys(data)) {
@@ -149,7 +162,7 @@ export class ModelStorage {
   }
 
   private filePath(modelName: string): string {
-    return join(DATA_ROOT, `${modelName}.mld`);
+    return this.paths.modelDataPath(modelName);
   }
 
   private dirReady = false;
@@ -158,12 +171,11 @@ export class ModelStorage {
     if (this.dirReady) {
       return;
     }
-    await mkdir(DATA_ROOT, { recursive: true });
+    await mkdir(this.paths.modelsDir(), { recursive: true });
     this.dirReady = true;
   }
 }
 
-/** Type guard for Node.js system errors that carry a `code` property. */
 function isNodeError(err: unknown): err is NodeJS.ErrnoException {
   return err instanceof Error && 'code' in err;
 }

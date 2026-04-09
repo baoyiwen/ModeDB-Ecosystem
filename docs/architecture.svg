@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 600" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="12">
+  <defs>
+    <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 z" fill="#374151"/>
+    </marker>
+    <linearGradient id="gAuth" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dbeafe"/>
+      <stop offset="100%" stop-color="#eff6ff"/>
+    </linearGradient>
+    <linearGradient id="gRun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dcfce7"/>
+      <stop offset="100%" stop-color="#f0fdf4"/>
+    </linearGradient>
+    <linearGradient id="gSh" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f3f4f6"/>
+      <stop offset="100%" stop-color="#fafafa"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="920" height="600" fill="#ffffff"/>
+
+  <text x="460" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#111827">Mode DB Engine</text>
+  <text x="460" y="46" text-anchor="middle" font-size="11" fill="#6b7280">Authoring (write) vs Runtime (read-only) and on-disk layout</text>
+
+  <rect x="280" y="62" width="160" height="36" rx="6" fill="#fef3c7" stroke="#d97706"/>
+  <text x="360" y="84" text-anchor="middle" fill="#92400e" font-size="11">Governance / admin</text>
+  <rect x="480" y="62" width="160" height="36" rx="6" fill="#fef3c7" stroke="#d97706"/>
+  <text x="560" y="84" text-anchor="middle" fill="#92400e" font-size="11">Third-party read-only</text>
+
+  <rect x="340" y="118" width="240" height="32" rx="6" fill="#e0e7ff" stroke="#6366f1"/>
+  <text x="460" y="138" text-anchor="middle" fill="#3730a3" font-weight="600">index.ts (package entry)</text>
+
+  <line x1="360" y1="98" x2="400" y2="118" stroke="#9ca3af" marker-end="url(#arrow)"/>
+  <line x1="560" y1="98" x2="520" y2="118" stroke="#9ca3af" marker-end="url(#arrow)"/>
+  <line x1="400" y1="150" x2="220" y2="178" stroke="#6366f1" marker-end="url(#arrow)"/>
+  <line x1="520" y1="150" x2="700" y2="178" stroke="#6366f1" marker-end="url(#arrow)"/>
+
+  <rect x="40" y="178" width="380" height="248" rx="8" fill="url(#gAuth)" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="60" y="198" font-weight="700" fill="#1e40af">Authoring (authoring/)</text>
+
+  <rect x="56" y="210" width="168" height="28" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="140" y="228" text-anchor="middle" font-size="11" fill="#1e3a8a">AuthoringEngine</text>
+  <rect x="232" y="210" width="168" height="28" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="316" y="228" text-anchor="middle" font-size="11" fill="#1e3a8a">ModelDBAdmin</text>
+
+  <rect x="56" y="248" width="110" height="26" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="111" y="265" text-anchor="middle" font-size="11">ModelEntity</text>
+  <rect x="174" y="248" width="110" height="26" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="229" y="265" text-anchor="middle" font-size="11">RelationEntity</text>
+  <rect x="292" y="248" width="108" height="26" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="346" y="265" text-anchor="middle" font-size="11">AtlasRegistry</text>
+
+  <rect x="56" y="286" width="168" height="26" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="140" y="303" text-anchor="middle" font-size="11">ModelStorage</text>
+  <rect x="232" y="286" width="168" height="26" rx="4" fill="#ffffff" stroke="#93c5fd"/>
+  <text x="316" y="303" text-anchor="middle" font-size="11">RelationIndexer</text>
+
+  <text x="56" y="332" font-size="10" fill="#1d4ed8">Write path: .mld, .rid, atlas-manifest.json</text>
+
+  <rect x="500" y="178" width="380" height="248" rx="8" fill="url(#gRun)" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="520" y="198" font-weight="700" fill="#166534">Runtime (src/runtime/)</text>
+
+  <rect x="516" y="210" width="348" height="30" rx="4" fill="#ffffff" stroke="#86efac"/>
+  <text x="690" y="230" text-anchor="middle" font-size="11" fill="#14532d">ModelDBClient.connect / fromContext</text>
+
+  <rect x="516" y="250" width="168" height="26" rx="4" fill="#ffffff" stroke="#86efac"/>
+  <text x="600" y="267" text-anchor="middle" font-size="11">Read-only ModelEntity</text>
+  <rect x="696" y="250" width="168" height="26" rx="4" fill="#ffffff" stroke="#86efac"/>
+  <text x="780" y="267" text-anchor="middle" font-size="11">RuntimeRelation</text>
+
+  <rect x="516" y="286" width="108" height="26" rx="4" fill="#ffffff" stroke="#86efac"/>
+  <text x="570" y="303" text-anchor="middle" font-size="11">QueryChain</text>
+  <rect x="634" y="286" width="114" height="26" rx="4" fill="#ffffff" stroke="#86efac"/>
+  <text x="691" y="303" text-anchor="middle" font-size="11">ModelFileReader</text>
+  <rect x="748" y="286" width="116" height="26" rx="4" fill="#ffffff" stroke="#86efac"/>
+  <text x="806" y="303" text-anchor="middle" font-size="9.5">RelationIndexFileReader</text>
+
+  <text x="516" y="332" font-size="10" fill="#15803d">Read path: no dependency on ModelStorage / RelationIndexer impl</text>
+
+  <rect x="180" y="448" width="560" height="56" rx="8" fill="url(#gSh)" stroke="#9ca3af"/>
+  <text x="200" y="468" font-weight="600" fill="#374151">Shared: common/ + src/common/</text>
+  <text x="200" y="486" font-size="11" fill="#4b5563">Types, registry contracts, manifest, errors, storage root, PathResolver</text>
+
+  <line x1="230" y1="426" x2="280" y2="448" stroke="#9ca3af" marker-end="url(#arrow)"/>
+  <line x1="690" y1="426" x2="640" y2="448" stroke="#9ca3af" marker-end="url(#arrow)"/>
+
+  <rect x="120" y="528" width="680" height="56" rx="8" fill="#f9fafb" stroke="#6b7280"/>
+  <text x="140" y="548" font-weight="600" fill="#374151">Disk: STORAGE_ROOT / atlas /</text>
+  <rect x="140" y="556" width="200" height="22" rx="4" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="240" y="571" text-anchor="middle" font-size="10">atlas-manifest.json</text>
+  <rect x="360" y="556" width="200" height="22" rx="4" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="460" y="571" text-anchor="middle" font-size="10">models/*.mld</text>
+  <rect x="580" y="556" width="200" height="22" rx="4" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="680" y="571" text-anchor="middle" font-size="10">relations/*.rid</text>
+
+  <line x1="230" y1="504" x2="280" y2="528" stroke="#6b7280" marker-end="url(#arrow)"/>
+  <line x1="460" y1="504" x2="460" y2="528" stroke="#6b7280" marker-end="url(#arrow)"/>
+  <line x1="690" y1="504" x2="640" y2="528" stroke="#6b7280" marker-end="url(#arrow)"/>
+
+  <text x="460" y="592" text-anchor="middle" font-size="10" fill="#6b7280">Blue: write | Green: read (manifest + file readers)</text>
+</svg>

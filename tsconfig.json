@@ -22,6 +22,6 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["core/**/*", "utils/**/*", "test/**/*", "index.ts"],
+  "include": ["src/**/*", "common/**/*", "authoring/**/*", "runtime/**/*", "test/**/*", "index.ts"],
   "exclude": ["node_modules", "dist", "data"]
 }

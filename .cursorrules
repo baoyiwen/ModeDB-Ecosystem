@@ -1,11 +1,11 @@
 # mode-db-engine — Cursor Rules
 
-# Model DB Engine Rules
-- 模型（Model）必须纯净：只能存储属性，严禁存储外键、状态位或 ID 关联。
-- 关系（Relation）必须纯粹：关系仅为四元组协议 (Source, Target, Forward, Reverse)，不存数据。
-- 继承锁定：子模型在创建时锁定 ParentID，且不可更改。
-- 链式查询：查询必须通过模型跳转 ID 集合，最后才进行数据填充（Lazy Hydration）。
-- 存储隔离：每个模型的数据物理隔离，存储在独立的 .mld 文件中。
+# Model DB Engine 2.0 核心准则
+1. 原子化注册：所有模型注册必须通过 Engine 统一入口，同步初始化元数据与物理存储。
+2. 骨架优先：支持模型定义（Schema）与关系逻辑（Logic）的滞后补全。
+3. 双向守恒：关系必须以“正/逆”四元组形式成对存在，禁止单向关系。
+4. 显式绑定：索引构建不再全自动黑盒，支持 GLOBAL（全量）、PROTOCOL（自动匹配）、CONDITIONAL（条件过滤）、MANUAL（精准拉线）四种策略，通过 Engine.bind() 显式触发。
+5. 物理隔离：维持模型属性在 .mld 文件中的纯净性，索引在 .rid 文件中成对存储。
 
 ## Project Overview
 
