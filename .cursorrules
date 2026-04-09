@@ -1,0 +1,128 @@
+# mode-db-engine — Cursor Rules
+
+# Model DB Engine Rules
+- 模型（Model）必须纯净：只能存储属性，严禁存储外键、状态位或 ID 关联。
+- 关系（Relation）必须纯粹：关系仅为四元组协议 (Source, Target, Forward, Reverse)，不存数据。
+- 继承锁定：子模型在创建时锁定 ParentID，且不可更改。
+- 链式查询：查询必须通过模型跳转 ID 集合，最后才进行数据填充（Lazy Hydration）。
+- 存储隔离：每个模型的数据物理隔离，存储在独立的 .mld 文件中。
+
+## Project Overview
+
+This is a **hyper-relational data engine** for data governance, aimed at building a data asset graph.
+It establishes physical relationships between data entities without relying on traditional
+foreign-key constraints. The project is in early-stage design and implementation.
+
+## Tech Stack
+
+- **Language:** TypeScript (strict mode)
+- **Runtime:** Node.js (ES2022, Node16 module system)
+- **Module format:** ESM (`"type": "module"` in package.json)
+- **Linting:** ESLint 10 (flat config) + @typescript-eslint
+- **Formatting:** Prettier
+- **Git hooks:** Husky + lint-staged
+
+## Project Structure
+
+```
+mode-db-engine/
+├── index.ts              # Package entry point, re-exports public API
+├── core/                 # Engine core modules
+│   ├── storage.ts        # Data persistence layer
+│   ├── registry.ts       # Entity/schema registration
+│   ├── query.ts          # Query parsing and execution
+│   └── indexer.ts        # Index management for fast lookups
+├── utils/                # Shared utility functions
+├── data/                 # Runtime data directory (git-ignored, not source code)
+│   ├── models/           # Stored model definitions
+│   └── relations/        # Stored relation data
+├── test/                 # Test files
+├── dist/                 # Build output (git-ignored)
+├── eslint.config.js      # ESLint flat config
+├── tsconfig.json         # TypeScript configuration
+├── .prettierrc           # Prettier configuration
+└── .editorconfig         # Editor configuration
+```
+
+## Coding Conventions
+
+### Language & Syntax
+
+- Write all source code in **TypeScript**. Never create `.js` files in `core/`, `utils/`, or `test/`.
+- Use **ESM imports/exports** exclusively (`import`/`export`). Never use `require()`.
+- Use `import type { ... }` for type-only imports (enforced by `consistent-type-imports` rule).
+- Target **ES2022** — use modern syntax: `structuredClone`, `Array.at()`, top-level `await`, etc.
+- Use `const` by default. Only use `let` when reassignment is genuinely needed. Never use `var`.
+
+### Type Safety
+
+- **`strict: true`** is enabled — never suppress it globally.
+- Avoid `any`. If unavoidable, use `unknown` first and narrow with type guards.
+- Prefer **interfaces** for object shapes that may be extended; use **type aliases** for unions,
+  intersections, and utility types.
+- All public API functions and methods must have **explicit return types**.
+- Use **generics** to keep code reusable without sacrificing type safety.
+
+### Naming
+
+- **Files:** `kebab-case.ts` (e.g., `query-parser.ts`, `relation-builder.ts`)
+- **Classes:** `PascalCase` (e.g., `StorageEngine`, `QueryExecutor`)
+- **Interfaces/Types:** `PascalCase` (e.g., `RelationConfig`, `EntitySchema`)
+- **Functions/variables:** `camelCase` (e.g., `buildIndex`, `entityMap`)
+- **Constants:** `UPPER_SNAKE_CASE` for true compile-time constants (e.g., `MAX_BATCH_SIZE`)
+- **Private members:** prefix with `_` is NOT required; use TypeScript's `private` keyword instead.
+- **Unused parameters:** prefix with `_` (e.g., `_event`) to satisfy the linter.
+
+### Formatting (enforced by Prettier)
+
+- 2-space indentation, no tabs
+- Single quotes, semicolons, trailing commas
+- 100-character line width
+- LF line endings
+
+### Error Handling
+
+- Define custom error classes extending `Error` for domain-specific failures.
+- Never swallow errors silently. At minimum, log with `console.error()`.
+- Use typed error results (`Result<T, E>` pattern) where appropriate instead of throwing.
+
+### Comments & Documentation
+
+- Do NOT write comments that merely restate the code.
+- Use JSDoc (`/** ... */`) on all **exported** functions, classes, interfaces, and types.
+- Include `@param`, `@returns`, and `@throws` tags where applicable.
+- Use inline comments only for non-obvious logic, trade-offs, or constraints.
+
+### Module Design
+
+- Each file should have a **single responsibility**.
+- Export public API through `index.ts` barrel file. Internal modules should not be imported
+  directly by consumers.
+- Keep circular dependencies at zero. If two modules need each other, extract shared types
+  into a separate file.
+
+### Testing
+
+- Place test files in `test/` with the naming pattern `<module>.test.ts`.
+- Tests may use `console.log` and `any` freely (relaxed ESLint rules for `test/`).
+
+### Git & Workflow
+
+- Commit messages: use conventional format — `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`.
+- Pre-commit hook runs `lint-staged` automatically (ESLint fix + Prettier).
+- Run `npm run check` before pushing to verify typecheck + lint + format.
+
+### Performance Considerations
+
+- This is a data engine — be mindful of memory allocation in hot paths.
+- Prefer `Map`/`Set` over plain objects for dynamic key collections.
+- Avoid synchronous file I/O in core engine paths; use `fs/promises`.
+- Consider streaming for large dataset operations.
+
+## What NOT to Do
+
+- Do not add runtime dependencies without discussion. Keep the dependency footprint minimal.
+- Do not put application logic in `utils/` — it is for pure, stateless helper functions only.
+- Do not store source code or configuration in `data/`. It is a runtime data directory.
+- Do not disable TypeScript strict checks (`@ts-ignore`, `@ts-nocheck`) without a comment
+  explaining why.

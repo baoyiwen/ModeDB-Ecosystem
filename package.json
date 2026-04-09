@@ -1,0 +1,57 @@
+{
+  "name": "mode-db-engine",
+  "version": "1.0.0",
+  "description": "这是一个关于数据治理的引擎，旨在做一个能够形成数据资产图谱。他是一个超关系型数据引擎，我想使用他来建立物理关系。不在使用传统的数据库主外键关系来关联数据。但是，目前这个只是一个想法，还在实现与构思当中。",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{js,ts,json,md}\"",
+    "format:check": "prettier --check \"**/*.{js,ts,json,md}\"",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky",
+    "check": "npm run typecheck && npm run lint && npm run format:check"
+  },
+  "lint-staged": {
+    "*.{js,ts,mjs,mts}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/baoyiwen/mode-db-engine.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/baoyiwen/mode-db-engine/issues"
+  },
+  "homepage": "https://github.com/baoyiwen/mode-db-engine#readme",
+  "devDependencies": {
+    "@types/node": "^25.5.2",
+    "@typescript-eslint/eslint-plugin": "^8.58.1",
+    "@typescript-eslint/parser": "^8.58.1",
+    "eslint": "^10.2.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1"
+  }
+}
