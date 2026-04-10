@@ -179,8 +179,8 @@ const Pump = pipe.model('Pump');
 const Zone = pipe.model('Zone');
 
 // 骨架补全：先插入时未声明字段会被过滤，再 updateFields 后插入完整数据
-Pump.updateFields(new Set(['name', 'zoneCode']));
-Zone.updateFields(new Set(['code', 'label']));
+Pump.updateFields(['name', 'zoneCode']);
+Zone.updateFields(['code', 'label']);
 
 const pump = await Pump.insert({ name: '主循环泵-1', zoneCode: 'Z-A' });
 
@@ -232,27 +232,180 @@ await locRel.clear();
 
 ### 6. 链式查询（QueryChain）与 HydratedEntity
 
-Authoring 与 Runtime 共用同一 **`QueryChain`** 实现，底层只依赖 **`DataReader` / `IndexReader`** 接口。 **`execute()`** 返回 **`HydratedEntity[]`**：用 **`getData()`** 取与 `.mld` 一致的原始行；**`execute({ includeRelates: true })`** 时返回**起点模型**根节点，并在每条边上填充 **`getRelate(关系名)`** 嵌套子实体。若 **`getRelate` 为空**，可调用 **`explainRelate(关系名)`**（或查看 **`getRelateDiagnostic`**) 区分 **`NOT_REGISTERED`** / **`NO_LINK_IN_INDEX`** / **`FILTERED_OUT_ORPHAN`**（索引有 id 但 `.mld` 缺行）/ **`FILTERED_OUT_WHERE`**（数据已加载但被 `where` / `filter` 全部筛掉）。
+Authoring 与 Runtime 共用同一 **`QueryChain`** 实现，底层只依赖 **`DataReader` / `IndexReader`**。过滤条件的**内部协议**定义在 **`src/runtime/predicate-tree.ts`**：**`PredicateNode`** = **`AtomNode`**（`field` + `op` + `value`）| **`GroupNode`**（`logic: 'AND' | 'OR'` + `children`）| **`CallbackNode`**（`filter(fn)`）。**`evaluatePredicate`** / **`QueryEngine.evaluate`** 对单行递归求值。
 
-**组合过滤**：`model.query()` 不传 id 表示从该模型全表起步；**`.where(field, operator, value)`** 可多段 AND，**`.or()`** 开启 OR 组；**`.filter(fn)`** 自定义谓词；**`.relate(name, (b) => b.where(...))`** 在跳转后对**目标模型**再过滤。对 **`_id`** / **`id`** 的单条件 **`eq`** 在 Runtime 会走 **`getByIds` / 流式首行匹配**，避免无谓全表读。
+**短路语义（与布尔运算一致）**
+
+- **AND**：按 `children` 顺序求值；**第一个为假的子节点**决定失败结果并**立即返回**，**右侧兄弟不再求值**（含嵌套子树内的 AND 同样短路）。
+- **OR**：**第一个为真**即成功返回，**后续兄弟不再求值**；若**全部**为假，**`failedAt`** 指向该 **OR `GroupNode`**。
+
+**`execute()`** 始终返回 **`HydratedEntity[]`**。**`execute({ includeRelates: true })`** 在边上填充 **`getRelate`**；若为空，**`getRelateDiagnostic`** 可区分 **`NOT_REGISTERED`** / **`NO_LINK_IN_INDEX`** / **`FILTERED_OUT_ORPHAN`** / **`FILTERED_OUT_WHERE`**。其中 **`FILTERED_OUT_WHERE`**（及源实体未过跳前过滤时）可带 **`failedPredicate`**：导致未命中的 **`PredicateNode`** 的 JSON 快照，便于溯源。
+
+**粗粒度关系溯源（`RelationTraceStatus`）**：**`getRelationStatus(name)`** 返回 **`SUCCESS`** | **`NO_LINK`** | **`FILTERED_OUT`** | **`NOT_REG`**，与上述细因一一对应，便于 UI / 3D 管线做状态着色。**`toSnapshot()`** 生成 **`HydratedEntitySnapshot`**（纯 JSON：`model`、`data`、可选 **`relates`** 嵌套快照、可选 **`relationStatus`**），便于前端或渲染端做缓存加载。
+
+**失败上下文（谓词调试）**：**`QueryEngine.evaluateInto(data, node, ctx)`** 在 **`ctx: PredicateEvaluateContext`** 上写入 **`failedAt`**（指向 **`PredicateNode`**）与 **`failureKind`**（**`ATTRIBUTE_MISMATCH`** | **`CALLBACK_FALSE`** | **`OR_UNSATISFIED`**），与 **`evaluatePredicate`** 的短路语义一致。
+
+#### 6.1 链上组合（段模型 → 谓词树）
+
+**`QueryChain`** 维护若干**段**，每段内节点为 **AND**；段与段之间编译为 **OR**（与原先「OR 组」语义一致）。**`filter(fn)`** 作为 **`CallbackNode`** 并入当前段，与其余条件 **AND**。
+
+| 写法                                                                               | 语义                                                                                                              |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 连续 **`.where` / `.is` / `.gt` / `.greaterThan` / `.lt` …**（不调用 **`.or()`**） | 落在**当前段**，段内 **AND**                                                                                      |
+| **`.or()`**                                                                        | 新开一段；编译为 **(段₁) ∨ (段₂) ∨ …**                                                                            |
+| **`.matchAll((b) => { … })`**                                                      | 闭包内 **`FilterBuilder`** 累积为一棵子树，**压入当前段**（段内再 **AND**）                                       |
+| **`.matchAllNodes((p) => [ … ])`**                                                 | **`PredicateComposer`** 返回多棵子树，依次压入当前段（彼此 **AND**）；可与 **`p.and` / `p.or`** 任意嵌套          |
+| **`.matchAny((p) => [ … ])`**                                                      | **`PredicateComposer`** 返回若干 **`PredicateNode`**，与**当前段已有节点**做前缀展开：**(P ∧ b₁) ∨ (P ∧ b₂) ∨ …** |
+
+**字段补全**：**`model.query<YourRowType>()`** 后 **`QueryChain<YourRowType>`** 上 **`.is('field', …)`** 的字段名会按泛型收窄（`YourRowType` 为业务行形状即可）。
+
+**起点与优化**：`query()` 不传 id 为全表起步；**`query([ids])`** 先按 id 收窄。若谓词树**等价于**单独一条 **`_id`/`id` 的 `eq`** 且**不含** **`CallbackNode`**，Runtime 可走 **`getByIds` / `findFirstByFieldEq`**，避免无谓全表读。
+
+#### 6.2 `FilterBuilder` / `PredicateComposer` 与嵌套
+
+实现见 **`src/runtime/filter-builder.ts`**。
+
+**`FilterBuilder<M>`**（**`relate` / `matchAll` 闭包**）：链式 **`.is` / `.not` / `.gt` / `.lt`**（**`.greaterThan` / `.lessThan`** 为别名）、**`.contains` / `.inside` / `.between` / `.where`**；字段参数在 **`M`** 上尽量用 **`keyof M & string`** 以补全。组合：**`.and(n1, n2, …)`**、**`.or(n1, n2, …)`** 可传入 **`PredicateNode`** 或其它 **`FilterBuilder`**。**`.filter(fn)`** → **`CallbackNode`**。**`FilterBuilder.compose<M>()`** 返回 **`PredicateComposer<M>`**，用于**不写 `new FilterBuilder`** 即可拼装独立 **`PredicateNode`**（例如 `const p = FilterBuilder.compose<Row>(); p.and(p.is('a',1), p.gt('b',2))`）。
+
+**`PredicateComposer<M>`**（**`matchAllNodes` / `matchAny`** 回调参数）：原子方法返回 **`PredicateNode`**；**`.and(...)`** / **`.or(...)`** 返回 **`GroupNode`**，可任意嵌套。
+
+**`getQueryPlan()`** 返回 **`QueryPlanASTv2`**（`version: 2`）：**`hops[].source` / `target`** 与 **`trailing`** 为 **`serializePredicate`** 后的 JSON（**`callback`** 仅占位）。
+
+**`QueryEngine`**：对单行执行 **`evaluate`** / **`matches`** / **`explainFailure`** / **`evaluateInto`**（对外与链内求值一致）。
 
 ```typescript
 const hydrated = await Pump.find([pumpId]).relate('located_in').execute();
 const results = hydrated.map((h) => h.getData());
 
-// 全表起步 + 多条件 + 关联目标过滤（与治理端 schema 一致的业务字段）
+// AND：同一组内多条件同时成立（`.gt` 与 `.greaterThan` 等价）
+const strict = await client
+  .model('Pump')
+  .query()
+  .is('status', 'active')
+  .gt('power', 50)
+  .is('zoneId', 'Z-A')
+  .execute();
+
+// 与 matchAll 等价片段（均在当前 OR 组内 AND）
+const sameIdea = await client
+  .model('Pump')
+  .query()
+  .matchAll((b) => {
+    b.is('status', 'active');
+    b.greaterThan('power', 50);
+  })
+  .is('zoneId', 'Z-A')
+  .execute();
+
+// OR：level=1 或 level=2 的分区下的泵
+const eitherLevel = await client
+  .model('Zone')
+  .query()
+  .where('level', 'eq', 1)
+  .or()
+  .where('level', 'eq', 2)
+  .relate('has_pump')
+  .execute();
+
+// OR + 前缀分配：(status∧power∧(id 含 P1)) ∨ (status∧power∧(id∈{P3})) — 回调参数为 PredicateComposer
+const distributed = await client
+  .model('Pump')
+  .query()
+  .is('status', 'active')
+  .gt('power', 50)
+  .matchAny((p) => [p.contains('id', 'P1'), p.inside('id', ['P3'])])
+  .execute();
+
+// 独立 PredicateNode（不经 QueryChain）：FilterBuilder.compose + QueryEngine
+import { FilterBuilder, QueryEngine } from 'mode-db-engine';
+type Row = { level: number };
+const pc = FilterBuilder.compose<Row>();
+const levelNode = pc.and(pc.is('level', 1), pc.lt('level', 99));
+QueryEngine.matches({ _id: 'x', _createdAt: new Date().toISOString(), level: 1 }, levelNode);
+
+// 任意嵌套：AND( status, OR( id∈P1, id∈P3 ) )
+type PumpRow = { id: string; status: string; power: number; zoneId: string };
+await client
+  .model('Pump')
+  .query<PumpRow>()
+  .matchAllNodes((p) => [
+    p.and(p.is('status', 'active'), p.or(p.inside('id', ['P1']), p.inside('id', ['P3']))),
+  ])
+  .execute();
+
+// 全表起步 + 关联 + 目标侧 AND（FilterBuilder）
 const filtered = await client
   .model('Zone')
   .query()
   .where('level', 'eq', 1)
-  .relate('has_pump', (p) => p.where('status', 'eq', 'active').and('power', '>', 50))
+  .relate('has_pump', (p) => p.is('status', 'active').where('power', '>', 50))
+  .execute();
+
+// 跳转目标上仅语义 API
+const zone = await client
+  .model('Pump')
+  .query()
+  .is('id', 'P1')
+  .relate('in_zone', (z) => z.is('level', 1))
   .execute();
 
 const roots = await Pump.find([pumpId]).relate('located_in').execute({ includeRelates: true });
 console.log(roots[0]?.toNested());
+console.log(roots[0]?.getRelationStatus('located_in')); // e.g. 'SUCCESS'
+console.log(JSON.stringify(roots[0]?.toSnapshot()));
 
 const why = await hydrated[0]?.explainRelate('some_rel');
 ```
+
+#### 6.3 多维分析管道：分组、聚合与 `AnalysisResult`
+
+在 **`QueryChain`** 末端增加 **「改形状」** 能力；**`execute()`** 时顺序为：**① 谓词树过滤行 → ② 解析分组键 → ③ 桶内流式聚合**（流式扫描路径对每条记录同样顺序执行）。核心实现位于 **`src/runtime/transform-engine.ts`**（**`AggregatorEngine`**、**`PivotTable`**、**`DataPivot`**）；数值稳定性由 **`src/runtime/stat-accumulator.ts`** 中的 **`StatAccumulator`**（**Welford**）支撑 **`variance` / `stdDev`**。
+
+| 方法                           | 作用                                                                                                                                                                                                                                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`.groupBy(fields[])`**       | 多级分组维度；语义与 **`.pivot`** 相同。至少传入 **一个** 路径，否则抛 **`QueryError`**。普通字段用字段名；**关联路径**用 **`关系名.目标字段`**（如 **`in_zone.label`**），解析到**首个**目标行再取后续路径（点对多取 `_id` 字典序第一个，便于稳定复现）。                                             |
+| **`.pivot(keys[])`**           | 与 **`.groupBy`** 等价，命名上强调「嵌套层级顺序」（如年份 → 国家）。                                                                                                                                                                                                                                  |
+| **`.compute(spec)`**           | **整表替换**内置映射：**键 = 行上字段名**，值为单个算子或 **`Op[]`**（多算子时输出键为 **`{算子}_{字段}`**，如 **`sum_population`**、**`variance_population`**）。若未配置 **`.compute` / `.aggregate`** 且无 **`.customReduce`**，默认为 **`{ _count: 'count' }`**。**`count`** 表示桶内行数。        |
+| **`.aggregate(config)`**       | **按源字段键合并**到已有映射：`config` 可为 **`Record<string, AggregateOp \| Op[]>`** 或 **`Aggregator`**。同一字段多个算子展开规则与 **`.compute`** 一致。与 **`.compute`**、**`.customReduce`** 冲突时抛 **`QueryError`**。                                                                          |
+| **`.customReduce(key, spec)`** | 自定义折叠：**`spec.reduce(prev, current) → next`**。首行 **`prev`** 为 **`spec.initial`**（若给出），否则 **`undefined`**；**`current`** 默认取 **`row[key]`**，可用 **`valueField`** 指定另一字段。可与 **`.compute` / `.aggregate`** 混用，**输出键不可重复**。                                     |
+| **`.execute()`**               | 已配置 **`.groupBy` / `.pivot`** 时返回 **`AnalysisResult`**；否则返回 **`HydratedEntity[]`**。透视路径下不支持 **`includeRelates`**（会抛 **`QueryError`**）。类型上：调用 **`groupBy` / `pivot`** 后链类型为 **`QueryChain<M, 'analysis'>`**，**`execute()`** 推断为 **`Promise<AnalysisResult>`**。 |
+| **`.analyze()`**               | 在已配置至少一个分组维度时，等价于 **`execute()`**，返回 **`AnalysisResult`**；未配置维度时抛 **`QueryError`**。                                                                                                                                                                                       |
+
+**`AnalysisResult`**（**`isAnalysisResult`**）：封装分组维度、桶内聚合值与元数据。
+
+- **`.asTree()`**：嵌套 JSON（如 **`tree['2026']['China']`**），**叶节点上直接为指标键值**（如 **`sum_population`**），便于 **ECharts** 等消费。
+- **`.asMatrix()`** / **`.asFlatTable()`**：扁平行数组；**每行一个对象**，**维度列与指标列合并**（如 **`{ year: 2026, country: 'China', sum_population: … }`**）。
+- **`.getMetadata()`**：**`AnalysisRunMetadata`**（**`pipeline: 'filter_then_group_then_aggregate'`**、维度键、各桶 **`dimensionValues`**、各指标 **`validSampleCount` / `missingSampleCount` / `resultHint`**（如全缺失时的 **`all_missing`**））。
+- **`.getTraceability()`**：在 **`getMetadata`** 之上标注 **`unlinkedOrBrokenPath`**（维度中含 **`__unlinked__`**）及汇总计数，便于审计「拓扑断裂 / 字段缺口」。
+
+兼容旧形态可用 **`.toAnalysisReport('tree' \| 'flat')`**（**`isAnalysisReport`**）。
+
+**缺失值与 0**：聚合时 **`null` / `undefined`** 视为缺失，不参与 **`sum` / `avg` / min / max / variance / stdDev`**；数值 **`0`** 为有效样本。若某桶内某数值指标**全部为缺失**，该指标结果为 **`traceableNull('all_missing')`**（**`isTraceableNull`**，**`TRACEABLE_REASON_ALL_MISSING`**），便于区分「真无数据」与 **`0`**。
+
+**流式累加**：在 **无 `relate` 跳步**、谓词树**不含** **`CallbackNode`**、且 **`DataReader`** 实现了 **`scanModelRecords`**（**`ModelFileReader` / `ModelStorage`** 已提供）时，按 **`.mld` 行流**过滤并写入桶。带 **`relate`** 或多段跳步时，仍先按现有查询路径得到末端行集，再对该行集累加。
+
+```typescript
+import { Aggregator, isAnalysisResult } from 'mode-db-engine';
+
+// 对象式 aggregate，与 groupBy 等价写法也可用 pivot
+const report = await client
+  .model('Population')
+  .query()
+  .between('year', 1990, 2026)
+  .aggregate({ population: 'sum', growth: 'avg' })
+  .pivot(['year', 'country'])
+  .execute();
+
+if (isAnalysisResult(report)) {
+  console.log(report.asTree());
+  console.table(report.asFlatTable());
+  console.log(report.getMetadata());
+}
+
+// 链式 Aggregator + compute 混用示例见 test/transform_aggregate.ts
+```
+
+**方差**：桶内为**总体方差** \(\sigma^2 = M_2/n\)（**Welford** 稳定累加）；**`stdDev`** 为其算术平方根。
 
 ### 7. Runtime / ModelDBClient — 第三方只读接入
 
@@ -344,13 +497,19 @@ mode-db-engine/
 ├── common/                     # 共享：类型、registry、manifest、错误、存储根
 ├── runtime/                    # 对 src/runtime 的薄再导出（便于从包根 import）
 ├── src/
-│   ├── runtime/                # 只读 Runtime SDK 实现（不依赖 authoring 写入模块）
+│   ├── runtime/                # 只读 Runtime SDK：query、transform-engine（分组/聚合）
 │   ├── authoring/
 │   │   └── AuthoringEngine.ts  # 指向 authoring/engine 的规范入口路径
 │   └── common/
 │       └── PathResolver.ts     # Atlas 目录路径解析
 ├── test/
-│   └── verify.ts               # 端到端集成验证（多图谱 / 滞后字段 / PROTOCOL / Runtime）
+│   ├── README.md               # 测试命令、Atlas 对照、与全量集成脚本说明
+│   ├── verify.ts               # 端到端：双图谱、滞后字段、PROTOCOL、Runtime 只读（启动时清空 data/）
+│   ├── query_filters.ts        # 谓词 / QueryChain / matchAny / 短路 / getQueryPlan / includeRelates / evaluateInto
+│   ├── logic_integrity.ts      # HydratedEntity 溯源、幽灵 id、includeRelates 级联
+│   ├── logic_closure_audit.ts  # Atlas 隔离、双向索引、多级 relate、Runtime
+│   ├── transform_aggregate.ts  # §6.3：pivot / groupBy、aggregate、execute → AnalysisResult
+│   └── first_run.ts            # 演示：治理 → flush → Runtime（点火脚本）
 ├── data/                       # 默认运行时数据（建议 git-ignore）
 ├── dist/                       # tsc 输出
 ├── eslint.config.js
@@ -366,21 +525,45 @@ mode-db-engine/
 
 根入口 `index.ts` 主要导出（完整列表以源码为准）：
 
-| 类别        | 导出                                                                                                                                                                                              |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 治理        | `AuthoringEngine`, `Engine`, `ModelDBAdmin`, `AtlasRegistry`, `ModelEntity`, `RelationEntity`, `ModelStorage`, `RelationIndexer`                                                                  |
-| 运行时      | `ModelDBClient`, `Runtime`, `RuntimeModel`, `RuntimeRelation`, `HydratedEntity`, `QueryChain`, `RelateFilterBuilder`, `normalizeOperator`, `configureModelDBRuntime`, `resolveModelDBStorageRoot` |
-| 类型 / 协议 | `ModelRegistry`, `PathResolver`, manifest 常量与解析函数，`DataReader`, `IndexReader`，各类 `export type { … }` 与错误类                                                                          |
+| 类别        | 导出                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 治理        | `AuthoringEngine`, `Engine`, `ModelDBAdmin`, `AtlasRegistry`, `ModelEntity`, `RelationEntity`, `ModelStorage`, `RelationIndexer`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 运行时      | `ModelDBClient`, `Runtime`, `RuntimeModel`, `RuntimeRelation`, `HydratedEntity`, `QueryChain`, `QueryEngine`, `FilterBuilder`, `PredicateComposer`, `mergeMatchAnyIntoSegment`, `compileSegments`, `RelateFilterBuilder`（别名）, `normalizeOperator`, `configureModelDBRuntime`, `resolveModelDBStorageRoot`；多维分析：`isAnalysisResult`, `AnalysisResult`, `PivotTable`, `Aggregator`, `AggregatorEngine`, `DataPivot`, `isAnalysisReport`, `AnalysisReport`（兼容）, `StatAccumulator`, `traceableNull`, `isTraceableNull`, `isStatMissing`, `coerceFiniteNumber`, `TRACEABLE_REASON_ALL_MISSING`；类型如 `TraceableNull`, `PredicateNode`, `QueryPlanASTv2`, `EvaluateResult`, `AggregateOp`, `AnalysisFlatRow`, `CustomReducerSpec`, `PredicateEvaluateContext`, `PredicateFailureKind`, `PredicateStandardOperator`, `PredicateAtomOperator`, `RelationTraceStatus`, `HydratedEntitySnapshot`, `LocalFilterState`, `QueryStartSpec` 等 |
+| 类型 / 协议 | `ModelRegistry`, `PathResolver`, manifest 常量与解析函数，`DataReader`, `IndexReader`，各类 `export type { … }` 与错误类                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 ---
 
-## 集成验证
+## 集成验证与测试
+
+**索引**：各脚本的 Atlas 名、是否清空 `data/`、覆盖范围见 **[test/README.md](test/README.md)**。
+
+**推荐一键回归**（顺序：`verify` → `query-filters` → `integrity` → `audit`；首步会删除整个默认 **`data/`** 目录）：
 
 ```bash
-npx tsx test/verify.ts
+npm test
+# 等价于
+npm run test:integration
 ```
 
-当前脚本覆盖：**pipe / tran 双图谱目录与模型隔离**、**骨架插入后 `updateFields` 补全**、**PROTOCOL 绑定与 `.rid` 正逆向成对**、**`ModelDBClient.connect` 链式查询与无写入方法**。
+**单项执行**：
+
+```bash
+npx tsx test/verify.ts          # 或单独跑 verify（同样会先清空 data/）
+npm run query-filters
+npm run integrity
+npm run audit
+npm run first-run               # 演示向，未包含在 test:integration 中
+npm run transform               # pivot / groupBy / aggregate / execute → AnalysisResult（§6.3）
+```
+
+| 脚本                         | 主要内容                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`verify.ts`**              | **pipe / tran** 双图谱隔离；**滞后 `updateFields`**；**PROTOCOL** 与 **`.rid` 正逆向成对**；**`ModelDBClient.connect`**、链式查询；Runtime **无 `insert` / `bind` 等**；**遇错计数**，失败时 **exit 1**。                                                                                                                                             |
+| **`query_filters.ts`**       | **§6** 全链路：**谓词树**、**AND/OR 短路**、**`matchAll` / `matchAllNodes` / `matchAny`**、**`getQueryPlan`**、**`filter`（Callback）**、**`relate` 目标过滤**、**`includeRelates`**；**`getRelateDiagnostic`** + **`failedPredicate`**；**`getRelationStatus`**、**`toSnapshot`**；**`QueryEngine.evaluateInto`** + **`PredicateEvaluateContext`**。 |
+| **`logic_integrity.ts`**     | **`explainRelate`**、**`NOT_REGISTERED`** / **`NO_LINK_IN_INDEX`**；**.rid 幽灵 id** → **`FILTERED_OUT_ORPHAN`**；**`includeRelates` + `toNested()`**。                                                                                                                                                                                               |
+| **`logic_closure_audit.ts`** | **pipe_system / tran_system** 物理隔离；**双向索引审计**；**多级 `relate`**；Runtime 只读。                                                                                                                                                                                                                                                           |
+| **`transform_aggregate.ts`** | **§6.3**：**`pivot` / `groupBy`**、**`aggregate`（对象与 `Aggregator`）**、**`between`**、**`compute` / `customReduce`**、**`execute()` → `AnalysisResult`**（**`asTree` / `asMatrix`**）、**`analyze()`**、**`traceableNull(all_missing)`**、关系路径分组键。                                                                                        |
+| **`first_run.ts`**           | 治理 → **`flushAll`** → Runtime 查询的**可读演示**（弱断言）。                                                                                                                                                                                                                                                                                        |
 
 ---
 
@@ -401,8 +584,8 @@ npx tsx test/verify.ts
 ```bash
 npm install
 
-# 集成验证
-npx tsx test/verify.ts
+# 集成验证（verify + query-filters + integrity + audit）
+npm test
 
 # 类型检查
 npm run typecheck

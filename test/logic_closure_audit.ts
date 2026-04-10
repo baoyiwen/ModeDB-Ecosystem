@@ -2,6 +2,10 @@
  * 逻辑闭环审计 — Atlas 隔离、双向索引、多级链式查询、Runtime 只读
  *
  * Run:  npx tsx test/logic_closure_audit.ts
+ *       npm run audit
+ *       npm run test:integration（末项）
+ *
+ * 全部测试脚本说明见同目录 README.md
  */
 
 import { existsSync } from 'node:fs';
@@ -70,6 +74,7 @@ async function runAudit(): Promise<void> {
 
   await pipeAdmin.model('Pump').insert({});
   await tranAdmin.model('Train').insert({});
+  await Promise.all([pipeAdmin.flushAll(), tranAdmin.flushAll()]);
 
   const pipePumpMld = join(pipeAtlas, 'models', 'Pump.mld');
   const pipeTrainMld = join(pipeAtlas, 'models', 'Train.mld');
@@ -103,8 +108,8 @@ async function runAudit(): Promise<void> {
   const Zone = pipeAdmin.model('Zone');
   const Pump = pipeAdmin.model('Pump');
 
-  Zone.updateFields(new Set(['id', 'name']));
-  Pump.updateFields(new Set(['id', 'name', 'zoneId']));
+  Zone.updateFields(['id', 'name']);
+  Pump.updateFields(['id', 'name', 'zoneId']);
 
   const zoneRow = await Zone.insert({ id: 'Z1', name: '核心区' });
   await Pump.insert({ id: 'P1', name: '1号泵', zoneId: 'Z1' });
@@ -137,7 +142,7 @@ async function runAudit(): Promise<void> {
 
   pipeAdmin.quickLink('Pump', 'Sensor', 'has_sensor', 'of_pump');
   const Sensor = pipeAdmin.model('Sensor');
-  Sensor.updateFields(new Set(['id', 'name', 'pumpId']));
+  Sensor.updateFields(['id', 'name', 'pumpId']);
 
   await Sensor.insert({ id: 'S1', name: '压力传感器', pumpId: 'P1' });
 

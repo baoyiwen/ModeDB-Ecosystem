@@ -3,6 +3,8 @@
  *
  * Run:  npx tsx test/first_run.ts
  *       npm run first-run
+ *
+ * 演示向脚本，未纳入 npm run test:integration；与其它测试说明见同目录 README.md
  */
 
 import { join } from 'node:path';
@@ -10,6 +12,7 @@ import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
 import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
+import type { HydratedEntity } from '../src/runtime/HydratedEntity.js';
 
 const DATA_ROOT = join(process.cwd(), 'data');
 const PIPE_ATLAS = join(DATA_ROOT, 'pipe');
@@ -28,8 +31,8 @@ async function main(): Promise<void> {
   const Zone = admin.model('Zone');
   const Rel = admin.relation('located_in');
 
-  Pump.updateFields(new Set(['id', 'name', 'zoneCode']));
-  Zone.updateFields(new Set(['id', 'label']));
+  Pump.updateFields(['id', 'name', 'zoneCode']);
+  Zone.updateFields(['id', 'label']);
   Rel.updateLogic('many-to-one', { sourceField: 'zoneCode', targetField: 'id' });
 
   console.log('正在写入物理数据 (.mld)...');
@@ -49,11 +52,13 @@ async function main(): Promise<void> {
   const pumpIds = pumps.map((r) => r._id);
 
   console.log(`执行链式跳转查询 [Pump(${pumpIds.length} 条) -> located_in -> Zone]...`);
-  const result = await RuntimePump.query(pumpIds).relate('located_in').execute();
+  const result = (await RuntimePump.query(pumpIds)
+    .relate('located_in')
+    .execute()) as HydratedEntity[];
 
   console.log('\n--- 查询结果 ---');
   console.table(
-    result.map((row) => {
+    result.map((row: HydratedEntity) => {
       const d = row.getData() as Record<string, unknown>;
       return { _id: d['_id'], ...d };
     }),
@@ -67,9 +72,9 @@ async function main(): Promise<void> {
   }
   const dBad = await result[0]!.explainRelate('no_such_edge');
   console.log(`  explainRelate("no_such_edge"): ${JSON.stringify(dBad)}`);
-  const tree = await RuntimePump.query(pumpIds)
-    .relate('located_in')
-    .execute({ includeRelates: true });
+  const tree = (await RuntimePump.query(pumpIds).relate('located_in').execute({
+    includeRelates: true,
+  })) as HydratedEntity[];
   console.log('  includeRelates → 根节点 toNested():');
   console.log(JSON.stringify(tree[0]?.toNested(), null, 2));
 

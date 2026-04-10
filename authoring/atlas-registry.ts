@@ -3,6 +3,7 @@ import { RegistryError } from '../common/errors.js';
 import type { PathResolver } from '../src/common/PathResolver.js';
 import type { ModelStorage } from './storage.js';
 import type { RelationIndexer } from './indexer.js';
+import type { PersistenceManager } from './persistence-manager.js';
 import { ModelEntity } from './entity.js';
 import { RelationEntity } from './relation-entity.js';
 
@@ -16,6 +17,7 @@ export class AtlasRegistry extends ModelRegistry {
     private readonly _storage: ModelStorage,
     private readonly _indexer: RelationIndexer,
     private readonly _paths: PathResolver,
+    private readonly _persistence: PersistenceManager,
   ) {
     super();
   }
@@ -27,7 +29,14 @@ export class AtlasRegistry extends ModelRegistry {
     if (!this.getModel(name)) {
       throw new RegistryError(`Model "${name}" is not registered.`);
     }
-    return new ModelEntity(name, this, this._storage, this._indexer, this._paths);
+    return new ModelEntity(
+      name,
+      this,
+      this._storage,
+      this._indexer,
+      this._paths,
+      this._persistence,
+    );
   }
 
   /**
@@ -40,6 +49,6 @@ export class AtlasRegistry extends ModelRegistry {
         `Relation "${label}" is not registered (checked both forward and reverse).`,
       );
     }
-    return new RelationEntity(def, this, this._indexer, this._paths);
+    return new RelationEntity(def, this, this._indexer, this._paths, this._persistence);
   }
 }

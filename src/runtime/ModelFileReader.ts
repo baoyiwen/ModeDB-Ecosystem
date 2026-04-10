@@ -52,6 +52,39 @@ export class ModelFileReader implements DataReader {
     return results;
   }
 
+  async scanModelRecords(
+    modelName: string,
+    visitor: (record: ModelRecord) => void | Promise<void>,
+  ): Promise<void> {
+    this.resolveSchema(modelName);
+    const filePath = this.paths.modelDataPath(modelName);
+
+    let stream: ReturnType<typeof createReadStream> | undefined;
+    try {
+      stream = createReadStream(filePath, 'utf-8');
+    } catch (err) {
+      throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
+    }
+
+    const rl = createInterface({ input: stream, crlfDelay: Infinity });
+
+    try {
+      for await (const line of rl) {
+        const trimmed = line.trim();
+        if (trimmed.length === 0) {
+          continue;
+        }
+        const record = JSON.parse(trimmed) as ModelRecord;
+        await visitor(record);
+      }
+    } catch (err) {
+      if (isNodeError(err) && err.code === 'ENOENT') {
+        return;
+      }
+      throw new FileIOError(`Failed to scan records from "${modelName}"`, filePath, { cause: err });
+    }
+  }
+
   async getByIds(modelName: string, ids: string[]): Promise<ModelRecord[]> {
     this.resolveSchema(modelName);
 

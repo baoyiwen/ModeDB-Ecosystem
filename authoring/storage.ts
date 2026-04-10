@@ -38,25 +38,45 @@ export class ModelStorage implements DataReader {
     schema.fields = fields;
   }
 
-  async insert(modelName: string, data: Record<string, unknown>): Promise<ModelRecord> {
+  /**
+   * Build one persisted row (UUID + timestamp + schema-filtered fields) without writing to disk.
+   * Used by the authoring persistence layer for buffered inserts.
+   */
+  prepareInsert(modelName: string, data: Record<string, unknown>): ModelRecord {
     const schema = this.resolveSchema(modelName);
     const clean = this.sanitize(data, schema);
-
-    const record: ModelRecord = {
+    return {
       _id: randomUUID(),
       _createdAt: new Date().toISOString(),
       ...clean,
     };
+  }
 
+  /** Append JSON lines to the model `.mld` file (used by flush / direct insert). */
+  async appendRecordsToDisk(modelName: string, records: readonly ModelRecord[]): Promise<void> {
+    if (records.length === 0) {
+      return;
+    }
+    this.resolveSchema(modelName);
     const filePath = this.filePath(modelName);
     await this.ensureDir();
-
-    try {
-      await appendFile(filePath, JSON.stringify(record) + '\n', 'utf-8');
-    } catch (err) {
-      throw new FileIOError(`Failed to write record to "${modelName}"`, filePath, { cause: err });
+    let body = '';
+    for (const r of records) {
+      body += JSON.stringify(r) + '\n';
     }
+    try {
+      await appendFile(filePath, body, 'utf-8');
+    } catch (err) {
+      throw new FileIOError(`Failed to write record(s) to "${modelName}"`, filePath, {
+        cause: err,
+      });
+    }
+  }
 
+  /** Direct disk insert (bypasses the authoring write buffer). */
+  async insert(modelName: string, data: Record<string, unknown>): Promise<ModelRecord> {
+    const record = this.prepareInsert(modelName, data);
+    await this.appendRecordsToDisk(modelName, [record]);
     return record;
   }
 
@@ -90,6 +110,39 @@ export class ModelStorage implements DataReader {
     }
 
     return results;
+  }
+
+  async scanModelRecords(
+    modelName: string,
+    visitor: (record: ModelRecord) => void | Promise<void>,
+  ): Promise<void> {
+    this.resolveSchema(modelName);
+    const filePath = this.filePath(modelName);
+
+    let stream: ReturnType<typeof createReadStream> | undefined;
+    try {
+      stream = createReadStream(filePath, 'utf-8');
+    } catch (err) {
+      throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
+    }
+
+    const rl = createInterface({ input: stream, crlfDelay: Infinity });
+
+    try {
+      for await (const line of rl) {
+        const trimmed = line.trim();
+        if (trimmed.length === 0) {
+          continue;
+        }
+        const record = JSON.parse(trimmed) as ModelRecord;
+        await visitor(record);
+      }
+    } catch (err) {
+      if (isNodeError(err) && err.code === 'ENOENT') {
+        return;
+      }
+      throw new FileIOError(`Failed to scan records from "${modelName}"`, filePath, { cause: err });
+    }
   }
 
   async getByIds(modelName: string, ids: string[]): Promise<ModelRecord[]> {

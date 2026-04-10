@@ -33,7 +33,9 @@ export class RuntimeModel {
   /**
    * @param ids 省略或 `undefined` 表示从该模型**全表**起步（再结合 {@link QueryChain.where} 等缩小）。
    */
-  query(ids?: readonly string[]): QueryChain {
+  query<M extends Record<string, unknown> = Record<string, unknown>>(
+    ids?: readonly string[],
+  ): QueryChain<M, 'rows'> {
     if (ids === undefined) {
       return new QueryChain(this.registry, this.indexReader, this.dataReader, this.name, {
         kind: 'all',
@@ -45,7 +47,9 @@ export class RuntimeModel {
     });
   }
 
-  find(ids: string[]): QueryChain {
+  find<M extends Record<string, unknown> = Record<string, unknown>>(
+    ids: string[],
+  ): QueryChain<M, 'rows'> {
     return this.query(ids);
   }
 

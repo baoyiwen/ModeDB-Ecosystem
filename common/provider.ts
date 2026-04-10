@@ -11,6 +11,14 @@ export interface DataReader {
   getByIds(modelName: string, ids: string[]): Promise<ModelRecord[]>;
   getAll(modelName: string): Promise<ModelRecord[]>;
   /**
+   * Optional: scan `.mld` line-by-line without building a full array — for aggregation / transforms.
+   * Implementations should invoke `visitor` for each parsed record and avoid retaining all rows.
+   */
+  scanModelRecords?(
+    modelName: string,
+    visitor: (record: ModelRecord) => void | Promise<void>,
+  ): Promise<void>;
+  /**
    * Optional: stream `.mld` until `record[field] === value` (strict `===`), then stop.
    * Used by {@link QueryChain} for `where(field, 'eq', value)` without loading the full file.
    */

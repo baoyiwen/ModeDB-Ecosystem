@@ -8,6 +8,7 @@ import type { ModelRegistry } from '../common/registry.js';
 import type { PathResolver } from '../src/common/PathResolver.js';
 import type { ModelStorage } from './storage.js';
 import type { RelationIndexer } from './indexer.js';
+import type { PersistenceManager } from './persistence-manager.js';
 import { RuntimeModel, type RuntimeAvailableRelation } from '../src/runtime/RuntimeModel.js';
 import type { QueryChain } from '../src/runtime/query.js';
 
@@ -22,30 +23,35 @@ export class ModelEntity extends RuntimeModel {
     private readonly storage: ModelStorage,
     private readonly indexer: RelationIndexer,
     private readonly paths: PathResolver,
+    private readonly persistence: PersistenceManager,
   ) {
-    super(name, registry, storage, indexer);
+    super(name, registry, persistence.getMergedReader(), indexer);
   }
 
   /**
    * Replace persisted field set for this model (Registry + storage schema stay in sync).
    */
-  updateFields(fields: ReadonlySet<string>): this {
-    this.registry.updateModelFields(this.name, fields);
-    this.storage.updateSchema(this.name, fields);
+  updateFields(fields: readonly string[]): this {
+    const set = new Set(fields);
+    this.registry.updateModelFields(this.name, set);
+    this.storage.updateSchema(this.name, set);
     return this;
   }
 
   /**
-   * Insert one record: only schema-defined fields are kept; written under this atlas.
+   * Insert one record: only schema-defined fields are kept; staged in the persistence buffer
+   * and flushed to `.mld` shortly (or on {@link AuthoringEngine.flushAll} / process exit).
    */
   async insert(data: Record<string, unknown>): Promise<ModelRecord> {
-    return this.storage.insert(this.name, data);
+    return this.persistence.insert(this.name, data);
   }
 
   /**
    * Start a lazy query chain from this model. Omit `ids` to scan all rows of this model (then narrow with `.where()`).
    */
-  override query(ids?: readonly string[]): QueryChain {
+  override query<M extends Record<string, unknown> = Record<string, unknown>>(
+    ids?: readonly string[],
+  ): QueryChain<M> {
     return super.query(ids);
   }
 
@@ -54,6 +60,7 @@ export class ModelEntity extends RuntimeModel {
     strategy: BindStrategy,
     options: BindOptions = {},
   ): Promise<this> {
+    await this.persistence.flushPendingToDisk();
     const rel = this.resolveRelationByForward(relationForward);
 
     const sourceModels = this.registry.getDescendantsInclusive(rel.source);
@@ -69,6 +76,7 @@ export class ModelEntity extends RuntimeModel {
     relationForward: string,
     pairs: ReadonlyArray<readonly [srcId: string, targetId: string]>,
   ): Promise<this> {
+    await this.persistence.flushPendingToDisk();
     const rel = this.resolveRelationByForward(relationForward);
     await this.indexer.unlink(rel, pairs);
     return this;

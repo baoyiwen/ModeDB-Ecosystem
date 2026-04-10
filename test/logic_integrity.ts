@@ -1,7 +1,12 @@
 /**
- * HydratedEntity / QueryChain 空关联溯源与 includeRelates 行为校验
+ * HydratedEntity / QueryChain 空关联溯源与 includeRelates 行为校验；
+ * 并断言同进程「合并读」：`insert` 后尚未 `flushAll` 时，`AuthoringEngine.query` 仍应命中新行。
  *
  * Run:  npx tsx test/logic_integrity.ts
+ *       npm run integrity
+ *       npm run test:integration（第三项）
+ *
+ * 全部测试脚本说明见同目录 README.md
  */
 
 import { join } from 'node:path';
@@ -52,11 +57,17 @@ async function main(): Promise<void> {
 
   const Pump = engine.model('Pump');
   const Zone = engine.model('Zone');
-  Pump.updateFields(new Set(['id', 'name', 'zoneCode']));
-  Zone.updateFields(new Set(['id', 'label']));
+  Pump.updateFields(['id', 'name', 'zoneCode']);
+  Zone.updateFields(['id', 'label']);
 
   const zone = await Zone.insert({ id: 'Z-99', label: '隔离区' });
   const pump = await Pump.insert({ id: 'P-99', name: '审计泵', zoneCode: 'Z-99' });
+
+  const zMerged = await engine.query('Zone', [zone._id]).execute();
+  assert(zMerged.length === 1, '合并读：insert 后未 flushAll 应能 query 到 Zone');
+  assert(zMerged[0]!.getData().id === 'Z-99', '合并读 Zone 业务 id');
+  const pMerged = await engine.query('Pump', [pump._id]).execute();
+  assert(pMerged.length === 1, '合并读：insert 后未 flushAll 应能 query 到 Pump');
 
   const loc = engine.relation('located_in');
   loc.updateLogic('many-to-one', { sourceField: 'zoneCode', targetField: 'id' });

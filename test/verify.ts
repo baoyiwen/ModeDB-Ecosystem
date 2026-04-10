@@ -2,6 +2,9 @@
  * 端到端集成验证 — 管廊 (pipe) / 轨道 (tran) 双图谱隔离 + 滞后字段 + PROTOCOL 绑定 + Runtime 只读
  *
  * Run:  npx tsx test/verify.ts
+ *       npm run test:integration（首步，会清空整个默认 data/）
+ *
+ * 全部测试脚本说明见同目录 README.md
  */
 
 import { existsSync } from 'node:fs';
@@ -121,8 +124,8 @@ async function main(): Promise<void> {
     '补全前：未声明字段被过滤（name / zoneCode 均不落盘）',
   );
 
-  Pump.updateFields(new Set(['name', 'zoneCode']));
-  Zone.updateFields(new Set(['code', 'label']));
+  Pump.updateFields(['name', 'zoneCode']);
+  Zone.updateFields(['code', 'label']);
 
   const pump1 = await Pump.insert({ name: '主循环泵-1', zoneCode: 'Z-A' });
   const zoneA = await Zone.insert({ code: 'Z-A', label: '管廊分区 A' });
@@ -134,7 +137,7 @@ async function main(): Promise<void> {
     (skTrain as Record<string, unknown>)['lineNo'] === undefined,
     'tran：补全前 lineNo 被过滤',
   );
-  TrainModel.updateFields(new Set(['lineNo']));
+  TrainModel.updateFields(['lineNo']);
   const train1 = await TrainModel.insert({ lineNo: '轨道一号线' });
   assert(
     (train1 as Record<string, unknown>)['lineNo'] === '轨道一号线',

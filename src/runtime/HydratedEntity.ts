@@ -10,14 +10,22 @@ import {
 export type RelationEmptyReason =
   | 'NOT_REGISTERED'
   | 'NO_LINK_IN_INDEX'
-  /** 索引有边但 `.mld` 缺行（幽灵 id） */
   | 'FILTERED_OUT_ORPHAN'
-  /** 关联行已加载，但被 where / filter 全部筛掉 */
   | 'FILTERED_OUT_WHERE';
+
+/**
+ * 关系边在用户 API 上的**粗粒度溯源**（与 {@link getRelateDiagnostic} 细因配合）。
+ * - **SUCCESS**：至少有一条子实体
+ * - **NO_LINK**：索引中无连线（`.rid` 无边）
+ * - **FILTERED_OUT**：谓词筛空、源实体未过跳前过滤、或索引/数据不一致（幽灵 id）
+ * - **NOT_REG**：关系未注册
+ */
+export type RelationTraceStatus = 'SUCCESS' | 'NO_LINK' | 'FILTERED_OUT' | 'NOT_REG';
 
 export interface RelateDiagnostic {
   readonly reason: RelationEmptyReason;
   readonly message: string;
+  readonly failedPredicate?: Record<string, unknown>;
 }
 
 export interface HydrationContext {
@@ -26,15 +34,42 @@ export interface HydrationContext {
   readonly dataReader: DataReader;
 }
 
+function reasonToTraceStatus(reason: RelationEmptyReason): RelationTraceStatus {
+  switch (reason) {
+    case 'NOT_REGISTERED':
+      return 'NOT_REG';
+    case 'NO_LINK_IN_INDEX':
+      return 'NO_LINK';
+    case 'FILTERED_OUT_ORPHAN':
+    case 'FILTERED_OUT_WHERE':
+      return 'FILTERED_OUT';
+    default: {
+      const _e: never = reason;
+      return _e;
+    }
+  }
+}
+
+/** 可 JSON 序列化的实体树快照（Web / 3D 管线缓存友好） */
+export interface HydratedEntitySnapshot {
+  readonly model: string;
+  readonly data: Record<string, unknown>;
+  readonly relates?: Record<string, HydratedEntitySnapshot[]>;
+  readonly relationStatus?: Record<string, RelationTraceStatus>;
+}
+
 /**
- * Wrapped query row: raw `.mld` payload plus optional nested relates and empty-relation diagnostics.
+ * 查询结果封装：原始行 + 嵌套关联 + 关系溯源状态 + 可选诊断详情。
+ *
+ * 分组模式下 **`wrapGroups`** 时，链式末端返回 {@link GroupInstance}[]；其与实体行一致提供 **`getData()`**，便于列表/卡片组件统一渲染。
  */
-export class HydratedEntity {
+export class HydratedEntity<T extends ModelRecord = ModelRecord> {
   private readonly relates = new Map<string, HydratedEntity[]>();
   private readonly diagnostics = new Map<string, RelateDiagnostic>();
+  private readonly relationStatus = new Map<string, RelationTraceStatus>();
 
   constructor(
-    private readonly record: ModelRecord,
+    private readonly record: T,
     private readonly modelName: string,
     private readonly ctx: HydrationContext,
   ) {}
@@ -43,11 +78,10 @@ export class HydratedEntity {
     return this.modelName;
   }
 
-  getData(): ModelRecord {
+  getData(): T {
     return this.record;
   }
 
-  /** All relation → children populated for this query (see {@link QueryExecuteOptions.includeRelates}). */
   getRelates(): ReadonlyMap<string, HydratedEntity[]> {
     return this.relates;
   }
@@ -57,15 +91,20 @@ export class HydratedEntity {
   }
 
   /**
-   * When {@link getRelate} is empty, explains why (if known). For lazy resolution use {@link explainRelate}.
+   * 关系边的粗粒度状态；与 {@link getRelateDiagnostic} 的细因一一对应维护。
    */
+  getRelationStatus(name: string): RelationTraceStatus | undefined {
+    return this.relationStatus.get(name);
+  }
+
+  getRelationStatuses(): ReadonlyMap<string, RelationTraceStatus> {
+    return this.relationStatus;
+  }
+
   getRelateDiagnostic(name: string): RelateDiagnostic | undefined {
     return this.diagnostics.get(name);
   }
 
-  /**
-   * Deep empty-reason trace: resolves registry + index + `.mld` hydration, caches {@link getRelate} on success.
-   */
   async explainRelate(relationName: string): Promise<RelateDiagnostic | undefined> {
     if (this.diagnostics.has(relationName)) {
       return this.diagnostics.get(relationName);
@@ -84,8 +123,8 @@ export class HydratedEntity {
         reason: 'NOT_REGISTERED',
         message: `Relation "${relationName}" is not available on model "${this.modelName}" (inheritance chain).`,
       };
-      this.diagnostics.set(relationName, d);
-      this.relates.set(relationName, []);
+      this._setDiagnostic(relationName, d);
+      this._setRelate(relationName, []);
       return d;
     }
 
@@ -101,14 +140,14 @@ export class HydratedEntity {
         reason: 'NO_LINK_IN_INDEX',
         message: `Relation "${relationName}" is registered but index has no edges for _id "${id}" on "${this.modelName}".`,
       };
-      this.diagnostics.set(relationName, d);
-      this.relates.set(relationName, []);
+      this._setDiagnostic(relationName, d);
+      this._setRelate(relationName, []);
       return d;
     }
 
     const records = await this.ctx.dataReader.getByIds(nextModel, linked);
     const children = records.map((r) => new HydratedEntity(r, nextModel, this.ctx));
-    this.relates.set(relationName, children);
+    this._setRelate(relationName, children);
 
     if (records.length < linked.length) {
       const missing = linked.filter((lid) => !records.some((r) => r._id === lid));
@@ -116,16 +155,13 @@ export class HydratedEntity {
         reason: 'FILTERED_OUT_ORPHAN',
         message: `Index listed ${linked.length} id(s) but only ${records.length} row(s) in "${nextModel}.mld"; missing _id: ${missing.join(', ')}.`,
       };
-      this.diagnostics.set(relationName, d);
+      this._setDiagnostic(relationName, d);
       return d;
     }
 
     return undefined;
   }
 
-  /**
-   * Cascading plain object: serializable snapshot for logging / APIs.
-   */
   toNested(): Record<string, unknown> {
     const data = this.getData() as Record<string, unknown>;
     const out: Record<string, unknown> = { ...data };
@@ -139,18 +175,69 @@ export class HydratedEntity {
     return out;
   }
 
+  /**
+   * 轻量拓扑快照：纯 JSON、无函数、无 HydrationContext；便于前端 / 3D 缓存加载。
+   */
+  toSnapshot(): HydratedEntitySnapshot {
+    const data = this.getData() as Record<string, unknown>;
+    const snap: {
+      model: string;
+      data: Record<string, unknown>;
+      relates?: Record<string, HydratedEntitySnapshot[]>;
+      relationStatus?: Record<string, RelationTraceStatus>;
+    } = { model: this.modelName, data: { ...data } };
+    if (this.relates.size > 0) {
+      const rel: Record<string, HydratedEntitySnapshot[]> = {};
+      for (const [k, v] of this.relates) {
+        rel[k] = v.map((c) => c.toSnapshot());
+      }
+      snap.relates = rel;
+    }
+    const st: Record<string, RelationTraceStatus> = {};
+    for (const [k, v] of this.relationStatus) {
+      st[k] = v;
+    }
+    if (Object.keys(st).length > 0) {
+      snap.relationStatus = st;
+    }
+    return snap;
+  }
+
   /** @internal */
   _setRelate(name: string, children: HydratedEntity[]): void {
     this.relates.set(name, children);
+    if (children.length > 0) {
+      const d = this.diagnostics.get(name);
+      if (d?.reason === 'FILTERED_OUT_ORPHAN') {
+        this.relationStatus.set(name, 'FILTERED_OUT');
+      } else {
+        this.relationStatus.set(name, 'SUCCESS');
+      }
+      return;
+    }
+    if (!this.diagnostics.has(name)) {
+      this.relationStatus.delete(name);
+    }
   }
 
   /** @internal */
   _setDiagnostic(name: string, d: RelateDiagnostic): void {
     this.diagnostics.set(name, d);
+    this.relationStatus.set(name, reasonToTraceStatus(d.reason));
   }
 }
 
+/**
+ * {@link QueryChain.execute} 选项。
+ *
+ * 与链上 **`.page()` / `.limit()`** 二选一或合并：执行时 **`options`** 优先于链上状态。
+ */
 export interface QueryExecuteOptions {
-  /** When true, {@link QueryChain.execute} returns root entities with nested {@link HydratedEntity} per hop. */
   readonly includeRelates?: boolean;
+  /** 0-based 页码（需配合 **`limit`** 才启用分页） */
+  readonly page?: number;
+  /** 每页条数；设置后 **`execute()`** 返回 {@link Paginated} 包装（过滤 / 聚合之后再切片） */
+  readonly limit?: number;
+  /** 与 **`groupBy` / `pivot`** 联用：返回 {@link GroupInstance}[]（含 **`.getEntities()`**），而非 {@link AnalysisResult} */
+  readonly wrapGroups?: boolean;
 }

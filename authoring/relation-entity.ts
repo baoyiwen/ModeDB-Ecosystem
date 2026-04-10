@@ -8,6 +8,7 @@ import type {
 import type { ModelRegistry } from '../common/registry.js';
 import type { PathResolver } from '../src/common/PathResolver.js';
 import type { RelationIndexer } from './indexer.js';
+import type { PersistenceManager } from './persistence-manager.js';
 import { RuntimeRelation } from '../src/runtime/RuntimeRelation.js';
 
 /**
@@ -21,6 +22,7 @@ export class RelationEntity extends RuntimeRelation {
     private readonly registry: ModelRegistry,
     private readonly indexer: RelationIndexer,
     private readonly paths: PathResolver,
+    private readonly persistence: PersistenceManager,
   ) {
     super(def);
   }
@@ -35,6 +37,7 @@ export class RelationEntity extends RuntimeRelation {
    * Each link is written via {@link RelationIndexer.writePairIndex}.
    */
   async bind(options: RelationBindOptions = {}): Promise<this> {
+    await this.persistence.flushPendingToDisk();
     const strategy = options.strategy ?? 'PROTOCOL';
     const def = this.getDefinition();
 
@@ -51,6 +54,7 @@ export class RelationEntity extends RuntimeRelation {
   }
 
   async unlink(pairs: ReadonlyArray<readonly [srcId: string, targetId: string]>): Promise<this> {
+    await this.persistence.flushPendingToDisk();
     await this.indexer.unlink(this.getDefinition(), pairs);
     return this;
   }

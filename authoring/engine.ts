@@ -15,8 +15,9 @@ import { serializeAtlasManifestFile } from '../common/atlas-manifest.js';
 import { ModelStorage } from './storage.js';
 import { RelationIndexer } from './indexer.js';
 import { AtlasRegistry } from './atlas-registry.js';
-import { ModelEntity } from './entity.js';
-import { RelationEntity } from './relation-entity.js';
+import { PersistenceManager, registerAuthoringShutdownTask } from './persistence-manager.js';
+import type { ModelEntity } from './entity.js';
+import type { RelationEntity } from './relation-entity.js';
 import { QueryChain } from '../src/runtime/query.js';
 import type { RuntimeContext } from '../src/runtime/context.js';
 
@@ -37,12 +38,20 @@ export interface AuthoringEngineOptions {
  *
  * On construction, `PathResolver.ensureAtlasLayoutSync()` creates `models/` and `relations/`
  * and writes an initial `atlas-manifest.json` when missing.
+ *
+ * **Persistence:** `insert` appends to an in-memory buffer; a short idle timer flushes rows to `.mld`.
+ * `SIGINT` / `SIGTERM` best-effort run {@link AuthoringEngine.flushAll}. For scripts that exit cleanly,
+ * rely on the timer or call {@link AuthoringEngine.flushAll} before exit if another process must read files.
+ * Same-process `createRuntime()` / `ModelDBClient.fromContext` use a merged `DataReader` (disk + buffer)
+ * so queries see new rows before flush. Call {@link AuthoringEngine.flushAll} only when another OS process
+ * must read atlas files cold immediately.
  */
 export class AuthoringEngine {
   readonly registry: ModelRegistry;
   readonly storage: ModelStorage;
   readonly indexer: RelationIndexer;
   readonly paths: PathResolver;
+  readonly persistence: PersistenceManager;
 
   constructor(options: AuthoringEngineOptions) {
     const paths =
@@ -66,27 +75,32 @@ export class AuthoringEngine {
 
     this.paths = paths;
     this.storage = options.storage ?? new ModelStorage(paths);
+    this.persistence = new PersistenceManager(this.storage);
     this.indexer = options.indexer ?? new RelationIndexer(paths);
     this.registry =
       options.registry !== undefined
         ? options.registry
-        : new AtlasRegistry(this.storage, this.indexer, this.paths);
+        : new AtlasRegistry(this.storage, this.indexer, this.paths, this.persistence);
+
+    registerAuthoringShutdownTask(() => this.flushAll());
   }
 
   model(name: string): ModelEntity {
-    const def = this.registry.getModel(name);
-    if (!def) {
-      throw new Error(`Model "${name}" is not registered.`);
+    if (!(this.registry instanceof AtlasRegistry)) {
+      throw new Error(
+        'AuthoringEngine.model() requires the default AtlasRegistry (omit options.registry).',
+      );
     }
-    return new ModelEntity(name, this.registry, this.storage, this.indexer, this.paths);
+    return this.registry.model(name);
   }
 
   relation(label: string): RelationEntity {
-    const def = this.registry.findRelationByLabel(label);
-    if (!def) {
-      throw new Error(`Relation "${label}" is not registered (checked both forward and reverse).`);
+    if (!(this.registry instanceof AtlasRegistry)) {
+      throw new Error(
+        'AuthoringEngine.relation() requires the default AtlasRegistry (omit options.registry).',
+      );
     }
-    return new RelationEntity(def, this.registry, this.indexer, this.paths);
+    return this.registry.relation(label);
   }
 
   /**
@@ -95,7 +109,7 @@ export class AuthoringEngine {
   createRuntime(): RuntimeContext {
     return {
       registry: this.registry,
-      dataReader: this.storage,
+      dataReader: this.persistence.getMergedReader(),
       indexReader: this.indexer,
       atlas: this.paths.atlasName,
     };
@@ -130,9 +144,10 @@ export class AuthoringEngine {
     );
   }
 
-  updateModelFields(name: string, fields: ReadonlySet<string>): void {
-    this.registry.updateModelFields(name, fields);
-    this.storage.updateSchema(name, fields);
+  updateModelFields(name: string, fields: readonly string[]): void {
+    const set = new Set(fields);
+    this.registry.updateModelFields(name, set);
+    this.storage.updateSchema(name, set);
   }
 
   updateRelationLogic(forwardName: string, logic: RelationLogic, matchOn?: MatchPredicate): void {
@@ -150,7 +165,7 @@ export class AuthoringEngine {
   }
 
   async insert(modelName: string, data: Record<string, unknown>): Promise<ModelRecord> {
-    return this.storage.insert(modelName, data);
+    return this.persistence.insert(modelName, data);
   }
 
   async bind(
@@ -158,6 +173,7 @@ export class AuthoringEngine {
     strategy: BindStrategy,
     options: BindOptions = {},
   ): Promise<void> {
+    await this.persistence.flushPendingToDisk();
     const rel = this.registry.getRelations().find((r) => r.forward === forwardName);
     if (!rel) {
       throw new Error(`Relation with forward label "${forwardName}" not found.`);
@@ -175,6 +191,7 @@ export class AuthoringEngine {
     forwardName: string,
     pairs: ReadonlyArray<readonly [srcId: string, targetId: string]>,
   ): Promise<void> {
+    await this.persistence.flushPendingToDisk();
     const rel = this.registry.getRelations().find((r) => r.forward === forwardName);
     if (!rel) {
       throw new Error(`Relation with forward label "${forwardName}" not found.`);
@@ -183,10 +200,16 @@ export class AuthoringEngine {
   }
 
   query(modelName: string, ids: string[]): QueryChain {
-    return new QueryChain(this.registry, this.indexer, this.storage, modelName, {
-      kind: 'ids',
-      ids,
-    });
+    return new QueryChain(
+      this.registry,
+      this.indexer,
+      this.persistence.getMergedReader(),
+      modelName,
+      {
+        kind: 'ids',
+        ids,
+      },
+    );
   }
 
   /**
@@ -197,7 +220,14 @@ export class AuthoringEngine {
     await writeFile(this.paths.manifestFilePath(), body, 'utf-8');
   }
 
+  /**
+   * Optional **forced** persistence: flushes buffered model rows, relation indices, and manifest.
+   * Normal authoring flows auto-flush on an idle timer and on process shutdown; call this only when
+   * you need the lowest latency guarantee that data is on disk before another process reads files
+   * (e.g. cold `ModelDBClient.connect` to the same atlas).
+   */
   async flushAll(): Promise<void> {
+    await this.persistence.flushPendingToDisk();
     await this.indexer.flushAll();
     await this.writeAtlasManifest();
   }

@@ -11,3 +11,6 @@ export type { AvailableRelation } from './entity.js';
 export { RelationEntity, AuthoringRelation } from './relation-entity.js';
 export { ModelStorage } from './storage.js';
 export { RelationIndexer } from './indexer.js';
+export { PersistenceManager, registerAuthoringShutdownTask } from './persistence-manager.js';
+export { MergedDataReader } from './merged-data-reader.js';
+export type { BufferedModelSource } from './merged-data-reader.js';

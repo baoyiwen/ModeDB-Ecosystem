@@ -136,3 +136,17 @@ export function emptyGroups(): AtomicPredicate[][] {
 export function cloneGroups(g: AtomicPredicate[][]): AtomicPredicate[][] {
   return g.map((gr) => [...gr]);
 }
+
+/** 可执行过滤状态：组内 AND，组间 OR；另附自定义谓词（与所有组 AND） */
+export interface LocalFilterState {
+  groups: AtomicPredicate[][];
+  fns: RecordPredicate[];
+}
+
+export function emptyLocal(): LocalFilterState {
+  return { groups: emptyGroups(), fns: [] };
+}
+
+export function cloneLocal(s: LocalFilterState): LocalFilterState {
+  return { groups: cloneGroups(s.groups), fns: [...s.fns] };
+}
