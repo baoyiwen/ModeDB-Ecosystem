@@ -78,15 +78,18 @@ export {
   type PivotLeafNode,
   type ParsedGroupDimension,
   type ComputeMetricToken,
+  queryPlanHasSerializedCallback,
 } from './query.js';
-export type { TraceableNull } from './query.js';
+export type { TraceableNull, RemoteExecuteSnapshot } from './query.js';
 export { normalizeOperator, type ScalarOperator, type AtomicPredicate } from './query-filter.js';
+export { deserializePredicate, serializePredicate } from './predicate-tree.js';
 export type { QueryExecuteOptions } from './HydratedEntity.js';
 export {
   HydratedEntity,
   type RelationEmptyReason,
   type RelateDiagnostic,
   type HydrationContext,
+  type MemoryShadowOptions,
   type RelationTraceStatus,
   type HydratedEntitySnapshot,
 } from './HydratedEntity.js';

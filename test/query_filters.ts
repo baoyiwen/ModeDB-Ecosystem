@@ -19,6 +19,7 @@ import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import { integrationVaultAuthoringOptions, useIntegrationVaultEnv } from './integration-vault.js';
 import type { ModelRecord } from '../common/types.js';
 import type { HydratedEntity } from '../src/runtime/HydratedEntity.js';
 import { FilterBuilder } from '../src/runtime/filter-builder.js';
@@ -67,9 +68,14 @@ function printAllResults(
 
 async function main(): Promise<void> {
   configureModelDBStorageRoot({ storageRoot: DATA_ROOT });
+  useIntegrationVaultEnv();
   await rm(join(DATA_ROOT, ATLAS), { recursive: true, force: true });
 
-  const eng = new AuthoringEngine({ atlas: ATLAS, storageRoot: DATA_ROOT });
+  const eng = new AuthoringEngine({
+    atlas: ATLAS,
+    storageRoot: DATA_ROOT,
+    ...integrationVaultAuthoringOptions,
+  });
   eng.quickLink('Zone', 'Pump', 'has_pump', 'in_zone');
 
   const Zone = eng.model('Zone');

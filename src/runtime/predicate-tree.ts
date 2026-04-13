@@ -192,6 +192,45 @@ export function serializePredicate(node: PredicateNode): Record<string, unknown>
   };
 }
 
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return typeof x === 'object' && x !== null && !Array.isArray(x);
+}
+
+/**
+ * 反序列化 {@link serializePredicate} 的 JSON；**`callback` 占位无法还原函数**，将抛错。
+ */
+export function deserializePredicate(obj: Record<string, unknown>): PredicateNode {
+  const t = obj.type;
+  if (t === 'atom') {
+    return {
+      type: 'atom',
+      field: String(obj.field),
+      op: obj.op as PredicateAtomOperator,
+      value: obj.value,
+    };
+  }
+  if (t === 'callback') {
+    throw new Error(
+      `deserializePredicate: callback nodes cannot be restored from JSON (label=${String(obj.label ?? '')}).`,
+    );
+  }
+  if (t === 'group') {
+    const logic = obj.logic === 'OR' ? 'OR' : 'AND';
+    const raw = obj.children;
+    if (!Array.isArray(raw)) {
+      throw new Error('deserializePredicate: group.children must be an array.');
+    }
+    const children = raw.map((c) => {
+      if (!isRecord(c)) {
+        throw new Error('deserializePredicate: invalid child in group.');
+      }
+      return deserializePredicate(c);
+    });
+    return { type: 'group', logic, children };
+  }
+  throw new Error(`deserializePredicate: unknown node type ${String(t)}`);
+}
+
 export function formatPredicateNode(node: PredicateNode): string {
   if (node.type === 'atom') {
     return `${node.field} ${node.op} ${JSON.stringify(node.value)}`;

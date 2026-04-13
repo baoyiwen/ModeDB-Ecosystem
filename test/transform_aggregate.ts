@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import { integrationVaultAuthoringOptions, useIntegrationVaultEnv } from './integration-vault.js';
 import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
 import type { HydratedEntity } from '../src/runtime/HydratedEntity.js';
 import {
@@ -73,7 +74,11 @@ function leafKeysUnder(node: Record<string, unknown>): string[] {
 async function runTransformAudits(storageRoot: string): Promise<void> {
   await rm(join(storageRoot, ATLAS_AUDIT), { recursive: true, force: true });
 
-  const eng = new AuthoringEngine({ atlas: ATLAS_AUDIT, storageRoot });
+  const eng = new AuthoringEngine({
+    atlas: ATLAS_AUDIT,
+    storageRoot,
+    ...integrationVaultAuthoringOptions,
+  });
   eng.quickLink('Zone', 'Pump', 'has_pump', 'in_zone');
 
   const Zone = eng.model('Zone');
@@ -227,10 +232,15 @@ async function runTransformAudits(storageRoot: string): Promise<void> {
 
 async function main(): Promise<void> {
   configureModelDBStorageRoot({ storageRoot: DATA_ROOT });
+  useIntegrationVaultEnv();
   assertStreamingAccumulatorContract();
   await rm(join(DATA_ROOT, ATLAS), { recursive: true, force: true });
 
-  const eng = new AuthoringEngine({ atlas: ATLAS, storageRoot: DATA_ROOT });
+  const eng = new AuthoringEngine({
+    atlas: ATLAS,
+    storageRoot: DATA_ROOT,
+    ...integrationVaultAuthoringOptions,
+  });
   eng.quickLink('Zone', 'Pump', 'has_pump', 'in_zone');
 
   const Zone = eng.model('Zone');

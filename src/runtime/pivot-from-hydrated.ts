@@ -32,7 +32,7 @@ export async function resolveHydratedPivotSegment(
 ): Promise<unknown> {
   const parsed = parseGroupDimension(dimensionKey, registry, originModelName);
   if (parsed.kind === 'direct') {
-    return (entity.getData() as Record<string, unknown>)[parsed.field];
+    return (entity.materializeRow() as Record<string, unknown>)[parsed.field];
   }
 
   await entity.explainRelate(parsed.relation);
@@ -42,10 +42,10 @@ export async function resolveHydratedPivotSegment(
   }
 
   const sorted = [...children].sort((a, b) =>
-    String(a.getData()._id).localeCompare(String(b.getData()._id)),
+    String(a.materializeRow()._id).localeCompare(String(b.materializeRow()._id)),
   );
   const first = sorted[0]!;
-  const data = first.getData() as Record<string, unknown>;
+  const data = first.materializeRow() as Record<string, unknown>;
   const v = readFieldPathSync(data, parsed.pathOnTarget);
   if (v === undefined || v === null) {
     return PIVOT_UNLINKED_KEY;
@@ -126,7 +126,7 @@ export class PivotHydratedRecursiveBuilder {
       segments.push(pivotSegmentKey(raw));
     }
     const leaf = ensureLeafAggregator(this.root, segments, this.metricSpec);
-    leaf.ingest(entity.getData() as Record<string, unknown>);
+    leaf.ingest(entity.materializeRow() as Record<string, unknown>);
   }
 
   async ingestAll(entities: readonly HydratedEntity[]): Promise<void> {

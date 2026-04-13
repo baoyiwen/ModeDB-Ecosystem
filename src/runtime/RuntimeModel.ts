@@ -3,6 +3,8 @@ import type { ModelRegistry } from '../../common/registry.js';
 import type { DataReader, IndexReader } from '../../common/provider.js';
 import { QueryChain } from './query.js';
 import type { FieldMatchContext } from './query-filter.js';
+import type { MemoryShadowOptions } from './HydratedEntity.js';
+import type { SmartCache } from '../../common/smart-cache.js';
 
 /**
  * Read-only model view: query / all / schema introspection only.
@@ -10,6 +12,8 @@ import type { FieldMatchContext } from './query-filter.js';
 export class RuntimeModel {
   readonly name: string;
   protected fieldContext: FieldMatchContext | undefined;
+  protected memoryShadow: MemoryShadowOptions | undefined;
+  protected smartCache: SmartCache | undefined;
 
   constructor(
     name: string,
@@ -17,9 +21,13 @@ export class RuntimeModel {
     protected readonly dataReader: DataReader,
     protected readonly indexReader: IndexReader,
     fieldContext?: FieldMatchContext,
+    memoryShadow?: MemoryShadowOptions,
+    smartCache?: SmartCache,
   ) {
     this.name = name;
     this.fieldContext = fieldContext;
+    this.memoryShadow = memoryShadow;
+    this.smartCache = smartCache;
   }
 
   getSchema(): ModelDefinition {
@@ -50,6 +58,8 @@ export class RuntimeModel {
           kind: 'all',
         },
         this.fieldContext,
+        this.memoryShadow,
+        this.smartCache,
       );
     }
     return new QueryChain(
@@ -62,6 +72,8 @@ export class RuntimeModel {
         ids: [...ids],
       },
       this.fieldContext,
+      this.memoryShadow,
+      this.smartCache,
     );
   }
 

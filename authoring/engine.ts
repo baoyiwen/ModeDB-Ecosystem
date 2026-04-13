@@ -7,11 +7,13 @@ import type {
   BindStrategy,
   BindOptions,
 } from '../common/types.js';
+import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
-import type { ModelRegistry } from '../common/registry.js';
+import { ModelRegistry } from '../common/registry.js';
 import { PathResolver } from '../src/common/PathResolver.js';
 import { resolveModelDBStorageRoot } from '../common/storage-root-config.js';
-import { serializeAtlasManifestFile } from '../common/atlas-manifest.js';
+import { parseAtlasManifestJson, serializeAtlasManifestFile } from '../common/atlas-manifest.js';
+import { AtlasManifestError } from '../common/errors.js';
 import { ModelStorage } from './storage.js';
 import { RelationIndexer } from './indexer.js';
 import { AtlasRegistry } from './atlas-registry.js';
@@ -27,6 +29,36 @@ import {
   type FieldDefsRecord,
   type FieldTypeDef,
 } from '../common/data-types.js';
+import { InternalVault } from '../common/internal-vault.js';
+import { SmartCache } from '../common/smart-cache.js';
+import { EngineLogger } from '../common/engine-logger.js';
+import { DiagnosticCenter } from '../common/diagnostic.js';
+import { AtlasSingleVault } from './atlas-single-vault.js';
+
+function hydrateAuthoringFromManifest(
+  registry: ModelRegistry,
+  storage: ModelStorage,
+  raw: string,
+  atlas: string,
+): void {
+  const loaded = parseAtlasManifestJson(raw, atlas);
+  for (const def of loaded.getModelDefinitions()) {
+    const fields = new Set(def.fields);
+    const ft = new Map(def.fieldTypes);
+    registry.registerModel(def.name, fields, def.parentId, ft);
+    storage.registerSchema({ name: def.name, fields, fieldTypes: ft });
+  }
+  for (const rel of loaded.getRelations()) {
+    registry.registerRelation(
+      rel.source,
+      rel.target,
+      rel.forward,
+      rel.reverse,
+      rel.logic,
+      rel.matchOn,
+    );
+  }
+}
 
 export interface AuthoringEngineOptions {
   /** Atlas name; data lives under `<storageRoot>/<atlas>/`. */
@@ -40,13 +72,34 @@ export interface AuthoringEngineOptions {
   registry?: ModelRegistry;
   storage?: ModelStorage;
   indexer?: RelationIndexer;
+  /**
+   * When true, `.mld` body lines are obfuscated (see `common/shadow-codec.ts`); reads auto-detect.
+   */
+  shadowDiskEncoding?: boolean;
+  /**
+   * When true, {@link HydratedEntity.getData} exposes `m_addr_*` vault pointers for user fields;
+   * {@link HydratedEntity.getValue} resolves real payloads. Requires default {@link AtlasRegistry}.
+   */
+  memoryShadowHydration?: boolean;
+  /** Enable query fingerprint cache; entries invalidate when any dependent model is written. */
+  enableSmartCache?: boolean;
+  /** Rolling file log under `<atlas>/logs/engine.log` and mirror {@link DiagnosticCenter} output. */
+  engineLogger?: boolean | { maxFileBytes?: number };
+  /**
+   * Single encrypted `atlas.mld` vault (models + relations + manifest). No `models/`, `relations/`,
+   * or `atlas-manifest.json` on disk. Requires {@link vaultSecret} or `process.env.MODEL_DB_VAULT_SECRET`.
+   */
+  singleFileVault?: boolean;
+  /** Passphrase for scrypt/AES-GCM when {@link singleFileVault} is true. */
+  vaultSecret?: string;
 }
 
 /**
  * Authoring-side engine: all model/relation I/O is scoped to one atlas directory tree.
  *
- * On construction, `PathResolver.ensureAtlasLayoutSync()` creates `models/` and `relations/`
- * and writes an initial `atlas-manifest.json` when missing.
+ * On construction, `PathResolver.ensureAtlasLayoutSync()` creates the legacy layout (`models/`,
+ * `relations/`, `atlas-manifest.json`) unless {@link AuthoringEngineOptions.singleFileVault} is
+ * set, in which case only `atlas.mld` is used.
  *
  * **Persistence:** `insert` stages rows in a per-model write-behind `Map<_id, row>`; a **200ms** scheduler
  * appends to `.mld` when buffers are non-empty; `beforeExit` and `SIGINT`/`SIGTERM` best-effort run
@@ -60,6 +113,13 @@ export class AuthoringEngine {
   readonly paths: PathResolver;
   readonly persistence: PersistenceManager;
   currentLocale: string | undefined;
+  /** Present when {@link AuthoringEngineOptions.memoryShadowHydration} is enabled. */
+  readonly internalVault: InternalVault | undefined;
+  /** In-memory vault for {@link AuthoringEngineOptions.singleFileVault}. */
+  readonly atlasVault: AtlasSingleVault | undefined;
+  private readonly vaultSecret: string | undefined;
+  private readonly smartCacheRef: SmartCache | undefined;
+  private readonly memoryShadowHydration: boolean;
   private readonly _autoFlushHandle: ReturnType<typeof setInterval>;
 
   constructor(options: AuthoringEngineOptions) {
@@ -80,18 +140,98 @@ export class AuthoringEngine {
       throw new Error('Custom storage or indexer requires options.paths (PathResolver).');
     }
 
-    paths.ensureAtlasLayoutSync();
+    const useVault = options.singleFileVault === true;
+    if (useVault && (options.storage !== undefined || options.indexer !== undefined)) {
+      throw new Error('singleFileVault cannot be combined with custom storage or indexer.');
+    }
+
+    let resolvedVaultSecret: string | undefined;
+    if (useVault) {
+      const fromEnv =
+        typeof process !== 'undefined' && process.env.MODEL_DB_VAULT_SECRET
+          ? process.env.MODEL_DB_VAULT_SECRET
+          : undefined;
+      resolvedVaultSecret = options.vaultSecret ?? fromEnv;
+      if (!resolvedVaultSecret || resolvedVaultSecret.length === 0) {
+        throw new Error(
+          'singleFileVault requires vaultSecret or process.env.MODEL_DB_VAULT_SECRET to be set.',
+        );
+      }
+    }
+
+    let atlasVault: AtlasSingleVault | undefined;
+    if (useVault && resolvedVaultSecret) {
+      paths.ensureAtlasVaultLayoutSync();
+      const vaultPath = paths.atlasSingleVaultPath();
+      atlasVault = new AtlasSingleVault();
+      const fileExisted = existsSync(vaultPath);
+      const loaded = atlasVault.loadSync(vaultPath, resolvedVaultSecret);
+      if (fileExisted && !loaded) {
+        throw new AtlasManifestError(
+          `Cannot open single-file vault at "${vaultPath}": decrypt failed, file truncated, or wrong secret (see diagnostics E3002).`,
+        );
+      }
+      if (!fileExisted) {
+        atlasVault.set(
+          AtlasSingleVault.manifestKey,
+          serializeAtlasManifestFile(new ModelRegistry(), paths.atlasName),
+        );
+        atlasVault.saveSync(vaultPath, resolvedVaultSecret);
+      }
+    } else {
+      paths.ensureAtlasLayoutSync();
+    }
 
     this.paths = paths;
+    this.atlasVault = atlasVault;
+    this.vaultSecret = resolvedVaultSecret;
     this.currentLocale = options.currentLocale;
-    this.storage = options.storage ?? new ModelStorage(paths);
+    this.memoryShadowHydration = options.memoryShadowHydration ?? false;
+    this.internalVault = this.memoryShadowHydration ? new InternalVault() : undefined;
+    this.smartCacheRef = options.enableSmartCache ? new SmartCache() : undefined;
+
+    const vaultOpts =
+      atlasVault && resolvedVaultSecret
+        ? { vault: atlasVault, vaultSecret: resolvedVaultSecret }
+        : undefined;
+
+    this.storage = options.storage ?? new ModelStorage(paths, vaultOpts);
     this.storage.locale = this.currentLocale;
-    this.persistence = new PersistenceManager(this.storage);
-    this.indexer = options.indexer ?? new RelationIndexer(paths);
+    this.storage.shadowDiskEncoding = atlasVault ? false : (options.shadowDiskEncoding ?? false);
+    this.persistence = new PersistenceManager(this.storage, this.smartCacheRef);
+    this.indexer =
+      options.indexer ??
+      (vaultOpts
+        ? new RelationIndexer(paths, {
+            vault: atlasVault!,
+            vaultSecret: vaultOpts.vaultSecret,
+            loadModelRecords: (m) => this.persistence.getMergedReader().getAll(m),
+          })
+        : new RelationIndexer(paths));
     this.registry =
       options.registry !== undefined
         ? options.registry
-        : new AtlasRegistry(this.storage, this.indexer, this.paths, this.persistence);
+        : new AtlasRegistry(this.storage, this.indexer, this.paths, this.persistence, {
+            internalVault: this.internalVault,
+            memoryShadowHydration: this.memoryShadowHydration,
+            smartCache: this.smartCacheRef,
+          });
+
+    if (atlasVault && options.registry === undefined) {
+      const raw = atlasVault.get(AtlasSingleVault.manifestKey);
+      if (raw) {
+        hydrateAuthoringFromManifest(this.registry, this.storage, raw, paths.atlasName);
+      }
+    }
+
+    if (options.engineLogger) {
+      const maxFileBytes =
+        typeof options.engineLogger === 'object' && options.engineLogger.maxFileBytes !== undefined
+          ? options.engineLogger.maxFileBytes
+          : undefined;
+      EngineLogger.instance.configure({ atlasRoot: paths.atlasRoot(), maxFileBytes });
+      EngineLogger.instance.attachDiagnosticBridge((fn) => DiagnosticCenter.onDiagnostic(fn));
+    }
 
     registerAuthoringShutdownTask(() => this.flushAll());
 
@@ -348,6 +488,8 @@ export class AuthoringEngine {
         ids,
       },
       this._buildFieldContext(),
+      this.memoryShadowHydration && this.internalVault ? { vault: this.internalVault } : undefined,
+      this.smartCacheRef,
     );
   }
 
@@ -356,6 +498,11 @@ export class AuthoringEngine {
    */
   async writeAtlasManifest(): Promise<void> {
     const body = serializeAtlasManifestFile(this.registry, this.paths.atlasName);
+    if (this.atlasVault && this.vaultSecret) {
+      this.atlasVault.set(AtlasSingleVault.manifestKey, body);
+      this.atlasVault.saveSync(this.paths.atlasSingleVaultPath(), this.vaultSecret);
+      return;
+    }
     await writeFile(this.paths.manifestFilePath(), body, 'utf-8');
   }
 

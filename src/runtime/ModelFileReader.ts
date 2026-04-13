@@ -4,8 +4,7 @@ import type { ModelSchema, ModelRecord } from '../../common/types.js';
 import type { DataReader } from '../../common/provider.js';
 import type { PathResolver } from '../common/PathResolver.js';
 import { ModelNotRegisteredError, FileIOError } from '../../common/errors.js';
-
-const SCHEMA_HEADER_PREFIX = '{"__schema__":';
+import { parseMldLine } from '../../common/shadow-codec.js';
 
 /**
  * Read-only `.mld` access for the client runtime (no writes, no mkdir).
@@ -39,10 +38,11 @@ export class ModelFileReader implements DataReader {
     try {
       for await (const line of rl) {
         const trimmed = line.trim();
-        if (trimmed.length === 0 || trimmed.startsWith(SCHEMA_HEADER_PREFIX)) {
+        const parsed = parseMldLine(trimmed);
+        if (!parsed || parsed.kind === 'header') {
           continue;
         }
-        results.push(JSON.parse(trimmed) as ModelRecord);
+        results.push(parsed.record);
       }
     } catch (err) {
       if (isNodeError(err) && err.code === 'ENOENT') {
@@ -73,11 +73,11 @@ export class ModelFileReader implements DataReader {
     try {
       for await (const line of rl) {
         const trimmed = line.trim();
-        if (trimmed.length === 0 || trimmed.startsWith(SCHEMA_HEADER_PREFIX)) {
+        const parsed = parseMldLine(trimmed);
+        if (!parsed || parsed.kind === 'header') {
           continue;
         }
-        const record = JSON.parse(trimmed) as ModelRecord;
-        await visitor(record);
+        await visitor(parsed.record);
       }
     } catch (err) {
       if (isNodeError(err) && err.code === 'ENOENT') {
@@ -114,11 +114,12 @@ export class ModelFileReader implements DataReader {
         }
 
         const trimmed = line.trim();
-        if (trimmed.length === 0 || trimmed.startsWith(SCHEMA_HEADER_PREFIX)) {
+        const parsed = parseMldLine(trimmed);
+        if (!parsed || parsed.kind === 'header') {
           continue;
         }
 
-        const record = JSON.parse(trimmed) as ModelRecord;
+        const record = parsed.record;
         if (target.has(record._id)) {
           results.push(record);
           target.delete(record._id);
@@ -154,10 +155,11 @@ export class ModelFileReader implements DataReader {
     try {
       for await (const line of rl) {
         const trimmed = line.trim();
-        if (trimmed.length === 0 || trimmed.startsWith(SCHEMA_HEADER_PREFIX)) {
+        const parsed = parseMldLine(trimmed);
+        if (!parsed || parsed.kind === 'header') {
           continue;
         }
-        const record = JSON.parse(trimmed) as ModelRecord;
+        const record = parsed.record;
         const v = (record as Record<string, unknown>)[field];
         if (v === value) {
           return record;

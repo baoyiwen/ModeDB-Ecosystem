@@ -6,7 +6,14 @@ import prettierConfig from 'eslint-config-prettier';
 /** @type {import('eslint').Linter.Config[]} */
 export default [
   {
-    ignores: ['node_modules/**', 'dist/**', 'coverage/**', 'data/**'],
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'coverage/**',
+      'data/**',
+      'packages/**/dist/**',
+      'packages/**/tsup.config.ts',
+    ],
   },
 
   {

@@ -12,6 +12,7 @@ import {
   createValueObject,
   type ValueSyncFn,
 } from '../../common/value-objects.js';
+import { InternalVault } from '../../common/internal-vault.js';
 
 export type RelationEmptyReason =
   | 'NOT_REGISTERED'
@@ -34,12 +35,36 @@ export interface RelateDiagnostic {
   readonly failedPredicate?: Record<string, unknown>;
 }
 
+/** When set, {@link HydratedEntity.getValue} resolves pointers; {@link HydratedEntity.getData} still returns decoded plaintext. */
+export interface MemoryShadowOptions {
+  readonly vault: InternalVault;
+}
+
 export interface HydrationContext {
   readonly registry: ModelRegistry;
   readonly indexReader: IndexReader;
   readonly dataReader: DataReader;
   /** Optional sync callback for write-through from ValueObject.update(). */
   readonly valueSyncFn?: ValueSyncFn;
+  /** Optional in-memory field pointerization (see {@link MemoryShadowOptions}). */
+  readonly memoryShadow?: MemoryShadowOptions;
+}
+
+const VAULT_META_FIELDS = new Set(['_id', '_createdAt', '__deleted']);
+
+function pointerizeRecord<T extends ModelRecord>(row: T, vault: InternalVault): T {
+  const out = { ...row } as Record<string, unknown>;
+  for (const key of Object.keys(out)) {
+    if (VAULT_META_FIELDS.has(key)) {
+      continue;
+    }
+    const v = out[key];
+    if (v === undefined) {
+      continue;
+    }
+    out[key] = vault.put(v);
+  }
+  return out as T;
 }
 
 function reasonToTraceStatus(reason: RelationEmptyReason): RelationTraceStatus {
@@ -76,19 +101,27 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
   private readonly diagnostics = new Map<string, RelateDiagnostic>();
   private readonly relationStatus = new Map<string, RelationTraceStatus>();
   private _valueCache: Map<string, ValueObject> | undefined;
+  /**
+   * Shallow row for {@link getValue} / internal use: with memory shadow, user fields may be
+   * `m_addr_*` pointers; {@link getData} always returns {@link materializeRow}-style plaintext.
+   */
+  private readonly displayRow: T;
 
   constructor(
-    private readonly record: T,
+    row: T,
     private readonly modelName: string,
     private readonly ctx: HydrationContext,
-  ) {}
+  ) {
+    const vault = ctx.memoryShadow?.vault;
+    this.displayRow = vault ? pointerizeRecord({ ...row } as T, vault) : ({ ...row } as T);
+  }
 
   getModelName(): string {
     return this.modelName;
   }
 
   /**
-   * Return the raw record data as a plain JSON object.
+   * Return the raw record data as a plain JSON object (decoded field values, never vault pointers).
    *
    * When `deep` is `true` (default), nested {@link HydratedEntity} children
    * from `.relates` are recursively flattened into the output under a
@@ -96,10 +129,11 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
    * raw record (no ValueObject wrappers).
    */
   getData(deep?: boolean): T {
+    const materialized = this.materializeRow();
     if (!deep) {
-      return this.record;
+      return materialized;
     }
-    const base = { ...this.record } as Record<string, unknown>;
+    const base = { ...materialized } as Record<string, unknown>;
     if (this.relates.size > 0) {
       const rel: Record<string, Record<string, unknown>[]> = {};
       for (const [k, v] of this.relates) {
@@ -108,6 +142,25 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
       base['relates'] = rel;
     }
     return base as T;
+  }
+
+  /**
+   * Returns the row with real field values (resolves {@link InternalVault} pointers).
+   * Predicates, pivots, and relate walking use this internally; {@link getData} delegates here for the row payload.
+   */
+  materializeRow(): T {
+    const vault = this.ctx.memoryShadow?.vault;
+    if (!vault) {
+      return { ...this.displayRow } as T;
+    }
+    const out = { ...this.displayRow } as Record<string, unknown>;
+    for (const key of Object.keys(out)) {
+      const cell = out[key];
+      if (InternalVault.isVaultPointer(cell)) {
+        out[key] = vault.resolve(cell);
+      }
+    }
+    return out as T;
   }
 
   /**
@@ -121,9 +174,13 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
    * For fields without a registered DataType, a `JsonValue` wrapper is returned.
    */
   getValue(fieldName: string): ValueObject | undefined {
-    const raw = (this.record as Record<string, unknown>)[fieldName];
-    if (raw === undefined) {
+    const cell = (this.displayRow as Record<string, unknown>)[fieldName];
+    if (cell === undefined) {
       return undefined;
+    }
+    let raw: unknown = cell;
+    if (InternalVault.isVaultPointer(cell) && this.ctx.memoryShadow?.vault) {
+      raw = this.ctx.memoryShadow.vault.resolve(cell);
     }
 
     if (!this._valueCache) {
@@ -137,6 +194,7 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
     const modelDef = this.ctx.registry.getModel(this.modelName);
     const typeDef: FieldTypeDef = modelDef?.fieldTypes.get(fieldName) ?? { type: 'JSON' };
     const vo = createValueObject(fieldName, raw, typeDef, this.ctx.valueSyncFn);
+    vo._diagCtx = { model: this.modelName, recordId: this.displayRow._id, field: fieldName };
     this._valueCache.set(fieldName, vo);
     return vo;
   }
@@ -188,7 +246,7 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
     }
 
     const nextModel = targetModelName(resolved);
-    const id = this.record._id;
+    const id = this.displayRow._id;
     const linked =
       resolved.direction === 'forward'
         ? await this.ctx.indexReader.getForward(resolved.definition, id)

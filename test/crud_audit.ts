@@ -8,10 +8,17 @@
  */
 
 import { join } from 'node:path';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import {
+  atlasVaultPath,
+  INTEGRATION_VAULT_SECRET,
+  integrationVaultAuthoringOptions,
+  loadVaultModelBlob,
+  useIntegrationVaultEnv,
+} from './integration-vault.js';
 import { mergeDiskRowsWithAuthoringBuffer } from '../src/runtime/query-engine.js';
 import { DELETED_SENTINEL, isDeletedRecord, type ModelRecord } from '../common/types.js';
 import type { PredicateNode } from '../src/runtime/predicate-tree.js';
@@ -86,11 +93,28 @@ function auditDeletedHelpers(): void {
 // ---------------------------------------------------------------------------
 // 3–8. 引擎级 CRUD
 // ---------------------------------------------------------------------------
+function vaultItemDataRows(blob: string): Record<string, unknown>[] {
+  const rows: Record<string, unknown>[] = [];
+  for (const line of blob.split('\n')) {
+    const t = line.trim();
+    if (!t || t.includes('"__schema__"')) {
+      continue;
+    }
+    rows.push(JSON.parse(t) as Record<string, unknown>);
+  }
+  return rows;
+}
+
 async function auditEngineCrud(): Promise<void> {
   configureModelDBStorageRoot({ storageRoot: DATA_ROOT });
+  useIntegrationVaultEnv();
   await rm(join(DATA_ROOT, ATLAS), { recursive: true, force: true });
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, storageRoot: DATA_ROOT });
+  const engine = new AuthoringEngine({
+    atlas: ATLAS,
+    storageRoot: DATA_ROOT,
+    ...integrationVaultAuthoringOptions,
+  });
   engine.registerModel('Item', new Set(['name', 'status', 'score']));
   const Item = engine.model('Item');
 
@@ -277,21 +301,32 @@ async function auditEngineCrud(): Promise<void> {
   // --- 10. sync + flush 压缩 ---
   console.log('\n═══ 10. sync + flush 压缩（__deleted 物理移除） ═══');
   const r5 = await Item.insert({ name: 'Z', status: 'live', score: 100 }, { sync: true });
-  const mldPath = join(DATA_ROOT, ATLAS, 'models', 'Item.mld');
-  assert(existsSync(mldPath), 'insert sync 后 .mld 存在');
+  const vaultPath = atlasVaultPath(DATA_ROOT, ATLAS);
+  assert(existsSync(vaultPath), 'insert sync 后 atlas.mld 存在');
 
   await Item.delete(r5._id, { sync: true });
-  const mldContent = readFileSync(mldPath, 'utf-8');
-  assert(!mldContent.includes(r5._id), 'delete sync 后 .mld 中不含已删除行的 _id（压缩生效）');
-  assert(!mldContent.includes('__deleted'), '.mld 中无 __deleted 墓碑残留');
+  let itemBlob = loadVaultModelBlob(DATA_ROOT, ATLAS, 'Item', INTEGRATION_VAULT_SECRET);
+  let itemRows = vaultItemDataRows(itemBlob);
+  assert(
+    !itemRows.some((r) => r._id === r5._id),
+    'delete sync 后 Vault Item blob 中不含已删除行的 _id（压缩生效）',
+  );
+  assert(
+    !itemRows.some((r) => r[DELETED_SENTINEL] === true),
+    'Vault Item blob 中无 __deleted 墓碑残留',
+  );
 
   // update + sync
   const remaining = await Item.query().execute();
   if (remaining.length > 0) {
     const target = remaining[0]!.getData() as ModelRecord;
     await Item.update(target._id, { score: 999 }, { sync: true });
-    const mldAfterUpdate = readFileSync(mldPath, 'utf-8');
-    assert(mldAfterUpdate.includes('"score":999'), 'update sync 后 .mld 包含更新值');
+    itemBlob = loadVaultModelBlob(DATA_ROOT, ATLAS, 'Item', INTEGRATION_VAULT_SECRET);
+    itemRows = vaultItemDataRows(itemBlob);
+    assert(
+      itemRows.some((r) => r.score === 999),
+      'update sync 后 Vault Item 数据行含 score 999',
+    );
   }
 
   await engine.flushAll();

@@ -6,6 +6,7 @@ export {
 } from '../src/authoring/AuthoringEngine.js';
 export { ModelDBAdmin } from './admin.js';
 export { AtlasRegistry } from './atlas-registry.js';
+export type { AtlasAuthoringFacilities } from './authoring-facilities.js';
 export {
   ModelEntity,
   AuthoringModel,
@@ -17,6 +18,11 @@ export type { AvailableRelation } from './entity.js';
 export { RelationEntity, AuthoringRelation } from './relation-entity.js';
 export { ModelStorage } from './storage.js';
 export { RelationIndexer } from './indexer.js';
+export {
+  AtlasSingleVault,
+  fileLooksLikeAtlasSingleVault,
+  ATLAS_SINGLE_VAULT_MAGIC,
+} from './atlas-single-vault.js';
 export { PersistenceManager, registerAuthoringShutdownTask } from './persistence-manager.js';
 export { MergedDataReader } from './merged-data-reader.js';
 export type { BufferedModelSource } from './merged-data-reader.js';

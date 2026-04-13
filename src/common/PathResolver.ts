@@ -57,9 +57,19 @@ export class PathResolver {
     return this.relationsRootResolved;
   }
 
-  /** `<atlas>/atlas-manifest.json` */
+  /** `<atlas>/atlas-manifest.json` (legacy layout only; vault mode stores manifest inside {@link atlasSingleVaultPath}). */
   manifestFilePath(): string {
     const filePath = resolve(join(this.atlasRootResolved, 'atlas-manifest.json'));
+    this.assertResolvedUnderAtlasRoot(filePath);
+    return filePath;
+  }
+
+  /**
+   * Single-file atlas vault: encrypted catalog of models, relations, and manifest.
+   * When used, do not create `models/`, `relations/`, or `atlas-manifest.json` on disk.
+   */
+  atlasSingleVaultPath(): string {
+    const filePath = resolve(join(this.atlasRootResolved, 'atlas.mld'));
     this.assertResolvedUnderAtlasRoot(filePath);
     return filePath;
   }
@@ -109,6 +119,14 @@ export class PathResolver {
       const body = serializeAtlasManifestFile(empty, this.atlasName);
       writeFileSync(manifestPath, body, 'utf-8');
     }
+  }
+
+  /**
+   * Vault layout: only the atlas directory exists (no `models/`, `relations/`, no manifest JSON).
+   * Callers must persist registry + payloads through {@link AtlasSingleVault}.
+   */
+  ensureAtlasVaultLayoutSync(): void {
+    mkdirSync(this.atlasRootResolved, { recursive: true });
   }
 
   /** @deprecated Use {@link PathResolver.ensureAtlasLayoutSync}. */

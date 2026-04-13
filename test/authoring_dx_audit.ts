@@ -12,6 +12,11 @@ import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import {
+  atlasVaultPath,
+  integrationVaultAuthoringOptions,
+  useIntegrationVaultEnv,
+} from './integration-vault.js';
 import { mergeDiskRowsWithAuthoringBuffer, QueryEngine } from '../src/runtime/query-engine.js';
 import type { ModelRecord } from '../common/types.js';
 import type { PredicateNode } from '../src/runtime/predicate-tree.js';
@@ -61,12 +66,17 @@ function auditQueryEngineExecute(): void {
 
 async function main(): Promise<void> {
   configureModelDBStorageRoot({ storageRoot: DATA_ROOT });
+  useIntegrationVaultEnv();
   await rm(join(DATA_ROOT, ATLAS), { recursive: true, force: true });
 
   auditMergeHelper();
   auditQueryEngineExecute();
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, storageRoot: DATA_ROOT });
+  const engine = new AuthoringEngine({
+    atlas: ATLAS,
+    storageRoot: DATA_ROOT,
+    ...integrationVaultAuthoringOptions,
+  });
   engine.registerModel('Dx', new Set(['id']));
 
   const Dx = engine.model('Dx');
@@ -83,9 +93,11 @@ async function main(): Promise<void> {
   const q1 = await engine.query('Dx', [r1._id]).execute();
   assert(q1.length === 1 && q1[0]!.getData().id === 'a1', '合并读：insert 后 query 可见');
 
-  const mldPath = join(DATA_ROOT, ATLAS, 'models', 'Dx.mld');
   await engine.insert('Dx', { id: 'a2', name: '二' }, { sync: true });
-  assert(existsSync(mldPath), 'engine.insert(..., { sync: true }) 后 Dx.mld 应存在');
+  assert(
+    existsSync(atlasVaultPath(DATA_ROOT, ATLAS)),
+    'engine.insert(..., { sync: true }) 后 atlas.mld 应存在',
+  );
 
   await engine.flushAll();
 

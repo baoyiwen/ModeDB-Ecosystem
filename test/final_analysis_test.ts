@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import { integrationVaultAuthoringOptions, useIntegrationVaultEnv } from './integration-vault.js';
 import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
 import { isAnalysisResult } from '../src/runtime/transform-engine.js';
 
@@ -22,9 +23,14 @@ function assert(cond: boolean, msg: string): void {
 
 async function run(): Promise<void> {
   configureModelDBStorageRoot({ storageRoot: DATA_ROOT });
+  useIntegrationVaultEnv();
   await rm(join(DATA_ROOT, ATLAS), { recursive: true, force: true });
 
-  const eng = new AuthoringEngine({ atlas: ATLAS, storageRoot: DATA_ROOT });
+  const eng = new AuthoringEngine({
+    atlas: ATLAS,
+    storageRoot: DATA_ROOT,
+    ...integrationVaultAuthoringOptions,
+  });
   eng.registerModel('Stats');
   const Stats = eng.model('Stats');
   Stats.updateFields(['id', 'year', 'country', 'population', 'gdp']);

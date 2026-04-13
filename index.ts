@@ -13,6 +13,11 @@ export type { AvailableRelation, UpdateOptions, DeleteOptions } from './authorin
 export { RelationEntity, AuthoringRelation } from './authoring/relation-entity.js';
 export { ModelStorage } from './authoring/storage.js';
 export { RelationIndexer } from './authoring/indexer.js';
+export {
+  AtlasSingleVault,
+  fileLooksLikeAtlasSingleVault,
+  ATLAS_SINGLE_VAULT_MAGIC,
+} from './authoring/atlas-single-vault.js';
 
 // ---------------------------------------------------------------------------
 // Runtime (read-side)
@@ -33,6 +38,7 @@ export {
   type RelationEmptyReason,
   type RelateDiagnostic,
   type HydrationContext,
+  type MemoryShadowOptions,
   resolveRelationOnRegistry,
   targetModelName,
   type ResolvedRelation,
@@ -84,6 +90,8 @@ export {
   type LocalFilterState,
   type QueryStartSpec,
   type QueryPlanASTv2,
+  queryPlanHasSerializedCallback,
+  deserializePredicate,
   type PredicateNode,
   type EvaluateResult,
   type PredicateStandardOperator,
@@ -110,7 +118,7 @@ export {
   type ParsedGroupDimension,
   type ComputeMetricToken,
 } from './runtime/index.js';
-export type { TraceableNull } from './runtime/index.js';
+export type { TraceableNull, RemoteExecuteSnapshot } from './runtime/index.js';
 export type { RuntimeAvailableRelation } from './runtime/model-runtime.js';
 export type { DataReader, IndexReader } from './common/provider.js';
 
@@ -156,6 +164,7 @@ export { DELETED_SENTINEL, isDeletedRecord } from './common/types.js';
 export {
   DataType,
   validateFieldValue,
+  isFieldValueEmpty,
   normalizeFieldDefs,
   normalizeFieldDef,
   coerceI18NValue,
@@ -181,6 +190,44 @@ export {
   unwrapValue,
 } from './common/value-objects.js';
 export type { ValueSyncFn, I18NDict, RGBA, UnitData } from './common/value-objects.js';
+export type { ValidateFieldOptions } from './common/data-types.js';
+export { DiagnosticCenter, ValidationReport, ErrorCodes } from './common/diagnostic.js';
+export type {
+  Severity,
+  DiagnosticCode,
+  DiagnosticContext,
+  Diagnostic,
+  DiagnosticLocale,
+  RowResult,
+  CodeEntry,
+  ValidationReportSummary,
+  ValidationReportJSON,
+} from './common/diagnostic.js';
+export { EngineLogger } from './common/engine-logger.js';
+export type { EngineLogLevel } from './common/engine-logger.js';
+export { InternalVault } from './common/internal-vault.js';
+export { SmartCache } from './common/smart-cache.js';
+export { encodeMldLine, parseMldLine, SHADOW_LINE_PREFIX } from './common/shadow-codec.js';
+export type { ParsedMldLine } from './common/shadow-codec.js';
+export { deriveWireSessionKey, encodeWirePayload, decodeWirePayload } from './common/wire-codec.js';
+export type {
+  WireClientMessage,
+  WireHandshakeRequest,
+  WireRpcEnvelope,
+  WireExecuteBody,
+  WireServerMessage,
+} from './src/network/wire-protocol.js';
+export type { WireExecuteResultJson } from './src/network/execute-result-wire.js';
+export { serializeExecuteResultForWire } from './src/network/execute-result-wire.js';
+export {
+  startModelDBWebSocketServer,
+  getWebSocketServerListeningPort,
+} from './server/modeldb-server.js';
+export { loadModelDBServerConfig } from './server/modeldb-config.js';
+export type {
+  ModelDBServerFileConfig,
+  ResolvedModelDBServerConfig,
+} from './server/modeldb-config.js';
 export type {
   ModelSchema,
   ModelDefinition,

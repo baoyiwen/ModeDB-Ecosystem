@@ -11,6 +11,7 @@ import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import { integrationVaultAuthoringOptions, useIntegrationVaultEnv } from './integration-vault.js';
 import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
 import type { HydratedEntity } from '../src/runtime/HydratedEntity.js';
 
@@ -19,11 +20,16 @@ const PIPE_ATLAS = join(DATA_ROOT, 'pipe');
 
 async function main(): Promise<void> {
   configureModelDBStorageRoot({ storageRoot: DATA_ROOT });
+  useIntegrationVaultEnv();
   await rm(PIPE_ATLAS, { recursive: true, force: true });
 
   console.log('--- 第一阶段：治理态 (Authoring) ---\n');
 
-  const admin = new AuthoringEngine({ atlas: 'pipe', storageRoot: DATA_ROOT });
+  const admin = new AuthoringEngine({
+    atlas: 'pipe',
+    storageRoot: DATA_ROOT,
+    ...integrationVaultAuthoringOptions,
+  });
 
   admin.quickLink('Pump', 'Zone', 'located_in', 'contains_pump');
 
@@ -35,11 +41,11 @@ async function main(): Promise<void> {
   Zone.updateFields(['id', 'label']);
   Rel.updateLogic('many-to-one', { sourceField: 'zoneCode', targetField: 'id' });
 
-  console.log('正在写入物理数据 (.mld)...');
+  console.log('正在写入物理数据（单文件 Vault / atlas.mld）...');
   await Zone.insert({ id: 'Z-001', label: '一号管廊区' });
   await Pump.insert({ id: 'P-101', name: '循环水泵A', zoneCode: 'Z-001' });
 
-  console.log('正在构建拓扑关系索引 (PROTOCOL → .rid)...');
+  console.log('正在构建拓扑关系索引 (PROTOCOL → Vault r:*)...');
   await Rel.bind({ strategy: 'PROTOCOL' });
   await admin.flushAll();
 

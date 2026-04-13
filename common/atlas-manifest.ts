@@ -14,6 +14,7 @@ export interface AtlasManifestFieldTypeJson {
   readonly type: string;
   readonly required?: boolean;
   readonly unit?: string;
+  readonly default?: unknown;
 }
 
 export interface AtlasManifestModelJson {
@@ -132,6 +133,9 @@ function deserializeFieldTypes(
     if (v.unit) {
       (def as { unit: string }).unit = v.unit;
     }
+    if (v.default !== undefined) {
+      (def as { default: unknown }).default = v.default;
+    }
     map.set(k, def);
   }
   return map;
@@ -226,7 +230,7 @@ function serializeFieldTypes(
   }
   const out: Record<string, AtlasManifestFieldTypeJson> = {};
   for (const [k, v] of ft) {
-    const entry: { type: string; required?: boolean; unit?: string } = {
+    const entry: { type: string; required?: boolean; unit?: string; default?: unknown } = {
       type: v.type,
     };
     if (v.required) {
@@ -234,6 +238,9 @@ function serializeFieldTypes(
     }
     if (v.unit) {
       entry.unit = v.unit;
+    }
+    if (v.default !== undefined) {
+      entry.default = v.default;
     }
     out[k] = entry;
   }

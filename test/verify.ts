@@ -9,11 +9,18 @@
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { readFile, rm } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
 import type { RelationIndexData } from '../common/types.js';
 import { AuthoringEngine } from '../authoring/engine.js';
 import { ModelDBClient } from '../runtime/client.js';
+import {
+  atlasVaultPath,
+  INTEGRATION_VAULT_SECRET,
+  integrationVaultAuthoringOptions,
+  loadVaultRelationData,
+  useIntegrationVaultEnv,
+} from './integration-vault.js';
 
 const DATA_ROOT = join(process.cwd(), 'data');
 
@@ -73,6 +80,7 @@ function assertThrows(fn: () => void, label: string): void {
 
 async function main(): Promise<void> {
   configureModelDBStorageRoot({ storageRoot: DATA_ROOT });
+  useIntegrationVaultEnv();
   await rm(DATA_ROOT, { recursive: true, force: true });
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -81,17 +89,25 @@ async function main(): Promise<void> {
 
   section('1. 多图谱隔离 — pipe / tran 独立目录与注册');
 
-  const pipe = new AuthoringEngine({ atlas: 'pipe', storageRoot: DATA_ROOT });
-  const tran = new AuthoringEngine({ atlas: 'tran', storageRoot: DATA_ROOT });
+  const pipe = new AuthoringEngine({
+    atlas: 'pipe',
+    storageRoot: DATA_ROOT,
+    ...integrationVaultAuthoringOptions,
+  });
+  const tran = new AuthoringEngine({
+    atlas: 'tran',
+    storageRoot: DATA_ROOT,
+    ...integrationVaultAuthoringOptions,
+  });
 
   const pipeRoot = join(DATA_ROOT, 'pipe');
   const tranRoot = join(DATA_ROOT, 'tran');
   assert(existsSync(pipeRoot), '物理目录存在 data/pipe');
   assert(existsSync(tranRoot), '物理目录存在 data/tran');
-  assert(existsSync(join(pipeRoot, 'models')), 'pipe/models 已创建');
-  assert(existsSync(join(tranRoot, 'models')), 'tran/models 已创建');
-  assert(existsSync(join(pipeRoot, 'relations')), 'pipe/relations 已创建');
-  assert(existsSync(join(tranRoot, 'relations')), 'tran/relations 已创建');
+  assert(existsSync(atlasVaultPath(DATA_ROOT, 'pipe')), 'pipe/atlas.mld（单文件 Vault）已创建');
+  assert(existsSync(atlasVaultPath(DATA_ROOT, 'tran')), 'tran/atlas.mld（单文件 Vault）已创建');
+  assert(!existsSync(join(pipeRoot, 'models')), 'pipe 下无 models/ 分文件目录');
+  assert(!existsSync(join(pipeRoot, 'relations')), 'pipe 下无 relations/ 分文件目录');
 
   // pipe：管廊 — Pump + Zone；tran：轨道 — 仅 Train
   pipe.quickLink('Pump', 'Zone', 'located_in', 'contains_pump');
@@ -104,8 +120,14 @@ async function main(): Promise<void> {
     pipe.model('Train');
   }, 'pipe 图谱无法获取 tran 的 Train 句柄（应抛错）');
 
-  assert(!existsSync(join(tranRoot, 'models', 'Pump.mld')), 'tran 下不存在 Pump.mld');
-  assert(!existsSync(join(pipeRoot, 'models', 'Train.mld')), 'pipe 下不存在 Train.mld');
+  assert(
+    !existsSync(join(tranRoot, 'models', 'Pump.mld')),
+    'tran 下不存在分文件 Pump.mld（Vault 模式无 models/）',
+  );
+  assert(
+    !existsSync(join(pipeRoot, 'models', 'Train.mld')),
+    'pipe 下不存在分文件 Train.mld（Vault 模式无 models/）',
+  );
 
   console.log('  ✔ pipe / tran 目录与模型命名空间互不干扰');
 
@@ -145,7 +167,7 @@ async function main(): Promise<void> {
   );
 
   await tran.flushAll();
-  assert(existsSync(join(tranRoot, 'models', 'Train.mld')), 'tran/models/Train.mld 已落盘');
+  assert(existsSync(atlasVaultPath(DATA_ROOT, 'tran')), 'tran 单文件 atlas.mld 已落盘');
 
   console.log(`  Pump1: ${pump1._id}  ZoneA: ${zoneA._id}  Train1: ${train1._id}`);
 
@@ -153,18 +175,21 @@ async function main(): Promise<void> {
   // 3. PROTOCOL：水泵与分区按协议字段匹配绑定 + .rid 正逆向成对
   // ═══════════════════════════════════════════════════════════════════════
 
-  section('3. PROTOCOL 绑定 — located_in（zoneCode ↔ code）与 .rid 成对校验');
+  section('3. PROTOCOL 绑定 — located_in（zoneCode ↔ code）与 Vault 内 r:* 成对校验');
 
   const locRel = pipe.relation('located_in');
   locRel.updateLogic('many-to-one', { sourceField: 'zoneCode', targetField: 'code' });
   await locRel.bind({ strategy: 'PROTOCOL' });
   await pipe.flushAll();
 
-  const ridPath = join(pipeRoot, 'relations', 'Pump-Zone-located_in.rid');
-  assert(existsSync(ridPath), '已生成 Pump-Zone-located_in.rid');
+  assert(existsSync(atlasVaultPath(DATA_ROOT, 'pipe')), 'pipe atlas.mld 存在（含关系索引）');
 
-  const ridRaw = await readFile(ridPath, 'utf-8');
-  const ridData = JSON.parse(ridRaw) as RelationIndexData;
+  const ridData = loadVaultRelationData(
+    DATA_ROOT,
+    'pipe',
+    'Pump-Zone-located_in',
+    INTEGRATION_VAULT_SECRET,
+  );
   assert(
     Object.keys(ridData.fwd).length > 0 && Object.keys(ridData.rev).length > 0,
     '.rid 中 fwd / rev 均非空',

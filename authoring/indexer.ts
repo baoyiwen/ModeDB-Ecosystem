@@ -1,5 +1,6 @@
 import { createReadStream } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { basename } from 'node:path';
 import { createInterface } from 'node:readline';
 import type {
   RelationDefinition,
@@ -12,6 +13,13 @@ import type {
 import type { IndexReader } from '../common/provider.js';
 import type { PathResolver } from '../src/common/PathResolver.js';
 import { IndexerError } from '../common/errors.js';
+import { AtlasSingleVault } from './atlas-single-vault.js';
+
+export interface RelationIndexerVaultOptions {
+  readonly vault: AtlasSingleVault;
+  readonly vaultSecret: string;
+  readonly loadModelRecords: (modelName: string) => Promise<ModelRecord[]>;
+}
 
 function relationFileKey(rel: RelationDefinition): string {
   return `${rel.source}-${rel.target}-${rel.forward}`;
@@ -32,8 +40,23 @@ interface LiveIndex {
 export class RelationIndexer implements IndexReader {
   private readonly indices = new Map<string, LiveIndex>();
   private dirReady = false;
+  private readonly vaultOptions?: RelationIndexerVaultOptions;
 
-  constructor(private readonly paths: PathResolver) {}
+  constructor(
+    private readonly paths: PathResolver,
+    vaultOptions?: RelationIndexerVaultOptions,
+  ) {
+    this.vaultOptions = vaultOptions;
+  }
+
+  private persistVaultSync(): void {
+    if (this.vaultOptions) {
+      this.vaultOptions.vault.saveSync(
+        this.paths.atlasSingleVaultPath(),
+        this.vaultOptions.vaultSecret,
+      );
+    }
+  }
 
   async bind(
     rel: RelationDefinition,
@@ -366,6 +389,14 @@ export class RelationIndexer implements IndexReader {
   // ---------------------------------------------------------------------------
 
   private async loadAllRecordsFromFiles(files: readonly string[]): Promise<ModelRecord[]> {
+    if (this.vaultOptions) {
+      const results: ModelRecord[] = [];
+      for (const file of files) {
+        const modelName = basename(file, '.mld');
+        results.push(...(await this.vaultOptions.loadModelRecords(modelName)));
+      }
+      return results;
+    }
     const results: ModelRecord[] = [];
     for (const file of files) {
       await this.scanFile(file, (r) => results.push(r));
@@ -412,15 +443,26 @@ export class RelationIndexer implements IndexReader {
       return cached;
     }
 
-    const filePath = this.paths.relationIndexFilePath(key);
     let data: RelationIndexData = { fwd: {}, rev: {} };
 
-    try {
-      const raw = await readFile(filePath, 'utf-8');
-      data = JSON.parse(raw) as RelationIndexData;
-    } catch (err) {
-      if (!isNodeError(err) || err.code !== 'ENOENT') {
-        throw new IndexerError(`Failed to load relation index "${key}"`, { cause: err });
+    if (this.vaultOptions) {
+      const raw = this.vaultOptions.vault.get(AtlasSingleVault.relationKey(key));
+      if (raw) {
+        try {
+          data = JSON.parse(raw) as RelationIndexData;
+        } catch (err) {
+          throw new IndexerError(`Failed to parse relation vault entry "${key}"`, { cause: err });
+        }
+      }
+    } else {
+      const filePath = this.paths.relationIndexFilePath(key);
+      try {
+        const raw = await readFile(filePath, 'utf-8');
+        data = JSON.parse(raw) as RelationIndexData;
+      } catch (err) {
+        if (!isNodeError(err) || err.code !== 'ENOENT') {
+          throw new IndexerError(`Failed to load relation index "${key}"`, { cause: err });
+        }
       }
     }
 
@@ -434,12 +476,18 @@ export class RelationIndexer implements IndexReader {
   }
 
   private async writeToDisk(key: string, index: LiveIndex): Promise<void> {
-    const filePath = this.paths.relationIndexFilePath(key);
     const data: RelationIndexData = {
       fwd: serializeMap(index.fwd),
       rev: serializeMap(index.rev),
     };
 
+    if (this.vaultOptions) {
+      this.vaultOptions.vault.set(AtlasSingleVault.relationKey(key), JSON.stringify(data));
+      this.persistVaultSync();
+      return;
+    }
+
+    const filePath = this.paths.relationIndexFilePath(key);
     try {
       await writeFile(filePath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
     } catch (err) {
@@ -448,6 +496,9 @@ export class RelationIndexer implements IndexReader {
   }
 
   private async ensureDir(): Promise<void> {
+    if (this.vaultOptions) {
+      return;
+    }
     if (this.dirReady) {
       return;
     }

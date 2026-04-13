@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import { integrationVaultAuthoringOptions, useIntegrationVaultEnv } from './integration-vault.js';
 import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
 import type { HydratedEntity } from '../src/runtime/HydratedEntity.js';
 import {
@@ -31,9 +32,14 @@ async function runAdvancedAudit(): Promise<void> {
   console.log('--- Model DB 2.0 高级查询审计开始 ---');
 
   configureModelDBStorageRoot({ storageRoot: DATA_ROOT });
+  useIntegrationVaultEnv();
   await rm(join(DATA_ROOT, ATLAS), { recursive: true, force: true });
 
-  const admin = new AuthoringEngine({ atlas: ATLAS, storageRoot: DATA_ROOT });
+  const admin = new AuthoringEngine({
+    atlas: ATLAS,
+    storageRoot: DATA_ROOT,
+    ...integrationVaultAuthoringOptions,
+  });
 
   admin.quickLink('Region', 'Region', 'sub_regions', 'parent_region');
   const Region = admin.model('Region');

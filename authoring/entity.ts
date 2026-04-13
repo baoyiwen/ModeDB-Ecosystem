@@ -14,6 +14,8 @@ import type { QueryChain } from '../src/runtime/query.js';
 import type { PredicateNode } from '../src/runtime/predicate-tree.js';
 import { QueryEngine } from '../src/runtime/query-engine.js';
 import { normalizeFieldDefs, type FieldDefsRecord } from '../common/data-types.js';
+import type { ValidationReport } from '../common/diagnostic.js';
+import type { AtlasAuthoringFacilities } from './authoring-facilities.js';
 
 /** Options for {@link ModelEntity.insert}. */
 export interface InsertOptions {
@@ -51,8 +53,19 @@ export class ModelEntity extends RuntimeModel {
     private readonly indexer: RelationIndexer,
     private readonly paths: PathResolver,
     private readonly persistence: PersistenceManager,
+    facilities?: AtlasAuthoringFacilities,
   ) {
-    super(name, registry, persistence.getMergedReader(), indexer, storage.fieldContext);
+    super(
+      name,
+      registry,
+      persistence.getMergedReader(),
+      indexer,
+      storage.fieldContext,
+      facilities?.memoryShadowHydration && facilities.internalVault
+        ? { vault: facilities.internalVault }
+        : undefined,
+      facilities?.smartCache,
+    );
     this._buffer = this.persistence.getOrCreateModelBuffer(name);
   }
 
@@ -98,6 +111,22 @@ export class ModelEntity extends RuntimeModel {
       await this._internalFlush();
     }
     return record;
+  }
+
+  /**
+   * Batch insert: validates each row independently. Returns a {@link ValidationReport}
+   * describing which rows succeeded and which failed (with diagnostic details).
+   * Failed rows do not block successful ones.
+   */
+  async insertMany(
+    rows: ReadonlyArray<Record<string, unknown>>,
+    options?: InsertOptions,
+  ): Promise<ValidationReport<ModelRecord>> {
+    const report = await this.persistence.insertMany(this.name, rows);
+    if (report.totalSucceeded > 0 && options?.sync) {
+      await this._internalFlush();
+    }
+    return report;
   }
 
   /**

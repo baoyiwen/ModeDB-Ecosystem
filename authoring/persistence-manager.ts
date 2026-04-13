@@ -1,6 +1,15 @@
+import { writeFile } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
 import { DELETED_SENTINEL, isDeletedRecord, type ModelRecord } from '../common/types.js';
 import type { ModelStorage } from './storage.js';
 import { MergedDataReader, type BufferedModelSource } from './merged-data-reader.js';
+import {
+  ValidationReport,
+  DiagnosticCenter,
+  ErrorCodes,
+  type Diagnostic,
+} from '../common/diagnostic.js';
+import type { SmartCache } from '../common/smart-cache.js';
 
 const shutdownTasks: Array<() => Promise<void>> = [];
 let lifecycleHooksInstalled = false;
@@ -50,8 +59,15 @@ export class PersistenceManager implements BufferedModelSource {
   private readonly merged: MergedDataReader;
   private pendingFlushPromise: Promise<void> | null = null;
 
-  constructor(private readonly storage: ModelStorage) {
+  constructor(
+    private readonly storage: ModelStorage,
+    private readonly smartCache?: SmartCache,
+  ) {
     this.merged = new MergedDataReader(storage, this);
+  }
+
+  private invalidateQueryCache(modelName: string): void {
+    this.smartCache?.invalidateModel(modelName);
   }
 
   getMergedReader(): MergedDataReader {
@@ -90,13 +106,57 @@ export class PersistenceManager implements BufferedModelSource {
     return false;
   }
 
-  /** Stage one row in the write-behind map (see {@link ModelEntity.insert} for `{ sync: true }`). */
+  /**
+   * Stage one row in the write-behind map.
+   *
+   * Validation runs through DiagnosticCenter in **throw** mode — invalid data
+   * never enters the buffer. For batch inserts with silent collection, use
+   * {@link insertMany}.
+   */
   async insert(modelName: string, data: Record<string, unknown>): Promise<ModelRecord> {
     const record = this.storage.prepareInsert(modelName, data);
     const buf = this.getOrCreateModelBuffer(modelName);
     buf.set(record._id, record);
     this.dirtyModels.add(modelName);
+    this.invalidateQueryCache(modelName);
     return record;
+  }
+
+  /**
+   * Batch insert: validates each row independently. Successful rows are staged;
+   * failed rows are recorded in the returned {@link ValidationReport}.
+   */
+  async insertMany(
+    modelName: string,
+    rows: ReadonlyArray<Record<string, unknown>>,
+  ): Promise<ValidationReport<ModelRecord>> {
+    const report = new ValidationReport<ModelRecord>();
+    for (let i = 0; i < rows.length; i++) {
+      const diagnostics: Diagnostic[] = [];
+      try {
+        const record = this.storage.prepareInsert(modelName, rows[i], diagnostics);
+        if (diagnostics.some((d) => d.severity === 'ERROR' || d.severity === 'FATAL')) {
+          report.addRow({ index: i, success: false, diagnostics });
+          continue;
+        }
+        const buf = this.getOrCreateModelBuffer(modelName);
+        buf.set(record._id, record);
+        this.dirtyModels.add(modelName);
+        report.addRow({ index: i, success: true, data: record, diagnostics });
+      } catch (err) {
+        const d = DiagnosticCenter.create('E1010', {
+          index: i,
+          model: modelName,
+          detail: err instanceof Error ? err.message : String(err),
+        });
+        diagnostics.push(d);
+        report.addRow({ index: i, success: false, diagnostics });
+      }
+    }
+    if (report.successCount > 0) {
+      this.invalidateQueryCache(modelName);
+    }
+    return report;
   }
 
   /**
@@ -127,6 +187,7 @@ export class PersistenceManager implements BufferedModelSource {
     delete (merged as Record<string, unknown>)[DELETED_SENTINEL];
     buf.set(id, merged);
     this.dirtyModels.add(modelName);
+    this.invalidateQueryCache(modelName);
     return merged;
   }
 
@@ -152,12 +213,16 @@ export class PersistenceManager implements BufferedModelSource {
     } as ModelRecord;
     buf.set(id, tombstone);
     this.dirtyModels.add(modelName);
+    this.invalidateQueryCache(modelName);
     return true;
   }
 
   /**
    * Flush one model: live rows are appended; tombstoned rows trigger a full rewrite
    * that compacts deleted lines out of the `.mld` file.
+   *
+   * On disk I/O failure, emits a FATAL diagnostic via {@link DiagnosticCenter} and
+   * attempts an emergency `.dump` export to prevent data loss.
    */
   async flushModelToDisk(modelName: string): Promise<void> {
     for (;;) {
@@ -170,8 +235,8 @@ export class PersistenceManager implements BufferedModelSource {
         return;
       }
       this.pendingFlushPromise = (async () => {
+        const batch = [...map.values()];
         try {
-          const batch = [...map.values()];
           const hasTombstones = batch.some(isDeletedRecord);
           map.clear();
           this.dirtyModels.delete(modelName);
@@ -181,6 +246,9 @@ export class PersistenceManager implements BufferedModelSource {
           } else if (batch.length > 0) {
             await this.storage.appendRecordsToDisk(modelName, batch);
           }
+        } catch (err) {
+          await this._emergencyDump(modelName, batch, err);
+          throw err;
         } finally {
           this.pendingFlushPromise = null;
         }
@@ -192,6 +260,9 @@ export class PersistenceManager implements BufferedModelSource {
   /**
    * Append all staged rows to `.mld` files and clear buffers for those models.
    * Idempotent when buffers are empty. Serialized so concurrent callers share one run.
+   *
+   * On disk I/O failure for any model, emits a FATAL diagnostic and writes an
+   * emergency `.dump` file before re-throwing.
    */
   async flushPendingToDisk(): Promise<void> {
     for (;;) {
@@ -214,10 +285,15 @@ export class PersistenceManager implements BufferedModelSource {
             map.clear();
             this.dirtyModels.delete(model);
 
-            if (hasTombstones) {
-              await this._compactRewrite(model, batch);
-            } else if (batch.length > 0) {
-              await this.storage.appendRecordsToDisk(model, batch);
+            try {
+              if (hasTombstones) {
+                await this._compactRewrite(model, batch);
+              } else if (batch.length > 0) {
+                await this.storage.appendRecordsToDisk(model, batch);
+              }
+            } catch (err) {
+              await this._emergencyDump(model, batch, err);
+              throw err;
             }
           }
         } finally {
@@ -248,5 +324,41 @@ export class PersistenceManager implements BufferedModelSource {
       }
     }
     await this.storage.rewriteRecordsToDisk(modelName, live);
+  }
+
+  /**
+   * Emergency dump: when a flush fails, write the buffered rows to a `.dump`
+   * file next to the `.mld` to prevent data loss, then emit a FATAL diagnostic.
+   *
+   * Tries the models directory first; if that also fails, falls back to the
+   * atlas root directory.
+   */
+  private async _emergencyDump(
+    modelName: string,
+    batch: readonly ModelRecord[],
+    cause: unknown,
+  ): Promise<void> {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    DiagnosticCenter.report(
+      ErrorCodes.IO_PERSISTENCE_FAIL,
+      { model: modelName, detail },
+      'collect',
+    );
+
+    const lines = batch.map((r) => JSON.stringify(r)).join('\n') + '\n';
+    const mldPath = this.storage.filePath(modelName);
+    const candidates = [
+      join(dirname(mldPath), `${modelName}.dump`),
+      join(dirname(dirname(mldPath)), `${modelName}.dump`),
+    ];
+
+    for (const dumpPath of candidates) {
+      try {
+        await writeFile(dumpPath, lines, 'utf-8');
+        return;
+      } catch {
+        /* try next candidate */
+      }
+    }
   }
 }

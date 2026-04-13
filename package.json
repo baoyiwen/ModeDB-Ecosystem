@@ -3,17 +3,26 @@
   "version": "1.0.0",
   "description": "这是一个关于数据治理的引擎，旨在做一个能够形成数据资产图谱。他是一个超关系型数据引擎，我想使用他来建立物理关系。不在使用传统的数据库主外键关系来关联数据。但是，目前这个只是一个想法，还在实现与构思当中。",
   "type": "module",
+  "bin": {
+    "modeldb-server": "./dist/server/cli.js"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist",
-    "docs/architecture.svg"
+    "docs/architecture.svg",
+    "modeldb.config.example.json"
   ],
   "directories": {
     "test": "test"
   },
   "scripts": {
     "build": "tsc",
+    "build:sdk": "npm run build -w @mode-db/model-db-client-sdk",
+    "start:server": "node dist/server/cli.js",
     "dev": "tsc --watch",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -21,8 +30,13 @@
     "format:check": "prettier --check \"**/*.{js,ts,json,md}\"",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:integration",
-    "test:integration": "tsx test/verify.ts && tsx test/query_filters.ts && tsx test/logic_integrity.ts && tsx test/logic_closure_audit.ts && tsx test/query_chain_extended.ts && tsx test/authoring_dx_audit.ts && tsx test/crud_audit.ts && tsx test/datatype_audit.ts",
+    "test:integration": "tsx test/verify.ts && tsx test/query_filters.ts && tsx test/logic_integrity.ts && tsx test/logic_closure_audit.ts && tsx test/query_chain_extended.ts && tsx test/authoring_dx_audit.ts && tsx test/crud_audit.ts && tsx test/datatype_audit.ts && tsx test/diagnostic_audit.ts && tsx test/vault_audit.ts && tsx test/wire_server_audit.ts",
+    "wire-server-audit": "tsx test/wire_server_audit.ts",
     "datatype-audit": "tsx test/datatype_audit.ts",
+    "diagnostic-audit": "tsx test/diagnostic_audit.ts",
+    "stress-test": "tsx test/million_stress_test.ts",
+    "shadow-smart-cache-audit": "tsx test/shadow_smartcache_logger_audit.ts",
+    "vault-audit": "tsx test/vault_audit.ts",
     "first-run": "tsx test/first_run.ts",
     "audit": "tsx test/logic_closure_audit.ts",
     "integrity": "tsx test/logic_integrity.ts",
@@ -56,7 +70,11 @@
     "url": "https://github.com/baoyiwen/mode-db-engine/issues"
   },
   "homepage": "https://github.com/baoyiwen/mode-db-engine#readme",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
   "devDependencies": {
+    "@types/ws": "^8.18.1",
     "@types/node": "^25.5.2",
     "@typescript-eslint/eslint-plugin": "^8.58.1",
     "@typescript-eslint/parser": "^8.58.1",
@@ -66,6 +84,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
-    "tsx": "^4.21.0"
+    "tsx": "^4.21.0",
+    "tsup": "^8.5.0"
   }
 }

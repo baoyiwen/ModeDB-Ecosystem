@@ -1,5 +1,11 @@
-import type { DataType, FieldTypeDef } from './data-types.js';
+import { type DataType, type FieldTypeDef, isFieldValueEmpty } from './data-types.js';
 import { ValidationError } from './errors.js';
+import {
+  DiagnosticCenter,
+  ErrorCodes,
+  type Diagnostic,
+  type DiagnosticContext,
+} from './diagnostic.js';
 
 /**
  * Callback signature for syncing a field value back to the model buffer.
@@ -19,6 +25,9 @@ export type ValueSyncFn = (fieldName: string, rawValue: unknown) => void;
  * changes into the write-behind buffer without manual plumbing.
  */
 export abstract class ValueObject<T = unknown> {
+  /** Optional context for richer diagnostic messages (set by hydration layer). */
+  _diagCtx?: DiagnosticContext;
+
   constructor(
     protected _value: T,
     readonly fieldName: string,
@@ -30,10 +39,67 @@ export abstract class ValueObject<T = unknown> {
 
   abstract validate(raw: unknown): T;
 
-  update(newValue: T | unknown): void {
-    const validated = this.validate(newValue);
+  /**
+   * Returns `true` when the current value is semantically empty for this type.
+   * Each subclass refines the definition of "empty".
+   */
+  isEmpty(): boolean {
+    return isFieldValueEmpty(this._value, this.typeDef.type);
+  }
+
+  /**
+   * Replace the wrapped value. Validates the new value, enforces `required`
+   * constraints (rejects semantically empty values when `required: true`),
+   * and pushes the raw data to the model buffer via the sync callback.
+   *
+   * When `diagnostics` is provided, errors are collected instead of thrown.
+   */
+  update(newValue: T | unknown, diagnostics?: Diagnostic[]): boolean {
+    const mode: 'throw' | 'collect' = diagnostics ? 'collect' : 'throw';
+    const ctx: DiagnosticContext = {
+      field: this.fieldName,
+      type: this.typeDef.type,
+      ...this._diagCtx,
+    };
+
+    let validated: T;
+    try {
+      validated = this.validate(newValue);
+    } catch (err) {
+      DiagnosticCenter.report(
+        ErrorCodes.TYPE_MISMATCH,
+        { ...ctx, received: typeof newValue },
+        mode,
+        diagnostics,
+      );
+      if (mode === 'throw') {
+        throw err;
+      }
+      return false;
+    }
+
+    if (this.typeDef.required && isFieldValueEmpty(validated, this.typeDef.type)) {
+      DiagnosticCenter.report(ErrorCodes.SCHEMA_REQUIRED_EMPTY, ctx, mode, diagnostics);
+      return false;
+    }
     this._value = validated;
     this._sync?.(this.fieldName, this.getData());
+    return true;
+  }
+
+  /**
+   * Explicitly push the current value to the model buffer.
+   * Equivalent to calling the sync callback with the current raw data.
+   * Throws if no sync callback is available (read-only context).
+   */
+  save(): void {
+    if (!this._sync) {
+      DiagnosticCenter.report(ErrorCodes.VO_NO_SYNC, {
+        field: this.fieldName,
+        ...this._diagCtx,
+      });
+    }
+    this._sync!(this.fieldName, this.getData());
   }
 
   get dataType(): DataType {
@@ -80,6 +146,10 @@ export class I18NValue extends ValueObject<I18NDict> {
 
   get locales(): string[] {
     return Object.keys(this._value);
+  }
+
+  isEmpty(): boolean {
+    return Object.keys(this._value).length === 0;
   }
 }
 
@@ -163,6 +233,11 @@ export class ColorValue extends ValueObject<RGBA> {
     }
     return `rgb(${r}, ${g}, ${b})`;
   }
+
+  isEmpty(): boolean {
+    const { r, g, b } = this._value;
+    return typeof r !== 'number' || typeof g !== 'number' || typeof b !== 'number';
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -225,6 +300,10 @@ export class UnitValue extends ValueObject<UnitData> {
     }
     return this._value.value * factor;
   }
+
+  isEmpty(): boolean {
+    return typeof this._value.value !== 'number' || Number.isNaN(this._value.value);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -243,6 +322,10 @@ export class StringValue extends ValueObject<string> {
     throw new ValidationError(
       `StringValue "${this.fieldName}" expects string but received ${typeof raw}.`,
     );
+  }
+
+  isEmpty(): boolean {
+    return this._value.trim().length === 0;
   }
 }
 

@@ -7,18 +7,23 @@ import type { DataReader } from '../common/provider.js';
 import type { PathResolver } from '../src/common/PathResolver.js';
 import { ModelNotRegisteredError, FileIOError } from '../common/errors.js';
 import { validateFieldValue, coerceI18NValue, type FieldTypeDef } from '../common/data-types.js';
+import type { Diagnostic } from '../common/diagnostic.js';
 import type { FieldMatchContext } from '../src/runtime/query-filter.js';
+import { encodeMldLine, parseMldLine } from '../common/shadow-codec.js';
+import { AtlasSingleVault } from './atlas-single-vault.js';
 
 const SCHEMA_HEADER_KEY = '__schema__';
 
-function isSchemaHeaderLine(line: string): boolean {
-  return line.startsWith(`{"${SCHEMA_HEADER_KEY}":`);
+export interface ModelStorageVaultOptions {
+  readonly vault: AtlasSingleVault;
+  readonly vaultSecret: string;
 }
 
 function buildSchemaHeaderLine(schema: ModelSchema): string {
-  const ft: Record<string, { type: string; required?: boolean; unit?: string }> = {};
+  const ft: Record<string, { type: string; required?: boolean; unit?: string; default?: unknown }> =
+    {};
   for (const [k, v] of schema.fieldTypes) {
-    const entry: { type: string; required?: boolean; unit?: string } = {
+    const entry: { type: string; required?: boolean; unit?: string; default?: unknown } = {
       type: v.type,
     };
     if (v.required) {
@@ -26,6 +31,9 @@ function buildSchemaHeaderLine(schema: ModelSchema): string {
     }
     if (v.unit) {
       entry.unit = v.unit;
+    }
+    if (v.default !== undefined) {
+      entry.default = v.default;
     }
     ft[k] = entry;
   }
@@ -53,8 +61,54 @@ export class ModelStorage implements DataReader {
   private readonly schemas = new Map<string, ModelSchema>();
   /** Current locale for I18N auto-wrap on insert; set by AuthoringEngine. */
   locale: string | undefined;
+  /**
+   * When true, `.mld` data and schema header lines are written with {@link encodeMldLine}
+   * (no plaintext JSON). Reads accept both legacy plain lines and obfuscated lines.
+   */
+  shadowDiskEncoding = false;
 
-  constructor(private readonly paths: PathResolver) {}
+  private readonly vaultOptions?: ModelStorageVaultOptions;
+
+  constructor(
+    private readonly paths: PathResolver,
+    vaultOptions?: ModelStorageVaultOptions,
+  ) {
+    this.vaultOptions = vaultOptions;
+  }
+
+  private get vault(): AtlasSingleVault | undefined {
+    return this.vaultOptions?.vault;
+  }
+
+  private persistVaultSync(): void {
+    if (this.vaultOptions) {
+      this.vaultOptions.vault.saveSync(
+        this.paths.atlasSingleVaultPath(),
+        this.vaultOptions.vaultSecret,
+      );
+    }
+  }
+
+  private modelVaultKey(modelName: string): string {
+    return AtlasSingleVault.modelKey(modelName);
+  }
+
+  private parseVaultModelLines(modelName: string): ModelRecord[] {
+    const raw = this.vault!.get(this.modelVaultKey(modelName)) ?? '';
+    const results: ModelRecord[] = [];
+    for (const line of raw.split('\n')) {
+      const trimmed = line.trim();
+      if (trimmed.length === 0) {
+        continue;
+      }
+      const obj = JSON.parse(trimmed) as Record<string, unknown>;
+      if (SCHEMA_HEADER_KEY in obj) {
+        continue;
+      }
+      results.push(obj as ModelRecord);
+    }
+    return results;
+  }
 
   registerSchema(schema: ModelSchema): void {
     if (this.schemas.has(schema.name)) {
@@ -98,10 +152,16 @@ export class ModelStorage implements DataReader {
   /**
    * Build one persisted row (UUID + timestamp + schema-filtered fields) without writing to disk.
    * Used by the authoring persistence layer for buffered inserts.
+   *
+   * When `diagnostics` is provided, validation errors are collected instead of thrown.
    */
-  prepareInsert(modelName: string, data: Record<string, unknown>): ModelRecord {
+  prepareInsert(
+    modelName: string,
+    data: Record<string, unknown>,
+    diagnostics?: Diagnostic[],
+  ): ModelRecord {
     const schema = this.resolveSchema(modelName);
-    const clean = this.sanitize(data, schema);
+    const clean = this.sanitize(data, schema, diagnostics);
     return {
       _id: randomUUID(),
       _createdAt: new Date().toISOString(),
@@ -115,16 +175,32 @@ export class ModelStorage implements DataReader {
       return;
     }
     const schema = this.resolveSchema(modelName);
+    if (this.vault) {
+      const key = this.modelVaultKey(modelName);
+      let body = this.vault.get(key) ?? '';
+      const isNew = body.trim().length === 0;
+      if (isNew) {
+        body = buildSchemaHeaderLine(schema) + '\n';
+      }
+      for (const r of records) {
+        body += JSON.stringify(r) + '\n';
+      }
+      this.vault.set(key, body);
+      this.persistVaultSync();
+      return;
+    }
+
     const filePath = this.filePath(modelName);
     await this.ensureDir();
 
     const isNew = !existsSync(filePath) || statSync(filePath).size === 0;
     let body = '';
     if (isNew) {
-      body += buildSchemaHeaderLine(schema) + '\n';
+      const headerObj = JSON.parse(buildSchemaHeaderLine(schema)) as Record<string, unknown>;
+      body += encodeMldLine(headerObj, this.shadowDiskEncoding) + '\n';
     }
     for (const r of records) {
-      body += JSON.stringify(r) + '\n';
+      body += encodeMldLine(r, this.shadowDiskEncoding) + '\n';
     }
     try {
       await appendFile(filePath, body, 'utf-8');
@@ -141,11 +217,23 @@ export class ModelStorage implements DataReader {
    */
   async rewriteRecordsToDisk(modelName: string, records: readonly ModelRecord[]): Promise<void> {
     const schema = this.resolveSchema(modelName);
+    if (this.vault) {
+      const headerObj = JSON.parse(buildSchemaHeaderLine(schema)) as Record<string, unknown>;
+      let body = JSON.stringify(headerObj) + '\n';
+      for (const r of records) {
+        body += JSON.stringify(r) + '\n';
+      }
+      this.vault.set(this.modelVaultKey(modelName), body);
+      this.persistVaultSync();
+      return;
+    }
+
     const filePath = this.filePath(modelName);
     await this.ensureDir();
-    let body = buildSchemaHeaderLine(schema) + '\n';
+    const headerObj = JSON.parse(buildSchemaHeaderLine(schema)) as Record<string, unknown>;
+    let body = encodeMldLine(headerObj, this.shadowDiskEncoding) + '\n';
     for (const r of records) {
-      body += JSON.stringify(r) + '\n';
+      body += encodeMldLine(r, this.shadowDiskEncoding) + '\n';
     }
     try {
       await writeFile(filePath, body, 'utf-8');
@@ -163,6 +251,20 @@ export class ModelStorage implements DataReader {
 
   async getAll(modelName: string): Promise<ModelRecord[]> {
     this.resolveSchema(modelName);
+    if (this.vault) {
+      try {
+        return this.parseVaultModelLines(modelName);
+      } catch (err) {
+        throw new FileIOError(
+          `Failed to read vault model "${modelName}"`,
+          this.paths.atlasSingleVaultPath(),
+          {
+            cause: err,
+          },
+        );
+      }
+    }
+
     const results: ModelRecord[] = [];
     const filePath = this.filePath(modelName);
 
@@ -178,10 +280,11 @@ export class ModelStorage implements DataReader {
     try {
       for await (const line of rl) {
         const trimmed = line.trim();
-        if (trimmed.length === 0 || isSchemaHeaderLine(trimmed)) {
+        const parsed = parseMldLine(trimmed);
+        if (!parsed || parsed.kind === 'header') {
           continue;
         }
-        results.push(JSON.parse(trimmed) as ModelRecord);
+        results.push(parsed.record);
       }
     } catch (err) {
       if (isNodeError(err) && err.code === 'ENOENT') {
@@ -198,6 +301,14 @@ export class ModelStorage implements DataReader {
     visitor: (record: ModelRecord) => void | Promise<void>,
   ): Promise<void> {
     this.resolveSchema(modelName);
+    if (this.vault) {
+      const rows = this.parseVaultModelLines(modelName);
+      for (const r of rows) {
+        await visitor(r);
+      }
+      return;
+    }
+
     const filePath = this.filePath(modelName);
 
     let stream: ReturnType<typeof createReadStream> | undefined;
@@ -212,11 +323,11 @@ export class ModelStorage implements DataReader {
     try {
       for await (const line of rl) {
         const trimmed = line.trim();
-        if (trimmed.length === 0 || isSchemaHeaderLine(trimmed)) {
+        const parsed = parseMldLine(trimmed);
+        if (!parsed || parsed.kind === 'header') {
           continue;
         }
-        const record = JSON.parse(trimmed) as ModelRecord;
-        await visitor(record);
+        await visitor(parsed.record);
       }
     } catch (err) {
       if (isNodeError(err) && err.code === 'ENOENT') {
@@ -231,6 +342,11 @@ export class ModelStorage implements DataReader {
 
     if (ids.length === 0) {
       return [];
+    }
+
+    if (this.vault) {
+      const target = new Set(ids);
+      return this.parseVaultModelLines(modelName).filter((r) => target.has(r._id));
     }
 
     const target = new Set(ids);
@@ -253,11 +369,12 @@ export class ModelStorage implements DataReader {
         }
 
         const trimmed = line.trim();
-        if (trimmed.length === 0 || isSchemaHeaderLine(trimmed)) {
+        const parsed = parseMldLine(trimmed);
+        if (!parsed || parsed.kind === 'header') {
           continue;
         }
 
-        const record = JSON.parse(trimmed) as ModelRecord;
+        const record = parsed.record;
         if (target.has(record._id)) {
           results.push(record);
           target.delete(record._id);
@@ -279,6 +396,16 @@ export class ModelStorage implements DataReader {
     value: unknown,
   ): Promise<ModelRecord | undefined> {
     this.resolveSchema(modelName);
+    if (this.vault) {
+      for (const record of this.parseVaultModelLines(modelName)) {
+        const v = (record as Record<string, unknown>)[field];
+        if (v === value) {
+          return record;
+        }
+      }
+      return undefined;
+    }
+
     const filePath = this.filePath(modelName);
 
     let stream: ReturnType<typeof createReadStream> | undefined;
@@ -293,10 +420,11 @@ export class ModelStorage implements DataReader {
     try {
       for await (const line of rl) {
         const trimmed = line.trim();
-        if (trimmed.length === 0 || isSchemaHeaderLine(trimmed)) {
+        const parsed = parseMldLine(trimmed);
+        if (!parsed || parsed.kind === 'header') {
           continue;
         }
-        const record = JSON.parse(trimmed) as ModelRecord;
+        const record = parsed.record;
         const v = (record as Record<string, unknown>)[field];
         if (v === value) {
           return record;
@@ -324,29 +452,58 @@ export class ModelStorage implements DataReader {
     return schema;
   }
 
-  private sanitize(data: Record<string, unknown>, schema: ModelSchema): Record<string, unknown> {
+  private sanitize(
+    data: Record<string, unknown>,
+    schema: ModelSchema,
+    diagnostics?: Diagnostic[],
+  ): Record<string, unknown> {
     const clean: Record<string, unknown> = {};
+    const valOpts = diagnostics
+      ? { locale: this.locale, diagnostics, model: schema.name }
+      : this.locale;
     for (const key of Object.keys(data)) {
       if (schema.fields.has(key)) {
         let value = data[key];
         const def = schema.fieldTypes.get(key);
         if (def) {
-          validateFieldValue(key, value, def, this.locale);
+          if ((value === undefined || value === null) && def.default !== undefined) {
+            value =
+              typeof def.default === 'function' ? (def.default as () => unknown)() : def.default;
+          }
+          validateFieldValue(key, value, def, valOpts);
           value = coerceI18NValue(value, def, this.locale);
         }
         clean[key] = value;
       }
     }
+    for (const [key, def] of schema.fieldTypes) {
+      if (!(key in clean) && def.default !== undefined) {
+        let value: unknown =
+          typeof def.default === 'function' ? (def.default as () => unknown)() : def.default;
+        validateFieldValue(key, value, def, valOpts);
+        value = coerceI18NValue(value, def, this.locale);
+        clean[key] = value;
+      } else if (!(key in clean) && def.required) {
+        validateFieldValue(key, undefined, def, valOpts);
+      }
+    }
     return clean;
   }
 
-  private filePath(modelName: string): string {
+  /** Resolve the `.mld` file path for a model (legacy); vault mode returns the atlas vault path. */
+  filePath(modelName: string): string {
+    if (this.vault) {
+      return this.paths.atlasSingleVaultPath();
+    }
     return this.paths.modelDataPath(modelName);
   }
 
   private dirReady = false;
 
   private async ensureDir(): Promise<void> {
+    if (this.vault) {
+      return;
+    }
     if (this.dirReady) {
       return;
     }

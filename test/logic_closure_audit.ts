@@ -9,12 +9,20 @@
  */
 
 import { existsSync } from 'node:fs';
-import { readFile, rm } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
 import type { RelationIndexData } from '../common/types.js';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
 import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
+import {
+  atlasVaultPath,
+  INTEGRATION_VAULT_SECRET,
+  integrationVaultAuthoringOptions,
+  loadVaultModelBlob,
+  loadVaultRelationData,
+  useIntegrationVaultEnv,
+} from './integration-vault.js';
 
 function dataRoot(): string {
   const env = process.env.STORAGE_ROOT?.trim() || process.env.MODEL_DB_STORAGE_ROOT?.trim();
@@ -52,6 +60,7 @@ function assertBidirectionalRid(data: RelationIndexData, label: string): void {
 async function runAudit(): Promise<void> {
   const root = dataRoot();
   configureModelDBStorageRoot({ storageRoot: root });
+  useIntegrationVaultEnv();
 
   const pipeAtlas = join(root, 'pipe_system');
   const tranAtlas = join(root, 'tran_system');
@@ -66,8 +75,16 @@ async function runAudit(): Promise<void> {
   // --- 审计 1: 物理 / 图谱隔离 ---
   console.log('[审计 1/4] 验证 Atlas 物理隔离...');
 
-  const pipeAdmin = new AuthoringEngine({ atlas: 'pipe_system', storageRoot: root });
-  const tranAdmin = new AuthoringEngine({ atlas: 'tran_system', storageRoot: root });
+  const pipeAdmin = new AuthoringEngine({
+    atlas: 'pipe_system',
+    storageRoot: root,
+    ...integrationVaultAuthoringOptions,
+  });
+  const tranAdmin = new AuthoringEngine({
+    atlas: 'tran_system',
+    storageRoot: root,
+    ...integrationVaultAuthoringOptions,
+  });
 
   pipeAdmin.registerModel('Pump');
   tranAdmin.registerModel('Train');
@@ -76,15 +93,18 @@ async function runAudit(): Promise<void> {
   await tranAdmin.model('Train').insert({});
   await Promise.all([pipeAdmin.flushAll(), tranAdmin.flushAll()]);
 
-  const pipePumpMld = join(pipeAtlas, 'models', 'Pump.mld');
-  const pipeTrainMld = join(pipeAtlas, 'models', 'Train.mld');
-  const tranTrainMld = join(tranAtlas, 'models', 'Train.mld');
-  const tranPumpMld = join(tranAtlas, 'models', 'Pump.mld');
-
-  assert(existsSync(pipePumpMld), 'pipe_system 应存在 Pump.mld');
-  assert(!existsSync(pipeTrainMld), 'pipe_system 不应出现 Train.mld（跨库污染）');
-  assert(existsSync(tranTrainMld), 'tran_system 应存在 Train.mld');
-  assert(!existsSync(tranPumpMld), 'tran_system 不应出现 Pump.mld（跨库污染）');
+  const pipeVaultFile = atlasVaultPath(root, 'pipe_system');
+  const tranVaultFile = atlasVaultPath(root, 'tran_system');
+  assert(existsSync(pipeVaultFile), 'pipe_system 应存在 atlas.mld');
+  assert(existsSync(tranVaultFile), 'tran_system 应存在 atlas.mld');
+  assert(
+    loadVaultModelBlob(root, 'pipe_system', 'Train', INTEGRATION_VAULT_SECRET).trim().length === 0,
+    'pipe vault 不应含 Train 模型 blob（跨库污染）',
+  );
+  assert(
+    loadVaultModelBlob(root, 'tran_system', 'Pump', INTEGRATION_VAULT_SECRET).trim().length === 0,
+    'tran vault 不应含 Pump 模型 blob（跨库污染）',
+  );
 
   let crossLeak = false;
   try {
@@ -96,9 +116,9 @@ async function runAudit(): Promise<void> {
   assert(!crossLeak, 'tran 侧不应能 model("Pump")');
 
   console.log('  通过：目录与注册表隔离正常。');
-  console.log('  [关键信息] 物理路径');
-  console.log(`    pipe Pump.mld: ${pipePumpMld} exists=${existsSync(pipePumpMld)}`);
-  console.log(`    tran Train.mld: ${tranTrainMld} exists=${existsSync(tranTrainMld)}`);
+  console.log('  [关键信息] Vault 路径');
+  console.log(`    pipe atlas.mld: ${pipeVaultFile} exists=${existsSync(pipeVaultFile)}`);
+  console.log(`    tran atlas.mld: ${tranVaultFile} exists=${existsSync(tranVaultFile)}`);
   console.log('');
 
   // --- 审计 2: OO + 双向索引（真实 .rid 格式）---
@@ -120,18 +140,17 @@ async function runAudit(): Promise<void> {
   await pipeAdmin.flushAll();
 
   const ridKey = 'Zone-Pump-has_pump';
-  const ridPath = join(pipeAtlas, 'relations', `${ridKey}.rid`);
-  assert(existsSync(ridPath), `应生成 ${ridKey}.rid`);
+  assert(existsSync(pipeVaultFile), 'flush 后 pipe atlas.mld 仍存在');
 
-  const ridJson = JSON.parse(await readFile(ridPath, 'utf-8')) as RelationIndexData;
+  const ridJson = loadVaultRelationData(root, 'pipe_system', ridKey, INTEGRATION_VAULT_SECRET);
   const fwdEdges = Object.values(ridJson.fwd).reduce((n, a) => n + a.length, 0);
   const revEdges = Object.values(ridJson.rev).reduce((n, a) => n + a.length, 0);
   assert(fwdEdges === revEdges && fwdEdges > 0, '正向与逆向边条数应相等且大于 0');
   assertBidirectionalRid(ridJson, 'has_pump');
 
   console.log(`  通过：双向守恒（fwd 边=${fwdEdges}, rev 边=${revEdges}）。`);
-  console.log('  [关键信息] .rid 文件');
-  console.log(`    path: ${ridPath}`);
+  console.log('  [关键信息] Vault 内关系索引');
+  console.log(`    key: r:${ridKey}`);
   console.log(
     `    fwd keys: ${Object.keys(ridJson.fwd).length}, rev keys: ${Object.keys(ridJson.rev).length}`,
   );

@@ -6,6 +6,9 @@ import type { RelationIndexer } from './indexer.js';
 import type { PersistenceManager } from './persistence-manager.js';
 import { ModelEntity } from './entity.js';
 import { RelationEntity } from './relation-entity.js';
+import type { AtlasAuthoringFacilities } from './authoring-facilities.js';
+
+export type { AtlasAuthoringFacilities } from './authoring-facilities.js';
 
 /**
  * Authoring registry: same definitions as {@link ModelRegistry}, plus Active Record handles.
@@ -20,6 +23,7 @@ export class AtlasRegistry extends ModelRegistry {
     private readonly _indexer: RelationIndexer,
     private readonly _paths: PathResolver,
     private readonly _persistence: PersistenceManager,
+    private readonly _facilities?: AtlasAuthoringFacilities,
   ) {
     super();
   }
@@ -36,7 +40,15 @@ export class AtlasRegistry extends ModelRegistry {
     if (!this.getModel(name)) {
       throw new RegistryError(`Model "${name}" is not registered.`);
     }
-    h = new ModelEntity(name, this, this._storage, this._indexer, this._paths, this._persistence);
+    h = new ModelEntity(
+      name,
+      this,
+      this._storage,
+      this._indexer,
+      this._paths,
+      this._persistence,
+      this._facilities,
+    );
     this._modelHandles.set(name, h);
     return h;
   }

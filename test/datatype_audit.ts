@@ -1,6 +1,6 @@
 /**
  * DataType Protocol 审计：类型校验、I18N 自动包装与查询解析、
- * .mld schema header 持久化、atlas-manifest fieldTypes、向后兼容。
+ * Vault 内模型 JSONL 的 __schema__ 行、包内 manifest 的 fieldTypes、向后兼容。
  *
  * Run:  npx tsx test/datatype_audit.ts
  *       npm run datatype-audit
@@ -8,9 +8,16 @@
  */
 
 import { join } from 'node:path';
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import {
+  INTEGRATION_VAULT_SECRET,
+  integrationVaultAuthoringOptions,
+  loadVaultManifestJson,
+  loadVaultModelBlob,
+  useIntegrationVaultEnv,
+} from './integration-vault.js';
 import { ValidationError } from '../common/errors.js';
 import { DataType } from '../common/data-types.js';
 import {
@@ -24,6 +31,12 @@ import {
 
 const DATA_ROOT = join(process.cwd(), 'data');
 const ATLAS = 'datatype_audit';
+
+const VAULT_ENGINE_BASE = {
+  atlas: ATLAS,
+  storageRoot: DATA_ROOT,
+  ...integrationVaultAuthoringOptions,
+} as const;
 
 let passed = 0;
 let failed = 0;
@@ -66,7 +79,7 @@ async function assertRejects(
 async function auditUpdateFields(): Promise<void> {
   console.log('\n═══ 1. updateFields — typed record 与 legacy string[] ═══');
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, currentLocale: 'zh' });
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 
   engine.registerModel('TypedModel');
   const m = engine.model('TypedModel');
@@ -108,7 +121,7 @@ async function auditUpdateFields(): Promise<void> {
 async function auditInsertValidation(): Promise<void> {
   console.log('\n═══ 2. Pre-insert validation ═══');
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, currentLocale: 'zh' });
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 
   engine.registerModel('Validated', {
     age: 'Int',
@@ -180,7 +193,7 @@ async function auditInsertValidation(): Promise<void> {
 async function auditI18NInsert(): Promise<void> {
   console.log('\n═══ 3. I18N insert — plain string auto-wrap ═══');
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, currentLocale: 'zh' });
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 
   engine.registerModel('I18NModel', { title: 'I18N', desc: 'I18N' });
   const m = engine.model('I18NModel');
@@ -204,7 +217,7 @@ async function auditI18NInsert(): Promise<void> {
 async function auditI18NQuery(): Promise<void> {
   console.log('\n═══ 4. I18N query — locale-aware filtering ═══');
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, currentLocale: 'zh' });
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 
   engine.registerModel('I18NQuery', { name: 'I18N', code: 'String' });
   const m = engine.model('I18NQuery');
@@ -232,17 +245,17 @@ async function auditI18NQuery(): Promise<void> {
 async function auditMldSchemaHeader(): Promise<void> {
   console.log('\n═══ 5. .mld schema header 持久化 ═══');
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, currentLocale: 'zh' });
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 
   engine.registerModel('HeaderTest', { val: 'Int', label: 'I18N' });
   const m = engine.model('HeaderTest');
 
   await m.insert({ val: 42, label: '测试' }, { sync: true });
 
-  const mldPath = engine.paths.modelDataPath('HeaderTest');
-  assert(existsSync(mldPath), '.mld 文件存在');
+  const vaultFile = engine.paths.atlasSingleVaultPath();
+  assert(existsSync(vaultFile), 'atlas.mld 存在');
 
-  const content = readFileSync(mldPath, 'utf-8');
+  const content = loadVaultModelBlob(DATA_ROOT, ATLAS, 'HeaderTest', INTEGRATION_VAULT_SECRET);
   const firstLine = content.split('\n')[0]!;
   assert(firstLine.startsWith('{"__schema__":'), '.mld 首行以 {"__schema__": 开头');
 
@@ -271,7 +284,7 @@ async function auditMldSchemaHeader(): Promise<void> {
 async function auditManifestFieldTypes(): Promise<void> {
   console.log('\n═══ 6. atlas-manifest.json fieldTypes ═══');
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, currentLocale: 'zh' });
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 
   engine.registerModel('ManifestTest', {
     count: 'Int',
@@ -282,10 +295,11 @@ async function auditManifestFieldTypes(): Promise<void> {
 
   await engine.flushAll();
 
-  const manifestPath = engine.paths.manifestFilePath();
-  assert(existsSync(manifestPath), 'atlas-manifest.json 存在');
+  assert(existsSync(engine.paths.atlasSingleVaultPath()), 'atlas.mld 存在');
 
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8')) as {
+  const manifest = JSON.parse(
+    loadVaultManifestJson(DATA_ROOT, ATLAS, INTEGRATION_VAULT_SECRET),
+  ) as {
     models: Array<{
       name: string;
       fields: string[];
@@ -314,7 +328,7 @@ async function auditManifestFieldTypes(): Promise<void> {
 async function auditBackwardCompat(): Promise<void> {
   console.log('\n═══ 7. Backward compatibility — untyped fields ═══');
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, currentLocale: 'zh' });
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 
   engine.registerModel('UntypedModel');
   engine.model('UntypedModel').updateFields(['foo', 'bar']);
@@ -351,7 +365,7 @@ function auditDataTypeConstants(): void {
 async function auditI18NNoLocale(): Promise<void> {
   console.log('\n═══ 9. I18N without locale — rejects plain string ═══');
 
-  const engine = new AuthoringEngine({ atlas: ATLAS });
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE });
 
   engine.registerModel('NoLocaleModel', { title: 'I18N' });
   const m = engine.model('NoLocaleModel');
@@ -374,7 +388,7 @@ async function auditI18NNoLocale(): Promise<void> {
 async function auditEngineRegisterTyped(): Promise<void> {
   console.log('\n═══ 10. Engine-level registerModel with typed fields ═══');
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, currentLocale: 'zh' });
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 
   engine.registerModel('EngineTyped', { x: 'Int', y: 'Number' });
   const def = engine.registry.getModel('EngineTyped')!;
@@ -396,7 +410,7 @@ async function auditEngineRegisterTyped(): Promise<void> {
 async function auditValueObject(): Promise<void> {
   console.log('\n═══ 11. ValueObject — getValue() on HydratedEntity ═══');
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, currentLocale: 'zh' });
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 
   engine.registerModel('VOModel', {
     name: 'I18N',
@@ -438,7 +452,7 @@ async function auditValueObject(): Promise<void> {
 async function auditColorType(): Promise<void> {
   console.log('\n═══ 12. Color type — insert validation + ValueObject ═══');
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, currentLocale: 'zh' });
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 
   engine.registerModel('ColorModel', { color: 'Color', label: 'String' });
   const m = engine.model('ColorModel');
@@ -479,7 +493,7 @@ async function auditColorType(): Promise<void> {
 async function auditUnitType(): Promise<void> {
   console.log('\n═══ 13. Unit type — insert validation + conversion ═══');
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, currentLocale: 'zh' });
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 
   engine.registerModel('UnitModel', { length: 'Unit', name: 'String' });
   const m = engine.model('UnitModel');
@@ -515,7 +529,7 @@ async function auditUnitType(): Promise<void> {
 async function auditGetDataDeep(): Promise<void> {
   console.log('\n═══ 14. getData(deep) — recursive unwrap ═══');
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, currentLocale: 'zh' });
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 
   engine.registerModel('Parent14', { name: 'String' });
   const parent = engine.model('Parent14');
@@ -532,9 +546,286 @@ async function auditGetDataDeep(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// 15. required 字段校验 — null / undefined / 语义空值
+// ---------------------------------------------------------------------------
+async function auditRequiredFields(): Promise<void> {
+  console.log('\n═══ 15. required 字段校验 ═══');
+
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
+
+  engine.registerModel('ReqModel', {
+    name: { type: 'String', required: true },
+    title: { type: 'I18N', required: true },
+    color: { type: 'Color', required: true },
+    size: { type: 'Unit', required: true },
+    age: { type: 'Int', required: true },
+    opt: 'String',
+  });
+  const m = engine.model('ReqModel');
+
+  await assertRejects(
+    () => m.insert({ age: 10, title: '标题', color: '#fff', size: { value: 1, unit: 'm' } }),
+    ValidationError,
+    'required String 缺失时抛错',
+  );
+
+  await assertRejects(
+    () =>
+      m.insert({
+        name: '',
+        age: 10,
+        title: '标题',
+        color: '#fff',
+        size: { value: 1, unit: 'm' },
+      }),
+    ValidationError,
+    'required String 空字符串抛错',
+  );
+
+  await assertRejects(
+    () =>
+      m.insert({
+        name: '   ',
+        age: 10,
+        title: '标题',
+        color: '#fff',
+        size: { value: 1, unit: 'm' },
+      }),
+    ValidationError,
+    'required String 全空格抛错',
+  );
+
+  await assertRejects(
+    () =>
+      m.insert({ name: 'ok', age: 10, title: {}, color: '#fff', size: { value: 1, unit: 'm' } }),
+    ValidationError,
+    'required I18N 空对象抛错',
+  );
+
+  await assertRejects(
+    () =>
+      m.insert({
+        name: 'ok',
+        age: null as unknown as number,
+        title: '标题',
+        color: '#fff',
+        size: { value: 1, unit: 'm' },
+      }),
+    ValidationError,
+    'required Int null 抛错',
+  );
+
+  const valid = await m.insert({
+    name: 'hello',
+    age: 42,
+    title: '标题',
+    color: '#ff0000',
+    size: { value: 1, unit: 'm' },
+  });
+  assert(valid._id !== undefined, 'required 字段全部合法时插入成功');
+
+  const noOpt = await m.insert({
+    name: 'hello2',
+    age: 10,
+    title: '标题2',
+    color: '#00ff00',
+    size: { value: 2, unit: 'cm' },
+  });
+  assert(noOpt._id !== undefined, '非 required 字段缺失时插入成功');
+
+  await engine.flushAll();
+}
+
+// ---------------------------------------------------------------------------
+// 16. default 值注入
+// ---------------------------------------------------------------------------
+async function auditDefaultValues(): Promise<void> {
+  console.log('\n═══ 16. default 值注入 ═══');
+
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
+
+  engine.registerModel('DefModel', {
+    status: { type: 'String', default: 'draft' },
+    count: { type: 'Int', default: 0 },
+    active: { type: 'Boolean', default: true },
+    tags: { type: 'JSON', default: [] },
+    name: 'String',
+  });
+  const m = engine.model('DefModel');
+
+  const r1 = await m.insert({ name: 'test' });
+  assert((r1 as Record<string, unknown>).status === 'draft', 'default String: status = "draft"');
+  assert((r1 as Record<string, unknown>).count === 0, 'default Int: count = 0');
+  assert((r1 as Record<string, unknown>).active === true, 'default Boolean: active = true');
+  assert(JSON.stringify((r1 as Record<string, unknown>).tags) === '[]', 'default JSON: tags = []');
+
+  const r2 = await m.insert({ name: 'override', status: 'published', count: 5 });
+  assert(
+    (r2 as Record<string, unknown>).status === 'published',
+    'explicit value 覆盖 default: status = "published"',
+  );
+  assert((r2 as Record<string, unknown>).count === 5, 'explicit value 覆盖 default: count = 5');
+
+  await engine.flushAll();
+}
+
+// ---------------------------------------------------------------------------
+// 17. default + required 组合
+// ---------------------------------------------------------------------------
+async function auditDefaultWithRequired(): Promise<void> {
+  console.log('\n═══ 17. default + required 组合 ═══');
+
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
+
+  engine.registerModel('DefReqModel', {
+    code: { type: 'String', required: true, default: 'AUTO' },
+    score: { type: 'Int', required: true },
+  });
+  const m = engine.model('DefReqModel');
+
+  const r = await m.insert({ score: 100 });
+  assert(
+    (r as Record<string, unknown>).code === 'AUTO',
+    'required + default: 缺失字段注入 default 后通过 required 校验',
+  );
+
+  await assertRejects(
+    () => m.insert({ code: 'X' }),
+    ValidationError,
+    'required 无 default 且缺失时抛错',
+  );
+
+  await engine.flushAll();
+}
+
+// ---------------------------------------------------------------------------
+// 18. ValueObject.isEmpty() 语义
+// ---------------------------------------------------------------------------
+async function auditIsEmpty(): Promise<void> {
+  console.log('\n═══ 18. ValueObject.isEmpty() 语义 ═══');
+
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
+
+  engine.registerModel('EmptyModel', {
+    s: 'String',
+    i18n: 'I18N',
+    color: 'Color',
+    size: 'Unit',
+    n: 'Int',
+  });
+  const m = engine.model('EmptyModel');
+
+  await m.insert({
+    s: '',
+    i18n: { zh: '有值' },
+    color: '#000000',
+    size: { value: 0, unit: 'm' },
+    n: 0,
+  });
+
+  const results = await m.query().execute();
+  const entity = results[0]!;
+
+  const sVO = entity.getValue('s')!;
+  assert(sVO.isEmpty() === true, 'StringValue("") isEmpty = true');
+
+  const i18nVO = entity.getValue('i18n')!;
+  assert(i18nVO.isEmpty() === false, 'I18NValue({zh:"有值"}) isEmpty = false');
+
+  const colorVO = entity.getValue('color')!;
+  assert(colorVO.isEmpty() === false, 'ColorValue(#000000) isEmpty = false');
+
+  const sizeVO = entity.getValue('size')!;
+  assert(sizeVO.isEmpty() === false, 'UnitValue({value:0,unit:"m"}) isEmpty = false');
+
+  const nVO = entity.getValue('n')!;
+  assert(nVO.isEmpty() === false, 'IntValue(0) isEmpty = false');
+
+  await m.insert({ s: 'hello', i18n: {}, color: '#fff', size: { value: 1, unit: 'm' }, n: 1 });
+  const r2 = (await m.query().where('s', 'eq', 'hello').execute())[0]!;
+  const i18nEmpty = r2.getValue('i18n')!;
+  assert(i18nEmpty.isEmpty() === true, 'I18NValue({}) isEmpty = true');
+
+  await engine.flushAll();
+}
+
+// ---------------------------------------------------------------------------
+// 19. ValueObject.update() required 约束
+// ---------------------------------------------------------------------------
+async function auditVOUpdateRequired(): Promise<void> {
+  console.log('\n═══ 19. ValueObject.update() required 约束 ═══');
+
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
+
+  engine.registerModel('VOReqModel', {
+    name: { type: 'String', required: true },
+    opt: 'String',
+  });
+  const m = engine.model('VOReqModel');
+
+  await m.insert({ name: 'initial', opt: 'x' });
+  const results = await m.query().execute();
+  const entity = results[0]!;
+
+  const nameVO = entity.getValue('name')!;
+  nameVO.update('updated');
+  assert(nameVO.getData() === 'updated', 'ValueObject.update() 正常更新');
+
+  let threw = false;
+  try {
+    nameVO.update('');
+  } catch (err) {
+    if (err instanceof ValidationError) {
+      threw = true;
+    }
+  }
+  assert(threw, 'ValueObject.update("") required String 抛 ValidationError');
+
+  const optVO = entity.getValue('opt')!;
+  optVO.update('');
+  assert(optVO.getData() === '', '非 required 字段 update("") 成功');
+
+  await engine.flushAll();
+}
+
+// ---------------------------------------------------------------------------
+// 20. default 持久化到 manifest
+// ---------------------------------------------------------------------------
+async function auditDefaultInManifest(): Promise<void> {
+  console.log('\n═══ 20. default 持久化到 manifest ═══');
+
+  const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
+
+  engine.registerModel('ManifestDef', {
+    status: { type: 'String', default: 'active' },
+    count: { type: 'Int', default: 0 },
+  });
+
+  await engine.flushAll();
+
+  const manifest = JSON.parse(
+    loadVaultManifestJson(DATA_ROOT, ATLAS, INTEGRATION_VAULT_SECRET),
+  ) as {
+    models: Array<{
+      name: string;
+      fieldTypes?: Record<string, { type: string; default?: unknown }>;
+    }>;
+  };
+
+  const model = manifest.models.find((m) => m.name === 'ManifestDef');
+  assert(model !== undefined, 'manifest 包含 ManifestDef');
+  assert(
+    model!.fieldTypes!.status?.default === 'active',
+    'manifest fieldTypes.status.default = "active"',
+  );
+  assert(model!.fieldTypes!.count?.default === 0, 'manifest fieldTypes.count.default = 0');
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 async function main(): Promise<void> {
+  useIntegrationVaultEnv();
   const atlasDir = join(DATA_ROOT, ATLAS);
   if (existsSync(atlasDir)) {
     await rm(atlasDir, { recursive: true, force: true });
@@ -554,6 +845,12 @@ async function main(): Promise<void> {
   await auditColorType();
   await auditUnitType();
   await auditGetDataDeep();
+  await auditRequiredFields();
+  await auditDefaultValues();
+  await auditDefaultWithRequired();
+  await auditIsEmpty();
+  await auditVOUpdateRequired();
+  await auditDefaultInManifest();
 
   console.log(
     `\n${'═'.repeat(60)}\n  datatype_audit 结果：通过 ${passed}，失败 ${failed}\n${'═'.repeat(60)}\n`,

@@ -1,6 +1,6 @@
 /**
  * HydratedEntity / QueryChain 空关联溯源与 includeRelates 行为校验；
- * 并断言：AtlasRegistry 缓存 ModelEntity；合并读；`insert(..., { sync: true })` 后 `.mld` 可测。
+ * 并断言：AtlasRegistry 缓存 ModelEntity；合并读；`insert(..., { sync: true })` 后单文件 Vault 已落盘。
  *
  * Run:  npx tsx test/logic_integrity.ts
  *       npm run integrity
@@ -11,11 +11,17 @@
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { readFile, writeFile, rm } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
-import type { RelationIndexData } from '../common/types.js';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
 import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
+import {
+  atlasVaultPath,
+  INTEGRATION_VAULT_SECRET,
+  integrationVaultAuthoringOptions,
+  mutateVaultRelationData,
+  useIntegrationVaultEnv,
+} from './integration-vault.js';
 import type { HydratedEntity } from '../src/runtime/HydratedEntity.js';
 
 const DATA_ROOT = join(process.cwd(), 'data');
@@ -47,13 +53,18 @@ function logEntityBrief(tag: string, row: HydratedEntity): void {
 
 async function main(): Promise<void> {
   configureModelDBStorageRoot({ storageRoot: DATA_ROOT });
+  useIntegrationVaultEnv();
   await rm(join(DATA_ROOT, ATLAS), { recursive: true, force: true });
 
   console.log('[关键信息] 存储根与图谱');
   console.log(`  STORAGE_ROOT (effective): ${DATA_ROOT}`);
   console.log(`  本用例 atlas: ${ATLAS}`);
 
-  const engine = new AuthoringEngine({ atlas: ATLAS, storageRoot: DATA_ROOT });
+  const engine = new AuthoringEngine({
+    atlas: ATLAS,
+    storageRoot: DATA_ROOT,
+    ...integrationVaultAuthoringOptions,
+  });
   engine.quickLink('Pump', 'Zone', 'located_in', 'contains_pump');
 
   const Pump = engine.model('Pump');
@@ -74,9 +85,11 @@ async function main(): Promise<void> {
   const pMerged = await engine.query('Pump', [pump._id]).execute();
   assert(pMerged.length === 1, '合并读：insert 后未 flushAll 应能 query 到 Pump');
 
-  const pumpMld = join(DATA_ROOT, ATLAS, 'models', 'Pump.mld');
   await Pump.insert({ id: 'P-sync', name: '强同步泵', zoneCode: 'Z-99' }, { sync: true });
-  assert(existsSync(pumpMld), 'insert(..., { sync: true }) 后 Pump.mld 应已落盘（可测）');
+  assert(
+    existsSync(atlasVaultPath(DATA_ROOT, ATLAS)),
+    'insert(..., { sync: true }) 后 atlas.mld 应已落盘',
+  );
 
   const loc = engine.relation('located_in');
   loc.updateLogic('many-to-one', { sourceField: 'zoneCode', targetField: 'id' });
@@ -102,16 +115,22 @@ async function main(): Promise<void> {
   assert(dNoLink?.reason === 'NO_LINK_IN_INDEX', `NO_LINK_IN_INDEX: ${dNoLink?.message}`);
   logDiag('explainRelate("located_in") → NO_LINK_IN_INDEX（未 bind 的泵）', dNoLink);
 
-  // --- FILTERED_OUT_ORPHAN：索引含幽灵 id，.mld 无行 ---
-  const ridPath = join(DATA_ROOT, ATLAS, 'relations', 'Pump-Zone-located_in.rid');
-  const rid = JSON.parse(await readFile(ridPath, 'utf-8')) as RelationIndexData;
+  // --- FILTERED_OUT_ORPHAN：索引含幽灵 id，目标行不存在 ---
   const ghost = '00000000-0000-4000-8000-00000000dead';
   const srcKey = pump._id;
-  const arr = rid.fwd[srcKey] ?? [];
-  rid.fwd[srcKey] = [...arr, ghost];
-  await writeFile(ridPath, JSON.stringify(rid, null, 2) + '\n', 'utf-8');
-  console.log('\n  [关键信息] 已向 .rid 注入幽灵 target id（用于 FILTERED_OUT_ORPHAN）');
-  console.log(`    文件: ${ridPath}`);
+  mutateVaultRelationData(
+    DATA_ROOT,
+    ATLAS,
+    'Pump-Zone-located_in',
+    INTEGRATION_VAULT_SECRET,
+    (rid) => {
+      const arr = rid.fwd[srcKey] ?? [];
+      rid.fwd[srcKey] = [...arr, ghost];
+    },
+  );
+  console.log(
+    '\n  [关键信息] 已向 Vault 内 r:Pump-Zone-located_in 注入幽灵 target id（用于 FILTERED_OUT_ORPHAN）',
+  );
   console.log(`    pump._id: ${srcKey} → fwd 追加: ${ghost}`);
 
   const client3 = await ModelDBClient.connect(ATLAS);

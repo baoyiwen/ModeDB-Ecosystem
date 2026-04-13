@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { ModelRecord } from '../../common/types.js';
 import type { ModelRegistry } from '../../common/registry.js';
 import type { DataReader, IndexReader } from '../../common/provider.js';
@@ -5,8 +6,10 @@ import { QueryError } from '../../common/errors.js';
 import {
   HydratedEntity,
   type HydrationContext,
+  type MemoryShadowOptions,
   type QueryExecuteOptions,
 } from './HydratedEntity.js';
+import type { SmartCache } from '../../common/smart-cache.js';
 import {
   ComputeBuilder,
   isComputeMetricToken,
@@ -32,6 +35,7 @@ import {
 } from './filter-builder.js';
 import {
   clonePredicateNode,
+  deserializePredicate,
   evaluatePredicate,
   predicateMatcher,
   serializePredicate,
@@ -163,6 +167,48 @@ export interface QueryPlanASTv2 {
   readonly trailing: Record<string, unknown>;
 }
 
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return typeof x === 'object' && x !== null && !Array.isArray(x);
+}
+
+/** 序列化后的谓词树是否含 `filter()` 回调占位（不可跨网执行）。 */
+export function queryPlanHasSerializedCallback(plan: QueryPlanASTv2): boolean {
+  const walk = (node: Record<string, unknown>): boolean => {
+    if (node.type === 'callback') {
+      return true;
+    }
+    if (node.type === 'group' && Array.isArray(node.children)) {
+      return node.children.some((c) => isRecord(c) && walk(c));
+    }
+    return false;
+  };
+  if (walk(plan.trailing)) {
+    return true;
+  }
+  for (const h of plan.hops) {
+    if (walk(h.source as Record<string, unknown>) || walk(h.target as Record<string, unknown>)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** 供远程 RPC 使用的不可变快照（由 {@link QueryChain.getRemoteExecuteSnapshot} 生成）。 */
+export interface RemoteExecuteSnapshot {
+  readonly plan: QueryPlanASTv2;
+  /** 与 {@link QueryExecuteOptions} 对齐的合并结果（含链上 `.limit()` / `.page()`）。 */
+  readonly execute: {
+    readonly limit?: number;
+    readonly page?: number;
+    readonly includeRelates?: boolean;
+    readonly wrapGroups?: boolean;
+  };
+  readonly analysis: {
+    readonly groupBy: readonly string[] | null;
+    readonly compute: Readonly<Record<string, AggregateInputEntry>> | null;
+  };
+}
+
 type OriginLoadHint =
   | { readonly kind: 'by_uuid'; readonly id: string }
   | { readonly kind: 'by_business_id'; readonly value: unknown };
@@ -215,6 +261,8 @@ export class QueryChain<
   private wrapGroupsFlag = false;
 
   private readonly fieldCtx: FieldMatchContext | undefined;
+  private readonly memoryShadow: MemoryShadowOptions | undefined;
+  private readonly smartCache: SmartCache | undefined;
 
   constructor(
     private readonly registry: ModelRegistry,
@@ -223,14 +271,142 @@ export class QueryChain<
     startModel: string,
     start: QueryStartSpec,
     fieldCtx?: FieldMatchContext,
+    memoryShadow?: MemoryShadowOptions,
+    smartCache?: SmartCache,
   ) {
     this.originModel = startModel;
     this.start = start;
     this.fieldCtx = fieldCtx;
+    this.memoryShadow = memoryShadow;
+    this.smartCache = smartCache;
   }
 
   getQueryPlan(): QueryPlanASTv2 {
     return this._buildRawQuery();
+  }
+
+  /**
+   * 构建远程执行快照：校验无 **`filter()` 回调**、无 **`customReduce`**、无 **`wrapGroups`**。
+   * 与 {@link execute} 相同方式合并 **`options`** 与链上分页 / **`wrapGroups`**。
+   */
+  getRemoteExecuteSnapshot(options?: QueryExecuteOptions): RemoteExecuteSnapshot {
+    const plan = this._buildRawQuery();
+    if (queryPlanHasSerializedCallback(plan)) {
+      throw new QueryError(
+        'Remote execute cannot serialize filter() callbacks; remove filter() for wire transport.',
+      );
+    }
+    const chainInternals = this as unknown as {
+      readonly analysisCustom: Record<string, CustomReducerSpec>;
+      readonly analysisGroupBy: string[] | null;
+      readonly analysisCompute: Record<string, AggregateInputEntry> | null;
+      readonly wrapGroupsFlag: boolean;
+      readonly paginationPartial: { page?: number; limit?: number } | null;
+    };
+    if (Object.keys(chainInternals.analysisCustom).length > 0) {
+      throw new QueryError('Remote execute does not support customReduce().');
+    }
+    if (chainInternals.wrapGroupsFlag) {
+      const gb = chainInternals.analysisGroupBy;
+      if (gb === null || gb.length === 0) {
+        throw new QueryError('wrapGroups requires groupBy(...) or pivot(...).');
+      }
+      throw new QueryError(
+        'Remote execute does not support wrapGroups() with groupBy/pivot in this version.',
+      );
+    }
+    const limitOpt = options?.limit ?? chainInternals.paginationPartial?.limit;
+    const pageOpt = options?.page ?? chainInternals.paginationPartial?.page ?? 0;
+    const wrapGroups = options?.wrapGroups ?? chainInternals.wrapGroupsFlag;
+    const execute: RemoteExecuteSnapshot['execute'] = {
+      ...(limitOpt !== undefined && limitOpt !== null ? { limit: limitOpt } : {}),
+      page: pageOpt,
+      ...(options?.includeRelates !== undefined ? { includeRelates: options.includeRelates } : {}),
+      ...(wrapGroups ? { wrapGroups: true } : {}),
+    };
+    return {
+      plan,
+      execute,
+      analysis: {
+        groupBy: chainInternals.analysisGroupBy,
+        compute: chainInternals.analysisCompute,
+      },
+    };
+  }
+
+  /**
+   * 从 JSON 计划恢复查询链（服务端）；若谓词树含 callback 则抛错。
+   */
+  static fromWirePlan(
+    registry: ModelRegistry,
+    indexReader: IndexReader,
+    dataReader: DataReader,
+    plan: QueryPlanASTv2,
+    options?: {
+      readonly fieldCtx?: FieldMatchContext;
+      readonly memoryShadow?: MemoryShadowOptions;
+      readonly smartCache?: SmartCache;
+    },
+  ): QueryChain {
+    if (plan.version !== 2) {
+      throw new QueryError(
+        `Unsupported query plan version: ${String((plan as { version?: unknown }).version)}`,
+      );
+    }
+    const trailing = deserializePredicate(plan.trailing as Record<string, unknown>);
+    const hops: HopPlan[] = plan.hops.map((h) => ({
+      relationName: h.relationName,
+      sourcePredicate: deserializePredicate(h.source as Record<string, unknown>),
+      targetPredicate: deserializePredicate(h.target as Record<string, unknown>),
+      ...(h.recursive ? { recursive: { maxDepth: h.recursive.maxDepth } } : {}),
+    }));
+    if (treeHasCallback(trailing)) {
+      throw new QueryError('Wire query plan contains callback predicates.');
+    }
+    for (const h of hops) {
+      if (treeHasCallback(h.sourcePredicate) || treeHasCallback(h.targetPredicate)) {
+        throw new QueryError('Wire query plan contains callback predicates.');
+      }
+    }
+    const chain = new QueryChain(
+      registry,
+      indexReader,
+      dataReader,
+      plan.originModel,
+      plan.start,
+      options?.fieldCtx,
+      options?.memoryShadow,
+      options?.smartCache,
+    );
+    const self = chain as unknown as { hops: HopPlan[]; segments: PredicateNode[][] };
+    self.hops = hops;
+    self.segments = [[trailing]];
+    return chain;
+  }
+
+  /** 将 {@link RemoteExecuteSnapshot} 上的分析配置应用到链（服务端）。 */
+  static applyRemoteAnalysisSnapshot(
+    chain: QueryChain,
+    analysis: RemoteExecuteSnapshot['analysis'],
+    execute: RemoteExecuteSnapshot['execute'],
+  ): void {
+    const c = chain as unknown as {
+      analysisGroupBy: string[] | null;
+      analysisCompute: Record<string, AggregateInputEntry> | null;
+      paginationPartial: { page?: number; limit?: number } | null;
+      wrapGroupsFlag: boolean;
+    };
+    if (analysis.groupBy !== null && analysis.groupBy.length > 0) {
+      c.analysisGroupBy = [...analysis.groupBy];
+    } else {
+      c.analysisGroupBy = null;
+    }
+    c.analysisCompute = analysis.compute !== null ? { ...analysis.compute } : null;
+    c.paginationPartial = {
+      ...(execute.limit !== undefined ? { limit: execute.limit } : {}),
+      ...(execute.page !== undefined ? { page: execute.page } : {}),
+    };
+    c.wrapGroupsFlag = execute.wrapGroups === true;
   }
 
   private _buildRawQuery(): QueryPlanASTv2 {
@@ -763,7 +939,38 @@ export class QueryChain<
       registry: this.registry,
       indexReader: this.indexReader,
       dataReader: this.dataReader,
+      memoryShadow: this.memoryShadow,
     };
+  }
+
+  private queryFingerprintKey(): string {
+    const payload = {
+      v: 1,
+      origin: this.originModel,
+      start: this.start,
+      segments: this.segments.map((seg) => seg.map((n) => serializePredicate(n))),
+      hops: this.hops.map((h) => ({
+        r: h.relationName,
+        sp: serializePredicate(h.sourcePredicate),
+        tp: serializePredicate(h.targetPredicate),
+        rec: h.recursive,
+      })),
+      trail: serializePredicate(this.compiledRoot()),
+      locale: this.fieldCtx?.locale,
+    };
+    return createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+  }
+
+  private cacheDependencyModels(terminalModel: string): Set<string> {
+    const deps = new Set<string>([this.originModel, terminalModel]);
+    let model = this.originModel;
+    for (const hop of this.hops) {
+      const resolved = resolveRelationOnRegistry(this.registry, hop.relationName, model);
+      deps.add(resolved.definition.source);
+      deps.add(resolved.definition.target);
+      model = targetModelName(resolved);
+    }
+    return deps;
   }
 
   private async loadOriginRecords(sourcePredicate: PredicateNode): Promise<ModelRecord[]> {
@@ -802,12 +1009,33 @@ export class QueryChain<
 
   private async executeFlat(): Promise<HydratedEntity[]> {
     const c = this.ctx();
+    const sc = this.smartCache;
+    const fp = sc ? this.queryFingerprintKey() : '';
 
     if (this.hops.length === 0) {
+      if (sc) {
+        const hit = sc.get(fp);
+        if (hit && hit.terminalModel === this.originModel) {
+          const cached = hit.rows as ModelRecord[];
+          return cached.map((r) => new HydratedEntity(r, this.originModel, c));
+        }
+      }
       let records = await this.loadOriginRecordsNoHop();
       const root = this.compiledRoot();
       records = records.filter(predicateMatcher(root, this._fieldCtxForModel(this.originModel)));
+      if (sc) {
+        sc.set(fp, this.cacheDependencyModels(this.originModel), [...records], this.originModel);
+      }
       return records.map((r) => new HydratedEntity(r, this.originModel, c));
+    }
+
+    if (sc) {
+      const hit = sc.get(fp);
+      if (hit) {
+        const cached = hit.rows as ModelRecord[];
+        const tm = hit.terminalModel;
+        return cached.map((r) => new HydratedEntity(r, tm, c));
+      }
     }
 
     let model = this.originModel;
@@ -867,6 +1095,9 @@ export class QueryChain<
 
     const tail = this.compiledRoot();
     records = records.filter(predicateMatcher(tail, this._fieldCtxForModel(model)));
+    if (sc) {
+      sc.set(fp, this.cacheDependencyModels(model), [...records], model);
+    }
     return records.map((r) => new HydratedEntity(r, model, c));
   }
 
@@ -902,7 +1133,7 @@ export class QueryChain<
       const nextFrontier: HydratedEntity[] = [];
 
       for (const entity of frontier) {
-        const srcRec = entity.getData();
+        const srcRec = entity.materializeRow();
 
         if (hi > 0) {
           const srcEv = evaluatePredicate(
@@ -1118,23 +1349,20 @@ export class QueryChain<
         membersMap.get(k) ?? [],
         terminalModel,
         this.ctx(),
-        newGroupQueryChainForGroup,
+        (registry, indexReader, dataReader, originModel, ids) =>
+          new QueryChain(
+            registry,
+            indexReader,
+            dataReader,
+            originModel,
+            { kind: 'ids', ids: [...ids] },
+            this.fieldCtx,
+            this.memoryShadow,
+            this.smartCache,
+          ),
       );
     });
   }
-}
-
-function newGroupQueryChainForGroup(
-  registry: ModelRegistry,
-  indexReader: IndexReader,
-  dataReader: DataReader,
-  originModel: string,
-  ids: readonly string[],
-): QueryChain {
-  return new QueryChain(registry, indexReader, dataReader, originModel, {
-    kind: 'ids',
-    ids: [...ids],
-  });
 }
 
 function formatFailureLine(ev: EvaluateResult): string {
