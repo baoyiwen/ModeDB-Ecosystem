@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    "paths": {
+      "mode-db-engine": ["./index.ts"]
+    },
     "target": "ES2022",
     "module": "Node16",
     "moduleResolution": "Node16",
