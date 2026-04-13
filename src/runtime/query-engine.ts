@@ -8,14 +8,46 @@ import {
 } from './predicate-tree.js';
 
 /**
+ * Merge on-disk rows with the authoring write-behind map (`_id` → row). Buffer wins on duplicate `_id`.
+ * Same semantics as the authoring merged `DataReader` + `QueryChain.execute` row materialization.
+ */
+export function mergeDiskRowsWithAuthoringBuffer(
+  diskRows: readonly ModelRecord[],
+  pendingById: ReadonlyMap<string, ModelRecord>,
+): ModelRecord[] {
+  if (pendingById.size === 0) {
+    return [...diskRows];
+  }
+  const byId = new Map<string, ModelRecord>();
+  const order: string[] = [];
+  for (const r of diskRows) {
+    byId.set(r._id, r);
+    order.push(r._id);
+  }
+  for (const r of pendingById.values()) {
+    if (!byId.has(r._id)) {
+      order.push(r._id);
+    }
+    byId.set(r._id, r);
+  }
+  return order.map((id) => byId.get(id)!);
+}
+
+/**
  * 查询谓词递归引擎：对单行数据递归求值；**AND 短路**、**OR 短路**与 {@link evaluatePredicate} 一致。
  *
- * **读写一致性（Authoring）：** `QueryChain.execute()` 通过 `DataReader` 取行；`AuthoringEngine.createRuntime`
- * 与 `ModelDBClient.fromContext` 使用的读取器会合并磁盘与未刷盘缓冲，故 `insert` 后即使尚未刷盘，
- * 同进程查询也能看到新行。本类只对**单行**做谓词求值，合并发生在读取层。
+ * **读写一致性（Authoring）：** 行集在 `QueryChain.execute` / `executeFlat` 中先经 `DataReader`（如
+ * `MergedDataReader`）合并磁盘与缓冲，再对本类 {@link evaluate} / {@link execute} 做谓词过滤；聚合同理基于合并后行集。
  */
 export class QueryEngine {
   static evaluate(data: ModelRecord, node: PredicateNode): EvaluateResult {
+    return evaluatePredicate(data, node);
+  }
+
+  /**
+   * 与 {@link evaluate} 相同；命名与「整条查询执行」对齐。合并视图由 `DataReader` 提供后再谓词求值。
+   */
+  static execute(data: ModelRecord, node: PredicateNode): EvaluateResult {
     return evaluatePredicate(data, node);
   }
 

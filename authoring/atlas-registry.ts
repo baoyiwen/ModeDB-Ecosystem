@@ -13,6 +13,8 @@ import { RelationEntity } from './relation-entity.js';
  * Use `registry.model('Pump')` / `registry.relation('located_in')` instead of raw `getModel` JSON.
  */
 export class AtlasRegistry extends ModelRegistry {
+  private readonly _modelHandles = new Map<string, ModelEntity>();
+
   constructor(
     private readonly _storage: ModelStorage,
     private readonly _indexer: RelationIndexer,
@@ -24,19 +26,19 @@ export class AtlasRegistry extends ModelRegistry {
 
   /**
    * Active Record handle for a registered model (schema, insert, query chain, bind).
+   * Handles are cached so each model shares one write-behind buffer reference.
    */
   model(name: string): ModelEntity {
+    let h = this._modelHandles.get(name);
+    if (h) {
+      return h;
+    }
     if (!this.getModel(name)) {
       throw new RegistryError(`Model "${name}" is not registered.`);
     }
-    return new ModelEntity(
-      name,
-      this,
-      this._storage,
-      this._indexer,
-      this._paths,
-      this._persistence,
-    );
+    h = new ModelEntity(name, this, this._storage, this._indexer, this._paths, this._persistence);
+    this._modelHandles.set(name, h);
+    return h;
   }
 
   /**

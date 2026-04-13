@@ -12,11 +12,23 @@ import type { PersistenceManager } from './persistence-manager.js';
 import { RuntimeModel, type RuntimeAvailableRelation } from '../src/runtime/RuntimeModel.js';
 import type { QueryChain } from '../src/runtime/query.js';
 
+/** Options for {@link ModelEntity.insert}. */
+export interface InsertOptions {
+  /**
+   * When true, append buffered rows for this model to `.mld` before resolving (crash safety).
+   * Default false: rows stay in the write-behind map until the scheduler or `flushAll`.
+   */
+  sync?: boolean;
+}
+
 /**
  * Active Record for a registered model: schema updates, inserts (with storage schema check),
  * and chain queries scoped to the current atlas.
  */
 export class ModelEntity extends RuntimeModel {
+  /** Write-behind map: `_id` → staged row (shared with {@link PersistenceManager}). */
+  private readonly _buffer: Map<string, ModelRecord>;
+
   constructor(
     name: string,
     registry: ModelRegistry,
@@ -26,10 +38,12 @@ export class ModelEntity extends RuntimeModel {
     private readonly persistence: PersistenceManager,
   ) {
     super(name, registry, persistence.getMergedReader(), indexer);
+    this._buffer = this.persistence.getOrCreateModelBuffer(name);
   }
 
   /**
    * Replace persisted field set for this model (Registry + storage schema stay in sync).
+   * Accepts `string[]`; duplicates are removed while preserving first-seen order (`Set` iteration).
    */
   updateFields(fields: readonly string[]): this {
     const set = new Set(fields);
@@ -38,12 +52,28 @@ export class ModelEntity extends RuntimeModel {
     return this;
   }
 
+  /** True while this model has staged rows not yet appended to `.mld`. */
+  get isDirty(): boolean {
+    return this._buffer.size > 0;
+  }
+
   /**
-   * Insert one record: only schema-defined fields are kept; staged in the persistence buffer
-   * and flushed to `.mld` shortly (or on {@link AuthoringEngine.flushAll} / process exit).
+   * Append staged rows for this model to `.mld` (does not run full {@link AuthoringEngine.flushAll}).
    */
-  async insert(data: Record<string, unknown>): Promise<ModelRecord> {
-    return this.persistence.insert(this.name, data);
+  private async _internalFlush(): Promise<void> {
+    await this.persistence.flushModelToDisk(this.name);
+  }
+
+  /**
+   * Insert one record: only schema-defined fields are kept; staged in the write-behind buffer.
+   * Use `{ sync: true }` to append to `.mld` before the promise resolves (reduces loss on crash).
+   */
+  async insert(data: Record<string, unknown>, options?: InsertOptions): Promise<ModelRecord> {
+    const record = await this.persistence.insert(this.name, data);
+    if (options?.sync) {
+      await this._internalFlush();
+    }
+    return record;
   }
 
   /**

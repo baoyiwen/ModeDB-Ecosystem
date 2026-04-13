@@ -24,6 +24,7 @@ export {
   FilterBuilder,
   PredicateComposer,
   QueryEngine,
+  mergeDiskRowsWithAuthoringBuffer,
   mergeMatchAnyIntoSegment,
   compileSegments,
   isAnalysisReport,

@@ -128,6 +128,75 @@ data/
 
 治理端写入或更新图谱后，应调用 `await engine.flushAll()`（或等价地刷新索引并写 manifest），以便 `ModelDBClient.connect('图谱名')` 能读到最新 `atlas-manifest.json`。
 
+下文 **「治理端持久化与开发者体验（DX）」** 描述写缓冲、定时调度与合并读；若仅需快速上手，可跳到 **「使用指南」**。
+
+---
+
+## 治理端持久化与开发者体验（DX）
+
+### `updateFields(fields: string[])`
+
+- **入参**：`readonly string[]`；内部用 `new Set(fields)` **去重**，并保留 **首次出现顺序**。
+- **效果**：同步更新 Registry 与 `ModelStorage` 的 schema，与后续 `.mld` 落盘字段一致。
+
+### 写缓冲（Write-Behind，`Map<_id, ModelRecord>`）
+
+- **`PersistenceManager`** 维护 `recordBuffers: Map<modelName, Map<recordId, ModelRecord>>`；同一 `_id` 再次写入时**覆盖**为较新行。
+- **`ModelEntity`**：`private readonly _buffer` 与 `getOrCreateModelBuffer(name)` 为**同一引用**。
+- **`AtlasRegistry.model(name)`**：**缓存** `ModelEntity` 实例，多次 `engine.model('Pump')` 返回**同一对象**，保证写缓冲与 `insert` 状态连续。
+
+### 自动化调度与进程收尾
+
+- **200ms 定时器**：`AuthoringEngine` 构造时启动 `setInterval`。若 `persistence.hasBufferedRows()` 为真，则调用 **`flushPendingToDisk()`**（仅将缓冲**追加到 `.mld`**，不更新关系索引与 manifest）。
+- **`beforeExit`**：`process.once('beforeExit', () => void engine.flushAll())`，在进程即将退出事件循环前尽力执行 **`flushAll()`**（缓冲 → `.mld` → 关系索引 → `atlas-manifest.json`）。
+- **信号**：`registerAuthoringShutdownTask` 在 **SIGINT / SIGTERM** 时调用各引擎注册的 **`flushAll()`**。
+- **`process.on('exit')`** 中无法可靠执行异步 IO；强一致落盘请使用 **`insert(..., { sync: true })`** 或显式 **`await engine.flushAll()`**。
+
+### 合并读与 `QueryEngine`
+
+- **`MergedDataReader`**：`getAll` / `getByIds` / `scanModelRecords` 合并磁盘行与 `getPendingSnapshot`；**同一 `_id` 以缓冲为准**。
+- **`findFirstByFieldEq`**：**先**查缓冲，**再**扫磁盘，避免未刷盘行被磁盘旧行抢先命中。
+- **`mergeDiskRowsWithAuthoringBuffer(diskRows, pendingById)`**（`src/runtime/query-engine.ts`）：与「磁盘行 + 缓冲 Map」合并语义一致，便于工具层复用。
+- **`QueryEngine.execute`** 与 **`evaluate`** 等价（单行谓词）；**完整查询**行集由 **`DataReader`**（已合并）再进入 `QueryChain.execute` / 聚合，**sum / avg** 等与合并后视图一致。
+
+### `insert` 与可选 `{ sync: true }`
+
+- **默认**：`await model.insert(data)` 将行放入写缓冲；同进程内 **`await query().execute()`** 可通过合并读立即看到新行，**不必**先 `flushAll`。
+- **`{ sync: true }`**：`await model.insert(data, { sync: true })` 或 `await engine.insert(modelName, data, { sync: true })` 在该 promise **resolve 前**对该模型执行 **`flushModelToDisk`**（将该模型当前缓冲批量写入 `.mld`）。适用于**财务 / 强一致**等场景。
+- **风险**：未刷盘前进程崩溃可能丢失缓冲内数据；跨进程读文件或 `existsSync('.mld')` 断言前，须 **`flushAll`** 或 **`insert(..., { sync: true })`**。
+
+### 代码示例（治理端）
+
+```typescript
+import { AuthoringEngine } from 'mode-db-engine';
+
+const engine = new AuthoringEngine({ atlas: 'my_atlas' });
+engine.registerModel('Item', new Set(['id', 'name']));
+
+const Item = engine.model('Item');
+
+Item.updateFields(['id', 'name', 'id']); // 重复字段名会被去重
+
+const row = await Item.insert({ id: 'i1', name: 'A' });
+await engine.query('Item', [row._id]).execute();
+
+await Item.insert({ id: 'i2', name: 'B' }, { sync: true });
+
+await engine.flushAll();
+```
+
+**Runtime**：`ModelDBClient.connect(atlas)` **无** `insert` / `updateFields` / `bind`，只读已落盘数据与 manifest。
+
+### 相关源码
+
+| 模块                                                      | 路径                               |
+| --------------------------------------------------------- | ---------------------------------- |
+| 写缓冲、`flushPendingToDisk` / `flushModelToDisk`         | `authoring/persistence-manager.ts` |
+| `ModelEntity`、`InsertOptions`、`insert`                  | `authoring/entity.ts`              |
+| `AuthoringEngine`、调度、`beforeExit`                     | `authoring/engine.ts`              |
+| `mergeDiskRowsWithAuthoringBuffer`、`QueryEngine.execute` | `src/runtime/query-engine.ts`      |
+| 磁盘 + 缓冲合并读                                         | `authoring/merged-data-reader.ts`  |
+
 ---
 
 ## 使用指南
@@ -191,14 +260,14 @@ const zones = zoneRows.map((h) => h.getData());
 const relations = Pump.getAvailableRelations();
 ```
 
-| 方法                       | 说明                           |
-| -------------------------- | ------------------------------ |
-| `.updateFields(fields)`    | 更新 Schema 字段集并同步存储层 |
-| `.insert(data)`            | 插入记录（过滤未声明字段）     |
-| `.all()` / `.find(ids)`    | 全量或按 ID 起点查询           |
-| `.bind(fwd, strategy, …)`  | 从模型侧触发该关系的索引构建   |
-| `.unlink(fwd, pairs)`      | 按对解除链接                   |
-| `.getAvailableRelations()` | 继承感知的关系列表             |
+| 方法                                 | 说明                                                                |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| `.updateFields(fields)`              | 传入 `string[]`，内部去重后更新 Schema 并同步存储层（见上文 DX 节） |
+| `.insert(data, options?)`            | 插入记录（过滤未声明字段）；可选 **`{ sync: true }`** 见上文 DX 节  |
+| `.all()` / `.find(ids)` / `.query()` | 全量、按 ID 或链式查询                                              |
+| `.bind(fwd, strategy, …)`            | 从模型侧触发该关系的索引构建                                        |
+| `.unlink(fwd, pairs)`                | 按对解除链接                                                        |
+| `.getAvailableRelations()`           | 继承感知的关系列表                                                  |
 
 ### 4. RelationEntity —「线」的 OO 句柄
 
@@ -535,7 +604,7 @@ mode-db-engine/
 
 ## 集成验证与测试
 
-**索引**：各脚本的 Atlas 名、是否清空 `data/`、覆盖范围见 **[test/README.md](test/README.md)**。
+**索引**：集成测试的命令、数据目录与各脚本覆盖点见 **[test/README.md](test/README.md)**（该文档**仅**写测试相关内容；引擎说明与 DX 见本文档）。
 
 **推荐一键回归**（顺序：`verify` → `query-filters` → `integrity` → `audit`；首步会删除整个默认 **`data/`** 目录）：
 
@@ -553,17 +622,17 @@ npm run query-filters
 npm run integrity
 npm run audit
 npm run first-run               # 演示向，未包含在 test:integration 中
-npm run transform               # pivot / groupBy / aggregate / execute → AnalysisResult（§6.3）
+npm run transform               # pivot / groupBy / aggregate / execute → AnalysisResult（第六节 6.3）
 ```
 
-| 脚本                         | 主要内容                                                                                                                                                                                                                                                                                                                                              |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`verify.ts`**              | **pipe / tran** 双图谱隔离；**滞后 `updateFields`**；**PROTOCOL** 与 **`.rid` 正逆向成对**；**`ModelDBClient.connect`**、链式查询；Runtime **无 `insert` / `bind` 等**；**遇错计数**，失败时 **exit 1**。                                                                                                                                             |
-| **`query_filters.ts`**       | **§6** 全链路：**谓词树**、**AND/OR 短路**、**`matchAll` / `matchAllNodes` / `matchAny`**、**`getQueryPlan`**、**`filter`（Callback）**、**`relate` 目标过滤**、**`includeRelates`**；**`getRelateDiagnostic`** + **`failedPredicate`**；**`getRelationStatus`**、**`toSnapshot`**；**`QueryEngine.evaluateInto`** + **`PredicateEvaluateContext`**。 |
-| **`logic_integrity.ts`**     | **`explainRelate`**、**`NOT_REGISTERED`** / **`NO_LINK_IN_INDEX`**；**.rid 幽灵 id** → **`FILTERED_OUT_ORPHAN`**；**`includeRelates` + `toNested()`**。                                                                                                                                                                                               |
-| **`logic_closure_audit.ts`** | **pipe_system / tran_system** 物理隔离；**双向索引审计**；**多级 `relate`**；Runtime 只读。                                                                                                                                                                                                                                                           |
-| **`transform_aggregate.ts`** | **§6.3**：**`pivot` / `groupBy`**、**`aggregate`（对象与 `Aggregator`）**、**`between`**、**`compute` / `customReduce`**、**`execute()` → `AnalysisResult`**（**`asTree` / `asMatrix`**）、**`analyze()`**、**`traceableNull(all_missing)`**、关系路径分组键。                                                                                        |
-| **`first_run.ts`**           | 治理 → **`flushAll`** → Runtime 查询的**可读演示**（弱断言）。                                                                                                                                                                                                                                                                                        |
+| 脚本                         | 主要内容                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`verify.ts`**              | **pipe / tran** 双图谱隔离；**滞后 `updateFields`**；**PROTOCOL** 与 **`.rid` 正逆向成对**；**`ModelDBClient.connect`**、链式查询；Runtime **无 `insert` / `bind` 等**；**遇错计数**，失败时 **exit 1**。                                                                                                                                                 |
+| **`query_filters.ts`**       | **第六节** 全链路：**谓词树**、**AND/OR 短路**、**`matchAll` / `matchAllNodes` / `matchAny`**、**`getQueryPlan`**、**`filter`（Callback）**、**`relate` 目标过滤**、**`includeRelates`**；**`getRelateDiagnostic`** + **`failedPredicate`**；**`getRelationStatus`**、**`toSnapshot`**；**`QueryEngine.evaluateInto`** + **`PredicateEvaluateContext`**。 |
+| **`logic_integrity.ts`**     | **`model` 句柄缓存**、**合并读**、**`insert({ sync: true })` + 文件存在断言**；**`explainRelate`**、**`NOT_REGISTERED`** / **`NO_LINK_IN_INDEX`**；**.rid 幽灵 id** → **`FILTERED_OUT_ORPHAN`**；**`includeRelates` + `toNested()`**。                                                                                                                    |
+| **`logic_closure_audit.ts`** | **pipe_system / tran_system** 物理隔离；**双向索引审计**；**多级 `relate`**；Runtime 只读。                                                                                                                                                                                                                                                               |
+| **`transform_aggregate.ts`** | **第六节 6.3**：**`pivot` / `groupBy`**、**`aggregate`（对象与 `Aggregator`）**、**`between`**、**`compute` / `customReduce`**、**`execute()` → `AnalysisResult`**（**`asTree` / `asMatrix`**）、**`analyze()`**、**`traceableNull(all_missing)`**、关系路径分组键。                                                                                      |
+| **`first_run.ts`**           | 治理 → **`flushAll`** → Runtime 查询的**可读演示**（弱断言）。                                                                                                                                                                                                                                                                                            |
 
 ---
 

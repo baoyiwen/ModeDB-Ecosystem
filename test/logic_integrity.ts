@@ -1,6 +1,6 @@
 /**
  * HydratedEntity / QueryChain 空关联溯源与 includeRelates 行为校验；
- * 并断言同进程「合并读」：`insert` 后尚未 `flushAll` 时，`AuthoringEngine.query` 仍应命中新行。
+ * 并断言：AtlasRegistry 缓存 ModelEntity；合并读；`insert(..., { sync: true })` 后 `.mld` 可测。
  *
  * Run:  npx tsx test/logic_integrity.ts
  *       npm run integrity
@@ -9,6 +9,7 @@
  * 全部测试脚本说明见同目录 README.md
  */
 
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { readFile, writeFile, rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
@@ -57,6 +58,10 @@ async function main(): Promise<void> {
 
   const Pump = engine.model('Pump');
   const Zone = engine.model('Zone');
+  assert(
+    engine.model('Pump') === Pump && engine.model('Zone') === Zone,
+    'AtlasRegistry.model() 应缓存同一 ModelEntity 句柄（共享写缓冲）',
+  );
   Pump.updateFields(['id', 'name', 'zoneCode']);
   Zone.updateFields(['id', 'label']);
 
@@ -68,6 +73,10 @@ async function main(): Promise<void> {
   assert(zMerged[0]!.getData().id === 'Z-99', '合并读 Zone 业务 id');
   const pMerged = await engine.query('Pump', [pump._id]).execute();
   assert(pMerged.length === 1, '合并读：insert 后未 flushAll 应能 query 到 Pump');
+
+  const pumpMld = join(DATA_ROOT, ATLAS, 'models', 'Pump.mld');
+  await Pump.insert({ id: 'P-sync', name: '强同步泵', zoneCode: 'Z-99' }, { sync: true });
+  assert(existsSync(pumpMld), 'insert(..., { sync: true }) 后 Pump.mld 应已落盘（可测）');
 
   const loc = engine.relation('located_in');
   loc.updateLogic('many-to-one', { sourceField: 'zoneCode', targetField: 'id' });

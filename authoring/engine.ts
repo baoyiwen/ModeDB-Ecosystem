@@ -16,7 +16,7 @@ import { ModelStorage } from './storage.js';
 import { RelationIndexer } from './indexer.js';
 import { AtlasRegistry } from './atlas-registry.js';
 import { PersistenceManager, registerAuthoringShutdownTask } from './persistence-manager.js';
-import type { ModelEntity } from './entity.js';
+import type { InsertOptions, ModelEntity } from './entity.js';
 import type { RelationEntity } from './relation-entity.js';
 import { QueryChain } from '../src/runtime/query.js';
 import type { RuntimeContext } from '../src/runtime/context.js';
@@ -39,12 +39,10 @@ export interface AuthoringEngineOptions {
  * On construction, `PathResolver.ensureAtlasLayoutSync()` creates `models/` and `relations/`
  * and writes an initial `atlas-manifest.json` when missing.
  *
- * **Persistence:** `insert` appends to an in-memory buffer; a short idle timer flushes rows to `.mld`.
- * `SIGINT` / `SIGTERM` best-effort run {@link AuthoringEngine.flushAll}. For scripts that exit cleanly,
- * rely on the timer or call {@link AuthoringEngine.flushAll} before exit if another process must read files.
- * Same-process `createRuntime()` / `ModelDBClient.fromContext` use a merged `DataReader` (disk + buffer)
- * so queries see new rows before flush. Call {@link AuthoringEngine.flushAll} only when another OS process
- * must read atlas files cold immediately.
+ * **Persistence:** `insert` stages rows in a per-model write-behind `Map<_id, row>`; a **200ms** scheduler
+ * appends to `.mld` when buffers are non-empty; `beforeExit` and `SIGINT`/`SIGTERM` best-effort run
+ * {@link AuthoringEngine.flushAll}. Same-process `createRuntime()` uses the merged disk+buffer reader.
+ * Use `{ sync: true }` on {@link ModelEntity.insert} when a row must hit `.mld` before the promise resolves.
  */
 export class AuthoringEngine {
   readonly registry: ModelRegistry;
@@ -52,6 +50,7 @@ export class AuthoringEngine {
   readonly indexer: RelationIndexer;
   readonly paths: PathResolver;
   readonly persistence: PersistenceManager;
+  private readonly _autoFlushHandle: ReturnType<typeof setInterval>;
 
   constructor(options: AuthoringEngineOptions) {
     const paths =
@@ -83,6 +82,19 @@ export class AuthoringEngine {
         : new AtlasRegistry(this.storage, this.indexer, this.paths, this.persistence);
 
     registerAuthoringShutdownTask(() => this.flushAll());
+
+    this._autoFlushHandle = setInterval(() => {
+      if (this.persistence.hasBufferedRows()) {
+        void this.persistence.flushPendingToDisk();
+      }
+    }, 200);
+    if (typeof this._autoFlushHandle.unref === 'function') {
+      this._autoFlushHandle.unref();
+    }
+
+    process.once('beforeExit', () => {
+      void this.flushAll();
+    });
   }
 
   model(name: string): ModelEntity {
@@ -144,6 +156,7 @@ export class AuthoringEngine {
     );
   }
 
+  /** Replace model fields; `fields` is deduped (first occurrence order) when syncing schema to disk. */
   updateModelFields(name: string, fields: readonly string[]): void {
     const set = new Set(fields);
     this.registry.updateModelFields(name, set);
@@ -164,8 +177,16 @@ export class AuthoringEngine {
     return this.registerRelation(source, target, forward, reverse);
   }
 
-  async insert(modelName: string, data: Record<string, unknown>): Promise<ModelRecord> {
-    return this.persistence.insert(modelName, data);
+  async insert(
+    modelName: string,
+    data: Record<string, unknown>,
+    options?: InsertOptions,
+  ): Promise<ModelRecord> {
+    const record = await this.persistence.insert(modelName, data);
+    if (options?.sync) {
+      await this.persistence.flushModelToDisk(modelName);
+    }
+    return record;
   }
 
   async bind(

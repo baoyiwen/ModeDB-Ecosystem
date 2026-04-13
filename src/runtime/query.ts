@@ -1115,4 +1115,4 @@ export {
   mergeMatchAnyIntoSegment,
   compileSegments,
 } from './filter-builder.js';
-export { QueryEngine } from './query-engine.js';
+export { QueryEngine, mergeDiskRowsWithAuthoringBuffer } from './query-engine.js';

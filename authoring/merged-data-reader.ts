@@ -75,6 +75,11 @@ export class MergedDataReader implements DataReader {
     field: string,
     value: unknown,
   ): Promise<ModelRecord | undefined> {
+    for (const r of this.bufferSource.getPendingSnapshot(modelName)) {
+      if ((r as Record<string, unknown>)[field] === value) {
+        return r;
+      }
+    }
     let hit: ModelRecord | undefined;
     await this.disk.scanModelRecords(modelName, (rec) => {
       if (hit) {
@@ -84,14 +89,6 @@ export class MergedDataReader implements DataReader {
         hit = rec;
       }
     });
-    if (hit) {
-      return hit;
-    }
-    for (const r of this.bufferSource.getPendingSnapshot(modelName)) {
-      if ((r as Record<string, unknown>)[field] === value) {
-        return r;
-      }
-    }
-    return undefined;
+    return hit;
   }
 }
