@@ -1,7 +1,14 @@
 import type { ModelRecord } from '../../common/types.js';
+import type { FieldTypeDef } from '../../common/data-types.js';
 
 /** 支持的标量比较与集合操作符 */
 export type ScalarOperator = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'in' | 'between';
+
+/** Optional context for I18N-aware field resolution during query matching. */
+export interface FieldMatchContext {
+  readonly fieldTypes?: ReadonlyMap<string, FieldTypeDef>;
+  readonly locale?: string;
+}
 
 /** 单字段条件（参与 AND/OR 组） */
 export interface AtomicPredicate {
@@ -56,9 +63,24 @@ function num(x: unknown): number | null {
   return null;
 }
 
-export function matchesAtomic(rec: ModelRecord, p: AtomicPredicate): boolean {
+export function matchesAtomic(
+  rec: ModelRecord,
+  p: AtomicPredicate,
+  ctx?: FieldMatchContext,
+): boolean {
   const row = rec as Record<string, unknown>;
-  const actual = row[p.field];
+  let actual = row[p.field];
+
+  if (
+    ctx?.locale &&
+    ctx.fieldTypes?.get(p.field)?.type === 'I18N' &&
+    actual !== null &&
+    actual !== undefined &&
+    typeof actual === 'object' &&
+    !Array.isArray(actual)
+  ) {
+    actual = (actual as Record<string, unknown>)[ctx.locale];
+  }
 
   switch (p.operator) {
     case 'eq':
@@ -113,11 +135,15 @@ export function matchesAtomic(rec: ModelRecord, p: AtomicPredicate): boolean {
 }
 
 /** 组内 AND，组间 OR；空组列表视为恒真 */
-export function matchesPredicateGroups(groups: PredicateGroups, rec: ModelRecord): boolean {
+export function matchesPredicateGroups(
+  groups: PredicateGroups,
+  rec: ModelRecord,
+  ctx?: FieldMatchContext,
+): boolean {
   if (groups.length === 0) {
     return true;
   }
-  return groups.some((g) => g.every((atom) => matchesAtomic(rec, atom)));
+  return groups.some((g) => g.every((atom) => matchesAtomic(rec, atom, ctx)));
 }
 
 export type RecordPredicate = (rec: ModelRecord) => boolean;

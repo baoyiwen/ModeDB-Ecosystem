@@ -5,6 +5,8 @@ import type { DataReader } from '../../common/provider.js';
 import type { PathResolver } from '../common/PathResolver.js';
 import { ModelNotRegisteredError, FileIOError } from '../../common/errors.js';
 
+const SCHEMA_HEADER_PREFIX = '{"__schema__":';
+
 /**
  * Read-only `.mld` access for the client runtime (no writes, no mkdir).
  */
@@ -37,7 +39,7 @@ export class ModelFileReader implements DataReader {
     try {
       for await (const line of rl) {
         const trimmed = line.trim();
-        if (trimmed.length === 0) {
+        if (trimmed.length === 0 || trimmed.startsWith(SCHEMA_HEADER_PREFIX)) {
           continue;
         }
         results.push(JSON.parse(trimmed) as ModelRecord);
@@ -71,7 +73,7 @@ export class ModelFileReader implements DataReader {
     try {
       for await (const line of rl) {
         const trimmed = line.trim();
-        if (trimmed.length === 0) {
+        if (trimmed.length === 0 || trimmed.startsWith(SCHEMA_HEADER_PREFIX)) {
           continue;
         }
         const record = JSON.parse(trimmed) as ModelRecord;
@@ -112,7 +114,7 @@ export class ModelFileReader implements DataReader {
         }
 
         const trimmed = line.trim();
-        if (trimmed.length === 0) {
+        if (trimmed.length === 0 || trimmed.startsWith(SCHEMA_HEADER_PREFIX)) {
           continue;
         }
 
@@ -152,7 +154,7 @@ export class ModelFileReader implements DataReader {
     try {
       for await (const line of rl) {
         const trimmed = line.trim();
-        if (trimmed.length === 0) {
+        if (trimmed.length === 0 || trimmed.startsWith(SCHEMA_HEADER_PREFIX)) {
           continue;
         }
         const record = JSON.parse(trimmed) as ModelRecord;

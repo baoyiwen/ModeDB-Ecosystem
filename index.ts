@@ -9,7 +9,7 @@ export {
   type AuthoringEngineOptions,
 } from './authoring/index.js';
 export { ModelEntity, AuthoringModel } from './authoring/entity.js';
-export type { AvailableRelation } from './authoring/entity.js';
+export type { AvailableRelation, UpdateOptions, DeleteOptions } from './authoring/entity.js';
 export { RelationEntity, AuthoringRelation } from './authoring/relation-entity.js';
 export { ModelStorage } from './authoring/storage.js';
 export { RelationIndexer } from './authoring/indexer.js';
@@ -142,6 +142,7 @@ export {
   StorageError,
   ModelNotRegisteredError,
   FileIOError,
+  ValidationError,
   RegistryError,
   DuplicateModelError,
   ParentNotFoundError,
@@ -151,6 +152,35 @@ export {
   QueryError,
   RelationNotFoundError,
 } from './common/errors.js';
+export { DELETED_SENTINEL, isDeletedRecord } from './common/types.js';
+export {
+  DataType,
+  validateFieldValue,
+  normalizeFieldDefs,
+  normalizeFieldDef,
+  coerceI18NValue,
+} from './common/data-types.js';
+export type {
+  FieldTypeDef,
+  FieldTypeMap,
+  FieldDefInput,
+  FieldDefsRecord,
+} from './common/data-types.js';
+export {
+  ValueObject,
+  I18NValue,
+  ColorValue,
+  UnitValue,
+  StringValue,
+  NumberValue,
+  IntValue,
+  BooleanValue,
+  DateTimeValue,
+  JsonValue,
+  createValueObject,
+  unwrapValue,
+} from './common/value-objects.js';
+export type { ValueSyncFn, I18NDict, RGBA, UnitData } from './common/value-objects.js';
 export type {
   ModelSchema,
   ModelDefinition,

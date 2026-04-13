@@ -21,7 +21,8 @@
     "format:check": "prettier --check \"**/*.{js,ts,json,md}\"",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:integration",
-    "test:integration": "tsx test/verify.ts && tsx test/query_filters.ts && tsx test/logic_integrity.ts && tsx test/logic_closure_audit.ts && tsx test/query_chain_extended.ts",
+    "test:integration": "tsx test/verify.ts && tsx test/query_filters.ts && tsx test/logic_integrity.ts && tsx test/logic_closure_audit.ts && tsx test/query_chain_extended.ts && tsx test/authoring_dx_audit.ts && tsx test/crud_audit.ts && tsx test/datatype_audit.ts",
+    "datatype-audit": "tsx test/datatype_audit.ts",
     "first-run": "tsx test/first_run.ts",
     "audit": "tsx test/logic_closure_audit.ts",
     "integrity": "tsx test/logic_integrity.ts",
@@ -30,6 +31,8 @@
     "final-analysis": "tsx test/final_analysis_test.ts",
     "query-extended": "tsx test/query_chain_extended.ts",
     "advanced-audit": "tsx test/advanced_feature_audit.ts",
+    "dx-audit": "tsx test/authoring_dx_audit.ts",
+    "crud-audit": "tsx test/crud_audit.ts",
     "prepare": "husky",
     "check": "npm run typecheck && npm run lint && npm run format:check"
   },

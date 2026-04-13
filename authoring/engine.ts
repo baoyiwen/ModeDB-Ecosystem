@@ -16,16 +16,25 @@ import { ModelStorage } from './storage.js';
 import { RelationIndexer } from './indexer.js';
 import { AtlasRegistry } from './atlas-registry.js';
 import { PersistenceManager, registerAuthoringShutdownTask } from './persistence-manager.js';
-import type { InsertOptions, ModelEntity } from './entity.js';
+import type { InsertOptions, UpdateOptions, DeleteOptions, ModelEntity } from './entity.js';
 import type { RelationEntity } from './relation-entity.js';
 import { QueryChain } from '../src/runtime/query.js';
+import { QueryEngine } from '../src/runtime/query-engine.js';
+import type { PredicateNode } from '../src/runtime/predicate-tree.js';
 import type { RuntimeContext } from '../src/runtime/context.js';
+import {
+  normalizeFieldDefs,
+  type FieldDefsRecord,
+  type FieldTypeDef,
+} from '../common/data-types.js';
 
 export interface AuthoringEngineOptions {
   /** Atlas name; data lives under `<storageRoot>/<atlas>/`. */
   atlas: string;
   /** Storage root directory. Defaults to shared `resolveModelDBStorageRoot()` (see `storage-root-config.ts`). */
   storageRoot?: string;
+  /** Default locale for I18N field auto-wrap and query resolution. */
+  currentLocale?: string;
   /** Advanced: inject a pre-built resolver (must match `atlas`). */
   paths?: PathResolver;
   registry?: ModelRegistry;
@@ -50,6 +59,7 @@ export class AuthoringEngine {
   readonly indexer: RelationIndexer;
   readonly paths: PathResolver;
   readonly persistence: PersistenceManager;
+  currentLocale: string | undefined;
   private readonly _autoFlushHandle: ReturnType<typeof setInterval>;
 
   constructor(options: AuthoringEngineOptions) {
@@ -73,7 +83,9 @@ export class AuthoringEngine {
     paths.ensureAtlasLayoutSync();
 
     this.paths = paths;
+    this.currentLocale = options.currentLocale;
     this.storage = options.storage ?? new ModelStorage(paths);
+    this.storage.locale = this.currentLocale;
     this.persistence = new PersistenceManager(this.storage);
     this.indexer = options.indexer ?? new RelationIndexer(paths);
     this.registry =
@@ -124,17 +136,34 @@ export class AuthoringEngine {
       dataReader: this.persistence.getMergedReader(),
       indexReader: this.indexer,
       atlas: this.paths.atlasName,
+      fieldContext: this._buildFieldContext(),
     };
+  }
+
+  /** Build a FieldMatchContext from the current registry for I18N-aware queries. */
+  private _buildFieldContext():
+    | { locale?: string; fieldTypes?: ReadonlyMap<string, FieldTypeDef> }
+    | undefined {
+    if (!this.currentLocale) {
+      return undefined;
+    }
+    return { locale: this.currentLocale };
   }
 
   registerModel(
     name: string,
-    fields?: ReadonlySet<string>,
+    fields?: ReadonlySet<string> | FieldDefsRecord,
     parentId?: string | null,
   ): ModelDefinition {
-    const resolvedFields = fields ?? new Set<string>();
+    if (fields && !(fields instanceof Set) && typeof fields === 'object') {
+      const { fields: set, fieldTypes } = normalizeFieldDefs(fields as FieldDefsRecord);
+      const definition = this.registry.registerModel(name, set, parentId ?? null, fieldTypes);
+      this.storage.registerSchema({ name, fields: set, fieldTypes });
+      return definition;
+    }
+    const resolvedFields = (fields as ReadonlySet<string> | undefined) ?? new Set<string>();
     const definition = this.registry.registerModel(name, resolvedFields, parentId ?? null);
-    this.storage.registerSchema({ name, fields: resolvedFields });
+    this.storage.registerSchema({ name, fields: resolvedFields, fieldTypes: new Map() });
     return definition;
   }
 
@@ -156,11 +185,17 @@ export class AuthoringEngine {
     );
   }
 
-  /** Replace model fields; `fields` is deduped (first occurrence order) when syncing schema to disk. */
-  updateModelFields(name: string, fields: readonly string[]): void {
-    const set = new Set(fields);
-    this.registry.updateModelFields(name, set);
-    this.storage.updateSchema(name, set);
+  /** Replace model fields; accepts `string[]` (legacy) or typed `Record<string, DataType | FieldTypeDef>`. */
+  updateModelFields(name: string, fields: readonly string[] | FieldDefsRecord): void {
+    if (Array.isArray(fields)) {
+      const set = new Set(fields as readonly string[]);
+      this.registry.updateModelFields(name, set);
+      this.storage.updateSchema(name, set);
+    } else {
+      const { fields: set, fieldTypes } = normalizeFieldDefs(fields as FieldDefsRecord);
+      this.registry.updateModelFields(name, set, fieldTypes);
+      this.storage.updateSchema(name, set, fieldTypes);
+    }
   }
 
   updateRelationLogic(forwardName: string, logic: RelationLogic, matchOn?: MatchPredicate): void {
@@ -187,6 +222,88 @@ export class AuthoringEngine {
       await this.persistence.flushModelToDisk(modelName);
     }
     return record;
+  }
+
+  /**
+   * Partial update by `_id`. Merges `partialData` into the existing row (buffer → disk fallback).
+   * Returns the merged row, or `undefined` when the id does not exist.
+   */
+  async update(
+    modelName: string,
+    id: string,
+    partialData: Record<string, unknown>,
+    options?: UpdateOptions,
+  ): Promise<ModelRecord | undefined> {
+    const merged = await this.persistence.update(modelName, id, partialData);
+    if (merged && options?.sync) {
+      await this.persistence.flushModelToDisk(modelName);
+    }
+    return merged;
+  }
+
+  /**
+   * Soft-delete by `_id`. Tombstones the row and purges all relation edges originating
+   * from this entity (model-independent: related model rows are untouched).
+   * Physical removal from `.mld` happens on the next flush cycle.
+   */
+  async delete(modelName: string, id: string, options?: DeleteOptions): Promise<boolean> {
+    const ok = await this.persistence.delete(modelName, id);
+    if (ok) {
+      await this.indexer.purgeEntityFromAllRelations(modelName, id, this.registry);
+      if (options?.sync) {
+        await this.persistence.flushModelToDisk(modelName);
+      }
+    }
+    return ok;
+  }
+
+  /**
+   * Batch update: find all rows of `modelName` matching `predicate`, merge `partialData` into each.
+   */
+  async updateWhere(
+    modelName: string,
+    predicate: PredicateNode,
+    partialData: Record<string, unknown>,
+    options?: UpdateOptions,
+  ): Promise<ModelRecord[]> {
+    const allRows = await this.persistence.getMergedReader().getAll(modelName);
+    const hits = allRows.filter((r) => QueryEngine.matches(r, predicate));
+    const results: ModelRecord[] = [];
+    for (const row of hits) {
+      const merged = await this.persistence.update(modelName, row._id, partialData);
+      if (merged) {
+        results.push(merged);
+      }
+    }
+    if (results.length > 0 && options?.sync) {
+      await this.persistence.flushModelToDisk(modelName);
+    }
+    return results;
+  }
+
+  /**
+   * Batch delete: find all rows of `modelName` matching `predicate`, tombstone each
+   * and purge their relation edges (model-independent). Returns the count of deleted rows.
+   */
+  async deleteWhere(
+    modelName: string,
+    predicate: PredicateNode,
+    options?: DeleteOptions,
+  ): Promise<number> {
+    const allRows = await this.persistence.getMergedReader().getAll(modelName);
+    const hits = allRows.filter((r) => QueryEngine.matches(r, predicate));
+    let count = 0;
+    for (const row of hits) {
+      const ok = await this.persistence.delete(modelName, row._id);
+      if (ok) {
+        await this.indexer.purgeEntityFromAllRelations(modelName, row._id, this.registry);
+        count++;
+      }
+    }
+    if (count > 0 && options?.sync) {
+      await this.persistence.flushModelToDisk(modelName);
+    }
+    return count;
   }
 
   async bind(
@@ -230,6 +347,7 @@ export class AuthoringEngine {
         kind: 'ids',
         ids,
       },
+      this._buildFieldContext(),
     );
   }
 

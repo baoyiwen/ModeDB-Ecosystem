@@ -2,20 +2,24 @@ import type { ModelDefinition, RelationDefinition, ModelRecord } from '../../com
 import type { ModelRegistry } from '../../common/registry.js';
 import type { DataReader, IndexReader } from '../../common/provider.js';
 import { QueryChain } from './query.js';
+import type { FieldMatchContext } from './query-filter.js';
 
 /**
  * Read-only model view: query / all / schema introspection only.
  */
 export class RuntimeModel {
   readonly name: string;
+  protected fieldContext: FieldMatchContext | undefined;
 
   constructor(
     name: string,
     protected readonly registry: ModelRegistry,
     protected readonly dataReader: DataReader,
     protected readonly indexReader: IndexReader,
+    fieldContext?: FieldMatchContext,
   ) {
     this.name = name;
+    this.fieldContext = fieldContext;
   }
 
   getSchema(): ModelDefinition {
@@ -37,14 +41,28 @@ export class RuntimeModel {
     ids?: readonly string[],
   ): QueryChain<M, 'rows'> {
     if (ids === undefined) {
-      return new QueryChain(this.registry, this.indexReader, this.dataReader, this.name, {
-        kind: 'all',
-      });
+      return new QueryChain(
+        this.registry,
+        this.indexReader,
+        this.dataReader,
+        this.name,
+        {
+          kind: 'all',
+        },
+        this.fieldContext,
+      );
     }
-    return new QueryChain(this.registry, this.indexReader, this.dataReader, this.name, {
-      kind: 'ids',
-      ids: [...ids],
-    });
+    return new QueryChain(
+      this.registry,
+      this.indexReader,
+      this.dataReader,
+      this.name,
+      {
+        kind: 'ids',
+        ids: [...ids],
+      },
+      this.fieldContext,
+    );
   }
 
   find<M extends Record<string, unknown> = Record<string, unknown>>(

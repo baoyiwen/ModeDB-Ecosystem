@@ -9,7 +9,7 @@
  * **{@link PredicateNode}** = `AtomNode | GroupNode | CallbackNode`（IR 超集；序列化/教学场景可视为 Atom|Group）。
  */
 import type { ModelRecord } from '../../common/types.js';
-import { matchesAtomic, type ScalarOperator } from './query-filter.js';
+import { matchesAtomic, type ScalarOperator, type FieldMatchContext } from './query-filter.js';
 
 /** 语义化查询核心算子（与 FilterBuilder 主 API 对齐） */
 export type PredicateStandardOperator = 'eq' | 'neq' | 'gt' | 'lt' | 'like' | 'in';
@@ -89,6 +89,7 @@ export function evaluatePredicate(
   data: ModelRecord,
   node: PredicateNode,
   ctx?: PredicateEvaluateContext,
+  fieldCtx?: FieldMatchContext,
 ): EvaluateResult {
   const finish = (r: EvaluateResult): EvaluateResult => {
     if (ctx && !r.ok && r.failedAt) {
@@ -100,11 +101,15 @@ export function evaluatePredicate(
 
   switch (node.type) {
     case 'atom': {
-      const ok = matchesAtomic(data, {
-        field: node.field,
-        operator: node.op as ScalarOperator,
-        value: node.value,
-      });
+      const ok = matchesAtomic(
+        data,
+        {
+          field: node.field,
+          operator: node.op as ScalarOperator,
+          value: node.value,
+        },
+        fieldCtx,
+      );
       if (ok) {
         return { ok: true };
       }
@@ -125,7 +130,7 @@ export function evaluatePredicate(
       }
       if (node.logic === 'AND') {
         for (const c of node.children) {
-          const r = evaluatePredicate(data, c, ctx);
+          const r = evaluatePredicate(data, c, ctx, fieldCtx);
           if (!r.ok) {
             return r;
           }
@@ -133,7 +138,7 @@ export function evaluatePredicate(
         return { ok: true };
       }
       for (const c of node.children) {
-        const r = evaluatePredicate(data, c, ctx);
+        const r = evaluatePredicate(data, c, ctx, fieldCtx);
         if (r.ok) {
           return { ok: true };
         }
@@ -151,8 +156,11 @@ export function evaluatePredicate(
   }
 }
 
-export function predicateMatcher(node: PredicateNode): (rec: ModelRecord) => boolean {
-  return (rec) => evaluatePredicate(rec, node).ok;
+export function predicateMatcher(
+  node: PredicateNode,
+  fieldCtx?: FieldMatchContext,
+): (rec: ModelRecord) => boolean {
+  return (rec) => evaluatePredicate(rec, node, undefined, fieldCtx).ok;
 }
 
 export function clonePredicateNode(node: PredicateNode): PredicateNode {

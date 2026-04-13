@@ -2,16 +2,25 @@ import { createHash } from 'node:crypto';
 import type { MatchPredicate, RelationLogic } from './types.js';
 import { ModelRegistry } from './registry.js';
 import { AtlasManifestError } from './errors.js';
+import type { FieldTypeDef } from './data-types.js';
 
 /** Logical format version embedded in `atlas-manifest.json`. */
 export const ATLAS_MANIFEST_FORMAT_VERSION = '1.0.0';
 
 export const ATLAS_MANIFEST_FILENAME = 'atlas-manifest.json';
 
+/** Serialized field type entry in the manifest. */
+export interface AtlasManifestFieldTypeJson {
+  readonly type: string;
+  readonly required?: boolean;
+  readonly unit?: string;
+}
+
 export interface AtlasManifestModelJson {
   readonly name: string;
   readonly parentId: string | null;
   readonly fields: readonly string[];
+  readonly fieldTypes?: Readonly<Record<string, AtlasManifestFieldTypeJson>>;
 }
 
 export interface AtlasManifestRelationJson {
@@ -108,6 +117,26 @@ export function computeAtlasManifestChecksum(data: {
   return sha256Hex(atlasManifestChecksumPayload(data));
 }
 
+function deserializeFieldTypes(
+  raw?: Readonly<Record<string, AtlasManifestFieldTypeJson>>,
+): Map<string, FieldTypeDef> {
+  if (!raw) {
+    return new Map();
+  }
+  const map = new Map<string, FieldTypeDef>();
+  for (const [k, v] of Object.entries(raw)) {
+    const def: FieldTypeDef = { type: v.type as FieldTypeDef['type'] };
+    if (v.required) {
+      (def as { required: boolean }).required = v.required;
+    }
+    if (v.unit) {
+      (def as { unit: string }).unit = v.unit;
+    }
+    map.set(k, def);
+  }
+  return map;
+}
+
 function hydrateRegistryFromManifest(data: {
   version: string;
   atlas: string;
@@ -128,7 +157,12 @@ function hydrateRegistryFromManifest(data: {
     }
     const m = pending[idx]!;
     pending.splice(idx, 1);
-    registry.registerModel(m.name, new Set(m.fields), m.parentId);
+    registry.registerModel(
+      m.name,
+      new Set(m.fields),
+      m.parentId,
+      deserializeFieldTypes(m.fieldTypes),
+    );
   }
 
   for (const r of data.relations) {
@@ -184,17 +218,46 @@ export function parseAtlasManifestJson(raw: string, expectedAtlas: string): Mode
   return hydrateRegistryFromManifest(payload);
 }
 
+function serializeFieldTypes(
+  ft: Map<string, FieldTypeDef>,
+): Record<string, AtlasManifestFieldTypeJson> | undefined {
+  if (ft.size === 0) {
+    return undefined;
+  }
+  const out: Record<string, AtlasManifestFieldTypeJson> = {};
+  for (const [k, v] of ft) {
+    const entry: { type: string; required?: boolean; unit?: string } = {
+      type: v.type,
+    };
+    if (v.required) {
+      entry.required = v.required;
+    }
+    if (v.unit) {
+      entry.unit = v.unit;
+    }
+    out[k] = entry;
+  }
+  return out;
+}
+
 export function buildAtlasManifestFileJson(
   registry: ModelRegistry,
   atlas: string,
 ): AtlasManifestFileJson {
   const models: AtlasManifestModelJson[] = registry
     .getModelDefinitions()
-    .map((m) => ({
-      name: m.name,
-      parentId: m.parentId,
-      fields: [...m.fields].sort((a, b) => a.localeCompare(b)),
-    }))
+    .map((m) => {
+      const base: AtlasManifestModelJson = {
+        name: m.name,
+        parentId: m.parentId,
+        fields: [...m.fields].sort((a, b) => a.localeCompare(b)),
+      };
+      const ft = serializeFieldTypes(m.fieldTypes);
+      if (ft) {
+        return { ...base, fieldTypes: ft };
+      }
+      return base;
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const relations: AtlasManifestRelationJson[] = [...registry.getRelations()]

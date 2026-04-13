@@ -1,4 +1,4 @@
-import type { ModelRecord } from '../../common/types.js';
+import { isDeletedRecord, type ModelRecord } from '../../common/types.js';
 import {
   evaluatePredicate,
   formatEvaluateFailure,
@@ -6,10 +6,11 @@ import {
   type PredicateEvaluateContext,
   type PredicateNode,
 } from './predicate-tree.js';
+import type { FieldMatchContext } from './query-filter.js';
 
 /**
  * Merge on-disk rows with the authoring write-behind map (`_id` → row). Buffer wins on duplicate `_id`.
- * Same semantics as the authoring merged `DataReader` + `QueryChain.execute` row materialization.
+ * Rows carrying `__deleted: true` are stripped from the result so deleted data never surfaces in queries.
  */
 export function mergeDiskRowsWithAuthoringBuffer(
   diskRows: readonly ModelRecord[],
@@ -30,7 +31,7 @@ export function mergeDiskRowsWithAuthoringBuffer(
     }
     byId.set(r._id, r);
   }
-  return order.map((id) => byId.get(id)!);
+  return order.filter((id) => !isDeletedRecord(byId.get(id)!)).map((id) => byId.get(id)!);
 }
 
 /**
@@ -40,15 +41,23 @@ export function mergeDiskRowsWithAuthoringBuffer(
  * `MergedDataReader`）合并磁盘与缓冲，再对本类 {@link evaluate} / {@link execute} 做谓词过滤；聚合同理基于合并后行集。
  */
 export class QueryEngine {
-  static evaluate(data: ModelRecord, node: PredicateNode): EvaluateResult {
-    return evaluatePredicate(data, node);
+  static evaluate(
+    data: ModelRecord,
+    node: PredicateNode,
+    fieldCtx?: FieldMatchContext,
+  ): EvaluateResult {
+    return evaluatePredicate(data, node, undefined, fieldCtx);
   }
 
   /**
    * 与 {@link evaluate} 相同；命名与「整条查询执行」对齐。合并视图由 `DataReader` 提供后再谓词求值。
    */
-  static execute(data: ModelRecord, node: PredicateNode): EvaluateResult {
-    return evaluatePredicate(data, node);
+  static execute(
+    data: ModelRecord,
+    node: PredicateNode,
+    fieldCtx?: FieldMatchContext,
+  ): EvaluateResult {
+    return evaluatePredicate(data, node, undefined, fieldCtx);
   }
 
   /**
@@ -59,14 +68,15 @@ export class QueryEngine {
     data: ModelRecord,
     node: PredicateNode,
     ctx: PredicateEvaluateContext,
+    fieldCtx?: FieldMatchContext,
   ): EvaluateResult {
     ctx.failedAt = undefined;
     ctx.failureKind = undefined;
-    return evaluatePredicate(data, node, ctx);
+    return evaluatePredicate(data, node, ctx, fieldCtx);
   }
 
-  static matches(data: ModelRecord, node: PredicateNode): boolean {
-    return evaluatePredicate(data, node).ok;
+  static matches(data: ModelRecord, node: PredicateNode, fieldCtx?: FieldMatchContext): boolean {
+    return evaluatePredicate(data, node, undefined, fieldCtx).ok;
   }
 
   static explainFailure(data: ModelRecord, node: PredicateNode): string {

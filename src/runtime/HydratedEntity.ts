@@ -1,4 +1,5 @@
 import type { ModelRecord } from '../../common/types.js';
+import type { FieldTypeDef } from '../../common/data-types.js';
 import type { ModelRegistry } from '../../common/registry.js';
 import type { DataReader, IndexReader } from '../../common/provider.js';
 import {
@@ -6,6 +7,11 @@ import {
   targetModelName,
   type ResolvedRelation,
 } from './relation-resolve.js';
+import {
+  type ValueObject,
+  createValueObject,
+  type ValueSyncFn,
+} from '../../common/value-objects.js';
 
 export type RelationEmptyReason =
   | 'NOT_REGISTERED'
@@ -32,6 +38,8 @@ export interface HydrationContext {
   readonly registry: ModelRegistry;
   readonly indexReader: IndexReader;
   readonly dataReader: DataReader;
+  /** Optional sync callback for write-through from ValueObject.update(). */
+  readonly valueSyncFn?: ValueSyncFn;
 }
 
 function reasonToTraceStatus(reason: RelationEmptyReason): RelationTraceStatus {
@@ -67,6 +75,7 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
   private readonly relates = new Map<string, HydratedEntity[]>();
   private readonly diagnostics = new Map<string, RelateDiagnostic>();
   private readonly relationStatus = new Map<string, RelationTraceStatus>();
+  private _valueCache: Map<string, ValueObject> | undefined;
 
   constructor(
     private readonly record: T,
@@ -78,8 +87,58 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
     return this.modelName;
   }
 
-  getData(): T {
-    return this.record;
+  /**
+   * Return the raw record data as a plain JSON object.
+   *
+   * When `deep` is `true` (default), nested {@link HydratedEntity} children
+   * from `.relates` are recursively flattened into the output under a
+   * `relates` key — mirroring {@link toNested} but always returning the
+   * raw record (no ValueObject wrappers).
+   */
+  getData(deep?: boolean): T {
+    if (!deep) {
+      return this.record;
+    }
+    const base = { ...this.record } as Record<string, unknown>;
+    if (this.relates.size > 0) {
+      const rel: Record<string, Record<string, unknown>[]> = {};
+      for (const [k, v] of this.relates) {
+        rel[k] = v.map((c) => c.getData(true) as Record<string, unknown>);
+      }
+      base['relates'] = rel;
+    }
+    return base as T;
+  }
+
+  /**
+   * Return a typed {@link ValueObject} wrapper for the given field.
+   *
+   * The wrapper provides type-specific helpers (e.g. `I18NValue.get(lang)`,
+   * `ColorValue.toHex()`, `UnitValue.convertTo(unit)`) and a `.update()`
+   * method that writes through to the model buffer when a sync callback
+   * is available.
+   *
+   * For fields without a registered DataType, a `JsonValue` wrapper is returned.
+   */
+  getValue(fieldName: string): ValueObject | undefined {
+    const raw = (this.record as Record<string, unknown>)[fieldName];
+    if (raw === undefined) {
+      return undefined;
+    }
+
+    if (!this._valueCache) {
+      this._valueCache = new Map();
+    }
+    const cached = this._valueCache.get(fieldName);
+    if (cached) {
+      return cached;
+    }
+
+    const modelDef = this.ctx.registry.getModel(this.modelName);
+    const typeDef: FieldTypeDef = modelDef?.fieldTypes.get(fieldName) ?? { type: 'JSON' };
+    const vo = createValueObject(fieldName, raw, typeDef, this.ctx.valueSyncFn);
+    this._valueCache.set(fieldName, vo);
+    return vo;
   }
 
   getRelates(): ReadonlyMap<string, HydratedEntity[]> {

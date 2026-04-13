@@ -6,7 +6,13 @@ export {
 } from '../src/authoring/AuthoringEngine.js';
 export { ModelDBAdmin } from './admin.js';
 export { AtlasRegistry } from './atlas-registry.js';
-export { ModelEntity, AuthoringModel, type InsertOptions } from './entity.js';
+export {
+  ModelEntity,
+  AuthoringModel,
+  type InsertOptions,
+  type UpdateOptions,
+  type DeleteOptions,
+} from './entity.js';
 export type { AvailableRelation } from './entity.js';
 export { RelationEntity, AuthoringRelation } from './relation-entity.js';
 export { ModelStorage } from './storage.js';

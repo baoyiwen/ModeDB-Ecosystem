@@ -1,4 +1,4 @@
-import type { ModelRecord } from '../common/types.js';
+import { isDeletedRecord, type ModelRecord } from '../common/types.js';
 import type { DataReader } from '../common/provider.js';
 import type { ModelStorage } from './storage.js';
 
@@ -25,12 +25,13 @@ function mergeRecordLists(
     }
     byId.set(r._id, r);
   }
-  return order.map((id) => byId.get(id)!);
+  return order.filter((id) => !isDeletedRecord(byId.get(id)!)).map((id) => byId.get(id)!);
 }
 
 /**
  * Merges on-disk `.mld` rows with the authoring persistence buffer so {@link QueryChain.execute}
- * sees inserts before background flush (read-your-writes).
+ * sees inserts / updates / deletes before background flush (read-your-writes).
+ * Rows carrying `__deleted: true` are transparently filtered out.
  */
 export class MergedDataReader implements DataReader {
   constructor(
@@ -57,7 +58,9 @@ export class MergedDataReader implements DataReader {
         byId.set(r._id, r);
       }
     }
-    return ids.map((id) => byId.get(id)).filter((x): x is ModelRecord => x !== undefined);
+    return ids
+      .map((id) => byId.get(id))
+      .filter((x): x is ModelRecord => x !== undefined && !isDeletedRecord(x));
   }
 
   async scanModelRecords(
@@ -76,7 +79,7 @@ export class MergedDataReader implements DataReader {
     value: unknown,
   ): Promise<ModelRecord | undefined> {
     for (const r of this.bufferSource.getPendingSnapshot(modelName)) {
-      if ((r as Record<string, unknown>)[field] === value) {
+      if (!isDeletedRecord(r) && (r as Record<string, unknown>)[field] === value) {
         return r;
       }
     }
@@ -89,6 +92,14 @@ export class MergedDataReader implements DataReader {
         hit = rec;
       }
     });
+    if (hit) {
+      const pendingOverride = this.bufferSource
+        .getPendingSnapshot(modelName)
+        .find((r) => r._id === hit!._id);
+      if (pendingOverride && isDeletedRecord(pendingOverride)) {
+        return undefined;
+      }
+    }
     return hit;
   }
 }

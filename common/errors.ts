@@ -68,6 +68,16 @@ export class FileIOError extends StorageError {
   }
 }
 
+/**
+ * Thrown when a field value fails DataType validation on insert or update.
+ */
+export class ValidationError extends StorageError {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'ValidationError';
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Registry errors
 // ---------------------------------------------------------------------------

@@ -51,7 +51,7 @@ export class ModelDBClient {
     const indexReader = new RelationIndexFileReader(paths);
 
     for (const m of registry.getModelDefinitions()) {
-      dataReader.registerSchema({ name: m.name, fields: m.fields });
+      dataReader.registerSchema({ name: m.name, fields: m.fields, fieldTypes: m.fieldTypes });
     }
 
     const ctx: RuntimeContext = {

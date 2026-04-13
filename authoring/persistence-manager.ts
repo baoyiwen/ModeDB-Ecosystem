@@ -1,4 +1,4 @@
-import type { ModelRecord } from '../common/types.js';
+import { DELETED_SENTINEL, isDeletedRecord, type ModelRecord } from '../common/types.js';
 import type { ModelStorage } from './storage.js';
 import { MergedDataReader, type BufferedModelSource } from './merged-data-reader.js';
 
@@ -100,7 +100,64 @@ export class PersistenceManager implements BufferedModelSource {
   }
 
   /**
-   * Append staged rows for one model to `.mld` and clear that model's buffer map.
+   * Merge `partialData` into an existing row. Checks buffer first; falls back to disk.
+   * The merged row is staged in the buffer (last-write-wins on flush).
+   * Returns the merged row, or `undefined` when `_id` does not exist anywhere.
+   */
+  async update(
+    modelName: string,
+    id: string,
+    partialData: Record<string, unknown>,
+  ): Promise<ModelRecord | undefined> {
+    const buf = this.getOrCreateModelBuffer(modelName);
+    let existing = buf.get(id);
+    if (!existing) {
+      const diskRows = await this.storage.getByIds(modelName, [id]);
+      existing = diskRows[0];
+    }
+    if (!existing || isDeletedRecord(existing)) {
+      return undefined;
+    }
+    const merged: ModelRecord = {
+      ...existing,
+      ...partialData,
+      _id: id,
+      _createdAt: existing._createdAt,
+    };
+    delete (merged as Record<string, unknown>)[DELETED_SENTINEL];
+    buf.set(id, merged);
+    this.dirtyModels.add(modelName);
+    return merged;
+  }
+
+  /**
+   * Soft-delete: place a tombstone (`__deleted: true`) in the buffer.
+   * Queries immediately stop returning this row; the physical `.mld` line is removed on flush.
+   * Returns `true` when the row existed (buffer or disk), `false` otherwise.
+   */
+  async delete(modelName: string, id: string): Promise<boolean> {
+    const buf = this.getOrCreateModelBuffer(modelName);
+    let existing = buf.get(id);
+    if (!existing) {
+      const diskRows = await this.storage.getByIds(modelName, [id]);
+      existing = diskRows[0];
+    }
+    if (!existing || isDeletedRecord(existing)) {
+      return false;
+    }
+    const tombstone: ModelRecord = {
+      _id: id,
+      _createdAt: existing._createdAt,
+      [DELETED_SENTINEL]: true,
+    } as ModelRecord;
+    buf.set(id, tombstone);
+    this.dirtyModels.add(modelName);
+    return true;
+  }
+
+  /**
+   * Flush one model: live rows are appended; tombstoned rows trigger a full rewrite
+   * that compacts deleted lines out of the `.mld` file.
    */
   async flushModelToDisk(modelName: string): Promise<void> {
     for (;;) {
@@ -115,9 +172,13 @@ export class PersistenceManager implements BufferedModelSource {
       this.pendingFlushPromise = (async () => {
         try {
           const batch = [...map.values()];
+          const hasTombstones = batch.some(isDeletedRecord);
           map.clear();
           this.dirtyModels.delete(modelName);
-          if (batch.length > 0) {
+
+          if (hasTombstones) {
+            await this._compactRewrite(modelName, batch);
+          } else if (batch.length > 0) {
             await this.storage.appendRecordsToDisk(modelName, batch);
           }
         } finally {
@@ -149,9 +210,15 @@ export class PersistenceManager implements BufferedModelSource {
               continue;
             }
             const batch = [...map.values()];
+            const hasTombstones = batch.some(isDeletedRecord);
             map.clear();
             this.dirtyModels.delete(model);
-            await this.storage.appendRecordsToDisk(model, batch);
+
+            if (hasTombstones) {
+              await this._compactRewrite(model, batch);
+            } else if (batch.length > 0) {
+              await this.storage.appendRecordsToDisk(model, batch);
+            }
           }
         } finally {
           this.pendingFlushPromise = null;
@@ -159,5 +226,27 @@ export class PersistenceManager implements BufferedModelSource {
       })();
       await this.pendingFlushPromise;
     }
+  }
+
+  /**
+   * Read the full `.mld`, merge buffered rows (updates overwrite, deletes remove),
+   * then atomically rewrite the file without any tombstoned lines.
+   */
+  private async _compactRewrite(
+    modelName: string,
+    buffered: readonly ModelRecord[],
+  ): Promise<void> {
+    const diskRows = await this.storage.getAll(modelName);
+    const byId = new Map(diskRows.map((r) => [r._id, r] as const));
+    for (const r of buffered) {
+      byId.set(r._id, r);
+    }
+    const live: ModelRecord[] = [];
+    for (const r of byId.values()) {
+      if (!isDeletedRecord(r)) {
+        live.push(r);
+      }
+    }
+    await this.storage.rewriteRecordsToDisk(modelName, live);
   }
 }

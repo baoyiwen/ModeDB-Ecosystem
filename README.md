@@ -134,10 +134,108 @@ data/
 
 ## 治理端持久化与开发者体验（DX）
 
-### `updateFields(fields: string[])`
+### `updateFields(fields)` — 支持类型化字段
 
-- **入参**：`readonly string[]`；内部用 `new Set(fields)` **去重**，并保留 **首次出现顺序**。
-- **效果**：同步更新 Registry 与 `ModelStorage` 的 schema，与后续 `.mld` 落盘字段一致。
+- **Legacy 入参**：`readonly string[]`；内部用 `new Set(fields)` **去重**，无类型元数据。
+- **Typed 入参**：`Record<string, DataType | FieldTypeDef>`，如 `{ age: 'Int', name: 'I18N' }`；自动提取字段名集合与类型元数据。
+- **效果**：同步更新 Registry 与 `ModelStorage` 的 schema（含 `fieldTypes`），与后续 `.mld` 落盘字段一致。
+
+### DataType 协议与对象化类型系统（2.0）
+
+引擎内置 9 种数据类型，通过 `DataType` 常量引用：
+
+| 类型         | 说明                                                      |
+| ------------ | --------------------------------------------------------- |
+| **String**   | 普通字符串                                                |
+| **I18N**     | 国际化字符串，存储为 `{ zh: '...', en: '...' }` 对象      |
+| **Number**   | 浮点数                                                    |
+| **Int**      | 整数（`Number.isInteger`）                                |
+| **Boolean**  | 布尔值                                                    |
+| **DateTime** | ISO 8601 格式字符串                                       |
+| **JSON**     | 任意值（逃生舱口，不做校验）                              |
+| **Color**    | 颜色值，接受 hex 字符串或 `{r,g,b,a?}` 对象               |
+| **Unit**     | 带单位数值，存储为 `{value, unit}` 对象，支持基础单位换算 |
+
+> **Enum 已移除**：引导用户使用关联模型（`registerRelation`）替代枚举约束。
+
+**Pre-insert validation**：`insert()` / `update()` 时自动校验字段值与声明类型是否匹配；不匹配则抛出 `ValidationError`。未声明类型的字段（legacy `string[]` 路径）跳过校验。
+
+**I18N 特殊处理**：
+
+- 引擎配置 `currentLocale`（如 `new AuthoringEngine({ atlas: 'x', currentLocale: 'zh' })`）。
+- **插入时**：若 I18N 字段传入 plain string，自动包装为 `{ [currentLocale]: value }`。
+- **查询时**：`where('name', 'eq', '苹果')` 自动按 `currentLocale` 解析 `row.name[locale]` 进行比较。
+
+**对象化类型系统（ValueObject）**：
+
+所有高级类型均有对应的 `ValueObject` 子类，查询结果的 `HydratedEntity` 通过 `.getValue(field)` 返回类型化包装：
+
+| ValueObject 子类 | DataType | 特有方法                                      |
+| ---------------- | -------- | --------------------------------------------- |
+| `I18NValue`      | I18N     | `.get(lang)`, `.set(lang, text)`, `.locales`  |
+| `ColorValue`     | Color    | `.toHex()`, `.toCSS()`, `.getData()` → `RGBA` |
+| `UnitValue`      | Unit     | `.value`, `.unit`, `.convertTo(targetUnit)`   |
+| `StringValue`    | String   | `.getData()` → `string`                       |
+| `NumberValue`    | Number   | `.getData()` → `number`                       |
+| `IntValue`       | Int      | `.getData()` → `number`                       |
+| `BooleanValue`   | Boolean  | `.getData()` → `boolean`                      |
+| `DateTimeValue`  | DateTime | `.getData()` → `string`, `.toDate()` → `Date` |
+| `JsonValue`      | JSON     | `.getData()` → `unknown`                      |
+
+每个 `ValueObject` 提供 `.update(newValue)` 方法，当 sync 回调可用时可直接写回模型缓冲区。
+
+**元数据持久化**：
+
+- `.mld` 文件首行为 `__schema__` header（JSON），包含 `fields` 与 `fieldTypes`；读取时自动跳过。
+- `atlas-manifest.json` 的 model 条目新增可选 `fieldTypes` 字段。
+- 已有无类型 `.mld` 文件（无 header）与 manifest 完全向后兼容。
+
+```typescript
+import { AuthoringEngine, DataType, I18NValue, ColorValue, UnitValue } from 'mode-db-engine';
+
+const engine = new AuthoringEngine({ atlas: 'typed', currentLocale: 'zh' });
+
+// 方式 A：registerModel 时直接传入类型化字段
+engine.registerModel('Product', {
+  name: 'I18N',
+  price: 'Number',
+  active: 'Boolean',
+  color: 'Color',
+  weight: { type: 'Unit', unit: 'kg' },
+});
+
+// 方式 B：骨架优先 + updateFields 补全
+engine.registerModel('Order');
+engine.model('Order').updateFields({
+  total: 'Int',
+  createdAt: 'DateTime',
+});
+
+// 插入时自动校验 + I18N 自动包装 + Color/Unit 校验
+const p = await engine.model('Product').insert({
+  name: '苹果',
+  price: 9.9,
+  active: true,
+  color: '#ff0000',
+  weight: { value: 0.2, unit: 'kg' },
+});
+// p.name → { zh: '苹果' }
+
+// 查询时 I18N 字段按 locale 解析
+const hits = await engine.model('Product').query().where('name', 'eq', '苹果').execute();
+
+// 对象化访问
+const entity = hits[0]!;
+const nameVO = entity.getValue('name') as I18NValue;
+nameVO.get('zh'); // '苹果'
+
+const colorVO = entity.getValue('color') as ColorValue;
+colorVO.toHex(); // '#ff0000'
+colorVO.toCSS(); // 'rgb(255, 0, 0)'
+
+const weightVO = entity.getValue('weight') as UnitValue;
+weightVO.convertTo('g'); // 200
+```
 
 ### 写缓冲（Write-Behind，`Map<_id, ModelRecord>`）
 
@@ -154,48 +252,86 @@ data/
 
 ### 合并读与 `QueryEngine`
 
-- **`MergedDataReader`**：`getAll` / `getByIds` / `scanModelRecords` 合并磁盘行与 `getPendingSnapshot`；**同一 `_id` 以缓冲为准**。
-- **`findFirstByFieldEq`**：**先**查缓冲，**再**扫磁盘，避免未刷盘行被磁盘旧行抢先命中。
-- **`mergeDiskRowsWithAuthoringBuffer(diskRows, pendingById)`**（`src/runtime/query-engine.ts`）：与「磁盘行 + 缓冲 Map」合并语义一致，便于工具层复用。
+- **`MergedDataReader`**：`getAll` / `getByIds` / `scanModelRecords` 合并磁盘行与 `getPendingSnapshot`；**同一 `_id` 以缓冲为准**；**`__deleted` 墓碑行被自动过滤**。
+- **`findFirstByFieldEq`**：**先**查缓冲，**再**扫磁盘，避免未刷盘行被磁盘旧行抢先命中；已删除行不会命中。
+- **`mergeDiskRowsWithAuthoringBuffer(diskRows, pendingById)`**（`src/runtime/query-engine.ts`）：与「磁盘行 + 缓冲 Map」合并语义一致，**`__deleted` 行被过滤**，便于工具层复用。
 - **`QueryEngine.execute`** 与 **`evaluate`** 等价（单行谓词）；**完整查询**行集由 **`DataReader`**（已合并）再进入 `QueryChain.execute` / 聚合，**sum / avg** 等与合并后视图一致。
+
+### CRUD 操作与缓冲区协议
+
+引擎完整支持 **Create / Read / Update / Delete**，所有写操作遵循同一套「自动驾驶」缓冲区协议：
+
+| 操作             | ModelEntity 方法                    | AuthoringEngine 方法                              | 说明                                                        |
+| ---------------- | ----------------------------------- | ------------------------------------------------- | ----------------------------------------------------------- |
+| **Create**       | `insert(data, opts?)`               | `engine.insert(model, data, opts?)`               | 新行入缓冲；合并读即时可见                                  |
+| **Update**       | `update(id, partial, opts?)`        | `engine.update(model, id, partial, opts?)`        | 合并已有行（缓冲优先，磁盘回退）；`_id` / `_createdAt` 不变 |
+| **Delete**       | `delete(id, opts?)`                 | `engine.delete(model, id, opts?)`                 | 缓冲写入 `__deleted` 墓碑；查询立即不可见                   |
+| **Batch Update** | `updateWhere(pred, partial, opts?)` | `engine.updateWhere(model, pred, partial, opts?)` | 复用 `QueryEngine` 匹配后逐行 update                        |
+| **Batch Delete** | `deleteWhere(pred, opts?)`          | `engine.deleteWhere(model, pred, opts?)`          | 复用 `QueryEngine` 匹配后逐行 delete                        |
+
+- 所有写操作均支持 **`{ sync: true }`**，在 promise resolve 前执行 `flushModelToDisk`。
+- **`update` 不存在的 id** → 返回 `undefined`；**`delete` 不存在 / 已删除的 id** → 返回 `false`。
+- **`updateWhere` / `deleteWhere`** 接受 `PredicateNode`（谓词树），与 `QueryChain.where()` 语义一致。
+
+### 删除的物理语义
+
+- `delete` 在缓冲中写入 **`{ _id, _createdAt, __deleted: true }`** 墓碑。
+- **关系层清理**：`delete` / `deleteWhere` 自动调用 **`RelationIndexer.purgeEntityFromAllRelations`**，移除该实体在所有 `.rid` 索引中的正向与反向边。**严格遵循模型独立性**：仅清理被删实体自身的链接，**绝不**删除关联模型的数据行。
+- **合并读**（`MergedDataReader` / `mergeDiskRowsWithAuthoringBuffer`）自动过滤 `__deleted` 行，查询**立即**生效。
+- **flush 时压缩**：当缓冲中存在墓碑行，`flushModelToDisk` 触发 **全量重写**（读取磁盘 → 合并缓冲 → 过滤墓碑 → 原子写回），`.mld` 文件中**不会残留** `__deleted` 行。
+- **`DELETED_SENTINEL`** 常量（`'__deleted'`）与 **`isDeletedRecord(row)`** 工具函数已从 `common/types.ts` 导出。
 
 ### `insert` 与可选 `{ sync: true }`
 
 - **默认**：`await model.insert(data)` 将行放入写缓冲；同进程内 **`await query().execute()`** 可通过合并读立即看到新行，**不必**先 `flushAll`。
 - **`{ sync: true }`**：`await model.insert(data, { sync: true })` 或 `await engine.insert(modelName, data, { sync: true })` 在该 promise **resolve 前**对该模型执行 **`flushModelToDisk`**（将该模型当前缓冲批量写入 `.mld`）。适用于**财务 / 强一致**等场景。
-- **风险**：未刷盘前进程崩溃可能丢失缓冲内数据；跨进程读文件或 `existsSync('.mld')` 断言前，须 **`flushAll`** 或 **`insert(..., { sync: true })`**。
+- **风险**：未刷盘前进程崩溃可能丢失缓冲内数据；跨进程读文件或 `existsSync('.mld')` 断言前，须 **`flushAll`** 或写操作加 **`{ sync: true }`**。
 
-### 代码示例（治理端）
+### 代码示例（治理端 CRUD）
 
 ```typescript
 import { AuthoringEngine } from 'mode-db-engine';
 
 const engine = new AuthoringEngine({ atlas: 'my_atlas' });
-engine.registerModel('Item', new Set(['id', 'name']));
+engine.registerModel('Item', new Set(['id', 'name', 'status', 'score']));
 
 const Item = engine.model('Item');
 
-Item.updateFields(['id', 'name', 'id']); // 重复字段名会被去重
+// Create
+const row = await Item.insert({ id: 'i1', name: 'A', status: 'active', score: 10 });
 
-const row = await Item.insert({ id: 'i1', name: 'A' });
-await engine.query('Item', [row._id]).execute();
+// Read（合并读，无需 flushAll）
+const results = await engine.query('Item', [row._id]).execute();
 
-await Item.insert({ id: 'i2', name: 'B' }, { sync: true });
+// Update（部分字段合并，_id / _createdAt 不变）
+const updated = await Item.update(row._id, { score: 99 });
 
+// Delete（墓碑写入缓冲，查询立即不可见）
+await Item.delete(row._id);
+
+// Batch Update / Delete（谓词匹配）
+await Item.updateWhere(
+  { type: 'atom', field: 'status', op: 'eq', value: 'active' },
+  { status: 'archived' },
+);
+await Item.deleteWhere({ type: 'atom', field: 'status', op: 'eq', value: 'archived' });
+
+// 强制同步刷盘
 await engine.flushAll();
 ```
 
-**Runtime**：`ModelDBClient.connect(atlas)` **无** `insert` / `updateFields` / `bind`，只读已落盘数据与 manifest。
+**Runtime**：`ModelDBClient.connect(atlas)` **无** `insert` / `update` / `delete` / `updateFields` / `bind`，只读已落盘数据与 manifest。
 
 ### 相关源码
 
-| 模块                                                      | 路径                               |
-| --------------------------------------------------------- | ---------------------------------- |
-| 写缓冲、`flushPendingToDisk` / `flushModelToDisk`         | `authoring/persistence-manager.ts` |
-| `ModelEntity`、`InsertOptions`、`insert`                  | `authoring/entity.ts`              |
-| `AuthoringEngine`、调度、`beforeExit`                     | `authoring/engine.ts`              |
-| `mergeDiskRowsWithAuthoringBuffer`、`QueryEngine.execute` | `src/runtime/query-engine.ts`      |
-| 磁盘 + 缓冲合并读                                         | `authoring/merged-data-reader.ts`  |
+| 模块                                                             | 路径                               |
+| ---------------------------------------------------------------- | ---------------------------------- |
+| 写缓冲、`flushPendingToDisk` / `flushModelToDisk`                | `authoring/persistence-manager.ts` |
+| `ModelEntity`、`InsertOptions`、`UpdateOptions`、`DeleteOptions` | `authoring/entity.ts`              |
+| `AuthoringEngine`、调度、`beforeExit`                            | `authoring/engine.ts`              |
+| `mergeDiskRowsWithAuthoringBuffer`、`QueryEngine.execute`        | `src/runtime/query-engine.ts`      |
+| 磁盘 + 缓冲合并读（含 `__deleted` 过滤）                         | `authoring/merged-data-reader.ts`  |
+| `DELETED_SENTINEL`、`isDeletedRecord`、`ModelRecord`             | `common/types.ts`                  |
 
 ---
 
@@ -260,14 +396,18 @@ const zones = zoneRows.map((h) => h.getData());
 const relations = Pump.getAvailableRelations();
 ```
 
-| 方法                                 | 说明                                                                |
-| ------------------------------------ | ------------------------------------------------------------------- |
-| `.updateFields(fields)`              | 传入 `string[]`，内部去重后更新 Schema 并同步存储层（见上文 DX 节） |
-| `.insert(data, options?)`            | 插入记录（过滤未声明字段）；可选 **`{ sync: true }`** 见上文 DX 节  |
-| `.all()` / `.find(ids)` / `.query()` | 全量、按 ID 或链式查询                                              |
-| `.bind(fwd, strategy, …)`            | 从模型侧触发该关系的索引构建                                        |
-| `.unlink(fwd, pairs)`                | 按对解除链接                                                        |
-| `.getAvailableRelations()`           | 继承感知的关系列表                                                  |
+| 方法                                      | 说明                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------- |
+| `.updateFields(fields)`                   | 传入 `string[]`，内部去重后更新 Schema 并同步存储层（见上文 DX 节） |
+| `.insert(data, options?)`                 | 插入记录（过滤未声明字段）；可选 **`{ sync: true }`** 见上文 DX 节  |
+| `.update(id, partialData, options?)`      | 部分更新：合并已有行；不存在 → `undefined`                          |
+| `.delete(id, options?)`                   | 软删除：墓碑入缓冲，查询立即不可见；不存在 → `false`                |
+| `.updateWhere(predicate, data, options?)` | 批量条件更新：谓词匹配后逐行合并                                    |
+| `.deleteWhere(predicate, options?)`       | 批量条件删除：谓词匹配后逐行墓碑                                    |
+| `.all()` / `.find(ids)` / `.query()`      | 全量、按 ID 或链式查询                                              |
+| `.bind(fwd, strategy, …)`                 | 从模型侧触发该关系的索引构建                                        |
+| `.unlink(fwd, pairs)`                     | 按对解除链接                                                        |
+| `.getAvailableRelations()`                | 继承感知的关系列表                                                  |
 
 ### 4. RelationEntity —「线」的 OO 句柄
 
@@ -505,14 +645,14 @@ const rows = (await PumpRO.query([somePumpId]).relate('located_in').execute()).m
 
 路径：`STORAGE_ROOT/<atlas>/models/<模型名>.mld`
 
+若模型声明了 DataType 字段，首行为 `__schema__` header（读取时自动跳过）：
+
 ```jsonl
-{
-  "_id": "a1b2c3d4-...",
-  "_createdAt": "2026-04-09T10:00:00.000Z",
-  "name": "张三",
-  "email": "zhang@example.com"
-}
+{"__schema__":{"fields":["email","name"],"fieldTypes":{"name":{"type":"I18N"},"email":{"type":"String"}}}}
+{"_id":"a1b2c3d4-...","_createdAt":"2026-04-09T10:00:00.000Z","name":{"zh":"张三"},"email":"zhang@example.com"}
 ```
+
+无 DataType 的 legacy `.mld` 文件不含 header，完全向后兼容。
 
 ### 关系索引 — `.rid` (JSON)
 
@@ -542,7 +682,8 @@ EngineError
 ├── AtlasManifestError             ← manifest 缺失或解析失败（常见于 connect 早于 flush）
 ├── StorageError
 │   ├── ModelNotRegisteredError
-│   └── FileIOError
+│   ├── FileIOError
+│   └── ValidationError            ← DataType 校验失败（insert / update 时字段类型不匹配）
 ├── RegistryError
 │   ├── DuplicateModelError
 │   ├── ParentNotFoundError
@@ -563,7 +704,7 @@ mode-db-engine/
 ├── docs/
 │   └── architecture.svg        # README 系统架构图（矢量）
 ├── authoring/                  # 治理端：引擎、实体、存储、索引、Admin
-├── common/                     # 共享：类型、registry、manifest、错误、存储根
+├── common/                     # 共享：类型、registry、manifest、错误、存储根、DataType 协议、ValueObject
 ├── runtime/                    # 对 src/runtime 的薄再导出（便于从包根 import）
 ├── src/
 │   ├── runtime/                # 只读 Runtime SDK：query、transform-engine（分组/聚合）
@@ -572,11 +713,15 @@ mode-db-engine/
 │   └── common/
 │       └── PathResolver.ts     # Atlas 目录路径解析
 ├── test/
-│   ├── README.md               # 测试命令、Atlas 对照、与全量集成脚本说明
+│   ├── README.md               # 测试命令、Atlas 对照、各脚本覆盖点与注意事项
 │   ├── verify.ts               # 端到端：双图谱、滞后字段、PROTOCOL、Runtime 只读（启动时清空 data/）
 │   ├── query_filters.ts        # 谓词 / QueryChain / matchAny / 短路 / getQueryPlan / includeRelates / evaluateInto
-│   ├── logic_integrity.ts      # HydratedEntity 溯源、幽灵 id、includeRelates 级联
-│   ├── logic_closure_audit.ts  # Atlas 隔离、双向索引、多级 relate、Runtime
+│   ├── logic_integrity.ts      # 句柄缓存、合并读、insert sync、explainRelate、幽灵 id
+│   ├── logic_closure_audit.ts  # Atlas 隔离、双向索引守恒、多级 relate、Runtime
+│   ├── query_chain_extended.ts # ComputeBuilder、分析分页、wrapGroups、relateRecursive
+│   ├── authoring_dx_audit.ts   # 治理 DX：merge 缓冲、QueryEngine、句柄缓存、updateFields 去重
+│   ├── crud_audit.ts           # CRUD 全链路：update / delete / batch / 关系清理 / 模型独立性 / flush 压缩
+│   ├── datatype_audit.ts       # DataType 协议 + ValueObject：类型校验、I18N/Color/Unit、对象化访问、.mld header、manifest
 │   ├── transform_aggregate.ts  # §6.3：pivot / groupBy、aggregate、execute → AnalysisResult
 │   └── first_run.ts            # 演示：治理 → flush → Runtime（点火脚本）
 ├── data/                       # 默认运行时数据（建议 git-ignore）
@@ -598,15 +743,17 @@ mode-db-engine/
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 治理        | `AuthoringEngine`, `Engine`, `ModelDBAdmin`, `AtlasRegistry`, `ModelEntity`, `RelationEntity`, `ModelStorage`, `RelationIndexer`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 运行时      | `ModelDBClient`, `Runtime`, `RuntimeModel`, `RuntimeRelation`, `HydratedEntity`, `QueryChain`, `QueryEngine`, `FilterBuilder`, `PredicateComposer`, `mergeMatchAnyIntoSegment`, `compileSegments`, `RelateFilterBuilder`（别名）, `normalizeOperator`, `configureModelDBRuntime`, `resolveModelDBStorageRoot`；多维分析：`isAnalysisResult`, `AnalysisResult`, `PivotTable`, `Aggregator`, `AggregatorEngine`, `DataPivot`, `isAnalysisReport`, `AnalysisReport`（兼容）, `StatAccumulator`, `traceableNull`, `isTraceableNull`, `isStatMissing`, `coerceFiniteNumber`, `TRACEABLE_REASON_ALL_MISSING`；类型如 `TraceableNull`, `PredicateNode`, `QueryPlanASTv2`, `EvaluateResult`, `AggregateOp`, `AnalysisFlatRow`, `CustomReducerSpec`, `PredicateEvaluateContext`, `PredicateFailureKind`, `PredicateStandardOperator`, `PredicateAtomOperator`, `RelationTraceStatus`, `HydratedEntitySnapshot`, `LocalFilterState`, `QueryStartSpec` 等 |
+| DataType    | `DataType`（常量 + 类型）, `validateFieldValue`, `normalizeFieldDefs`, `normalizeFieldDef`, `coerceI18NValue`, `ValidationError`；类型 `FieldTypeDef`, `FieldTypeMap`, `FieldDefInput`, `FieldDefsRecord`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ValueObject | `ValueObject`（抽象基类）, `I18NValue`, `ColorValue`, `UnitValue`, `StringValue`, `NumberValue`, `IntValue`, `BooleanValue`, `DateTimeValue`, `JsonValue`, `createValueObject`, `unwrapValue`；类型 `ValueSyncFn`, `I18NDict`, `RGBA`, `UnitData`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | 类型 / 协议 | `ModelRegistry`, `PathResolver`, manifest 常量与解析函数，`DataReader`, `IndexReader`，各类 `export type { … }` 与错误类                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 ---
 
 ## 集成验证与测试
 
-**索引**：集成测试的命令、数据目录与各脚本覆盖点见 **[test/README.md](test/README.md)**（该文档**仅**写测试相关内容；引擎说明与 DX 见本文档）。
+**索引**：集成测试的命令、Atlas 对照、各脚本覆盖点与注意事项见 **[test/README.md](test/README.md)**（该文档**仅**写测试相关内容；引擎说明与 DX 见本文档）。
 
-**推荐一键回归**（顺序：`verify` → `query-filters` → `integrity` → `audit`；首步会删除整个默认 **`data/`** 目录）：
+**推荐一键回归**（顺序：`verify` → `query-filters` → `integrity` → `audit` → `query-extended` → **`dx-audit`** → **`crud-audit`** → **`datatype-audit`**；首步会删除整个默认 **`data/`** 目录）：
 
 ```bash
 npm test
@@ -617,22 +764,32 @@ npm run test:integration
 **单项执行**：
 
 ```bash
-npx tsx test/verify.ts          # 或单独跑 verify（同样会先清空 data/）
-npm run query-filters
-npm run integrity
-npm run audit
+npx tsx test/verify.ts          # 双图谱隔离、骨架补全、PROTOCOL、Runtime 只读（会先清空 data/）
+npm run query-filters           # 谓词树、AND/OR 短路、matchAll / matchAny、getQueryPlan
+npm run integrity               # 句柄缓存、合并读、insert sync、explainRelate、幽灵 id
+npm run audit                   # 多 Atlas 物理隔离、双向索引守恒、多级 relate
+npm run query-extended          # ComputeBuilder、分析分页、wrapGroups、relateRecursive
+npm run dx-audit                # 治理 DX：merge 缓冲、QueryEngine、句柄缓存、updateFields 去重、insert sync
+npm run crud-audit              # CRUD 全链路：update / delete / batch / 关系清理 / 模型独立性 / flush 压缩
+npm run datatype-audit          # DataType 协议：类型校验、I18N、.mld schema header、manifest fieldTypes
 npm run first-run               # 演示向，未包含在 test:integration 中
-npm run transform               # pivot / groupBy / aggregate / execute → AnalysisResult（第六节 6.3）
+npm run transform               # 多维分析：pivot / groupBy / aggregate → AnalysisResult（第六节 6.3）
+npm run final-analysis          # global_atlas / Stats 验收
+npm run advanced-audit          # relateRecursive、wrapGroups、Paginated
 ```
 
-| 脚本                         | 主要内容                                                                                                                                                                                                                                                                                                                                                  |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`verify.ts`**              | **pipe / tran** 双图谱隔离；**滞后 `updateFields`**；**PROTOCOL** 与 **`.rid` 正逆向成对**；**`ModelDBClient.connect`**、链式查询；Runtime **无 `insert` / `bind` 等**；**遇错计数**，失败时 **exit 1**。                                                                                                                                                 |
-| **`query_filters.ts`**       | **第六节** 全链路：**谓词树**、**AND/OR 短路**、**`matchAll` / `matchAllNodes` / `matchAny`**、**`getQueryPlan`**、**`filter`（Callback）**、**`relate` 目标过滤**、**`includeRelates`**；**`getRelateDiagnostic`** + **`failedPredicate`**；**`getRelationStatus`**、**`toSnapshot`**；**`QueryEngine.evaluateInto`** + **`PredicateEvaluateContext`**。 |
-| **`logic_integrity.ts`**     | **`model` 句柄缓存**、**合并读**、**`insert({ sync: true })` + 文件存在断言**；**`explainRelate`**、**`NOT_REGISTERED`** / **`NO_LINK_IN_INDEX`**；**.rid 幽灵 id** → **`FILTERED_OUT_ORPHAN`**；**`includeRelates` + `toNested()`**。                                                                                                                    |
-| **`logic_closure_audit.ts`** | **pipe_system / tran_system** 物理隔离；**双向索引审计**；**多级 `relate`**；Runtime 只读。                                                                                                                                                                                                                                                               |
-| **`transform_aggregate.ts`** | **第六节 6.3**：**`pivot` / `groupBy`**、**`aggregate`（对象与 `Aggregator`）**、**`between`**、**`compute` / `customReduce`**、**`execute()` → `AnalysisResult`**（**`asTree` / `asMatrix`**）、**`analyze()`**、**`traceableNull(all_missing)`**、关系路径分组键。                                                                                      |
-| **`first_run.ts`**           | 治理 → **`flushAll`** → Runtime 查询的**可读演示**（弱断言）。                                                                                                                                                                                                                                                                                            |
+| 脚本                          | Atlas                         | 主要内容                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`verify.ts`**               | `pipe` / `tran`               | 双图谱隔离；**滞后 `updateFields`**；**PROTOCOL** 与 **`.rid` 正逆向成对**；**`ModelDBClient.connect`**、链式查询；Runtime **无 `insert` / `bind` 等**；**遇错计数**，失败时 **exit 1**。                                                                                                                                                                                                                                           |
+| **`query_filters.ts`**        | `query_filter_demo`           | **第六节** 全链路：**谓词树**、**AND/OR 短路**、**`matchAll` / `matchAllNodes` / `matchAny`**、**`getQueryPlan`**、**`filter`（Callback）**、**`relate` 目标过滤**、**`includeRelates`**；**`getRelateDiagnostic`** + **`failedPredicate`**；**`getRelationStatus`**、**`toSnapshot`**；**`QueryEngine.evaluateInto`** + **`PredicateEvaluateContext`**。                                                                           |
+| **`logic_integrity.ts`**      | `integrity_pipe`              | **`model` 句柄缓存**、**合并读**、**`insert({ sync: true })` + 文件存在断言**；**`explainRelate`**、**`NOT_REGISTERED`** / **`NO_LINK_IN_INDEX`**；**.rid 幽灵 id** → **`FILTERED_OUT_ORPHAN`**；**`includeRelates` + `toNested()`**。                                                                                                                                                                                              |
+| **`logic_closure_audit.ts`**  | `pipe_system` / `tran_system` | 多 Atlas 物理隔离；**双向索引守恒**（fwd 边数 === rev 边数）；**多级 `relate`**（三级跳转）；Runtime 只读安全性。                                                                                                                                                                                                                                                                                                                   |
+| **`query_chain_extended.ts`** | （复用前序数据）              | **`ComputeBuilder`** + `groupBy`；分析分页（`Paginated`）；**`wrapGroups`** + `GroupInstance`；**`relateRecursive`** BFS（含环防护）。                                                                                                                                                                                                                                                                                              |
+| **`authoring_dx_audit.ts`**   | `dx_audit`                    | **`mergeDiskRowsWithAuthoringBuffer`**（覆盖 / 保留 / 追加 / 空 pending）、**`QueryEngine.execute`** 与 **`evaluate`** 一致、**`model` 句柄缓存**、**`updateFields` 去重**、**合并读**、**`engine.insert(..., { sync: true })`**。                                                                                                                                                                                                  |
+| **`crud_audit.ts`**           | `crud_audit`                  | **46 个断言**：`update` 缓冲合并 + 合并读即时可见；`delete` 墓碑 + 查询不可见；`updateWhere` / `deleteWhere` 批量条件操作；**关系层清理**（`purgeEntityFromAllRelations`）+ **模型独立性**验证；**flush 压缩** `.mld` 无 `__deleted` 残留。                                                                                                                                                                                         |
+| **`datatype_audit.ts`**       | `datatype_audit`              | **87 个断言 / 14 组**：DataType 常量（9 种，无 Enum）；`updateFields` typed record 与 legacy `string[]`；Pre-insert validation（Int/Number/Boolean/DateTime/String/Color/Unit）；I18N 自动包装与 locale 查询；`.mld` schema header 持久化；`atlas-manifest.json` fieldTypes；向后兼容；**ValueObject**（`getValue()` 返回 I18NValue/IntValue/ColorValue/UnitValue）；Color hex↔RGBA 互转；Unit 单位换算；`getData(deep)` 递归展开。 |
+| **`transform_aggregate.ts`**  | （脚本内自建）                | **第六节 6.3**：**`pivot` / `groupBy`**、**`aggregate`（对象与 `Aggregator`）**、**`between`**、**`compute` / `customReduce`**、**`execute()` → `AnalysisResult`**（**`asTree` / `asMatrix`**）、**`analyze()`**、**`traceableNull(all_missing)`**、关系路径分组键。                                                                                                                                                                |
+| **`first_run.ts`**            | `pipe`                        | 治理 → **`flushAll`** → Runtime 查询的**可读演示**（弱断言）。                                                                                                                                                                                                                                                                                                                                                                      |
 
 ---
 
@@ -653,7 +810,7 @@ npm run transform               # pivot / groupBy / aggregate / execute → Anal
 ```bash
 npm install
 
-# 集成验证（verify + query-filters + integrity + audit）
+# 集成验证（verify → … → dx-audit → crud-audit → datatype-audit）
 npm test
 
 # 类型检查

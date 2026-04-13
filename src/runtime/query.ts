@@ -23,7 +23,7 @@ import {
   targetModelName,
   type ResolvedRelation,
 } from './relation-resolve.js';
-import { normalizeOperator, type RecordPredicate } from './query-filter.js';
+import { normalizeOperator, type RecordPredicate, type FieldMatchContext } from './query-filter.js';
 import {
   FilterBuilder,
   PredicateComposer,
@@ -181,11 +181,12 @@ function tryOptimizedOriginLoad(root: PredicateNode): OriginLoadHint | undefined
 function filterRecordsWithTrace(
   records: ModelRecord[],
   root: PredicateNode,
+  fieldCtx?: FieldMatchContext,
 ): { passed: ModelRecord[]; firstFailure?: EvaluateResult } {
   const passed: ModelRecord[] = [];
   let firstFailure: EvaluateResult | undefined;
   for (const rec of records) {
-    const ev = QueryEngine.evaluate(rec, root);
+    const ev = QueryEngine.evaluate(rec, root, fieldCtx);
     if (ev.ok) {
       passed.push(rec);
     } else if (!firstFailure) {
@@ -213,15 +214,19 @@ export class QueryChain<
   private paginationPartial: { page?: number; limit?: number } | null = null;
   private wrapGroupsFlag = false;
 
+  private readonly fieldCtx: FieldMatchContext | undefined;
+
   constructor(
     private readonly registry: ModelRegistry,
     private readonly indexReader: IndexReader,
     private readonly dataReader: DataReader,
     startModel: string,
     start: QueryStartSpec,
+    fieldCtx?: FieldMatchContext,
   ) {
     this.originModel = startModel;
     this.start = start;
+    this.fieldCtx = fieldCtx;
   }
 
   getQueryPlan(): QueryPlanASTv2 {
@@ -652,7 +657,7 @@ export class QueryChain<
     };
 
     const root = this.compiledRoot();
-    const matcher = predicateMatcher(root);
+    const matcher = predicateMatcher(root, this._fieldCtxForModel(this.originModel));
 
     const canStream =
       this.hops.length === 0 &&
@@ -687,13 +692,17 @@ export class QueryChain<
   }> {
     if (this.hops.length === 0) {
       let records = await this.loadOriginRecordsNoHop();
-      records = records.filter(predicateMatcher(this.compiledRoot()));
+      records = records.filter(
+        predicateMatcher(this.compiledRoot(), this._fieldCtxForModel(this.originModel)),
+      );
       return { modelName: this.originModel, records };
     }
 
     let model = this.originModel;
     let records = await this.loadOriginRecords(this.hops[0]!.sourcePredicate);
-    records = records.filter(predicateMatcher(this.hops[0]!.sourcePredicate));
+    records = records.filter(
+      predicateMatcher(this.hops[0]!.sourcePredicate, this._fieldCtxForModel(this.originModel)),
+    );
     if (records.length === 0) {
       return { modelName: model, records };
     }
@@ -701,7 +710,9 @@ export class QueryChain<
     for (let i = 0; i < this.hops.length; i++) {
       const hop = this.hops[i]!;
       if (i > 0) {
-        records = records.filter(predicateMatcher(hop.sourcePredicate));
+        records = records.filter(
+          predicateMatcher(hop.sourcePredicate, this._fieldCtxForModel(model)),
+        );
         if (records.length === 0) {
           return { modelName: model, records };
         }
@@ -717,7 +728,9 @@ export class QueryChain<
           hop.recursive.maxDepth,
         );
         records = await this.dataReader.getByIds(nextModel, [...allIds]);
-        records = records.filter(predicateMatcher(hop.targetPredicate));
+        records = records.filter(
+          predicateMatcher(hop.targetPredicate, this._fieldCtxForModel(nextModel)),
+        );
         if (records.length === 0) {
           return { modelName: nextModel, records: [] };
         }
@@ -731,7 +744,9 @@ export class QueryChain<
       }
 
       records = await this.dataReader.getByIds(nextModel, nextIds);
-      records = records.filter(predicateMatcher(hop.targetPredicate));
+      records = records.filter(
+        predicateMatcher(hop.targetPredicate, this._fieldCtxForModel(nextModel)),
+      );
       if (records.length === 0) {
         return { modelName: nextModel, records: [] };
       }
@@ -739,7 +754,7 @@ export class QueryChain<
     }
 
     const tail = this.compiledRoot();
-    records = records.filter(predicateMatcher(tail));
+    records = records.filter(predicateMatcher(tail, this._fieldCtxForModel(model)));
     return { modelName: model, records };
   }
 
@@ -772,7 +787,9 @@ export class QueryChain<
         if (!hit) {
           return [];
         }
-        return QueryEngine.matches(hit, root) ? [hit] : [];
+        return QueryEngine.matches(hit, root, this._fieldCtxForModel(this.originModel))
+          ? [hit]
+          : [];
       }
     }
 
@@ -789,13 +806,15 @@ export class QueryChain<
     if (this.hops.length === 0) {
       let records = await this.loadOriginRecordsNoHop();
       const root = this.compiledRoot();
-      records = records.filter(predicateMatcher(root));
+      records = records.filter(predicateMatcher(root, this._fieldCtxForModel(this.originModel)));
       return records.map((r) => new HydratedEntity(r, this.originModel, c));
     }
 
     let model = this.originModel;
     let records = await this.loadOriginRecords(this.hops[0]!.sourcePredicate);
-    records = records.filter(predicateMatcher(this.hops[0]!.sourcePredicate));
+    records = records.filter(
+      predicateMatcher(this.hops[0]!.sourcePredicate, this._fieldCtxForModel(this.originModel)),
+    );
     if (records.length === 0) {
       return [];
     }
@@ -803,7 +822,9 @@ export class QueryChain<
     for (let i = 0; i < this.hops.length; i++) {
       const hop = this.hops[i]!;
       if (i > 0) {
-        records = records.filter(predicateMatcher(hop.sourcePredicate));
+        records = records.filter(
+          predicateMatcher(hop.sourcePredicate, this._fieldCtxForModel(model)),
+        );
         if (records.length === 0) {
           return [];
         }
@@ -819,7 +840,9 @@ export class QueryChain<
           hop.recursive.maxDepth,
         );
         records = await this.dataReader.getByIds(nextModel, [...allIds]);
-        records = records.filter(predicateMatcher(hop.targetPredicate));
+        records = records.filter(
+          predicateMatcher(hop.targetPredicate, this._fieldCtxForModel(nextModel)),
+        );
         if (records.length === 0) {
           return [];
         }
@@ -833,7 +856,9 @@ export class QueryChain<
       }
 
       records = await this.dataReader.getByIds(nextModel, nextIds);
-      records = records.filter(predicateMatcher(hop.targetPredicate));
+      records = records.filter(
+        predicateMatcher(hop.targetPredicate, this._fieldCtxForModel(nextModel)),
+      );
       if (records.length === 0) {
         return [];
       }
@@ -841,7 +866,7 @@ export class QueryChain<
     }
 
     const tail = this.compiledRoot();
-    records = records.filter(predicateMatcher(tail));
+    records = records.filter(predicateMatcher(tail, this._fieldCtxForModel(model)));
     return records.map((r) => new HydratedEntity(r, model, c));
   }
 
@@ -850,13 +875,17 @@ export class QueryChain<
 
     if (this.hops.length === 0) {
       let records = await this.loadOriginRecordsNoHop();
-      records = records.filter(predicateMatcher(this.compiledRoot()));
+      records = records.filter(
+        predicateMatcher(this.compiledRoot(), this._fieldCtxForModel(this.originModel)),
+      );
       return records.map((r) => new HydratedEntity(r, this.originModel, c));
     }
 
     const model = this.originModel;
     let records = await this.loadOriginRecords(this.hops[0]!.sourcePredicate);
-    records = records.filter(predicateMatcher(this.hops[0]!.sourcePredicate));
+    records = records.filter(
+      predicateMatcher(this.hops[0]!.sourcePredicate, this._fieldCtxForModel(this.originModel)),
+    );
     if (records.length === 0) {
       return [];
     }
@@ -876,7 +905,12 @@ export class QueryChain<
         const srcRec = entity.getData();
 
         if (hi > 0) {
-          const srcEv = evaluatePredicate(srcRec, hop.sourcePredicate);
+          const srcEv = evaluatePredicate(
+            srcRec,
+            hop.sourcePredicate,
+            undefined,
+            this._fieldCtxForModel(frontierModel),
+          );
           if (!srcEv.ok) {
             entity._setRelate(hop.relationName, []);
             entity._setDiagnostic(hop.relationName, {
@@ -909,7 +943,11 @@ export class QueryChain<
               message: `Recursive "${hop.relationName}": expected ${idsList.length} row(s) in "${nextModel}.mld", got ${childRecords.length}; missing _id: ${missing.join(', ')}.`,
             });
           }
-          const { passed, firstFailure } = filterRecordsWithTrace(childRecords, targetRoot);
+          const { passed, firstFailure } = filterRecordsWithTrace(
+            childRecords,
+            targetRoot,
+            this._fieldCtxForModel(nextModel),
+          );
           if (passed.length === 0) {
             if (!orphan) {
               entity._setDiagnostic(hop.relationName, {
@@ -951,7 +989,11 @@ export class QueryChain<
           });
         }
 
-        const { passed, firstFailure } = filterRecordsWithTrace(childRecords, targetRoot);
+        const { passed, firstFailure } = filterRecordsWithTrace(
+          childRecords,
+          targetRoot,
+          this._fieldCtxForModel(nextModel),
+        );
         if (passed.length === 0) {
           if (!orphan) {
             entity._setDiagnostic(hop.relationName, {
@@ -976,6 +1018,18 @@ export class QueryChain<
     }
 
     return roots;
+  }
+
+  /** Build a FieldMatchContext for a specific model, merging global locale with per-model fieldTypes. */
+  private _fieldCtxForModel(modelName: string): FieldMatchContext | undefined {
+    if (!this.fieldCtx?.locale) {
+      return this.fieldCtx;
+    }
+    const def = this.registry.getModel(modelName);
+    if (!def || def.fieldTypes.size === 0) {
+      return this.fieldCtx;
+    }
+    return { locale: this.fieldCtx.locale, fieldTypes: def.fieldTypes };
   }
 
   private async linkedIds(resolved: ResolvedRelation, id: string): Promise<string[]> {
@@ -1018,7 +1072,7 @@ export class QueryChain<
       relationTargetCache,
     };
     const root = this.compiledRoot();
-    const matcher = predicateMatcher(root);
+    const matcher = predicateMatcher(root, this._fieldCtxForModel(this.originModel));
 
     const push = (keyTuple: string, rec: ModelRecord, modelName: string) => {
       const list = members.get(keyTuple) ?? [];

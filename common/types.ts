@@ -1,10 +1,15 @@
+import type { FieldTypeDef } from './data-types.js';
+
 /**
  * Schema definition for a registered model.
  * Only the declared property names are persisted — enforcing model purity.
+ * `fieldTypes` carries optional per-field DataType metadata; fields absent
+ * from this map are treated as untyped (legacy String, no validation).
  */
 export interface ModelSchema {
   readonly name: string;
   fields: ReadonlySet<string>;
+  fieldTypes: Map<string, FieldTypeDef>;
 }
 
 /**
@@ -13,11 +18,13 @@ export interface ModelSchema {
  * `parentId` is locked at creation time and cannot be changed afterwards,
  * enforcing the inheritance-lock rule. `fields` can be updated later via
  * deferred completion (skeleton-first pattern).
+ * `fieldTypes` carries optional per-field DataType metadata.
  */
 export interface ModelDefinition {
   readonly name: string;
   readonly parentId: string | null;
   fields: ReadonlySet<string>;
+  fieldTypes: Map<string, FieldTypeDef>;
 }
 
 /**
@@ -137,7 +144,20 @@ export interface RecordMeta {
 }
 
 /**
+ * Sentinel field set by {@link ModelEntity.delete} / {@link AuthoringEngine.delete}.
+ * Rows carrying this flag are invisible to queries (filtered by {@link MergedDataReader})
+ * and physically removed from `.mld` on the next flush cycle.
+ */
+export const DELETED_SENTINEL = '__deleted' as const;
+
+/**
  * A persisted record = user-supplied data (filtered to schema fields) + engine metadata.
+ * Tombstoned rows additionally carry `__deleted: true`.
  */
 export type ModelRecord<T extends Record<string, unknown> = Record<string, unknown>> = T &
-  RecordMeta;
+  RecordMeta & { [DELETED_SENTINEL]?: true };
+
+/** Type guard: returns `true` when the row is a soft-delete tombstone. */
+export function isDeletedRecord(r: ModelRecord): boolean {
+  return (r as Record<string, unknown>)[DELETED_SENTINEL] === true;
+}

@@ -4,6 +4,7 @@ import type {
   RelationLogic,
   MatchPredicate,
 } from './types.js';
+import type { FieldTypeDef } from './data-types.js';
 import {
   DuplicateModelError,
   ParentNotFoundError,
@@ -52,6 +53,7 @@ export class ModelRegistry {
     name: string,
     fields: ReadonlySet<string> = new Set(),
     parentId: string | null = null,
+    fieldTypes: Map<string, FieldTypeDef> = new Map(),
   ): ModelDefinition {
     assertFlatGraphSegment(name, 'model name');
     if (parentId !== null) {
@@ -66,7 +68,7 @@ export class ModelRegistry {
       throw new ParentNotFoundError(name, parentId);
     }
 
-    const definition: ModelDefinition = { name, parentId, fields };
+    const definition: ModelDefinition = { name, parentId, fields, fieldTypes };
     this.models.set(name, definition);
     return definition;
   }
@@ -144,12 +146,19 @@ export class ModelRegistry {
    * @param fields - The new field set.
    * @throws {RegistryError} If the model is not registered.
    */
-  updateModelFields(name: string, fields: ReadonlySet<string>): void {
+  updateModelFields(
+    name: string,
+    fields: ReadonlySet<string>,
+    fieldTypes?: Map<string, FieldTypeDef>,
+  ): void {
     const model = this.models.get(name);
     if (!model) {
       throw new RegistryError(`Cannot update fields: model "${name}" is not registered.`);
     }
     model.fields = fields;
+    if (fieldTypes !== undefined) {
+      model.fieldTypes = fieldTypes;
+    }
   }
 
   /**

@@ -220,6 +220,64 @@ export class RelationIndexer implements IndexReader {
     };
   }
 
+  /**
+   * Remove **all** edges involving `entityId` from the given relation index.
+   *
+   * - Forward edges keyed by `entityId` are deleted; their reverse counterparts are cleaned.
+   * - Reverse edges keyed by `entityId` are deleted; their forward counterparts are cleaned.
+   *
+   * This implements **model-independent** delete: only the deleted entity's own links are
+   * purged; the related model's data rows are never touched.
+   */
+  async purgeEntity(rel: RelationDefinition, entityId: string): Promise<void> {
+    const index = await this.loadIndex(rel);
+
+    const fwdTargets = index.fwd.get(entityId);
+    if (fwdTargets) {
+      for (const targetId of fwdTargets) {
+        const revSet = index.rev.get(targetId);
+        if (revSet) {
+          revSet.delete(entityId);
+          if (revSet.size === 0) {
+            index.rev.delete(targetId);
+          }
+        }
+      }
+      index.fwd.delete(entityId);
+      index.dirty = true;
+    }
+
+    const revSources = index.rev.get(entityId);
+    if (revSources) {
+      for (const sourceId of revSources) {
+        const fwdSet = index.fwd.get(sourceId);
+        if (fwdSet) {
+          fwdSet.delete(entityId);
+          if (fwdSet.size === 0) {
+            index.fwd.delete(sourceId);
+          }
+        }
+      }
+      index.rev.delete(entityId);
+      index.dirty = true;
+    }
+  }
+
+  /**
+   * Purge all edges for `entityId` across **every** relation that involves `modelName`
+   * (as source or target, including inherited relations).
+   */
+  async purgeEntityFromAllRelations(
+    modelName: string,
+    entityId: string,
+    registry: { getRelationsOf(name: string): RelationDefinition[] },
+  ): Promise<void> {
+    const rels = registry.getRelationsOf(modelName);
+    for (const rel of rels) {
+      await this.purgeEntity(rel, entityId);
+    }
+  }
+
   async clearIndex(rel: RelationDefinition): Promise<void> {
     const index = await this.loadIndex(rel);
     index.fwd.clear();
