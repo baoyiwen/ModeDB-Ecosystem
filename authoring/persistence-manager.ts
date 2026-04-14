@@ -110,6 +110,13 @@ export class PersistenceManager implements BufferedModelSource {
     return m ? [...m.values()] : [];
   }
 
+  /** Drop staged rows and dirty flag for a model (metadata drop / tests). */
+  clearModelBuffer(modelName: string): void {
+    this.recordBuffers.delete(modelName);
+    this.dirtyModels.delete(modelName);
+    this.invalidateQueryCache(modelName);
+  }
+
   /** True if any model still has staged rows. */
   hasBufferedRows(): boolean {
     for (const m of this.recordBuffers.values()) {

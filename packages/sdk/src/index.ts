@@ -1,5 +1,6 @@
 export {
   connectRemote,
+  ModelDBClient,
   RemoteModelDBClient,
   RemoteRuntimeModel,
   RemoteQueryChain,

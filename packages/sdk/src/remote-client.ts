@@ -60,6 +60,14 @@ function reviveWireResult(json: WireExecuteResultJson): unknown {
         failureCount: json.failureCount ?? 0,
       };
     }
+    if (json.op === 'dropModel' || json.op === 'dropRelation' || json.op === 'alterModel') {
+      return {
+        op: json.op,
+        model: json.model,
+        relation: json.relation,
+        ok: json.ok === true,
+      };
+    }
     return {
       op: json.op,
       model: json.model,
@@ -468,6 +476,27 @@ export class RemoteModelDBClient {
     private readonly session: QuerySession,
   ) {}
 
+  /**
+   * Connect by host/port (HTTP origin + WebSocket stream); same wire protocol as {@link connectRemote}.
+   */
+  static async connectNetwork(options: {
+    readonly host: string;
+    readonly port: number;
+    readonly token: string;
+    readonly database: string;
+    readonly mode?: 'short' | 'stream';
+    readonly webSocketCtor?: WebSocketCtor;
+  }): Promise<RemoteModelDBClient> {
+    const url = `http://${options.host}:${options.port}`;
+    return RemoteModelDBClient.connect({
+      url,
+      connectToken: options.token,
+      dbName: options.database,
+      mode: options.mode,
+      webSocketCtor: options.webSocketCtor,
+    });
+  }
+
   static async connect(options: ConnectRemoteOptions): Promise<RemoteModelDBClient> {
     const logical = resolveConnectLogicalDb(options);
     const mode = options.mode ?? 'stream';
@@ -488,8 +517,46 @@ export class RemoteModelDBClient {
     return new RemoteRuntimeModel(this.session, name);
   }
 
+  /** Meta: drop model schema and vault payload (server-side {@link AuthoringEngine.dropModel}). */
+  async dropModel(model: string): Promise<void> {
+    const out = await this.session.executeWireBody({ op: 'dropModel', model });
+    if (!isRecord(out) || out.op !== 'dropModel' || out.ok !== true) {
+      throw new Error('dropModel: unexpected remote response.');
+    }
+  }
+
+  /** Meta: drop relation index and registry entry (server-side {@link AuthoringEngine.dropRelation}). */
+  async dropRelation(relation: string): Promise<void> {
+    const out = await this.session.executeWireBody({ op: 'dropRelation', relation });
+    if (!isRecord(out) || out.op !== 'dropRelation' || out.ok !== true) {
+      throw new Error('dropRelation: unexpected remote response.');
+    }
+  }
+
+  /** Meta: non-destructive schema merge (server-side {@link AuthoringEngine.alterModel}). */
+  async alterModel(model: string, schema: Readonly<Record<string, unknown>>): Promise<void> {
+    const out = await this.session.executeWireBody({ op: 'alterModel', model, schema });
+    if (!isRecord(out) || out.op !== 'alterModel' || out.ok !== true) {
+      throw new Error('alterModel: unexpected remote response.');
+    }
+  }
+
   close(): void {
     this.ws?.close();
+  }
+}
+
+/** Thin alias: network-only connector (no local engine); use {@link RemoteModelDBClient.connectNetwork}. */
+export class ModelDBClient {
+  static connect(options: {
+    readonly host: string;
+    readonly port: number;
+    readonly token: string;
+    readonly database: string;
+    readonly mode?: 'short' | 'stream';
+    readonly webSocketCtor?: WebSocketCtor;
+  }): Promise<RemoteModelDBClient> {
+    return RemoteModelDBClient.connectNetwork(options);
   }
 }
 

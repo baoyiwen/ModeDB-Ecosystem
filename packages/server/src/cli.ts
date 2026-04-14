@@ -5,7 +5,9 @@ import { startModelDBWebSocketServer } from './modeldb-server.js';
 
 const program = new Command()
   .name('modeldb-server')
-  .description('ModelDB 2.0 WebSocket server (wire obfuscation + connect token)')
+  .description(
+    'ModelDB 2.0 daemon: WebSocket/HTTP + disk. Use `modeldb-server start --workspace <dir>` or legacy flags without `start`.',
+  )
   .option('-c, --config <path>', 'Path to modeldb.config.json', undefined)
   .option('-p, --port <number>', 'Listen port (overrides config / env)')
   .option('-H, --host <host>', 'Bind host (default 127.0.0.1)')
@@ -18,7 +20,8 @@ const program = new Command()
   .option('-t, --token <secret>', 'Client connect token (also derives the atlas vault key)')
   .option('--dev', 'Print decrypted RPC payloads to stderr (development only)', false);
 
-program.parse(process.argv);
+const argv = process.argv.slice(2);
+program.parse(argv[0] === 'start' ? argv.slice(1) : argv, { from: 'user' });
 const o = program.opts<{
   config?: string;
   port?: string;

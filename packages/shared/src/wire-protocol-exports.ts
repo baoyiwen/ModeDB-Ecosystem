@@ -45,6 +45,19 @@ export type WireExecuteBody =
       readonly model: string;
       readonly rows: readonly Record<string, unknown>[];
       readonly sync?: boolean;
+    }
+  | {
+      readonly op: 'dropModel';
+      readonly model: string;
+    }
+  | {
+      readonly op: 'dropRelation';
+      readonly relation: string;
+    }
+  | {
+      readonly op: 'alterModel';
+      readonly model: string;
+      readonly schema: Readonly<Record<string, unknown>>;
     };
 
 export type WireServerMessage = WireHandshakeOk | WireRpcResponse | WireErrorMessage;
@@ -90,9 +103,11 @@ export type WireExecuteResultJson =
     }
   | {
       readonly kind: 'mutation';
-      readonly op: 'insert' | 'update' | 'insertMany';
+      readonly op: 'insert' | 'update' | 'insertMany' | 'dropModel' | 'dropRelation' | 'alterModel';
       readonly model: string;
       readonly record: Record<string, unknown> | null;
       readonly successCount?: number;
       readonly failureCount?: number;
+      readonly relation?: string;
+      readonly ok?: boolean;
     };

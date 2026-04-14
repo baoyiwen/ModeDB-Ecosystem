@@ -291,6 +291,51 @@ export class ModelRegistry {
     return this.relations.find((r) => r.forward === label || r.reverse === label);
   }
 
+  /**
+   * Remove a relation definition (inverse of {@link registerRelation}).
+   * Does not touch on-disk indices; callers must clear vault / `.rid` files separately.
+   */
+  unregisterRelation(def: RelationDefinition): void {
+    const idx = this.relations.indexOf(def);
+    if (idx === -1) {
+      return;
+    }
+    this.relations.splice(idx, 1);
+    const key = pairKey(def.source, def.target);
+    const labels = this.pairLabels.get(key);
+    if (labels) {
+      labels.delete(def.forward);
+      labels.delete(def.reverse);
+      if (labels.size === 0) {
+        this.pairLabels.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Remove a model definition. Relations touching this model must be removed first.
+   */
+  unregisterModel(name: string): void {
+    assertFlatGraphSegment(name, 'model name');
+    if (!this.models.has(name)) {
+      throw new RegistryError(`Cannot unregister: model "${name}" is not registered.`);
+    }
+    const touching = this.getRelationsOf(name);
+    if (touching.length > 0) {
+      throw new RegistryError(
+        `Cannot unregister model "${name}": ${touching.length} relation(s) still reference it.`,
+      );
+    }
+    for (const def of this.models.values()) {
+      if (def.parentId === name) {
+        throw new RegistryError(
+          `Cannot unregister model "${name}": child model "${def.name}" still has parentId "${name}".`,
+        );
+      }
+    }
+    this.models.delete(name);
+  }
+
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------

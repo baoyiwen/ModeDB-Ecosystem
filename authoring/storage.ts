@@ -151,6 +151,11 @@ export class ModelStorage implements DataReader {
     return this.schemas.get(modelName);
   }
 
+  /** Remove in-memory schema (e.g. after {@link AuthoringEngine.dropModel}). */
+  unregisterSchema(modelName: string): void {
+    this.schemas.delete(modelName);
+  }
+
   /** Build a FieldMatchContext from the current locale (used by ModelEntity for query threading). */
   get fieldContext(): FieldMatchContext | undefined {
     if (!this.locale) {

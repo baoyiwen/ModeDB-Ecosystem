@@ -17,6 +17,7 @@ import {
   type ModelDBClient,
 } from '@mode-db/engine';
 import type { WriteSerializationGate } from './write-serialization-gate.js';
+import type { FieldDefsRecord } from '@mode-db/common';
 
 const MAX_INSERT_MANY_ROWS = 20_000;
 
@@ -120,6 +121,53 @@ export class WireRequestDispatcher {
             record: null,
             successCount: report.successCount,
             failureCount: report.failureCount,
+          };
+          return encodeWirePayload(JSON.stringify(wireJson), sessionKey);
+        });
+        return { type: 'rpc.ok', id, cipher };
+      }
+      if (body.op === 'dropModel') {
+        const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
+          const engine = await this.opts.getEngine(atlas);
+          await engine.dropModel(body.model);
+          const wireJson: WireExecuteResultJson = {
+            kind: 'mutation',
+            op: 'dropModel',
+            model: body.model,
+            record: null,
+            ok: true,
+          };
+          return encodeWirePayload(JSON.stringify(wireJson), sessionKey);
+        });
+        return { type: 'rpc.ok', id, cipher };
+      }
+      if (body.op === 'dropRelation') {
+        const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
+          const engine = await this.opts.getEngine(atlas);
+          await engine.dropRelation(body.relation);
+          const wireJson: WireExecuteResultJson = {
+            kind: 'mutation',
+            op: 'dropRelation',
+            model: '',
+            relation: body.relation,
+            record: null,
+            ok: true,
+          };
+          return encodeWirePayload(JSON.stringify(wireJson), sessionKey);
+        });
+        return { type: 'rpc.ok', id, cipher };
+      }
+      if (body.op === 'alterModel') {
+        const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
+          const engine = await this.opts.getEngine(atlas);
+          engine.alterModel(body.model, body.schema as FieldDefsRecord);
+          await engine.flushAll();
+          const wireJson: WireExecuteResultJson = {
+            kind: 'mutation',
+            op: 'alterModel',
+            model: body.model,
+            record: null,
+            ok: true,
           };
           return encodeWirePayload(JSON.stringify(wireJson), sessionKey);
         });

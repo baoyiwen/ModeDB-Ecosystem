@@ -64,4 +64,9 @@ export class AtlasRegistry extends ModelRegistry {
     }
     return new RelationEntity(def, this, this._indexer, this._paths, this._persistence);
   }
+
+  /** Drop cached {@link ModelEntity} handle after {@link AuthoringEngine.dropModel}. */
+  evictModelHandle(name: string): void {
+    this._modelHandles.delete(name);
+  }
 }

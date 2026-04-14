@@ -15,6 +15,7 @@ import {
   type BindOptions,
   type BindStrategy,
   type Diagnostic,
+  RegistryError,
   type FieldDefsRecord,
   type FieldTypeDef,
   type MatchPredicate,
@@ -454,6 +455,108 @@ export class AuthoringEngine {
     const targetFiles = targetModels.map((m) => this.paths.modelDataPath(m));
 
     await this.indexer.bind(rel, strategy, sourceFiles, targetFiles, options);
+  }
+
+  /**
+   * Non-destructive schema merge: new fields may be added; existing fields cannot be removed.
+   * Changing **`required`** from true→false on an existing field is rejected; type changes are rejected.
+   */
+  alterModel(name: string, newSchema: FieldDefsRecord): void {
+    const existing = this.registry.getModel(name);
+    if (!existing) {
+      throw new RegistryError(`alterModel: model "${name}" is not registered.`);
+    }
+    const { fields: newFields, fieldTypes: newFt } = normalizeFieldDefs(newSchema);
+    for (const f of existing.fields) {
+      if (!newFields.has(f)) {
+        throw new RegistryError(`alterModel: cannot remove field "${f}" from model "${name}".`);
+      }
+    }
+    const mergedTypes = new Map(existing.fieldTypes);
+    for (const [k, neu] of newFt) {
+      const old = mergedTypes.get(k);
+      if (old === undefined) {
+        mergedTypes.set(k, neu);
+        continue;
+      }
+      if (old.type !== neu.type) {
+        throw new RegistryError(
+          `alterModel: cannot change type of field "${k}" on model "${name}".`,
+        );
+      }
+      if (old.required && !neu.required) {
+        throw new RegistryError(
+          `alterModel: cannot relax required on field "${k}" on model "${name}" (non-destructive policy).`,
+        );
+      }
+      mergedTypes.set(k, neu);
+    }
+    this.registry.updateModelFields(name, newFields, mergedTypes);
+    this.storage.updateSchema(name, newFields, mergedTypes);
+    EngineLogger.instance.info(
+      `[META] Model '${name}' schema altered (non-destructive field merge).`,
+      undefined,
+      'Authoring',
+    );
+  }
+
+  /**
+   * Remove a relation: clears vault **`r:*`** / disk index and unregisters topology.
+   */
+  async dropRelation(relationName: string): Promise<void> {
+    await this.persistence.flushPendingToDisk();
+    const rel = this.registry.findRelationByLabel(relationName);
+    if (!rel) {
+      throw new RegistryError(`dropRelation: relation "${relationName}" not found.`);
+    }
+    await this.indexer.dropRelationIndex(rel);
+    this.registry.unregisterRelation(rel);
+    this.smartCacheRef?.invalidateModel(rel.source);
+    this.smartCacheRef?.invalidateModel(rel.target);
+    await this.flushAll();
+    EngineLogger.instance.info(
+      `[META] Relation '${rel.forward}' (${rel.source}→${rel.target}) dropped. Index removed.`,
+      undefined,
+      'Authoring',
+    );
+  }
+
+  /**
+   * Drop a model: removes relations touching it, moves **`m:<name>`** payload to **`orphan:m:<name>`**,
+   * evicts buffers and registry; manifest rewritten.
+   */
+  async dropModel(modelName: string): Promise<void> {
+    if (!this.registry.getModel(modelName)) {
+      throw new RegistryError(`dropModel: model "${modelName}" is not registered.`);
+    }
+    await this.persistence.flushPendingToDisk();
+    const touching = this.registry.getRelationsOf(modelName);
+    for (const rel of [...touching]) {
+      await this.indexer.dropRelationIndex(rel);
+      this.registry.unregisterRelation(rel);
+    }
+    const mk = AtlasSingleVault.modelKey(modelName);
+    if (this.atlasVault && this.vaultSecret) {
+      const blob = this.atlasVault.get(mk);
+      if (blob !== undefined) {
+        this.atlasVault.set(AtlasSingleVault.orphanModelKey(modelName), blob);
+        this.atlasVault.delete(mk);
+        this.atlasVault.saveSync(this.paths.atlasSingleVaultPath(), this.vaultSecret);
+      }
+    }
+    this.persistence.clearModelBuffer(modelName);
+    this.storage.unregisterSchema(modelName);
+    this.registry.unregisterModel(modelName);
+    if (this.registry instanceof AtlasRegistry) {
+      this.registry.evictModelHandle(modelName);
+    }
+    this.smartCacheRef?.invalidateModel(modelName);
+    await this.flushAll();
+    EngineLogger.instance.info(
+      `[META] Model '${modelName}' dropped. Physical blocks marked as orphaned.`,
+      undefined,
+      'Authoring',
+    );
   }
 
   async unlink(

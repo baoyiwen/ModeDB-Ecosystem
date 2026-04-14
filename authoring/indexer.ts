@@ -1,5 +1,5 @@
 import { createReadStream } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, unlink } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { createInterface } from 'node:readline';
 import type {
@@ -128,6 +128,27 @@ export class RelationIndexer implements IndexReader {
       }
     }
     await Promise.all(tasks);
+  }
+
+  /**
+   * Remove a relation index from memory and storage (vault **`r:*`** key or legacy `.rid` file).
+   */
+  async dropRelationIndex(rel: RelationDefinition): Promise<void> {
+    const key = relationFileKey(rel);
+    this.indices.delete(key);
+    if (this.vaultOptions) {
+      this.vaultOptions.vault.delete(AtlasSingleVault.relationKey(key));
+      this.persistVaultSync();
+      return;
+    }
+    const filePath = this.paths.relationIndexFilePath(key);
+    try {
+      await unlink(filePath);
+    } catch (err) {
+      if (!isNodeError(err) || err.code !== 'ENOENT') {
+        throw new IndexerError(`Failed to delete relation index "${key}"`, { cause: err });
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------
