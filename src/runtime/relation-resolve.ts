@@ -1,6 +1,5 @@
-import type { RelationDefinition } from '../../common/types.js';
-import type { ModelRegistry } from '../../common/registry.js';
-import { RelationNotFoundError } from '../../common/errors.js';
+import type { RelationDefinition, ModelRegistry } from '@mode-db/common';
+import { RelationNotFoundError } from '@mode-db/common';
 
 export type ResolvedDirection = 'forward' | 'reverse';
 

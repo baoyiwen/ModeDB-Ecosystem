@@ -7,8 +7,7 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:
 import { existsSync, mkdirSync } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { DiagnosticCenter, ErrorCodes } from '../common/diagnostic.js';
-import { DiskAdapter } from '../common/disk-adapter.js';
+import { DiagnosticCenter, ErrorCodes, DiskAdapter } from '@mode-db/common';
 
 /** First bytes of `atlas.mld` (single-file vault). */
 export const ATLAS_SINGLE_VAULT_MAGIC = Buffer.from('MDB4SVLT', 'ascii');

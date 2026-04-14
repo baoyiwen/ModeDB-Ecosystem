@@ -2,16 +2,25 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { randomUUID } from 'node:crypto';
-import type { ModelSchema, ModelRecord } from '../common/types.js';
-import type { DataReader } from '../common/provider.js';
-import type { PathResolver } from '../src/common/PathResolver.js';
-import { ModelNotRegisteredError, FileIOError } from '../common/errors.js';
-import { validateFieldValue, coerceI18NValue, type FieldTypeDef } from '../common/data-types.js';
-import type { Diagnostic } from '../common/diagnostic.js';
+import type {
+  ModelSchema,
+  ModelRecord,
+  DataReader,
+  PathResolver,
+  Diagnostic,
+} from '@mode-db/common';
+import {
+  ModelNotRegisteredError,
+  FileIOError,
+  validateFieldValue,
+  coerceI18NValue,
+  type FieldTypeDef,
+  encodeMldLine,
+  parseMldLine,
+  DiskAdapter,
+} from '@mode-db/common';
 import type { FieldMatchContext } from '../src/runtime/query-filter.js';
-import { encodeMldLine, parseMldLine } from '../common/shadow-codec.js';
 import { AtlasSingleVault } from './atlas-single-vault.js';
-import { DiskAdapter } from '../common/disk-adapter.js';
 
 const SCHEMA_HEADER_KEY = '__schema__';
 

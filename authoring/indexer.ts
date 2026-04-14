@@ -9,12 +9,11 @@ import type {
   ModelRecord,
   BindStrategy,
   BindOptions,
-} from '../common/types.js';
-import type { IndexReader } from '../common/provider.js';
-import type { PathResolver } from '../src/common/PathResolver.js';
-import { IndexerError } from '../common/errors.js';
+  IndexReader,
+  PathResolver,
+} from '@mode-db/common';
+import { IndexerError, DiskAdapter } from '@mode-db/common';
 import { AtlasSingleVault } from './atlas-single-vault.js';
-import { DiskAdapter } from '../common/disk-adapter.js';
 
 export interface RelationIndexerVaultOptions {
   readonly vault: AtlasSingleVault;

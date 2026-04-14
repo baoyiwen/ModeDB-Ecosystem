@@ -1,8 +1,10 @@
-import { DiskAdapter } from '../../common/disk-adapter.js';
-import type { RelationDefinition, RelationIndexData } from '../../common/types.js';
-import type { IndexReader } from '../../common/provider.js';
-import type { PathResolver } from '../common/PathResolver.js';
-import { IndexerError } from '../../common/errors.js';
+import { DiskAdapter, IndexerError } from '@mode-db/common';
+import type {
+  RelationDefinition,
+  RelationIndexData,
+  IndexReader,
+  PathResolver,
+} from '@mode-db/common';
 
 function relationFileKey(rel: RelationDefinition): string {
   return `${rel.source}-${rel.target}-${rel.forward}`;

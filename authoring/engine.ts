@@ -1,19 +1,28 @@
-import type {
-  ModelDefinition,
-  RelationDefinition,
-  RelationLogic,
-  MatchPredicate,
-  ModelRecord,
-  BindStrategy,
-  BindOptions,
-} from '../common/types.js';
-import { existsSync, readFileSync } from 'node:fs';
-import { DiskAdapter } from '../common/disk-adapter.js';
-import { ModelRegistry } from '../common/registry.js';
-import { PathResolver } from '../src/common/PathResolver.js';
-import { resolveModelDBStorageRoot } from '../common/storage-root-config.js';
-import { parseAtlasManifestJson, serializeAtlasManifestFile } from '../common/atlas-manifest.js';
-import { AtlasManifestError } from '../common/errors.js';
+import { existsSync } from 'node:fs';
+import {
+  AtlasManifestError,
+  DiagnosticCenter,
+  EngineLogger,
+  InternalVault,
+  ModelRegistry,
+  PathResolver,
+  SmartCache,
+  deriveAtlasVaultSecretFromConnectToken,
+  normalizeFieldDefs,
+  parseAtlasManifestJson,
+  resolveModelDBStorageRoot,
+  serializeAtlasManifestFile,
+  type BindOptions,
+  type BindStrategy,
+  type Diagnostic,
+  type FieldDefsRecord,
+  type FieldTypeDef,
+  type MatchPredicate,
+  type ModelDefinition,
+  type ModelRecord,
+  type RelationDefinition,
+  type RelationLogic,
+} from '@mode-db/common';
 import { ModelStorage } from './storage.js';
 import { RelationIndexer } from './indexer.js';
 import { AtlasRegistry } from './atlas-registry.js';
@@ -24,15 +33,6 @@ import { QueryChain } from '../src/runtime/query.js';
 import { QueryEngine } from '../src/runtime/query-engine.js';
 import type { PredicateNode } from '../src/runtime/predicate-tree.js';
 import type { RuntimeContext } from '../src/runtime/context.js';
-import {
-  normalizeFieldDefs,
-  type FieldDefsRecord,
-  type FieldTypeDef,
-} from '../common/data-types.js';
-import { InternalVault } from '../common/internal-vault.js';
-import { SmartCache } from '../common/smart-cache.js';
-import { EngineLogger } from '../common/engine-logger.js';
-import { DiagnosticCenter } from '../common/diagnostic.js';
 import { AtlasSingleVault } from './atlas-single-vault.js';
 
 function hydrateAuthoringFromManifest(
@@ -70,8 +70,6 @@ export interface AuthoringEngineOptions {
   /** Advanced: inject a pre-built resolver (must match `atlas`). */
   paths?: PathResolver;
   registry?: ModelRegistry;
-  storage?: ModelStorage;
-  indexer?: RelationIndexer;
   /**
    * When true, `.mld` body lines are obfuscated (see `common/shadow-codec.ts`); reads auto-detect.
    */
@@ -98,20 +96,17 @@ export interface AuthoringEngineOptions {
         logEachBinaryUnwrap?: boolean;
       };
   /**
-   * Single encrypted `atlas.mld` vault (models + relations + manifest). No `models/`, `relations/`,
-   * or `atlas-manifest.json` on disk. Requires {@link vaultSecret} or `process.env.MODEL_DB_VAULT_SECRET`.
+   * Same value as the wire **`connectToken`**; used with {@link deriveAtlasVaultSecretFromConnectToken}
+   * to open **`${storageRoot}/${atlas}/atlas.mld`**. Omit to use **`process.env.MODEL_DB_CONNECT_TOKEN`**.
    */
-  singleFileVault?: boolean;
-  /** Passphrase for scrypt/AES-GCM when {@link singleFileVault} is true. */
-  vaultSecret?: string;
+  connectToken?: string;
 }
 
 /**
  * Authoring-side engine: all model/relation I/O is scoped to one atlas directory tree.
  *
- * On construction, `PathResolver.ensureAtlasLayoutSync()` creates the legacy layout (`models/`,
- * `relations/`, `atlas-manifest.json`) unless {@link AuthoringEngineOptions.singleFileVault} is
- * set, in which case only `atlas.mld` is used.
+ * On construction, only the single-file vault **`${storageRoot}/${atlas}/atlas.mld`** is used
+ * (encrypted catalog; no `models/`, `relations/`, or standalone `atlas-manifest.json`).
  *
  * **Persistence:** `insert` stages rows in a per-model write-behind `Map<_id, row>`; a **200ms** scheduler
  * appends to `.mld` when buffers are non-empty; `beforeExit` and `SIGINT`/`SIGTERM` best-effort run
@@ -127,7 +122,7 @@ export class AuthoringEngine {
   currentLocale: string | undefined;
   /** Present when {@link AuthoringEngineOptions.memoryShadowHydration} is enabled. */
   readonly internalVault: InternalVault | undefined;
-  /** In-memory vault for {@link AuthoringEngineOptions.singleFileVault}. */
+  /** In-memory vault for the single-file atlas layout. */
   readonly atlasVault: AtlasSingleVault | undefined;
   private readonly vaultSecret: string | undefined;
   private readonly smartCacheRef: SmartCache | undefined;
@@ -145,53 +140,35 @@ export class AuthoringEngine {
       );
     }
 
-    if (
-      (options.storage !== undefined || options.indexer !== undefined) &&
-      options.paths === undefined
-    ) {
-      throw new Error('Custom storage or indexer requires options.paths (PathResolver).');
+    const connectTok = (
+      options.connectToken ??
+      (typeof process !== 'undefined' && process.env.MODEL_DB_CONNECT_TOKEN
+        ? process.env.MODEL_DB_CONNECT_TOKEN
+        : '')
+    ).trim();
+    if (!connectTok) {
+      throw new Error(
+        'AuthoringEngine requires connectToken or process.env.MODEL_DB_CONNECT_TOKEN (derives the atlas vault key).',
+      );
     }
+    const resolvedVaultSecret = deriveAtlasVaultSecretFromConnectToken(connectTok);
 
-    const useVault = options.singleFileVault === true;
-    if (useVault && (options.storage !== undefined || options.indexer !== undefined)) {
-      throw new Error('singleFileVault cannot be combined with custom storage or indexer.');
+    paths.ensureAtlasVaultLayoutSync();
+    const vaultPath = paths.atlasSingleVaultPath();
+    const atlasVault = new AtlasSingleVault();
+    const fileExisted = existsSync(vaultPath);
+    const loaded = atlasVault.loadSync(vaultPath, resolvedVaultSecret);
+    if (fileExisted && !loaded) {
+      throw new AtlasManifestError(
+        `Cannot open single-file vault at "${vaultPath}": decrypt failed, file truncated, or wrong connectToken (see diagnostics E3002).`,
+      );
     }
-
-    let resolvedVaultSecret: string | undefined;
-    if (useVault) {
-      const fromEnv =
-        typeof process !== 'undefined' && process.env.MODEL_DB_VAULT_SECRET
-          ? process.env.MODEL_DB_VAULT_SECRET
-          : undefined;
-      resolvedVaultSecret = options.vaultSecret ?? fromEnv;
-      if (!resolvedVaultSecret || resolvedVaultSecret.length === 0) {
-        throw new Error(
-          'singleFileVault requires vaultSecret or process.env.MODEL_DB_VAULT_SECRET to be set.',
-        );
-      }
-    }
-
-    let atlasVault: AtlasSingleVault | undefined;
-    if (useVault && resolvedVaultSecret) {
-      paths.ensureAtlasVaultLayoutSync();
-      const vaultPath = paths.atlasSingleVaultPath();
-      atlasVault = new AtlasSingleVault();
-      const fileExisted = existsSync(vaultPath);
-      const loaded = atlasVault.loadSync(vaultPath, resolvedVaultSecret);
-      if (fileExisted && !loaded) {
-        throw new AtlasManifestError(
-          `Cannot open single-file vault at "${vaultPath}": decrypt failed, file truncated, or wrong secret (see diagnostics E3002).`,
-        );
-      }
-      if (!fileExisted) {
-        atlasVault.set(
-          AtlasSingleVault.manifestKey,
-          serializeAtlasManifestFile(new ModelRegistry(), paths.atlasName),
-        );
-        atlasVault.saveSync(vaultPath, resolvedVaultSecret);
-      }
-    } else {
-      paths.ensureAtlasLayoutSync();
+    if (!fileExisted) {
+      atlasVault.set(
+        AtlasSingleVault.manifestKey,
+        serializeAtlasManifestFile(new ModelRegistry(), paths.atlasName),
+      );
+      atlasVault.saveSync(vaultPath, resolvedVaultSecret);
     }
 
     this.paths = paths;
@@ -202,28 +179,21 @@ export class AuthoringEngine {
     this.internalVault = this.memoryShadowHydration ? new InternalVault() : undefined;
     this.smartCacheRef = options.enableSmartCache ? new SmartCache() : undefined;
 
-    const vaultOpts =
-      atlasVault && resolvedVaultSecret
-        ? { vault: atlasVault, vaultSecret: resolvedVaultSecret }
-        : undefined;
+    const vaultOpts = { vault: atlasVault, vaultSecret: resolvedVaultSecret };
 
-    this.storage = options.storage ?? new ModelStorage(paths, vaultOpts);
+    this.storage = new ModelStorage(paths, vaultOpts);
     this.storage.locale = this.currentLocale;
-    this.storage.shadowDiskEncoding = atlasVault ? false : (options.shadowDiskEncoding ?? false);
+    this.storage.shadowDiskEncoding = false;
     this.persistence = new PersistenceManager(
       this.storage,
       this.smartCacheRef,
       options.bufferFlushRowThreshold,
     );
-    this.indexer =
-      options.indexer ??
-      (vaultOpts
-        ? new RelationIndexer(paths, {
-            vault: atlasVault!,
-            vaultSecret: vaultOpts.vaultSecret,
-            loadModelRecords: (m) => this.persistence.getMergedReader().getAll(m),
-          })
-        : new RelationIndexer(paths));
+    this.indexer = new RelationIndexer(paths, {
+      vault: atlasVault,
+      vaultSecret: vaultOpts.vaultSecret,
+      loadModelRecords: (m) => this.persistence.getMergedReader().getAll(m),
+    });
     this.registry =
       options.registry !== undefined
         ? options.registry
@@ -233,15 +203,9 @@ export class AuthoringEngine {
             smartCache: this.smartCacheRef,
           });
 
-    if (atlasVault && options.registry === undefined) {
+    if (options.registry === undefined) {
       const raw = atlasVault.get(AtlasSingleVault.manifestKey);
       if (raw) {
-        hydrateAuthoringFromManifest(this.registry, this.storage, raw, paths.atlasName);
-      }
-    } else if (!atlasVault && options.registry === undefined) {
-      const manifestPath = paths.manifestFilePath();
-      if (existsSync(manifestPath)) {
-        const raw = readFileSync(manifestPath, 'utf-8');
         hydrateAuthoringFromManifest(this.registry, this.storage, raw, paths.atlasName);
       }
     }
@@ -255,7 +219,9 @@ export class AuthoringEngine {
         logEachDiskOp: eo.logEachDiskOp,
         logEachBinaryUnwrap: eo.logEachBinaryUnwrap,
       });
-      EngineLogger.instance.attachDiagnosticBridge((fn) => DiagnosticCenter.onDiagnostic(fn));
+      EngineLogger.instance.attachDiagnosticBridge((fn: (d: Diagnostic) => void) =>
+        DiagnosticCenter.onDiagnostic(fn),
+      );
     }
 
     registerAuthoringShutdownTask(() => this.flushAll());
@@ -523,12 +489,11 @@ export class AuthoringEngine {
    */
   async writeAtlasManifest(): Promise<void> {
     const body = serializeAtlasManifestFile(this.registry, this.paths.atlasName);
-    if (this.atlasVault && this.vaultSecret) {
-      this.atlasVault.set(AtlasSingleVault.manifestKey, body);
-      this.atlasVault.saveSync(this.paths.atlasSingleVaultPath(), this.vaultSecret);
-      return;
+    if (!this.atlasVault || !this.vaultSecret) {
+      throw new Error('writeAtlasManifest: internal vault is missing.');
     }
-    await DiskAdapter.writeFile(this.paths.manifestFilePath(), body, 'utf-8');
+    this.atlasVault.set(AtlasSingleVault.manifestKey, body);
+    this.atlasVault.saveSync(this.paths.atlasSingleVaultPath(), this.vaultSecret);
   }
 
   /**

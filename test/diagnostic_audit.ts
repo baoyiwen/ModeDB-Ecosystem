@@ -14,14 +14,16 @@ import { existsSync } from 'node:fs';
 import { mkdir, rm, readFile, rename } from 'node:fs/promises';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
 import { integrationVaultAuthoringOptions, useIntegrationVaultEnv } from './integration-vault.js';
-import { ValidationError, FileIOError } from '../common/errors.js';
 import {
+  ValidationError,
+  FileIOError,
   DiagnosticCenter,
   ValidationReport,
   ErrorCodes,
   type Diagnostic,
-} from '../common/diagnostic.js';
-import { validateFieldValue, type FieldTypeDef } from '../common/data-types.js';
+  validateFieldValue,
+  type FieldTypeDef,
+} from '@mode-db/common';
 
 const DATA_ROOT = join(import.meta.dirname ?? '.', '..', 'data');
 const ATLAS = 'diag_audit';

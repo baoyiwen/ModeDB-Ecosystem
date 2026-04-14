@@ -1,7 +1,5 @@
-import type { ModelSchema, ModelRecord } from '../../common/types.js';
-import type { DataReader } from '../../common/provider.js';
-import type { PathResolver } from '../common/PathResolver.js';
-import { ModelNotRegisteredError, FileIOError } from '../../common/errors.js';
+import type { ModelSchema, ModelRecord, DataReader, PathResolver } from '@mode-db/common';
+import { ModelNotRegisteredError, FileIOError } from '@mode-db/common';
 import { AtlasSingleVault } from '../../authoring/atlas-single-vault.js';
 
 const SCHEMA_HEADER_KEY = '__schema__';

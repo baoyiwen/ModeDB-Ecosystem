@@ -1,5 +1,4 @@
-import type { ModelRegistry } from '../../common/registry.js';
-import type { DataReader, IndexReader } from '../../common/provider.js';
+import type { ModelRegistry, DataReader, IndexReader } from '@mode-db/common';
 import type { FieldMatchContext } from './query-filter.js';
 
 /**

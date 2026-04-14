@@ -3,9 +3,10 @@ import type {
   ModelRecord,
   BindStrategy,
   BindOptions,
-} from '../common/types.js';
-import type { ModelRegistry } from '../common/registry.js';
-import type { PathResolver } from '../src/common/PathResolver.js';
+  ModelRegistry,
+  PathResolver,
+  ValidationReport,
+} from '@mode-db/common';
 import type { ModelStorage } from './storage.js';
 import type { RelationIndexer } from './indexer.js';
 import type { PersistenceManager } from './persistence-manager.js';
@@ -13,8 +14,7 @@ import { RuntimeModel, type RuntimeAvailableRelation } from '../src/runtime/Runt
 import type { QueryChain } from '../src/runtime/query.js';
 import type { PredicateNode } from '../src/runtime/predicate-tree.js';
 import { QueryEngine } from '../src/runtime/query-engine.js';
-import { normalizeFieldDefs, type FieldDefsRecord } from '../common/data-types.js';
-import type { ValidationReport } from '../common/diagnostic.js';
+import { normalizeFieldDefs, type FieldDefsRecord } from '@mode-db/common';
 import type { AtlasAuthoringFacilities } from './authoring-facilities.js';
 
 /** Options for {@link ModelEntity.insert}. */

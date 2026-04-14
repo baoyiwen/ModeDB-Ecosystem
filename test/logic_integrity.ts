@@ -12,12 +12,11 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
-import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
+import { configureModelDBStorageRoot } from '@mode-db/common';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
 import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
 import {
   atlasVaultPath,
-  INTEGRATION_VAULT_SECRET,
   integrationVaultAuthoringOptions,
   mutateVaultRelationData,
   useIntegrationVaultEnv,
@@ -118,16 +117,10 @@ async function main(): Promise<void> {
   // --- FILTERED_OUT_ORPHAN：索引含幽灵 id，目标行不存在 ---
   const ghost = '00000000-0000-4000-8000-00000000dead';
   const srcKey = pump._id;
-  mutateVaultRelationData(
-    DATA_ROOT,
-    ATLAS,
-    'Pump-Zone-located_in',
-    INTEGRATION_VAULT_SECRET,
-    (rid) => {
-      const arr = rid.fwd[srcKey] ?? [];
-      rid.fwd[srcKey] = [...arr, ghost];
-    },
-  );
+  mutateVaultRelationData(DATA_ROOT, ATLAS, 'Pump-Zone-located_in', (rid) => {
+    const arr = rid.fwd[srcKey] ?? [];
+    rid.fwd[srcKey] = [...arr, ghost];
+  });
   console.log(
     '\n  [关键信息] 已向 Vault 内 r:Pump-Zone-located_in 注入幽灵 target id（用于 FILTERED_OUT_ORPHAN）',
   );

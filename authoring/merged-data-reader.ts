@@ -1,5 +1,5 @@
-import { isDeletedRecord, type ModelRecord } from '../common/types.js';
-import type { DataReader } from '../common/provider.js';
+import { isDeletedRecord, type ModelRecord } from '@mode-db/common';
+import type { DataReader } from '@mode-db/common';
 import type { ModelStorage } from './storage.js';
 
 /**

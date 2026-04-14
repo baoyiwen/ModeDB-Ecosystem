@@ -10,13 +10,12 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
-import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
-import type { RelationIndexData } from '../common/types.js';
+import { configureModelDBStorageRoot } from '@mode-db/common';
+import type { RelationIndexData } from '@mode-db/common';
 import { AuthoringEngine } from '../authoring/engine.js';
 import { ModelDBClient } from '../runtime/client.js';
 import {
   atlasVaultPath,
-  INTEGRATION_VAULT_SECRET,
   integrationVaultAuthoringOptions,
   loadVaultRelationData,
   useIntegrationVaultEnv,
@@ -184,12 +183,7 @@ async function main(): Promise<void> {
 
   assert(existsSync(atlasVaultPath(DATA_ROOT, 'pipe')), 'pipe atlas.mld 存在（含关系索引）');
 
-  const ridData = loadVaultRelationData(
-    DATA_ROOT,
-    'pipe',
-    'Pump-Zone-located_in',
-    INTEGRATION_VAULT_SECRET,
-  );
+  const ridData = loadVaultRelationData(DATA_ROOT, 'pipe', 'Pump-Zone-located_in');
   assert(
     Object.keys(ridData.fwd).length > 0 && Object.keys(ridData.rev).length > 0,
     '.rid 中 fwd / rev 均非空',

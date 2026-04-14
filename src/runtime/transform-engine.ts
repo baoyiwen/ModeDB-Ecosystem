@@ -1,8 +1,6 @@
-import type { ModelRecord } from '../../common/types.js';
-import type { ModelRegistry } from '../../common/registry.js';
-import { QueryError } from '../../common/errors.js';
+import type { ModelRecord, ModelRegistry, DataReader, IndexReader } from '@mode-db/common';
+import { QueryError } from '@mode-db/common';
 import type { HydratedEntity } from './HydratedEntity.js';
-import type { DataReader, IndexReader } from '../../common/provider.js';
 import {
   BucketAggregator,
   isTraceableNull,

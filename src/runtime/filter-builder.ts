@@ -1,4 +1,4 @@
-import type { ModelRecord } from '../../common/types.js';
+import type { ModelRecord } from '@mode-db/common';
 import { atomNode, callbackNode, groupNode, type PredicateNode } from './predicate-tree.js';
 import { normalizeOperator } from './query-filter.js';
 

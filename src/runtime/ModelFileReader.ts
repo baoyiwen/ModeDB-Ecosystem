@@ -1,10 +1,7 @@
 import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
-import type { ModelSchema, ModelRecord } from '../../common/types.js';
-import type { DataReader } from '../../common/provider.js';
-import type { PathResolver } from '../common/PathResolver.js';
-import { ModelNotRegisteredError, FileIOError } from '../../common/errors.js';
-import { parseMldLine } from '../../common/shadow-codec.js';
+import type { ModelSchema, ModelRecord, DataReader, PathResolver } from '@mode-db/common';
+import { ModelNotRegisteredError, FileIOError, parseMldLine } from '@mode-db/common';
 
 /**
  * Read-only `.mld` access for the client runtime (no writes, no mkdir).

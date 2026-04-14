@@ -1,10 +1,11 @@
-import { decodeInboundTransportBuffer, TRANSPORT_INNER_MAGIC } from '@mode-db/shared';
 import {
+  decodeInboundTransportBuffer,
+  TRANSPORT_INNER_MAGIC,
   deriveWireSessionKey,
   decodeWirePayload,
-  EngineLogger,
   type WireExecuteBody,
-} from 'mode-db-engine';
+} from '@mode-db/shared';
+import { EngineLogger } from '@mode-db/common';
 import { TransportAuthError } from './transport-errors.js';
 
 export { TransportAuthError };

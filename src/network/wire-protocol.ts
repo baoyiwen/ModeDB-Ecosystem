@@ -1,11 +1,17 @@
-import type { RemoteExecuteSnapshot } from '../runtime/query.js';
+import type { RemoteExecuteSnapshot } from '@mode-db/shared';
 
 export type WireClientMessage = WireHandshakeRequest | WireRpcEnvelope;
 
 export interface WireHandshakeRequest {
   readonly type: 'handshake';
   readonly connectToken: string;
-  readonly atlas: string;
+  /**
+   * Logical library name → **`<workspace>/<dbName>/`** on the server (vault **`atlas.mld`** recommended for large scale).
+   * Preferred for new clients; **`atlas`** remains an alias when **`dbName`** is omitted.
+   */
+  readonly dbName?: string;
+  /** @deprecated Prefer **`dbName`**. Same string space as logical library directory name. */
+  readonly atlas?: string;
 }
 
 export interface WireRpcEnvelope {
@@ -44,7 +50,8 @@ export type WireServerMessage = WireHandshakeOk | WireRpcResponse | WireErrorMes
 
 export interface WireHandshakeOk {
   readonly type: 'handshake.ok';
-  readonly atlas: string;
+  readonly dbName?: string;
+  readonly atlas?: string;
 }
 
 export interface WireRpcResponse {

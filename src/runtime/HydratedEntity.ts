@@ -1,7 +1,10 @@
-import type { ModelRecord } from '../../common/types.js';
-import type { FieldTypeDef } from '../../common/data-types.js';
-import type { ModelRegistry } from '../../common/registry.js';
-import type { DataReader, IndexReader } from '../../common/provider.js';
+import type {
+  ModelRecord,
+  FieldTypeDef,
+  ModelRegistry,
+  DataReader,
+  IndexReader,
+} from '@mode-db/common';
 import {
   resolveRelationOnRegistry,
   targetModelName,
@@ -11,8 +14,8 @@ import {
   type ValueObject,
   createValueObject,
   type ValueSyncFn,
-} from '../../common/value-objects.js';
-import { InternalVault } from '../../common/internal-vault.js';
+  InternalVault,
+} from '@mode-db/common';
 
 export type RelationEmptyReason =
   | 'NOT_REGISTERED'
@@ -344,17 +347,4 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
   }
 }
 
-/**
- * {@link QueryChain.execute} 选项。
- *
- * 与链上 **`.page()` / `.limit()`** 二选一或合并：执行时 **`options`** 优先于链上状态。
- */
-export interface QueryExecuteOptions {
-  readonly includeRelates?: boolean;
-  /** 0-based 页码（需配合 **`limit`** 才启用分页） */
-  readonly page?: number;
-  /** 每页条数；设置后 **`execute()`** 返回 {@link Paginated} 包装（过滤 / 聚合之后再切片） */
-  readonly limit?: number;
-  /** 与 **`groupBy` / `pivot`** 联用：返回 {@link GroupInstance}[]（含 **`.getEntities()`**），而非 {@link AnalysisResult} */
-  readonly wrapGroups?: boolean;
-}
+export type { QueryExecuteOptions } from '@mode-db/shared';

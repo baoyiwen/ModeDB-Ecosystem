@@ -1,18 +1,20 @@
 import type { WebSocket } from 'ws';
 import {
-  QueryChain,
-  queryPlanHasSerializedCallback,
-  serializeExecuteResultForWire,
   decodeWirePayload,
   encodeWirePayload,
+  queryPlanHasSerializedCallback,
+  type RemoteExecuteSnapshot,
+  type WireExecuteResultJson,
+  type QueryExecuteOptions,
+  type WireExecuteBody,
+  type WireServerMessage,
+} from '@mode-db/shared';
+import {
+  QueryChain,
+  serializeExecuteResultForWire,
   EngineLogger,
   type AuthoringEngine,
   type ModelDBClient,
-  type QueryExecuteOptions,
-  type RemoteExecuteSnapshot,
-  type WireExecuteBody,
-  type WireExecuteResultJson,
-  type WireServerMessage,
 } from 'mode-db-engine';
 import type { WriteSerializationGate } from './write-serialization-gate.js';
 
@@ -64,7 +66,11 @@ export class WireRequestDispatcher {
     const t0 = performance.now();
     try {
       if (body.op === 'executeQuery') {
-        const cipher = await this.executeQueryCipherOnly(atlas, sessionKey, body.snapshot);
+        const cipher = await this.executeQueryCipherOnly(
+          atlas,
+          sessionKey,
+          body.snapshot as RemoteExecuteSnapshot,
+        );
         return { type: 'rpc.ok', id, cipher };
       }
       if (body.op === 'insert') {

@@ -1,28 +1,46 @@
+import { mkdirSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import websocket from '@fastify/websocket';
 import WS, { type WebSocket, type RawData } from 'ws';
 import {
-  configureModelDBStorageRoot,
   deriveWireSessionKey,
-  EngineLogger,
-  ModelDBClient,
   type WireClientMessage,
   type WireHandshakeRequest,
   type WireRpcEnvelope,
   type WireServerMessage,
-} from 'mode-db-engine';
+} from '@mode-db/shared';
+import { configureModelDBStorageRoot, EngineLogger } from '@mode-db/common';
+import { ModelDBClient } from 'mode-db-engine';
 import { BinaryInterceptor, TransportAuthError } from './binary-interceptor.js';
 import type { ResolvedModelDBServerConfig } from './config-loader.js';
 import { AuthoringBridge } from './authoring-bridge.js';
 import { WriteSerializationGate } from './write-serialization-gate.js';
 import { WireRequestDispatcher, decodeExecuteBody } from './request-dispatcher.js';
 import { atlasCatalogSignature } from './atlas-catalog-signature.js';
+import { assertLogicalDatabaseExists } from './logical-database-guard.js';
 
 const MAX_BULK_ITEMS = 50_000;
 const BULK_CONCURRENCY = 4;
 const WS_HEARTBEAT_MS = 25_000;
+
+/** Logical library directory under **`workspace`** (aka **`storageRoot`**): `<workspace>/<logical>/`. */
+export function resolveLogicalDbFromHandshake(hs: WireHandshakeRequest): string {
+  const d = typeof hs.dbName === 'string' ? hs.dbName.trim() : '';
+  const a = typeof hs.atlas === 'string' ? hs.atlas.trim() : '';
+  const v = d || a;
+  if (!v) {
+    throw new Error('Handshake requires non-empty dbName or atlas.');
+  }
+  return v;
+}
+
+function resolveLogicalDbFromHttpHeaders(headers: IncomingMessage['headers']): string {
+  const dn = String(headers['x-modeldb-db-name'] ?? '').trim();
+  const at = String(headers['x-modeldb-atlas'] ?? '').trim();
+  return dn || at;
+}
 
 type SocketState =
   | { readonly phase: 'guest' }
@@ -101,11 +119,17 @@ function attachWireSocket(
         }
         const hs: WireHandshakeRequest = parsed;
         interceptor.validateConnectToken(hs.connectToken);
-        const atlas = hs.atlas;
-        await getClient(atlas);
-        const sessionKey = deriveWireSessionKey(hs.connectToken, atlas);
-        state = { phase: 'ready', sessionKey, atlas };
-        sendJsonWs(ws, { type: 'handshake.ok', atlas });
+        const logicalDb = resolveLogicalDbFromHandshake(hs);
+        await getClient(logicalDb);
+        const sessionKey = deriveWireSessionKey(hs.connectToken, logicalDb);
+        state = { phase: 'ready', sessionKey, atlas: logicalDb };
+        const d = typeof hs.dbName === 'string' ? hs.dbName.trim() : '';
+        const a = typeof hs.atlas === 'string' ? hs.atlas.trim() : '';
+        sendJsonWs(ws, {
+          type: 'handshake.ok',
+          ...(d ? { dbName: d } : {}),
+          ...(a ? { atlas: a } : {}),
+        });
         return;
       }
 
@@ -203,12 +227,11 @@ function readActionEnvelope(
 export async function buildDualTrackFastify(
   cfg: ResolvedModelDBServerConfig,
 ): Promise<FastifyInstance> {
-  configureModelDBStorageRoot({ storageRoot: cfg.storageRoot });
-  if (cfg.vaultSecret) {
-    process.env.MODEL_DB_VAULT_SECRET = cfg.vaultSecret;
-  }
+  const dataRoot = cfg.workspace ?? cfg.storageRoot;
+  configureModelDBStorageRoot({ storageRoot: dataRoot });
+  process.env.MODEL_DB_CONNECT_TOKEN = cfg.connectToken;
 
-  const rootPrint = storageRootFingerprint(cfg.storageRoot);
+  const rootPrint = storageRootFingerprint(dataRoot);
 
   if (cfg.serverLogDirectory) {
     EngineLogger.instance.configure({
@@ -217,10 +240,13 @@ export async function buildDualTrackFastify(
     });
   } else {
     EngineLogger.instance.configure({
-      atlasRoot: `${cfg.storageRoot}/.modeldb-server`,
+      atlasRoot: `${dataRoot}/.modeldb-server`,
       enableAccessLog: cfg.accessLog === true,
     });
   }
+
+  mkdirSync(dataRoot, { recursive: true });
+  EngineLogger.instance.info('Workspace directory ready', { workspace: dataRoot }, 'ModelDBServer');
   EngineLogger.instance.info(
     'ModelDB Server starting (dual-track)',
     {
@@ -239,7 +265,8 @@ export async function buildDualTrackFastify(
     { readonly sig: string; readonly promise: Promise<ModelDBClient> }
   >();
   function getClient(atlas: string): Promise<ModelDBClient> {
-    const sig = atlasCatalogSignature(cfg.storageRoot, atlas);
+    assertLogicalDatabaseExists(dataRoot, atlas);
+    const sig = atlasCatalogSignature(dataRoot, atlas);
     const hit = atlasClients.get(atlas);
     if (hit && hit.sig === sig) {
       return hit.promise;
@@ -249,11 +276,7 @@ export async function buildDualTrackFastify(
     return p;
   }
 
-  const authoring = new AuthoringBridge(
-    cfg.storageRoot,
-    cfg.vaultSecret,
-    cfg.bufferFlushRowThreshold,
-  );
+  const authoring = new AuthoringBridge(dataRoot, cfg.connectToken, cfg.bufferFlushRowThreshold);
   const writeGate = new WriteSerializationGate();
   const dispatcher = new WireRequestDispatcher({
     dev: cfg.dev,
@@ -287,19 +310,21 @@ export async function buildDualTrackFastify(
   app.post('/v2/action', async (request: FastifyRequest, reply: FastifyReply) => {
     const interceptor = new BinaryInterceptor(cfg.connectToken);
     try {
-      const atlas = String(request.headers['x-modeldb-atlas'] ?? '');
       const token = String(request.headers['x-modeldb-connect-token'] ?? '');
       interceptor.validateConnectToken(token);
-      if (!atlas) {
-        return reply.code(400).send({ error: 'Missing X-ModelDB-Atlas header.' });
+      const logical = resolveLogicalDbFromHttpHeaders(request.headers);
+      if (!logical) {
+        return reply
+          .code(400)
+          .send({ error: 'Missing X-ModelDB-Db-Name or X-ModelDB-Atlas header.' });
       }
 
       const { cipher, id } = readActionEnvelope(interceptor, request.body);
 
-      const sessionKey = deriveWireSessionKey(token, atlas);
-      await getClient(atlas);
+      const sessionKey = deriveWireSessionKey(token, logical);
+      await getClient(logical);
       const body = decodeExecuteBody(cipher, sessionKey);
-      const out = await dispatcher.runRpcCipherReply(atlas, sessionKey, body, id);
+      const out = await dispatcher.runRpcCipherReply(logical, sessionKey, body, id);
       return reply.send(out);
     } catch (e) {
       if (e instanceof TransportAuthError) {
@@ -330,11 +355,13 @@ export async function buildDualTrackFastify(
   app.post('/v2/bulk', async (request: FastifyRequest, reply: FastifyReply) => {
     const interceptor = new BinaryInterceptor(cfg.connectToken);
     try {
-      const atlas = String(request.headers['x-modeldb-atlas'] ?? '');
       const token = String(request.headers['x-modeldb-connect-token'] ?? '');
       interceptor.validateConnectToken(token);
-      if (!atlas) {
-        return reply.code(400).send({ error: 'Missing X-ModelDB-Atlas header.' });
+      const logical = resolveLogicalDbFromHttpHeaders(request.headers);
+      if (!logical) {
+        return reply
+          .code(400)
+          .send({ error: 'Missing X-ModelDB-Db-Name or X-ModelDB-Atlas header.' });
       }
       const root = request.body as { items?: unknown };
       if (!root || !Array.isArray(root.items)) {
@@ -345,8 +372,8 @@ export async function buildDualTrackFastify(
         return reply.code(400).send({ error: `At most ${MAX_BULK_ITEMS} items per request.` });
       }
 
-      const sessionKey = deriveWireSessionKey(token, atlas);
-      await getClient(atlas);
+      const sessionKey = deriveWireSessionKey(token, logical);
+      await getClient(logical);
 
       let ok = 0;
       for (let i = 0; i < items.length; i += BULK_CONCURRENCY) {
@@ -359,7 +386,7 @@ export async function buildDualTrackFastify(
               throw new Error('Bulk item missing cipher.');
             }
             const body = decodeExecuteBody(cipher, sessionKey);
-            const out = await dispatcher.runRpcCipherReply(atlas, sessionKey, body, id);
+            const out = await dispatcher.runRpcCipherReply(logical, sessionKey, body, id);
             if (out.type === 'rpc.err') {
               throw new Error(out.error);
             }

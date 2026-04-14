@@ -5,8 +5,13 @@ import { basename, dirname, resolve } from 'node:path';
 export interface ModelDBServerFileConfig {
   readonly port?: number;
   readonly host?: string;
+  /**
+   * **首选**：逻辑库工作区根目录；每个逻辑库为 **`<workspace>/<dbName>/`**（内含 **`atlas.mld`** 等）。
+   * 与 **`storageRoot`**、**`dbPath`**（目录或 **`.mld` 文件**）互为别名，按合并顺序取第一个非空。
+   */
+  readonly workspace?: string;
   readonly storageRoot?: string;
-  /** Storage root, or a **`*.mld`** file path (parent dir becomes root, basename without extension → default atlas). */
+  /** @deprecated Prefer **`workspace`**. 目录或 **`*.mld`** 文件路径（父目录为根、basename 无扩展名为默认逻辑库名）。 */
   readonly dbPath?: string;
   /** Server / ops log directory (**`system.log`**, **`access.log`**). */
   readonly logDir?: string;
@@ -17,16 +22,19 @@ export interface ModelDBServerFileConfig {
   /** When **`production`**, enables **`access.log`** HTTP / query / decode / write-gate lines. */
   readonly mode?: string;
   readonly connectToken?: string;
-  readonly vaultSecret?: string;
-  readonly vaultKey?: string;
   readonly dev?: boolean;
 }
 
 export interface ResolvedModelDBServerConfig {
   readonly port: number;
   readonly host: string;
+  /**
+   * 逻辑库工作区根；客户端 **`dbName` / `atlas`** 对应 **`<storageRoot>/<name>/`**。
+   */
   readonly storageRoot: string;
-  /** When **`dbPath`** pointed at **`world.mld`**, suggested atlas name **`world`**. */
+  /** Same as **`storageRoot`** when loaded from file; optional when callers pass **`storageRoot`** only. */
+  readonly workspace?: string;
+  /** When legacy **`dbPath`** pointed at **`world.mld`**, suggested default logical name **`world`**. */
   readonly defaultAtlas?: string;
   /** Absolute directory for **`system.log`** / **`access.log`** when **`logDir`** is set in config. */
   readonly serverLogDirectory?: string;
@@ -35,7 +43,6 @@ export interface ResolvedModelDBServerConfig {
   readonly cacheSizeHint?: string;
   readonly mode?: string;
   readonly connectToken: string;
-  readonly vaultSecret?: string;
   readonly dev: boolean;
   /** When true, **`access.log`** profiling is enabled (see **`loadModelDBServerConfig`**). */
   readonly accessLog?: boolean;
@@ -74,7 +81,7 @@ function resolveStorageRootAndAtlas(
   cwd: string,
 ): { readonly storageRoot: string; readonly defaultAtlas?: string } {
   if (!raw) {
-    return { storageRoot: resolve(cwd, 'data') };
+    return { storageRoot: resolve(cwd, 'modeldb_vault') };
   }
   const abs = resolve(cwd, raw);
   const base = basename(abs);
@@ -87,18 +94,19 @@ function resolveStorageRootAndAtlas(
 export interface CliConfigOverrides {
   readonly port?: number;
   readonly host?: string;
+  readonly workspace?: string;
+  /** @deprecated Prefer **`workspace`**. */
   readonly storageRoot?: string;
+  /** @deprecated Prefer **`workspace`**. */
   readonly dbPath?: string;
   readonly connectToken?: string;
-  readonly vaultSecret?: string;
-  readonly vaultKey?: string;
   readonly dev?: boolean;
   readonly bufferThreshold?: number;
 }
 
 /**
- * Priority: CLI > `modeldb.config.json` > environment variables > defaults
- * (port **9090**, host **127.0.0.1**, dev **false**).
+ * Per-key merge order: CLI overrides → `modeldb.config.json` → environment variables → defaults
+ * (e.g. port **9090**, host **127.0.0.1**, dev **false**).
  */
 export async function loadModelDBServerConfig(
   configPath: string | undefined,
@@ -116,26 +124,22 @@ export async function loadModelDBServerConfig(
   const host = cli.host ?? file.host ?? strEnv('MODEL_DB_HOST') ?? '127.0.0.1';
 
   const storageRootRaw =
+    cli.workspace ??
     cli.storageRoot ??
     cli.dbPath ??
+    file.workspace ??
     file.storageRoot ??
     file.dbPath ??
+    strEnv('MODEL_DB_WORKSPACE') ??
     strEnv('MODEL_DB_STORAGE_ROOT') ??
     strEnv('STORAGE_ROOT') ??
-    'data';
+    'modeldb_vault';
   const { storageRoot, defaultAtlas } = resolveStorageRootAndAtlas(storageRootRaw, process.cwd());
 
   const connectTokenRaw =
     cli.connectToken ?? file.connectToken ?? strEnv('MODEL_DB_CONNECT_TOKEN') ?? '';
   const connectToken =
     typeof connectTokenRaw === 'string' ? connectTokenRaw.trim() : String(connectTokenRaw).trim();
-
-  const vaultSecret =
-    cli.vaultSecret ??
-    cli.vaultKey ??
-    file.vaultSecret ??
-    file.vaultKey ??
-    strEnv('MODEL_DB_VAULT_SECRET');
 
   const dev = cli.dev ?? boolEnv('MODEL_DB_DEV') ?? file.dev ?? false;
 
@@ -160,6 +164,7 @@ export async function loadModelDBServerConfig(
     port,
     host,
     storageRoot,
+    workspace: storageRoot,
     defaultAtlas,
     serverLogDirectory,
     bufferFlushRowThreshold:
@@ -169,7 +174,6 @@ export async function loadModelDBServerConfig(
     cacheSizeHint: file.cacheSize,
     mode: file.mode,
     connectToken,
-    vaultSecret,
     dev,
     ...(accessLog ? { accessLog: true as const } : {}),
   };

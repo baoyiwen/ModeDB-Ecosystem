@@ -1,4 +1,4 @@
-import type { RelationDefinition, RelationLogic, MatchPredicate } from '../../common/types.js';
+import type { RelationDefinition, RelationLogic, MatchPredicate } from '@mode-db/common';
 
 /**
  * Read-only relation metadata (no bind / index mutation).

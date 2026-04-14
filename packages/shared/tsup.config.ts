@@ -12,5 +12,4 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   splitting: false,
-  external: ['mode-db-engine'],
 });

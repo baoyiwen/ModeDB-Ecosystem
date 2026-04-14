@@ -9,18 +9,22 @@
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
+import { configureModelDBStorageRoot } from '@mode-db/common';
 import { ModelDBClient } from '../runtime/client.js';
-import { getWebSocketServerListeningPort, startModelDBWebSocketServer } from '../index.js';
+import {
+  getWebSocketServerListeningPort,
+  startModelDBWebSocketServer,
+} from '../packages/server/dist/index.js';
 import {
   atlasVaultPath,
-  INTEGRATION_VAULT_SECRET,
+  INTEGRATION_CONNECT_TOKEN,
   useIntegrationVaultEnv,
 } from './integration-vault.js';
 import { connectRemote, RemoteHydratedEntity } from '../packages/sdk/src/index.js';
 
 const DATA_ROOT = join(process.cwd(), 'data');
-const WIRE_TOKEN = 'wire-server-audit-token';
+/** Must match **`verify.ts`** atlas vaults (integration connect token). */
+const WIRE_TOKEN = INTEGRATION_CONNECT_TOKEN;
 
 let passed = 0;
 let failed = 0;
@@ -76,13 +80,12 @@ section('0. 同进程预检 ModelDBClient.connect("pipe")');
 await ModelDBClient.connect('pipe');
 assert(true, '本地 Runtime 可打开 pipe Vault（与服务端将使用的存储根一致）');
 
-section('1. 启动 WebSocket 服务（随机端口 + 集成 Vault 密钥）');
+section('1. 启动 WebSocket 服务（随机端口 + 与 verify 相同的 connectToken）');
 const wss = await startModelDBWebSocketServer({
   port: 0,
   host: '127.0.0.1',
   storageRoot: DATA_ROOT,
   connectToken: WIRE_TOKEN,
-  vaultSecret: INTEGRATION_VAULT_SECRET,
   dev: false,
 });
 try {

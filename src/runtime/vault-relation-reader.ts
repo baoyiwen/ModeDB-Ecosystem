@@ -1,6 +1,5 @@
-import type { RelationDefinition, RelationIndexData } from '../../common/types.js';
-import type { IndexReader } from '../../common/provider.js';
-import { IndexerError } from '../../common/errors.js';
+import type { RelationDefinition, RelationIndexData, IndexReader } from '@mode-db/common';
+import { IndexerError } from '@mode-db/common';
 import { AtlasSingleVault } from '../../authoring/atlas-single-vault.js';
 
 function relationFileKey(rel: RelationDefinition): string {

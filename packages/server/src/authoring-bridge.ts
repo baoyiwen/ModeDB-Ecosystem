@@ -1,11 +1,12 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { DiagnosticCenter, ErrorCodes } from '@mode-db/common';
 import { AuthoringEngine, fileLooksLikeAtlasSingleVault } from 'mode-db-engine';
 import { atlasCatalogSignature } from './atlas-catalog-signature.js';
 
 /**
- * Lazily constructs {@link AuthoringEngine} per atlas (Vault vs split-file) for server-side writes.
- * Cache is invalidated when **`atlas-manifest.json`** / **`atlas.mld`** mtimes change.
+ * Lazily constructs {@link AuthoringEngine} per logical database (**`<workspace>/<db>/atlas.mld`**)
+ * for server-side writes. Cache is invalidated when vault mtimes change (see **`atlasCatalogSignature`**).
  */
 export class AuthoringBridge {
   private readonly cache = new Map<
@@ -15,7 +16,7 @@ export class AuthoringBridge {
 
   constructor(
     private readonly storageRoot: string,
-    private readonly vaultSecret: string | undefined,
+    private readonly connectToken: string,
     private readonly bufferFlushRowThreshold?: number,
   ) {}
 
@@ -31,32 +32,31 @@ export class AuthoringBridge {
   }
 
   private async createEngine(atlas: string): Promise<AuthoringEngine> {
-    const vaultPath = join(this.storageRoot, atlas, 'atlas.mld');
     const flushOpt =
       this.bufferFlushRowThreshold !== undefined
         ? { bufferFlushRowThreshold: this.bufferFlushRowThreshold }
         : {};
-    if (existsSync(vaultPath) && (await fileLooksLikeAtlasSingleVault(vaultPath))) {
-      const vs = this.vaultSecret ?? process.env.MODEL_DB_VAULT_SECRET;
-      if (!vs || vs.length === 0) {
-        throw new Error(
-          `Atlas "${atlas}" uses single-file vault but no vault secret (MODEL_DB_VAULT_SECRET / config).`,
-        );
-      }
+    const nestedVaultPath = join(this.storageRoot, atlas, 'atlas.mld');
+    const ct = this.connectToken.trim();
+    if (!ct) {
+      throw new Error('AuthoringBridge: connectToken must be non-empty.');
+    }
+
+    if (existsSync(nestedVaultPath) && (await fileLooksLikeAtlasSingleVault(nestedVaultPath))) {
       return new AuthoringEngine({
         atlas,
         storageRoot: this.storageRoot,
-        singleFileVault: true,
-        vaultSecret: vs,
+        connectToken: ct,
         engineLogger: true,
         ...flushOpt,
       });
     }
-    return new AuthoringEngine({
-      atlas,
-      storageRoot: this.storageRoot,
-      engineLogger: true,
-      ...flushOpt,
-    });
+
+    DiagnosticCenter.report(
+      ErrorCodes.DATABASE_NOT_FOUND,
+      { dbName: atlas, path: nestedVaultPath },
+      'throw',
+    );
+    throw new Error('AuthoringBridge.createEngine: unreachable after DATABASE_NOT_FOUND');
   }
 }

@@ -1,1 +1,2 @@
+npm run check:sources
 npx lint-staged

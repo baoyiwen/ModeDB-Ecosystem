@@ -1,7 +1,7 @@
 {
   "name": "@mode-db/shared",
   "version": "0.1.0",
-  "description": "Shared wire obfuscation, diagnostics, and shadow codec re-exports for ModelDB clients.",
+  "description": "Wire codec, transport framing, remote query plan types, and protocol surfaces for ModelDB clients and server (no sibling workspace packages in dependencies).",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -17,12 +17,6 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit -p tsconfig.json"
-  },
-  "peerDependencies": {
-    "mode-db-engine": ">=1.0.0"
-  },
-  "dependencies": {
-    "mode-db-engine": "file:../.."
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

@@ -7,6 +7,8 @@ import prettierConfig from 'eslint-config-prettier';
 export default [
   {
     ignores: [
+      'test/**',
+      'templates/**',
       'node_modules/**',
       'dist/**',
       'coverage/**',
@@ -16,6 +18,36 @@ export default [
       // Colocated `tsc` emit under `src/` is not part of the TS program; linting it breaks projectService.
       'src/**/*.js',
       'src/**/*.js.map',
+      'src/**/*.d.ts',
+      'src/**/*.d.ts.map',
+      'authoring/**/*.js',
+      'authoring/**/*.js.map',
+      'authoring/**/*.d.ts',
+      'authoring/**/*.d.ts.map',
+      'common/**/*.js',
+      'common/**/*.js.map',
+      'common/**/*.d.ts',
+      'common/**/*.d.ts.map',
+      'runtime/**/*.js',
+      'runtime/**/*.js.map',
+      'runtime/**/*.d.ts',
+      'runtime/**/*.d.ts.map',
+      'network/**/*.js',
+      'network/**/*.js.map',
+      'network/**/*.d.ts',
+      'network/**/*.d.ts.map',
+      'packages/**/src/**/*.js',
+      'packages/**/src/**/*.js.map',
+      'packages/**/src/**/*.d.ts',
+      'packages/**/src/**/*.d.ts.map',
+      'templates/**/*.js',
+      'templates/**/*.js.map',
+      'templates/**/*.d.ts',
+      'templates/**/*.d.ts.map',
+      'test/**/*.js',
+      'test/**/*.js.map',
+      'test/**/*.d.ts',
+      'test/**/*.d.ts.map',
     ],
   },
 
@@ -27,7 +59,14 @@ export default [
       parser: tsparser,
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['*.config.js', '*.config.mjs', '*.config.ts'],
+          // No `**` in globs (typescript-eslint); one segment under scripts/ is enough here.
+          allowDefaultProject: [
+            '*.config.js',
+            '*.config.mjs',
+            '*.config.ts',
+            'lint-staged.config.mjs',
+            'scripts/*.mjs',
+          ],
         },
       },
     },
@@ -42,7 +81,8 @@ export default [
 
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'no-debugger': 'error',
-      'no-duplicate-imports': 'error',
+      // Allow `import type` + value import from same module (pairs with consistent-type-imports).
+      'no-duplicate-imports': ['error', { allowSeparateTypeImports: true }],
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
@@ -61,14 +101,6 @@ export default [
     files: ['**/*.config.{js,mjs,cjs,ts}'],
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
-    },
-  },
-
-  {
-    files: ['test/**/*.{js,ts}'],
-    rules: {
-      'no-console': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 ];

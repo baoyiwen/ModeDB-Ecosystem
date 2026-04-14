@@ -1,5 +1,4 @@
-import type { ModelRecord } from '../../common/types.js';
-import type { FieldTypeDef } from '../../common/data-types.js';
+import type { ModelRecord, FieldTypeDef } from '@mode-db/common';
 
 /** 支持的标量比较与集合操作符 */
 export type ScalarOperator = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'in' | 'between';

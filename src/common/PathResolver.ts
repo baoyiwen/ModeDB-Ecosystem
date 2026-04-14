@@ -1,10 +1,13 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
-import { AtlasIsolationError } from '../../common/errors.js';
-import { assertFlatGraphSegment, assertRelationIndexKey } from '../../common/atlas-segments.js';
-import { resolveModelDBStorageRoot } from '../../common/storage-root-config.js';
-import { ModelRegistry } from '../../common/registry.js';
-import { serializeAtlasManifestFile } from '../../common/atlas-manifest.js';
+import {
+  AtlasIsolationError,
+  assertFlatGraphSegment,
+  assertRelationIndexKey,
+  resolveModelDBStorageRoot,
+  ModelRegistry,
+  serializeAtlasManifestFile,
+} from '@mode-db/common';
 
 /**
  * Resolves all filesystem paths for one atlas under STORAGE_ROOT.

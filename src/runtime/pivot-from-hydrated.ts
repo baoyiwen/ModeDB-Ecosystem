@@ -1,4 +1,4 @@
-import type { ModelRegistry } from '../../common/registry.js';
+import type { ModelRegistry } from '@mode-db/common';
 import type { HydratedEntity } from './HydratedEntity.js';
 import { BucketAggregator, type AggregationProtocolOp } from './stat-accumulator.js';
 import { parseGroupDimension, readFieldPathSync, pivotSegmentKey } from './group-dimension.js';

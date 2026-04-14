@@ -12,22 +12,21 @@ import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
 import {
-  INTEGRATION_VAULT_SECRET,
   integrationVaultAuthoringOptions,
   loadVaultManifestJson,
   loadVaultModelBlob,
   useIntegrationVaultEnv,
 } from './integration-vault.js';
-import { ValidationError } from '../common/errors.js';
-import { DataType } from '../common/data-types.js';
 import {
+  ValidationError,
+  DataType,
   I18NValue,
   ColorValue,
   UnitValue,
   IntValue,
   StringValue,
   JsonValue,
-} from '../common/value-objects.js';
+} from '@mode-db/common';
 
 const DATA_ROOT = join(process.cwd(), 'data');
 const ATLAS = 'datatype_audit';
@@ -255,7 +254,7 @@ async function auditMldSchemaHeader(): Promise<void> {
   const vaultFile = engine.paths.atlasSingleVaultPath();
   assert(existsSync(vaultFile), 'atlas.mld 存在');
 
-  const content = loadVaultModelBlob(DATA_ROOT, ATLAS, 'HeaderTest', INTEGRATION_VAULT_SECRET);
+  const content = loadVaultModelBlob(DATA_ROOT, ATLAS, 'HeaderTest');
   const firstLine = content.split('\n')[0]!;
   assert(firstLine.startsWith('{"__schema__":'), '.mld 首行以 {"__schema__": 开头');
 
@@ -297,9 +296,7 @@ async function auditManifestFieldTypes(): Promise<void> {
 
   assert(existsSync(engine.paths.atlasSingleVaultPath()), 'atlas.mld 存在');
 
-  const manifest = JSON.parse(
-    loadVaultManifestJson(DATA_ROOT, ATLAS, INTEGRATION_VAULT_SECRET),
-  ) as {
+  const manifest = JSON.parse(loadVaultManifestJson(DATA_ROOT, ATLAS)) as {
     models: Array<{
       name: string;
       fields: string[];
@@ -803,9 +800,7 @@ async function auditDefaultInManifest(): Promise<void> {
 
   await engine.flushAll();
 
-  const manifest = JSON.parse(
-    loadVaultManifestJson(DATA_ROOT, ATLAS, INTEGRATION_VAULT_SECRET),
-  ) as {
+  const manifest = JSON.parse(loadVaultManifestJson(DATA_ROOT, ATLAS)) as {
     models: Array<{
       name: string;
       fieldTypes?: Record<string, { type: string; default?: unknown }>;

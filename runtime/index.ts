@@ -102,4 +102,4 @@ export {
   ReadonlyModelEntity,
   type ReadonlyAvailableRelation,
 } from '../src/runtime/index.js';
-export { PathResolver } from '../src/common/PathResolver.js';
+export { PathResolver } from '@mode-db/common';

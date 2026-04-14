@@ -1,15 +1,25 @@
 import { createHash } from 'node:crypto';
-import type { ModelRecord } from '../../common/types.js';
-import type { ModelRegistry } from '../../common/registry.js';
-import type { DataReader, IndexReader } from '../../common/provider.js';
-import { QueryError } from '../../common/errors.js';
+import type {
+  ModelRecord,
+  ModelRegistry,
+  DataReader,
+  IndexReader,
+  SmartCache,
+} from '@mode-db/common';
+import { QueryError, EngineLogger } from '@mode-db/common';
 import {
   HydratedEntity,
   type HydrationContext,
   type MemoryShadowOptions,
   type QueryExecuteOptions,
 } from './HydratedEntity.js';
-import type { SmartCache } from '../../common/smart-cache.js';
+import {
+  finalizeRemoteExecuteSnapshot,
+  WireQueryError,
+  type QueryPlanASTv2,
+  type QueryStartSpec,
+  type RemoteExecuteSnapshot,
+} from '@mode-db/shared';
 import {
   ComputeBuilder,
   isComputeMetricToken,
@@ -44,7 +54,6 @@ import {
   type PredicateNode,
 } from './predicate-tree.js';
 import { QueryEngine, type EvaluateResult } from './query-engine.js';
-import { EngineLogger } from '../../common/engine-logger.js';
 import {
   Aggregator,
   AggregatorEngine,
@@ -120,9 +129,8 @@ export {
 /** @deprecated 使用 {@link FilterBuilder} */
 export const RelateFilterBuilder = FilterBuilder;
 
-export type QueryStartSpec =
-  | { readonly kind: 'all' }
-  | { readonly kind: 'ids'; readonly ids: readonly string[] };
+export type { QueryStartSpec, QueryPlanASTv2, RemoteExecuteSnapshot } from '@mode-db/shared';
+export { queryPlanHasSerializedCallback, finalizeRemoteExecuteSnapshot } from '@mode-db/shared';
 
 interface HopPlan {
   readonly relationName: string;
@@ -152,62 +160,6 @@ export function isPaginatedExecuteResult(x: unknown): x is Paginated<unknown> {
     'limit' in x &&
     'pageCount' in x
   );
-}
-
-/** 查询计划快照 v2：谓词树（JSON 可序列化部分见 `serializePredicate`） */
-export interface QueryPlanASTv2 {
-  readonly version: 2;
-  readonly originModel: string;
-  readonly start: QueryStartSpec;
-  readonly hops: ReadonlyArray<{
-    readonly relationName: string;
-    readonly source: Record<string, unknown>;
-    readonly target: Record<string, unknown>;
-    readonly recursive?: { readonly maxDepth: number };
-  }>;
-  readonly trailing: Record<string, unknown>;
-}
-
-function isRecord(x: unknown): x is Record<string, unknown> {
-  return typeof x === 'object' && x !== null && !Array.isArray(x);
-}
-
-/** 序列化后的谓词树是否含 `filter()` 回调占位（不可跨网执行）。 */
-export function queryPlanHasSerializedCallback(plan: QueryPlanASTv2): boolean {
-  const walk = (node: Record<string, unknown>): boolean => {
-    if (node.type === 'callback') {
-      return true;
-    }
-    if (node.type === 'group' && Array.isArray(node.children)) {
-      return node.children.some((c) => isRecord(c) && walk(c));
-    }
-    return false;
-  };
-  if (walk(plan.trailing)) {
-    return true;
-  }
-  for (const h of plan.hops) {
-    if (walk(h.source as Record<string, unknown>) || walk(h.target as Record<string, unknown>)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/** 供远程 RPC 使用的不可变快照（由 {@link QueryChain.getRemoteExecuteSnapshot} 生成）。 */
-export interface RemoteExecuteSnapshot {
-  readonly plan: QueryPlanASTv2;
-  /** 与 {@link QueryExecuteOptions} 对齐的合并结果（含链上 `.limit()` / `.page()`）。 */
-  readonly execute: {
-    readonly limit?: number;
-    readonly page?: number;
-    readonly includeRelates?: boolean;
-    readonly wrapGroups?: boolean;
-  };
-  readonly analysis: {
-    readonly groupBy: readonly string[] | null;
-    readonly compute: Readonly<Record<string, AggregateInputEntry>> | null;
-  };
 }
 
 type OriginLoadHint =
@@ -292,11 +244,6 @@ export class QueryChain<
    */
   getRemoteExecuteSnapshot(options?: QueryExecuteOptions): RemoteExecuteSnapshot {
     const plan = this._buildRawQuery();
-    if (queryPlanHasSerializedCallback(plan)) {
-      throw new QueryError(
-        'Remote execute cannot serialize filter() callbacks; remove filter() for wire transport.',
-      );
-    }
     const chainInternals = this as unknown as {
       readonly analysisCustom: Record<string, CustomReducerSpec>;
       readonly analysisGroupBy: string[] | null;
@@ -304,35 +251,20 @@ export class QueryChain<
       readonly wrapGroupsFlag: boolean;
       readonly paginationPartial: { page?: number; limit?: number } | null;
     };
-    if (Object.keys(chainInternals.analysisCustom).length > 0) {
-      throw new QueryError('Remote execute does not support customReduce().');
-    }
-    if (chainInternals.wrapGroupsFlag) {
-      const gb = chainInternals.analysisGroupBy;
-      if (gb === null || gb.length === 0) {
-        throw new QueryError('wrapGroups requires groupBy(...) or pivot(...).');
+    try {
+      return finalizeRemoteExecuteSnapshot(plan, options, {
+        analysisCustom: chainInternals.analysisCustom,
+        wrapGroupsFlag: chainInternals.wrapGroupsFlag,
+        analysisGroupBy: chainInternals.analysisGroupBy,
+        paginationPartial: chainInternals.paginationPartial,
+        analysisCompute: chainInternals.analysisCompute,
+      });
+    } catch (e) {
+      if (e instanceof WireQueryError) {
+        throw new QueryError(e.message);
       }
-      throw new QueryError(
-        'Remote execute does not support wrapGroups() with groupBy/pivot in this version.',
-      );
+      throw e;
     }
-    const limitOpt = options?.limit ?? chainInternals.paginationPartial?.limit;
-    const pageOpt = options?.page ?? chainInternals.paginationPartial?.page ?? 0;
-    const wrapGroups = options?.wrapGroups ?? chainInternals.wrapGroupsFlag;
-    const execute: RemoteExecuteSnapshot['execute'] = {
-      ...(limitOpt !== undefined && limitOpt !== null ? { limit: limitOpt } : {}),
-      page: pageOpt,
-      ...(options?.includeRelates !== undefined ? { includeRelates: options.includeRelates } : {}),
-      ...(wrapGroups ? { wrapGroups: true } : {}),
-    };
-    return {
-      plan,
-      execute,
-      analysis: {
-        groupBy: chainInternals.analysisGroupBy,
-        compute: chainInternals.analysisCompute,
-      },
-    };
   }
 
   /**

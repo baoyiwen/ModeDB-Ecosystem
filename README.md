@@ -10,6 +10,8 @@
 - **Runtime（客户端）**：按图谱名只读打开；**分文件**走 **`ModelFileReader` / `RelationIndexFileReader`** + 磁盘 manifest；**Vault** 走 **`VaultModelFileReader` / `VaultRelationIndexReader`** + 解密 **`atlas.mld`**（需 **`MODEL_DB_VAULT_SECRET`**）。不依赖写入路径，适合独立交付。
 - **Network（可选）**：**`ModelDB WebSocket Server`** 在指定存储根上托管只读查询；**`@mode-db/sdk`** 通过 **`connectRemote`** 提供与本地 **`model.query()…execute()`** 相同的链式 API，查询体经 **ConnectToken 握手** 与 **会话密钥混淆** 传输（详见下文 **「网络服务与远程客户端 SDK」**）。
 
+**运维入口**：**`modeldb.config.json`**、**`npm run start:server`**、**`npm run ignition`** 与全部参数说明见下文 **「运行与配置（工作区、启动命令、参数与环境）」**。
+
 > 本项目处于早期设计与实现阶段。
 
 ---
@@ -91,7 +93,7 @@ Mode DB Engine 采用完全不同的思路：
 │  src/common/      PathResolver（Atlas 下路径解析）                        │
 │  packages/server/  ModelDB WebSocket 服务（commander CLI、配置、查询分发）   │
 │  packages/sdk/     远程客户端 SDK（tsup → ESM/CJS + d.ts）                 │
-│  packages/shared/  共享混淆与 diagnostic 再导出（依赖 mode-db-engine）       │
+│  packages/shared/  线协议编解码、握手/RPC 类型、远程查询计划（不依赖仓库根引擎包）   │
 │  src/network/     线协议类型、execute 结果 JSON 序列化（供服务端/SDK 共用）   │
 └─────────────────────────────────────────────────────────────────────────┘
                                       │
@@ -473,6 +475,179 @@ await engine.flushAll();
 
 ---
 
+## 运行与配置（工作区、启动命令、参数与环境）
+
+本节汇总 **如何在仓库内构建与启动**、**`modeldb.config.json` 各字段**、**`modeldb-server` CLI**、**环境变量**与 **`npm run ignition`** 压测点火；与 **`packages/server/src/config-loader.ts`** 实现一致。
+
+### 当前系统能力速览（2.0）
+
+| 能力           | 说明                                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **治理端**     | **`AuthoringEngine`**：模型/关系注册、写缓冲、**`flushAll`**；分文件布局或 **单文件 Vault（`atlas.mld`）**。        |
+| **运行时**     | **`ModelDBClient.connect(atlas)`**：只读链式查询、合并读语义与本地一致。                                            |
+| **网络层**     | **`@mode-db/server`**：**WebSocket** 上托管只读查询；**`@mode-db/sdk`**：**`connectRemote`** + 会话混淆（非 TLS）。 |
+| **共享包**     | **`@mode-db/shared`**：线协议编解码等，供 server / SDK 共用。                                                       |
+| **诊断与类型** | **`DiagnosticCenter`**、**`ValidationReport`**、**DataType / ValueObject** 等见上文各节。                           |
+
+### 仓库工作区（npm workspaces）
+
+| 包名                  | 路径              | 作用                                                                                                                                                                                                                       |
+| --------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`mode-db-engine`**  | 仓库根            | 引擎 **`dist/`**；根 **`package.json`** 聚合脚本与 **`bin.modeldb-server`**。                                                                                                                                              |
+| **`@mode-db/shared`** | `packages/shared` | **Wire codec**、**传输帧**、**握手/RPC 类型**（**`tsup`**；**不**依赖 **mode-db-engine**）。                                                                                                                               |
+| **`@mode-db/server`** | `packages/server` | **Fastify + ws**、配置加载、查询分发（**`tsc`** → `packages/server/dist/`）。**`package.json`** 不声明 **`mode-db-engine`**；源码在编译期以相对路径引用仓库根 **`dist/`** 下的已编译模块（须先 **`npm run build:lib`**）。 |
+| **`@mode-db/sdk`**    | `packages/sdk`    | 远程客户端（**`tsup`** → ESM/CJS + **`.d.ts`**）。                                                                                                                                                                         |
+
+根目录 **`dependencies`** 使用 **`file:packages/sdk`**、**`file:packages/server`**，便于 **`tsx`** 解析工作区包。**`@mode-db/server`** 与 **`@mode-db/sdk`** 的 **`package.json`** 均**不**声明对 **`mode-db-engine`** 的 npm 依赖：server 在编译后的 **`dist/`** 上通过相对路径链接引擎产物；SDK 仅依赖 **`@mode-db/shared`**。根包名仍为 **`mode-db-engine`**，**`npm run build:lib`**（**`tsconfig.lib.json`**）产出根 **`dist/`**，再 **`build:server`**。
+
+### 构建顺序
+
+```bash
+npm install
+npm run build    # build:lib（根 tsconfig.lib.json → dist/）→ build:shared → build:server → build:sdk
+```
+
+单独构建：**`npm run build:lib`**（仅引擎）、**`npm run build:sdk`**、**`npm run build:server`**、**`npm run build:shared`**。
+
+### 根目录常用 npm 脚本
+
+| 脚本                                                               | 说明                                                                                                    |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| **`npm run build`**                                                | 编译引擎 + shared + server + sdk。                                                                      |
+| **`npm run start:server`**                                         | 等价 **`node ./packages/server/dist/cli.js`**（无参时读取当前目录 **`modeldb.config.json`**，若存在）。 |
+| **`npm run dev`**                                                  | 根目录引擎 **`tsc -p tsconfig.lib.json --watch`**。                                                     |
+| **`npm test`** / **`npm run test:integration`**                    | 集成测试链（含配置加载审计，见 **`test/README.md`**）。                                                 |
+| **`npm run ignition`**                                             | 双轨压测点火：**`test/dual_track_ignition.ts`**（需已启动 server，见下文）。                            |
+| **`npm run typecheck`** / **`npm run lint`** / **`npm run check`** | 类型检查、ESLint、类型+lint+Prettier 检查。                                                             |
+| **`npm run wire-server-audit`** 等                                 | 单项集成脚本，见 **`test/README.md`** 命令对照表。                                                      |
+
+### `modeldb.config.json` 字段说明
+
+将根目录 **[modeldb.config.example.json](modeldb.config.example.json)** 复制为 **`modeldb.config.json`** 并按环境修改（**勿**提交真实令牌与密钥）。
+
+| 字段                               | 类型      | 说明                                                                                                                                                                                                       |
+| ---------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`port`**                         | `number`  | 监听端口；默认 **9090**（可被 CLI / **`MODEL_DB_PORT`** 覆盖）。                                                                                                                                           |
+| **`host`**                         | `string`  | 绑定地址；默认 **127.0.0.1**。                                                                                                                                                                             |
+| **`workspace`**                    | `string`  | **首选**：逻辑库工作区根目录；每个逻辑库为 **`<workspace>/<dbName>/`**（内含 **`atlas.mld`** 等）。合并顺序见 **`packages/server/src/config-loader.ts`**（**`workspace` → `storageRoot` → `dbPath`** …）。 |
+| **`dbPath`**                       | `string`  | **兼容**：与 **`workspace`** 同语义（目录或 **`*.mld` 文件路径**）；为 **`.mld` 文件**时父目录为根，**`defaultAtlas`** = basename 去扩展名。                                                               |
+| **`storageRoot`**                  | `string`  | **兼容**：显式存储根；与 **`workspace` / `dbPath`** 同一合并链。                                                                                                                                           |
+| **`logDir`**                       | `string`  | 相对 **进程 cwd** 解析的日志目录；写入 **`system.log`**、**`access.log`**（当 **`accessLog`** 开启时）。                                                                                                   |
+| **`bufferThreshold`**              | `number`  | 某模型暂存行数 ≥ 该值时触发该模型的 **`flushModelToDisk`**（服务端 **`AuthoringEngine`**）；可被 **`MODEL_DB_BUFFER_THRESHOLD`** 覆盖。                                                                    |
+| **`cacheSize`**                    | `string`  | 当前版本为预留/提示（如 **`2GB`**），不参与核心逻辑。                                                                                                                                                      |
+| **`mode`**                         | `string`  | 设为 **`"production"`**（不区分大小写）时启用 **`access.log`** 中的请求/解码/写门控等访问日志；等价于环境变量 **`MODEL_DB_ACCESS_LOG=true`**。                                                             |
+| **`connectToken`**                 | `string`  | **必填（文件或环境或 CLI 其一）**：客户端握手 **`connectToken`** 须一致，否则断开。                                                                                                                        |
+| **`vaultSecret`** / **`vaultKey`** | `string`  | 单文件 **`atlas.mld`** Vault 解密口令；可与 **`MODEL_DB_VAULT_SECRET`** 混用（别名 **`vaultKey`** 与 CLI **`--vault-key`** 相同语义）。                                                                    |
+| **`dev`**                          | `boolean` | **`true`** 时与 CLI **`--dev`** 类似语义空间（详见 server 实现）；另 **`MODEL_DB_DEV`** 可参与解析。                                                                                                       |
+
+解析后的 **`ResolvedModelDBServerConfig`** 另含 **`workspace`**（与 **`storageRoot`** 同路径，便于新代码命名）、**`defaultAtlas`**（仅当原始串指向 **`.mld`** 文件时）、**`bufferFlushRowThreshold`**、**`accessLog`**、**`serverLogDirectory`** 等派生字段。
+
+### 配置优先级（与实现一致）
+
+**同一键的合并顺序**为：**命令行（`commander` 传入的 overrides）→ `modeldb.config.json` → 环境变量 → 内置默认值**。
+
+示例：**`port`** = `cli.port ?? file.port ?? MODEL_DB_PORT ?? 9090`；**`connectToken`** = `cli.connectToken ?? file.connectToken ?? MODEL_DB_CONNECT_TOKEN`（再 **trim**），若仍为空则 **抛错**。
+
+未在 CLI 暴露的项（如 **`bufferThreshold`**）仅来自 **配置文件** 或 **`MODEL_DB_BUFFER_THRESHOLD`**。
+
+### `modeldb-server` CLI 参数
+
+入口：**`node ./packages/server/dist/cli.js`** 或 **`npm run start:server`** 或 **`npx modeldb-server`**（见根 **`package.json` → `bin`**）。
+
+| 选项                                     | 说明                                                                               |
+| ---------------------------------------- | ---------------------------------------------------------------------------------- |
+| **`-c, --config <path>`**                | **`modeldb.config.json`** 路径；默认 **`./modeldb.config.json`**（相对 **cwd**）。 |
+| **`-p, --port <number>`**                | 监听端口。                                                                         |
+| **`-H, --host <host>`**                  | 绑定 host。                                                                        |
+| **`-w, --workspace <path>`**             | 逻辑库工作区根（写入配置合并链的 **`workspace`**）。                               |
+| **`-s, --storage <path>`**               | 兼容别名，同 **`--workspace`**。                                                   |
+| **`--db-path <path>`**                   | 兼容别名，同 **`--workspace`**。                                                   |
+| **`-t, --token <secret>`**               | **`connectToken`**。                                                               |
+| **`--vault-secret`** / **`--vault-key`** | Vault 口令。                                                                       |
+| **`--dev`**                              | 开发模式（如打印解密后的 RPC 摘要，**勿**用于生产）。                              |
+
+### 环境变量一览
+
+| 变量                                             | 作用                                                                                                        |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| **`MODEL_DB_PORT`**                              | 端口。                                                                                                      |
+| **`MODEL_DB_HOST`**                              | Host。                                                                                                      |
+| **`MODEL_DB_WORKSPACE`**                         | 逻辑库工作区根（优先于下列存储根变量）。                                                                    |
+| **`MODEL_DB_STORAGE_ROOT`** / **`STORAGE_ROOT`** | 存储根原始串（与 **`workspace` / `dbPath`** 相同解析规则）。                                                |
+| **`MODEL_DB_CONNECT_TOKEN`**                     | 连接令牌。                                                                                                  |
+| **`MODEL_DB_VAULT_SECRET`**                      | Vault 口令（运行时 **`ModelDBClient.connect`** 读 Vault atlas **同样**依赖此变量）。                        |
+| **`MODEL_DB_BUFFER_THRESHOLD`**                  | 同 **`bufferThreshold`**。                                                                                  |
+| **`MODEL_DB_DEV`**                               | 开发标志。                                                                                                  |
+| **`MODEL_DB_ACCESS_LOG`**                        | 设为 **`true`** 等效强制打开访问日志（与 **`mode: production`** 二选一或叠加，见 **`config-loader.ts`**）。 |
+
+### ConnectToken（连接令牌）：从哪里来、如何用、与 Vault 密钥的区别
+
+**本仓库不会替你「生成」或「颁发」** **`connectToken`**。它是一个由**运维 / 开发者自行选定**的**共享口令字符串**（类似 API Key）：**服务端**保存一份期望值，**客户端**在连接时出示**完全相同**的字符串，通过后才进入会话。
+
+#### 服务端在哪里配置（三选一或组合，按优先级合并）
+
+解析顺序见上文 **「配置优先级」**：常用写法是在 **`modeldb.config.json`** 里写 **`"connectToken": "…"`**，或用环境变量 **`MODEL_DB_CONNECT_TOKEN`**，或启动命令 **`--token`** / **`-t`**（会覆盖文件中的值）。若合并后为空字符串，**`loadModelDBServerConfig`** 会**直接抛错**，服务无法启动。
+
+#### 客户端从哪里拿到「同一个」令牌
+
+客户端**没有**向服务器「申请令牌」的 HTTP 接口；你必须从**自己部署配置**里复制到客户端环境：
+
+- 脚本 / 压测：**`MODEL_DB_CONNECT_TOKEN`**（须与 **`modeldb.config.json`** 里 **`connectToken`** 一致），例如 **`npm run ignition`** 使用的 **`test/dual_track_ignition.ts`**。
+- **`@mode-db/sdk`** **`connectRemote({ connectToken, … })`**：把同一字符串传入代码或 CI Secret。
+- **短连接 HTTP 模式**：请求头 **`x-modeldb-connect-token`** 也携带同一值（见 **`packages/sdk/src/remote-client.ts`**）。
+
+#### 自定义令牌时建议怎么写
+
+引擎**不校验**令牌格式（不要求 UUID）；只要**服务端与所有合法客户端使用同一串**即可。生产环境建议：
+
+- 使用**足够长、高熵**的随机串（例如 32+ 字节再 hex / base64），用 **`openssl rand -hex 32`**、密码管理器、或云厂商 Secret 生成器均可。
+- **不要**把生产令牌提交进 Git；**`modeldb.config.example.json`** 里仅为占位说明。
+
+#### 握手与线协议里令牌具体干什么（概念）
+
+1. **WebSocket 首条业务消息**为 **`{ type: 'handshake', connectToken, atlas }`**（明文 JSON，见 **`packages/server/src/dual-track-app.ts`**）。服务端 **`BinaryInterceptor.validateConnectToken`** 将客户端发来的 **`connectToken`** 与配置中的期望值做 **`trim` 后字符串全等比较**；不一致则 **`TransportAuthError`**，连接被拒绝（集成测试 **`wire_server_audit`** 会断言错误令牌）。
+2. **握手通过后**，双方用 **`deriveWireSessionKey(connectToken, atlas)`**（**`common/wire-codec.ts`**：`sha256(\`${connectToken}:${atlas}:mode-db-wire-v2\`)` 的 **hex**）作为后续 **RPC 载荷** XOR 混淆的会话密钥材料（**不是** TLS；公网仍需 **WSS / 反向代理**）。
+3. **外层二进制帧**（若走 **`MDBX` 魔数** 路径）的 XOR 材料还与 **`connectToken`** 相关（**`@mode-db/shared`** **`mdb2-outer:${connectToken}:v1`**），与服务端 **`decodeInboundTransportBuffer`** 一致。
+
+#### 与 **`vaultSecret` / `MODEL_DB_VAULT_SECRET`** 不要混淆
+
+| 项                                          | 作用                                                                                                       |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **`connectToken`**                          | **谁可以连上这个 WebSocket/HTTP 服务**；与磁盘 **`atlas.mld`** 是否加密**无关**。                          |
+| **`vaultSecret` / `MODEL_DB_VAULT_SECRET`** | **磁盘上单文件 Vault 图谱**的加解密口令；**`ModelDBClient.connect`** 读 **`atlas.mld`** 时也需要同一变量。 |
+
+两者独立：可以只开分文件 atlas（无 Vault）但仍要 **`connectToken`**；也可以既有 Vault 又有 **`connectToken`**。
+
+### 启动 WebSocket 服务的推荐流程
+
+1. **`npm run build`**
+2. **`cp modeldb.config.example.json modeldb.config.json`**（Windows 可用复制），编辑 **`connectToken`**；若使用加密 **`atlas.mld`**，填写 **`vaultSecret`** 或导出 **`MODEL_DB_VAULT_SECRET`**。
+3. 在**配置文件所在目录或项目根**执行 **`npm run start:server`**（保证 **cwd** 与相对 **`dbPath` / `logDir`** 一致）。
+4. 若报 **`EADDRINUSE`**，更换 **`port`** 或结束占用端口的进程。
+5. 修改磁盘上的 **`atlas-manifest.json`** / Vault 内 manifest 后，**已运行的进程**不会自动重载全部缓存；需**重启 server** 再接受客户端。
+
+### 双轨压测点火 `npm run ignition`
+
+脚本：**`test/dual_track_ignition.ts`**。通过 **`@mode-db/sdk`** **`connectRemote`** + **`insertMany`** 向服务端灌入 **`Sensor`** 数据；启动前会按 **`loadModelDBServerConfig`** 对齐存储根，并在缺少 **`Sensor`** 模型时自动 **`AuthoringEngine`** 补 manifest（**`IGNITION_SKIP_BOOTSTRAP=1`** 可关闭）。
+
+| 环境变量                      | 说明                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| **`MODEL_DB_URL`**            | 例如 **`http://127.0.0.1:9090`** 或 **`ws://127.0.0.1:9090`**。         |
+| **`MODEL_DB_CONNECT_TOKEN`**  | 须与 server **`connectToken`** 一致。                                   |
+| **`MODEL_DB_ATLAS`**          | 目标 atlas 名（默认 **`world`**）。                                     |
+| **`MODEL_DB_MODE`**           | **`short`**（HTTP **`/v2/action`**）或 **`stream`**（默认 WebSocket）。 |
+| **`IGNITION_TOTAL`**          | 总条数（默认 **100000**）。                                             |
+| **`IGNITION_BATCH`**          | 每批条数（默认 **5000**，上限 **20000**）。                             |
+| **`IGNITION_SKIP_BOOTSTRAP`** | 设为 **`1`** 时不改磁盘。                                               |
+
+**注意**：补写 manifest 后若 server 已在运行，需**重启 server** 后再 **`npm run ignition`**，否则可能仍报模型未注册。
+
+### 集成测试与本文档的关系
+
+测试命令、Atlas 目录约定、各脚本断言范围见 **[test/README.md](test/README.md)**。其中 **`test/modeldb_config_loader_audit.ts`** 校验 **`loadModelDBServerConfig`** 的优先级与 **`.mld` 路径推导**。
+
+---
+
 ## 网络服务与远程客户端 SDK（ModelDB Server）
 
 本节描述 **2.0** 新增的 **只读查询网络层**：进程内仍是 **`ModelDBClient` + `QueryChain`**；跨进程时由 **WebSocket 服务** 执行 **`QueryChain.fromWirePlan`** 与 **`execute()`**，客户端使用 **`@mode-db/sdk`** 构造同一套链式计划并发送 **混淆后的 RPC 载荷**。
@@ -490,29 +665,28 @@ await engine.flushAll();
 
 **当前限制（远程快照会拒绝或无法完整表达）**：**`filter()` 回调**、**`customReduce`**、**`wrapGroups` + `groupBy`/`pivot`** 等；分析类结果在链上可用，但线传输以 **`WireExecuteResultJson`** 中的 **`analysis` flat 行** 为主，详见 **`src/network/execute-result-wire.ts`**。
 
-### 配置文件与 CLI
+### 配置文件与 CLI（摘要）
 
-仓库根提供示例 **[modeldb.config.example.json](modeldb.config.example.json)**，可复制为 **`modeldb.config.json`** 并按环境修改（**勿**将真实令牌提交到版本库）。
+**`modeldb.config.json` 全字段**、**CLI 表格**、**环境变量**、**配置优先级**与 **`npm run ignition`** 已集中在上一节 **「运行与配置（工作区、启动命令、参数与环境）」**。
 
-配置加载逻辑见 **`packages/server/src/config-loader.ts`**（由 **`@mode-db/server`** 导出），优先级为：**命令行参数 → 环境变量 → 配置文件 → 默认值**（端口默认 **9090**，绑定地址默认 **127.0.0.1**，存储根默认 **`./data`** 相对当前工作目录解析，`connectToken` 必填其一）。**`--dev`** 或 **`MODEL_DB_DEV=true`** 时在控制台打印解密后的 RPC 摘要（仅联调）。
-
-**编译后**启动服务（需先 **`npm run build`**）：
+**编译后**启动示例：
 
 ```bash
-# 使用默认 ./modeldb.config.json（若存在）或 CLI/环境变量
 node ./packages/server/dist/cli.js --port 9090 --token your-secret --storage ./data
-
-# 或 npm 脚本（等价于 node ./packages/server/dist/cli.js，无额外参数时读配置）
 npm run start:server
 ```
 
-全局安装本包后，可使用 **`npx modeldb-server`**（由 **`package.json` → `bin.modeldb-server`** 指向 **`packages/server/dist/cli.js`**）。
+全局安装本包后：**`npx modeldb-server`**（根 **`package.json` → `bin`** → **`packages/server/dist/cli.js`**）。
 
-**程序化启动**（嵌入自有 Node 服务、集成测试等）可从 **`mode-db-engine`** 导入 **`loadModelDBServerConfig`**、**`startModelDBWebSocketServer`**、**`getWebSocketServerListeningPort`**（传入 **`port: 0`** 可由系统分配端口，便于并行测试）。
+**程序化启动**：从 **`@mode-db/server`** 导入 **`loadModelDBServerConfig`**、**`startModelDBWebSocketServer`**、**`getWebSocketServerListeningPort`**（**`port: 0`** 随机端口便于测试）。**`--dev`** 或 **`MODEL_DB_DEV=true`** 时在控制台打印解密后的 RPC 摘要（仅联调）。
 
 ### 远程客户端 SDK（`@mode-db/sdk`）
 
-工作区包路径：**[packages/sdk](packages/sdk)**。构建命令：**`npm run build:sdk`**（依赖根目录已 **`npm run build`** 生成引擎 **`dist/`** 与 **`@mode-db/shared`**，因 SDK 以 **`mode-db-engine`** 为 peer/本地依赖）。
+工作区包路径：**[packages/sdk](packages/sdk)**。构建命令：**`npm run build:sdk`**（需已 **`npm run build:shared`**；根目录 **`npm run build`** 会顺序编译引擎、shared、server、sdk）。
+
+**依赖**：SDK 的 **`package.json`** 仅声明 **`@mode-db/shared`**（线编解码、**`WireQueryChain`**、**`RemoteExecuteSnapshot`**、**`WireExecuteResultJson`** 等）。**不**将 **`mode-db-engine`** 作为 npm 依赖；与进程内 **`ModelDBClient` + `QueryChain`** 共用同一套**线计划语义**，由服务端 **`QueryChain.fromWirePlan`** 回放执行。
+
+**与进程内 Runtime 的差异（兼容性）**：**`RemoteRuntimeModel`** **不是** **`RuntimeModel`** 的子类，**勿使用** **`instanceof RuntimeModel`**。远程句柄不挂载 **`ModelRegistry`** / **`DataReader`**，因此 **不提供** **`getSchema()`**、**`all()`**、**`getAvailableRelations()`**、**`getAncestors()`** 等依赖本地注册表或存储的 API。远程侧当前保证：**`model(name).query(…)`** 返回 **`RemoteQueryChain`**（内部继承 **`@mode-db/shared`** 的 **`WireQueryChain`**，**`.execute()`** 走 RPC），以及 **`insertMany`** 等已暴露的写 RPC。
 
 ```typescript
 import { connectRemote, RemoteHydratedEntity } from '@mode-db/sdk';
@@ -924,8 +1098,13 @@ EngineError
 ```
 mode-db-engine/
 ├── index.ts                    # 包入口，统一导出
+├── modeldb.config.example.json # 服务端配置示例（复制为 modeldb.config.json）
 ├── docs/
 │   └── architecture.svg        # README 系统架构图（矢量）
+├── packages/
+│   ├── shared/                 # @mode-db/shared
+│   ├── server/                 # @mode-db/server（CLI、Fastify、配置加载）
+│   └── sdk/                    # @mode-db/sdk（connectRemote）
 ├── authoring/                  # 治理端：引擎、实体、存储、索引、Admin
 ├── common/                     # 共享：类型、registry、manifest、错误、存储根、DataType 协议、ValueObject、DiagnosticCenter
 ├── runtime/                    # 对 src/runtime 的薄再导出（便于从包根 import）
@@ -937,6 +1116,9 @@ mode-db-engine/
 │       └── PathResolver.ts     # Atlas 目录路径解析
 ├── test/
 │   ├── README.md               # 测试命令、Atlas 对照、各脚本覆盖点与注意事项
+│   ├── modeldb_config_loader_audit.ts  # loadModelDBServerConfig 优先级与 .mld 路径推导（临时目录）
+│   ├── dual_track_ignition.ts  # npm run ignition：SDK 向 server 灌 Sensor（dbName / MODEL_DB_DB_NAME）
+│   ├── templates/pipe-gallery/ # 管廊 Pipe / Node / Monitor 预置 Schema（registerPipeGalleryModels）
 │   ├── verify.ts               # 端到端：双图谱（单文件 Vault）、滞后字段、PROTOCOL、Runtime 只读（启动时清空 data/）
 │   ├── query_filters.ts        # 谓词 / QueryChain / matchAny / 短路 / getQueryPlan / includeRelates / evaluateInto
 │   ├── logic_integrity.ts      # 句柄缓存、合并读、insert sync、explainRelate、幽灵 id
@@ -947,7 +1129,9 @@ mode-db-engine/
 │   ├── datatype_audit.ts       # DataType 协议 + ValueObject：类型校验、I18N/Color/Unit、对象化访问、.mld header、manifest
 │   ├── diagnostic_audit.ts    # DiagnosticCenter：错误码注册表（含 E3002）、ValidationReport、insertMany、国际化
 │   ├── vault_audit.ts          # 单文件 Vault：无 manifest/models/relations、connect、relate、错误密钥、E3002
+│   ├── wire_server_audit.ts    # WebSocket server + @mode-db/sdk（依赖 verify 的 pipe）
 │   ├── million_stress_test.ts # 压力测试：100 万行灌入、1% 错误注入、读写一致性、诊断审计
+│   ├── shadow_smartcache_logger_audit.ts # memoryShadow + SmartCache + EngineLogger（Vault）
 │   ├── transform_aggregate.ts  # 第六节 6.3：pivot / groupBy、aggregate、execute → AnalysisResult
 │   └── first_run.ts            # 演示：治理 → flush → Runtime（点火脚本）
 ├── data/                       # 默认运行时数据（建议 git-ignore）
@@ -973,6 +1157,9 @@ mode-db-engine/
 | ValueObject | `ValueObject`（抽象基类）, `I18NValue`, `ColorValue`, `UnitValue`, `StringValue`, `NumberValue`, `IntValue`, `BooleanValue`, `DateTimeValue`, `JsonValue`, `createValueObject`, `unwrapValue`；类型 `ValueSyncFn`, `I18NDict`, `RGBA`, `UnitData`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Diagnostic  | `DiagnosticCenter`, `ValidationReport`, `ErrorCodes`；类型 `Severity`, `DiagnosticCode`, `DiagnosticContext`, `Diagnostic`, `DiagnosticLocale`, `RowResult`, `CodeEntry`, `ValidationReportSummary`, `ValidationReportJSON`, `ValidateFieldOptions`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 类型 / 协议 | `ModelRegistry`, `PathResolver`, manifest 常量与解析函数，`DataReader`, `IndexReader`，各类 `export type { … }` 与错误类                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 行业模板    | **`registerPipeGalleryModels`**（**`Pipe` / `Node` / `Monitor`**，含 **Unit**/**Color**/**required**），见 **`templates/pipe-gallery/register.ts`** 与 **`docs/logical-workspace-and-single-file.md`**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+
+> **网络服务 API**（**`loadModelDBServerConfig`**、**`startModelDBWebSocketServer`** 等）由 **`@mode-db/server`** 导出，**不再**从 **`mode-db-engine`** 根 barrel 再导出，以避免 **engine ⇄ server** 循环依赖。
 
 ---
 
@@ -980,7 +1167,7 @@ mode-db-engine/
 
 **索引**：集成测试的命令、Atlas 对照、各脚本覆盖点与注意事项见 **[test/README.md](test/README.md)**（该文档**仅**写测试相关内容；引擎说明与 DX 见本文档）。
 
-**推荐一键回归**（顺序：`verify` → … → **`diagnostic-audit`** → **`vault-audit`** → **`wire_server_audit`**；首步会删除整个默认 **`data/`** 目录；**`vault_audit`** 使用独立 Atlas **`vault_audit_rt`** 并在末尾自清理；**`wire_server_audit`** 依赖 **`verify`** 已生成的 **`data/pipe/atlas.mld`**，在随机端口起 WebSocket 并跑 SDK 握手 + 查询断言）：
+**推荐一键回归**（顺序：**`modeldb_config_loader_audit`**（临时目录校验 **`loadModelDBServerConfig`**）→ **`verify`** → … → **`diagnostic-audit`** → **`vault-audit`** → **`wire_server_audit`**；**`verify`** 会删除整个默认 **`data/`** 目录；**`vault_audit`** 使用独立 Atlas **`vault_audit_rt`** 并在末尾自清理；**`wire_server_audit`** 依赖 **`verify`** 已生成的 **`data/pipe/atlas.mld`**，在随机端口起 WebSocket 并跑 SDK 握手 + 查询断言）：
 
 ```bash
 npm test
@@ -991,6 +1178,7 @@ npm run test:integration
 **单项执行**：
 
 ```bash
+npm run config-loader-audit   # loadModelDBServerConfig：CLI 覆盖、.mld→storageRoot、connectToken 必填
 npx tsx test/verify.ts          # 双图谱（单文件 Vault）、骨架补全、PROTOCOL、Runtime 只读（会先清空 data/）
 npm run query-filters           # 谓词树、AND/OR 短路、matchAll / matchAny、getQueryPlan
 npm run integrity               # 句柄缓存、合并读、insert sync、explainRelate、Vault 关系索引幽灵 id
@@ -1002,6 +1190,7 @@ npm run datatype-audit          # DataType 协议：类型校验、I18N、Vault 
 npm run diagnostic-audit        # DiagnosticCenter：错误码注册表、ValidationReport、insertMany 批量、国际化
 npm run vault-audit             # 单文件 Vault：目录零明文、connect、关系、错误密钥、E3002
 npm run wire-server-audit       # WebSocket 服务 + Client SDK（需先有 verify 的 pipe Vault）
+npm run ignition                # 双轨压测：需已 start:server；环境变量见「运行与配置」
 npm run stress-test             # 压力测试：100 万行灌入、1% 错误注入、读写一致性、诊断审计
 npm run first-run               # 演示：单文件 Vault 写入 atlas.mld → Runtime（未并入 test:integration）
 npm run transform               # 多维分析：pivot / groupBy / aggregate → AnalysisResult（第六节 6.3）
@@ -1009,22 +1198,23 @@ npm run final-analysis          # global_atlas / Stats 验收
 npm run advanced-audit          # relateRecursive、wrapGroups、Paginated
 ```
 
-| 脚本                          | Atlas                         | 主要内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ----------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`verify.ts`**               | `pipe` / `tran`               | 双图谱隔离（**`integration-vault.ts`**：**单文件 Vault**，仅 **`atlas.mld`**）；**滞后 `updateFields`**；**PROTOCOL** 与 **关系索引 `fwd`/`rev` 成对**（Vault 包内 **`r:*`**，语义同分文件 **`.rid`**）；**`ModelDBClient.connect`**、链式查询；Runtime **无 `insert` / `bind` 等**；**遇错计数**，失败时 **exit 1**。                                                                                                                                                                                                                                                                                   |
-| **`query_filters.ts`**        | `query_filter_demo`           | **第六节** 全链路：**谓词树**、**AND/OR 短路**、**`matchAll` / `matchAllNodes` / `matchAny`**、**`getQueryPlan`**、**`filter`（Callback）**、**`relate` 目标过滤**、**`includeRelates`**；**`getRelateDiagnostic`** + **`failedPredicate`**；**`getRelationStatus`**、**`toSnapshot`**；**`QueryEngine.evaluateInto`** + **`PredicateEvaluateContext`**。                                                                                                                                                                                                                                                |
-| **`logic_integrity.ts`**      | `integrity_pipe`              | **`model` 句柄缓存**、**合并读**、**`insert({ sync: true })` + **`atlas.mld`** 存在断言**；**`explainRelate`**、**`NOT_REGISTERED`** / **`NO_LINK_IN_INDEX`**；**Vault 包内 `r:*` 注入幽灵 id** → **`FILTERED_OUT_ORPHAN`**；**`includeRelates` + `toNested()`**。                                                                                                                                                                                                                                                                                                                                       |
-| **`logic_closure_audit.ts`**  | `pipe_system` / `tran_system` | 多 Atlas 物理隔离；**双向索引守恒**（fwd 边数 === rev 边数）；**多级 `relate`**（三级跳转）；Runtime 只读安全性。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| **`query_chain_extended.ts`** | `query_chain_extended`        | 独立 Atlas + **单文件 Vault**；**`ComputeBuilder`** + `groupBy`；分析分页（`Paginated`）；**`wrapGroups`** + `GroupInstance`；**`relateRecursive`** BFS（含环防护）。                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| **`authoring_dx_audit.ts`**   | `dx_audit`                    | **`mergeDiskRowsWithAuthoringBuffer`**（覆盖 / 保留 / 追加 / 空 pending）、**`QueryEngine.execute`** 与 **`evaluate`** 一致、**`model` 句柄缓存**、**`updateFields` 去重**、**合并读**、**`engine.insert(..., { sync: true })`**。                                                                                                                                                                                                                                                                                                                                                                       |
-| **`crud_audit.ts`**           | `crud_audit`                  | **46 个断言**（单文件 Vault）：`update` / `delete` / `updateWhere` / `deleteWhere`、缓冲区与 **flush 压缩**；**关系层清理**；**Vault 内 `m:Item` 明文 JSONL** 无 `__deleted` 残留（分文件布局下等价为 **`.mld`** 压缩）。                                                                                                                                                                                                                                                                                                                                                                                |
-| **`datatype_audit.ts`**       | `datatype_audit`              | **114 个断言 / 20 组**：DataType 常量；类型校验（含 Color/Unit）；I18N 自动包装/查询；ValueObject（`getValue`/`isEmpty`/`update`/`save`）；**`required` 语义空值**（String 空格/I18N 空对象/Color 通道缺失/Unit NaN）；**`default` 值注入**（缺失自动填充、显式覆盖、required+default 组合）；**manifest `default` 持久化**；`.mld` header；向后兼容。                                                                                                                                                                                                                                                   |
-| **`diagnostic_audit.ts`**     | `diagnostic-audit`            | **122 个断言 / 18 组**：ErrorCodes 命名别名（含 `SELF_REFERENTIAL_CYCLE`、`PHYSICAL_ADDRESS_CORRUPT=E3002`）；错误码注册表（含 E2005/E3001/E3002）；throw/collect 双模式 + severity 覆盖；`DiagnosticCenter.create`；国际化消息（en/zh）；`onDiagnostic` 监听器；`ValidationReport` API（`successCount`/`failureCount`/`isAllSuccess`/`getSummary`/`exportAsJSON`/`report()` 流式收集）；`validateFieldValue` collect 模式；throw 向后兼容；`insertMany` 批量校验报告；ValueObject DiagnosticCenter 联动（required + type mismatch）；Severity 分级；`toError` 转换；globalDiagnostics；emergency dump。 |
-| **`vault_audit.ts`**          | `vault_audit_rt`              | **单文件 Vault**：`singleFileVault` + `flushAll` 后无 `atlas-manifest.json` / `models/` / `relations/`；**`ModelDBClient.connect`** + **`getData()`** 明文；**`relate`** 读包内关系索引；**二次 `AuthoringEngine`** 从包内 manifest **hydrate**；错误密钥 → **`AtlasManifestError`**；损坏文件 → **`loadSync` false** 且 **`E3002`** 经 `onDiagnostic`。脚本末尾删除 `data/vault_audit_rt/`。                                                                                                                                                                                                            |
-| **`wire_server_audit.ts`**    | `pipe`（复用 `verify`）       | **WebSocket + SDK**：`startModelDBWebSocketServer`（**`port: 0`**）、**`ConnectToken`** 拒绝错误令牌、**`connectRemote`** 查询 **`Pump`**、**`RemoteHydratedEntity`** 形态断言；依赖集成 Vault 密钥与 **`data/pipe/atlas.mld`**。                                                                                                                                                                                                                                                                                                                                                                        |
-| **`million_stress_test.ts`**  | `stress_atlas`                | **34 个断言**（单文件 Vault）：100 万行 `Sensor` 灌入；~1% 错误注入（E1001/E1003）；`ValidationReport`；读写一致性；`ValueObject.update()` 监控；ErrorCodes 完整性；**`flushAll` + `atlas.mld`**（含 **`m:Sensor`** blob）；吞吐量报告。                                                                                                                                                                                                                                                                                                                                                                 |
-| **`transform_aggregate.ts`**  | （脚本内自建）                | **第六节 6.3**：**`pivot` / `groupBy`**、**`aggregate`（对象与 `Aggregator`）**、**`between`**、**`compute` / `customReduce`**、**`execute()` → `AnalysisResult`**（**`asTree` / `asMatrix`**）、**`analyze()`**、**`traceableNull(all_missing)`**、关系路径分组键。                                                                                                                                                                                                                                                                                                                                     |
-| **`first_run.ts`**            | `pipe`                        | 单文件 Vault：**治理** → **`flushAll`** → **`ModelDBClient.connect`** 可读演示（弱断言）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 脚本                                 | Atlas                         | 主要内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------ | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`modeldb_config_loader_audit.ts`** | —                             | **`loadModelDBServerConfig`**：临时目录 JSON；**`dbPath`** 为 **`world.mld`** 时 **`storageRoot`/`defaultAtlas`**；CLI 覆盖；空 token 抛错；**`mode: production`** → **`accessLog`**。                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **`verify.ts`**                      | `pipe` / `tran`               | 双图谱隔离（**`integration-vault.ts`**：**单文件 Vault**，仅 **`atlas.mld`**）；**滞后 `updateFields`**；**PROTOCOL** 与 **关系索引 `fwd`/`rev` 成对**（Vault 包内 **`r:*`**，语义同分文件 **`.rid`**）；**`ModelDBClient.connect`**、链式查询；Runtime **无 `insert` / `bind` 等**；**遇错计数**，失败时 **exit 1**。                                                                                                                                                                                                                                                                                   |
+| **`query_filters.ts`**               | `query_filter_demo`           | **第六节** 全链路：**谓词树**、**AND/OR 短路**、**`matchAll` / `matchAllNodes` / `matchAny`**、**`getQueryPlan`**、**`filter`（Callback）**、**`relate` 目标过滤**、**`includeRelates`**；**`getRelateDiagnostic`** + **`failedPredicate`**；**`getRelationStatus`**、**`toSnapshot`**；**`QueryEngine.evaluateInto`** + **`PredicateEvaluateContext`**。                                                                                                                                                                                                                                                |
+| **`logic_integrity.ts`**             | `integrity_pipe`              | **`model` 句柄缓存**、**合并读**、**`insert({ sync: true })` + **`atlas.mld`** 存在断言**；**`explainRelate`**、**`NOT_REGISTERED`** / **`NO_LINK_IN_INDEX`**；**Vault 包内 `r:*` 注入幽灵 id** → **`FILTERED_OUT_ORPHAN`**；**`includeRelates` + `toNested()`**。                                                                                                                                                                                                                                                                                                                                       |
+| **`logic_closure_audit.ts`**         | `pipe_system` / `tran_system` | 多 Atlas 物理隔离；**双向索引守恒**（fwd 边数 === rev 边数）；**多级 `relate`**（三级跳转）；Runtime 只读安全性。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **`query_chain_extended.ts`**        | `query_chain_extended`        | 独立 Atlas + **单文件 Vault**；**`ComputeBuilder`** + `groupBy`；分析分页（`Paginated`）；**`wrapGroups`** + `GroupInstance`；**`relateRecursive`** BFS（含环防护）。                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| **`authoring_dx_audit.ts`**          | `dx_audit`                    | **`mergeDiskRowsWithAuthoringBuffer`**（覆盖 / 保留 / 追加 / 空 pending）、**`QueryEngine.execute`** 与 **`evaluate`** 一致、**`model` 句柄缓存**、**`updateFields` 去重**、**合并读**、**`engine.insert(..., { sync: true })`**。                                                                                                                                                                                                                                                                                                                                                                       |
+| **`crud_audit.ts`**                  | `crud_audit`                  | **46 个断言**（单文件 Vault）：`update` / `delete` / `updateWhere` / `deleteWhere`、缓冲区与 **flush 压缩**；**关系层清理**；**Vault 内 `m:Item` 明文 JSONL** 无 `__deleted` 残留（分文件布局下等价为 **`.mld`** 压缩）。                                                                                                                                                                                                                                                                                                                                                                                |
+| **`datatype_audit.ts`**              | `datatype_audit`              | **114 个断言 / 20 组**：DataType 常量；类型校验（含 Color/Unit）；I18N 自动包装/查询；ValueObject（`getValue`/`isEmpty`/`update`/`save`）；**`required` 语义空值**（String 空格/I18N 空对象/Color 通道缺失/Unit NaN）；**`default` 值注入**（缺失自动填充、显式覆盖、required+default 组合）；**manifest `default` 持久化**；`.mld` header；向后兼容。                                                                                                                                                                                                                                                   |
+| **`diagnostic_audit.ts`**            | `diagnostic-audit`            | **122 个断言 / 18 组**：ErrorCodes 命名别名（含 `SELF_REFERENTIAL_CYCLE`、`PHYSICAL_ADDRESS_CORRUPT=E3002`）；错误码注册表（含 E2005/E3001/E3002）；throw/collect 双模式 + severity 覆盖；`DiagnosticCenter.create`；国际化消息（en/zh）；`onDiagnostic` 监听器；`ValidationReport` API（`successCount`/`failureCount`/`isAllSuccess`/`getSummary`/`exportAsJSON`/`report()` 流式收集）；`validateFieldValue` collect 模式；throw 向后兼容；`insertMany` 批量校验报告；ValueObject DiagnosticCenter 联动（required + type mismatch）；Severity 分级；`toError` 转换；globalDiagnostics；emergency dump。 |
+| **`vault_audit.ts`**                 | `vault_audit_rt`              | **单文件 Vault**：`singleFileVault` + `flushAll` 后无 `atlas-manifest.json` / `models/` / `relations/`；**`ModelDBClient.connect`** + **`getData()`** 明文；**`relate`** 读包内关系索引；**二次 `AuthoringEngine`** 从包内 manifest **hydrate**；错误密钥 → **`AtlasManifestError`**；损坏文件 → **`loadSync` false** 且 **`E3002`** 经 `onDiagnostic`。脚本末尾删除 `data/vault_audit_rt/`。                                                                                                                                                                                                            |
+| **`wire_server_audit.ts`**           | `pipe`（复用 `verify`）       | **WebSocket + SDK**：`startModelDBWebSocketServer`（**`port: 0`**）、**`ConnectToken`** 拒绝错误令牌、**`connectRemote`** 查询 **`Pump`**、**`RemoteHydratedEntity`** 形态断言；依赖集成 Vault 密钥与 **`data/pipe/atlas.mld`**。                                                                                                                                                                                                                                                                                                                                                                        |
+| **`million_stress_test.ts`**         | `stress_atlas`                | **34 个断言**（单文件 Vault）：100 万行 `Sensor` 灌入；~1% 错误注入（E1001/E1003）；`ValidationReport`；读写一致性；`ValueObject.update()` 监控；ErrorCodes 完整性；**`flushAll` + `atlas.mld`**（含 **`m:Sensor`** blob）；吞吐量报告。                                                                                                                                                                                                                                                                                                                                                                 |
+| **`transform_aggregate.ts`**         | （脚本内自建）                | **第六节 6.3**：**`pivot` / `groupBy`**、**`aggregate`（对象与 `Aggregator`）**、**`between`**、**`compute` / `customReduce`**、**`execute()` → `AnalysisResult`**（**`asTree` / `asMatrix`**）、**`analyze()`**、**`traceableNull(all_missing)`**、关系路径分组键。                                                                                                                                                                                                                                                                                                                                     |
+| **`first_run.ts`**                   | `pipe`                        | 单文件 Vault：**治理** → **`flushAll`** → **`ModelDBClient.connect`** 可读演示（弱断言）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 ---
 
@@ -1045,33 +1235,35 @@ npm run advanced-audit          # relateRecursive、wrapGroups、Paginated
 ```bash
 npm install
 
-# 集成验证（verify → … → vault-audit → wire-server-audit）
-npm test
-
-# 类型检查
-npm run typecheck
-
-# 代码检查
-npm run lint
-
-# 格式化
-npm run format
-
-# 类型 + lint + 格式
-npm run check
-
-# 编译引擎 + @mode-db/shared + @mode-db/server + @mode-db/sdk
+# 编译引擎 + shared + server + sdk（启动 server 或跑 ignition 前需要）
 npm run build
 
-# 仅构建远程客户端 SDK（ESM + CJS + 类型声明，输出 packages/sdk/dist/）
-npm run build:sdk
+# 准备配置（示例见 modeldb.config.example.json）
+cp modeldb.config.example.json modeldb.config.json   # Windows: 手动复制后编辑 connectToken
 
-# 编译后启动 WebSocket 服务（需配置或 CLI 传入 connectToken）
+# 启动 WebSocket 服务（读取当前目录 modeldb.config.json；须含 connectToken）
 npm run start:server
 
-# 监听编译
+# 另开终端：双轨压测点火（须与 server 的 URL / token / atlas 一致）
+npm run ignition
+
+# 集成验证（config-loader 审计 → verify → … → wire-server-audit，共 12 步）
+npm test
+
+# 类型检查 / 代码检查 / 格式化 / 三合一
+npm run typecheck
+npm run lint
+npm run format
+npm run check
+
+# 仅构建远程客户端 SDK（输出 packages/sdk/dist/）
+npm run build:sdk
+
+# 监听编译（仅根目录引擎 tsc --watch）
 npm run dev
 ```
+
+更完整的 **`modeldb.config.json` 字段**、**CLI**、**环境变量**与 **`ignition`** 说明见上文 **「运行与配置（工作区、启动命令、参数与环境）」**。
 
 ---
 
@@ -1089,15 +1281,16 @@ npm run dev
 
 ### 工作区包 `@mode-db/sdk`
 
-- **路径**：[packages/sdk](packages/sdk)。**`peerDependencies`** 声明 **`mode-db-engine`**；**`@mode-db/shared`** 提供线协议与 diagnostic 的薄再导出。
+- **路径**：[packages/sdk](packages/sdk)。**`dependencies`** 仅 **`@mode-db/shared`**；与 **`mode-db-engine`** 无 npm 依赖关系（运行时仍须配合 **ModelDB WebSocket Server**，由 **`@mode-db/server`** + 引擎提供）。
 - **构建**：根目录 **`npm run build:sdk`**（内部为 **`npm run build -w @mode-db/sdk`**，调用 **`tsup`**）。
-- **发布顺序**：先发布 **`mode-db-engine`** 再发布 **`@mode-db/shared`** / SDK，或保证 peer 版本范围与已发布引擎版本一致；SDK 的 **`package.json`** 中 **`dependencies.mode-db-engine`** 当前为 **`file:../..`**，**发布到 npm 前**须改为 **`^x.y.z`** 等与注册表一致的 semver 范围（仅 **`file:`** 无法供外部用户安装）。
+- **发布顺序**：可先发布 **`@mode-db/shared`**，再发布 **`@mode-db/sdk`**；与引擎版本解耦，但线计划与服务端 **`QueryChain`** 语义须保持大版本一致。
 - **tarball 检查**：在 **`packages/sdk`** 下 **`npm pack`**，检查是否仅含 **`dist/`**、**`package.json`**、**`README`**（若添加）等。
 
 ### 工作区包 `@mode-db/server`
 
 - **路径**：[packages/server](packages/server)。**`commander`** CLI（**`--port` / `--host` / `--config` / `--storage` / `--token` / `--vault-secret` / `--dev`**），**`ws`** WebSocket 服务，**`WireRequestDispatcher`** 与 **`WriteSerializationGate`**（为后续治理端写 RPC 预留串行化）。
-- **构建**：**`npm run build:server`** 或包含在根 **`npm run build`** 中。
+- **依赖**：**`package.json`** 仅 **`@mode-db/shared`**、**`fastify`**、**`ws`** 等；**不**声明 **`mode-db-engine`**。编译期通过 **`../../../dist/...`** 引用仓库根 **`dist/`**（由 **`npm run build:lib`** 生成），故 **`npm run build:server`** 必须排在 **`build:lib`** 之后。
+- **构建**：**`npm run build:server`** 或根目录 **`npm run build`**（已含 **`build:lib`**）。
 
 ### 部署 WebSocket 服务（运维摘要）
 

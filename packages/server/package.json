@@ -1,10 +1,30 @@
 {
   "name": "@mode-db/server",
   "version": "0.1.0",
-  "description": "ModelDB WebSocket server — CLI, config loading, wire transport, and query dispatch.",
+  "description": "ModelDB WebSocket server: CLI, config loading, wire transport, and query dispatch. Depends on the workspace root package mode-db-engine (file:../..) for runtime, authoring, and wire serialization APIs.",
+  "keywords": [
+    "modeldb",
+    "websocket",
+    "fastify",
+    "data-governance"
+  ],
+  "homepage": "https://github.com/baoyiwen/mode-db-engine#readme",
+  "bugs": {
+    "url": "https://github.com/baoyiwen/mode-db-engine/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/baoyiwen/mode-db-engine.git",
+    "directory": "packages/server"
+  },
+  "license": "ISC",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "modeldb-server": "./dist/cli.js"
   },
@@ -14,23 +34,24 @@
       "import": "./dist/index.js"
     }
   },
-  "sideEffects": false,
   "scripts": {
+    "prebuild": "npm --prefix ../.. run build:common && npm --prefix ../.. run build:shared",
+    "pretypecheck": "npm --prefix ../.. run build:common && npm --prefix ../.. run build:shared",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@mode-db/shared": "file:../shared",
     "@fastify/websocket": "^11.2.0",
+    "@mode-db/common": "file:../common",
+    "@mode-db/shared": "file:../shared",
     "commander": "^12.1.0",
-    "fastify": "^5.8.4",
     "mode-db-engine": "file:../..",
+    "fastify": "^5.8.4",
     "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/ws": "^8.18.1",
     "typescript": "^5.9.0"
-  },
-  "license": "ISC"
+  }
 }

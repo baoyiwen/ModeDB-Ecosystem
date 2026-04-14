@@ -1,16 +1,14 @@
-import { decodeWirePayload, deriveWireSessionKey, encodeWirePayload } from '@mode-db/shared';
 import {
-  ModelRegistry,
-  QueryChain,
-  RuntimeModel,
-  type DataReader,
-  type IndexReader,
+  decodeWirePayload,
+  deriveWireSessionKey,
+  encodeWirePayload,
+  WireQueryChain,
   type QueryExecuteOptions,
   type QueryStartSpec,
   type RemoteExecuteSnapshot,
   type WireExecuteBody,
   type WireExecuteResultJson,
-} from 'mode-db-engine';
+} from '@mode-db/shared';
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === 'object' && x !== null && !Array.isArray(x);
@@ -23,20 +21,6 @@ function nextRpcId(): string {
   }
   return `rpc-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
-
-function noLocal(): never {
-  throw new Error('RemoteQueryChain does not perform local storage I/O.');
-}
-
-const stubDataReader: DataReader = {
-  getByIds: () => noLocal(),
-  getAll: () => noLocal(),
-};
-
-const stubIndexReader: IndexReader = {
-  getForward: async () => [],
-  getReverse: async () => [],
-};
 
 /** Row handle compatible with {@link HydratedEntity} for `getData` / `getModelName`. */
 export class RemoteHydratedEntity {
@@ -192,7 +176,13 @@ function messageText(raw: unknown): string {
 export interface ConnectRemoteOptions {
   readonly url: string;
   readonly connectToken: string;
-  readonly atlas: string;
+  /**
+   * Logical library **`dbName`** → server resolves **`<workspace>/<dbName>/`** (vault **`atlas.mld`** recommended).
+   * Preferred over **`atlas`** for new integrations.
+   */
+  readonly dbName?: string;
+  /** @deprecated Prefer **`dbName`**. Same string space as logical library directory name. */
+  readonly atlas?: string;
   /**
    * **`short`**: stateless **HTTP POST `/v2/action`** (good for tools / batch).
    * **`stream`**: **WebSocket `/v2/stream`** (default; good for interactive UIs).
@@ -201,10 +191,17 @@ export interface ConnectRemoteOptions {
   readonly webSocketCtor?: WebSocketCtor;
 }
 
+/** Logical library directory name under the server **`workspace`** (`dbName` preferred; `atlas` is legacy alias). */
+function resolveConnectLogicalDb(options: ConnectRemoteOptions): string {
+  const v = (options.dbName?.trim() || options.atlas?.trim() || '').trim();
+  if (!v) {
+    throw new Error('connectRemote: provide dbName or atlas (logical library name).');
+  }
+  return v;
+}
+
 type QuerySession = {
-  readonly stubRegistry: ModelRegistry;
-  readonly stubData: DataReader;
-  readonly stubIndex: IndexReader;
+  /** Resolved logical library name (`dbName` or `atlas` under server **workspace**). */
   readonly atlas: string;
   connectHandshake(): Promise<void>;
   executeSnapshot(snapshot: RemoteExecuteSnapshot): Promise<unknown>;
@@ -212,10 +209,6 @@ type QuerySession = {
 };
 
 class ShortRemoteSession implements QuerySession {
-  readonly stubRegistry = new ModelRegistry();
-  readonly stubData: DataReader = stubDataReader;
-  readonly stubIndex: IndexReader = stubIndexReader;
-
   constructor(
     private readonly httpOrigin: string,
     private readonly connectToken: string,
@@ -241,6 +234,7 @@ class ShortRemoteSession implements QuerySession {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
+        'x-modeldb-db-name': this.atlas,
         'x-modeldb-atlas': this.atlas,
         'x-modeldb-connect-token': this.connectToken,
       },
@@ -276,10 +270,6 @@ class ShortRemoteSession implements QuerySession {
 }
 
 class RemoteSession implements QuerySession {
-  readonly stubRegistry = new ModelRegistry();
-  readonly stubData: DataReader = stubDataReader;
-  readonly stubIndex: IndexReader = stubIndexReader;
-
   private sessionKey = '';
   private handshakeDone = false;
   private handshakeWait: {
@@ -388,6 +378,7 @@ class RemoteSession implements QuerySession {
         JSON.stringify({
           type: 'handshake',
           connectToken: this.connectToken,
+          dbName: this.atlas,
           atlas: this.atlas,
         }),
       );
@@ -410,17 +401,17 @@ class RemoteSession implements QuerySession {
   }
 }
 
-/** Fluent query chain that RPCs {@link QueryChain.execute} to the server. */
+/** Fluent query chain that RPCs server-side query execution over the wire. */
 export class RemoteQueryChain<
   M extends Record<string, unknown> = Record<string, unknown>,
   Mode extends 'rows' | 'analysis' = 'rows',
-> extends QueryChain<M, Mode> {
+> extends WireQueryChain<M, Mode> {
   constructor(
     private readonly session: QuerySession,
     modelName: string,
     start: QueryStartSpec,
   ) {
-    super(session.stubRegistry, session.stubIndex, session.stubData, modelName, start);
+    super(modelName, start);
   }
 
   override async execute(options?: QueryExecuteOptions): Promise<unknown> {
@@ -429,15 +420,14 @@ export class RemoteQueryChain<
   }
 }
 
-export class RemoteRuntimeModel extends RuntimeModel {
+/** Remote model handle: `query()` returns a {@link RemoteQueryChain}; `insertMany` uses the write RPC. */
+export class RemoteRuntimeModel {
   constructor(
     private readonly session: QuerySession,
-    name: string,
-  ) {
-    super(name, session.stubRegistry, session.stubData, session.stubIndex);
-  }
+    readonly name: string,
+  ) {}
 
-  override query<M extends Record<string, unknown> = Record<string, unknown>>(
+  query<M extends Record<string, unknown> = Record<string, unknown>>(
     ids?: readonly string[],
   ): RemoteQueryChain<M, 'rows'> {
     if (ids === undefined) {
@@ -479,16 +469,17 @@ export class RemoteModelDBClient {
   ) {}
 
   static async connect(options: ConnectRemoteOptions): Promise<RemoteModelDBClient> {
+    const logical = resolveConnectLogicalDb(options);
     const mode = options.mode ?? 'stream';
     if (mode === 'short') {
       const origin = toHttpOrigin(options.url);
-      const session = new ShortRemoteSession(origin, options.connectToken, options.atlas);
+      const session = new ShortRemoteSession(origin, options.connectToken, logical);
       await session.connectHandshake();
       return new RemoteModelDBClient(undefined, session);
     }
     const wsUrl = toWsStreamUrl(options.url);
     const ws = await openWebSocket(wsUrl, options.webSocketCtor);
-    const session = new RemoteSession(ws, options.connectToken, options.atlas);
+    const session = new RemoteSession(ws, options.connectToken, logical);
     await session.connectHandshake();
     return new RemoteModelDBClient(ws, session);
   }

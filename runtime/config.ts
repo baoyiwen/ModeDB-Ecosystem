@@ -3,4 +3,4 @@ export {
   configureModelDBStorageRoot as configureModelDBRuntime,
   resolveModelDBStorageRoot,
   type ModelDBStorageRootConfig as ModelDBRuntimeConfig,
-} from '../common/storage-root-config.js';
+} from '@mode-db/common';

@@ -1,6 +1,5 @@
-import { ModelRegistry } from '../common/registry.js';
-import { RegistryError } from '../common/errors.js';
-import type { PathResolver } from '../src/common/PathResolver.js';
+import { ModelRegistry, RegistryError } from '@mode-db/common';
+import type { PathResolver } from '@mode-db/common';
 import type { ModelStorage } from './storage.js';
 import type { RelationIndexer } from './indexer.js';
 import type { PersistenceManager } from './persistence-manager.js';

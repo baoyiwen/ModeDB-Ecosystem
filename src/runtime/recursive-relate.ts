@@ -1,5 +1,4 @@
-import type { IndexReader } from '../../common/provider.js';
-import type { ModelRecord } from '../../common/types.js';
+import type { IndexReader, ModelRecord } from '@mode-db/common';
 import type { ResolvedRelation } from './relation-resolve.js';
 
 /**

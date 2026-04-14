@@ -1,15 +1,17 @@
-import { DiskAdapter } from '../common/disk-adapter.js';
 import { join, dirname } from 'node:path';
-import { DELETED_SENTINEL, isDeletedRecord, type ModelRecord } from '../common/types.js';
-import type { ModelStorage } from './storage.js';
-import { MergedDataReader, type BufferedModelSource } from './merged-data-reader.js';
 import {
+  DiskAdapter,
+  DELETED_SENTINEL,
+  isDeletedRecord,
+  type ModelRecord,
   ValidationReport,
   DiagnosticCenter,
   ErrorCodes,
   type Diagnostic,
-} from '../common/diagnostic.js';
-import type { SmartCache } from '../common/smart-cache.js';
+  type SmartCache,
+} from '@mode-db/common';
+import type { ModelStorage } from './storage.js';
+import { MergedDataReader, type BufferedModelSource } from './merged-data-reader.js';
 
 const shutdownTasks: Array<() => Promise<void>> = [];
 let lifecycleHooksInstalled = false;

@@ -1,0 +1,27 @@
+{
+  "name": "@mode-db/common",
+  "version": "0.1.0",
+  "description": "Shared types, registry, diagnostics, storage root, and engine utilities for ModelDB (publishable workspace package).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@mode-db/shared": "file:../shared"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.9.0"
+  },
+  "license": "ISC"
+}

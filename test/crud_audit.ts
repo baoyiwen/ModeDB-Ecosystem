@@ -10,17 +10,20 @@
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
-import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
+import {
+  configureModelDBStorageRoot,
+  DELETED_SENTINEL,
+  isDeletedRecord,
+  type ModelRecord,
+} from '@mode-db/common';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
 import {
   atlasVaultPath,
-  INTEGRATION_VAULT_SECRET,
   integrationVaultAuthoringOptions,
   loadVaultModelBlob,
   useIntegrationVaultEnv,
 } from './integration-vault.js';
 import { mergeDiskRowsWithAuthoringBuffer } from '../src/runtime/query-engine.js';
-import { DELETED_SENTINEL, isDeletedRecord, type ModelRecord } from '../common/types.js';
 import type { PredicateNode } from '../src/runtime/predicate-tree.js';
 
 const DATA_ROOT = join(process.cwd(), 'data');
@@ -305,7 +308,7 @@ async function auditEngineCrud(): Promise<void> {
   assert(existsSync(vaultPath), 'insert sync 后 atlas.mld 存在');
 
   await Item.delete(r5._id, { sync: true });
-  let itemBlob = loadVaultModelBlob(DATA_ROOT, ATLAS, 'Item', INTEGRATION_VAULT_SECRET);
+  let itemBlob = loadVaultModelBlob(DATA_ROOT, ATLAS, 'Item');
   let itemRows = vaultItemDataRows(itemBlob);
   assert(
     !itemRows.some((r) => r._id === r5._id),
@@ -321,7 +324,7 @@ async function auditEngineCrud(): Promise<void> {
   if (remaining.length > 0) {
     const target = remaining[0]!.getData() as ModelRecord;
     await Item.update(target._id, { score: 999 }, { sync: true });
-    itemBlob = loadVaultModelBlob(DATA_ROOT, ATLAS, 'Item', INTEGRATION_VAULT_SECRET);
+    itemBlob = loadVaultModelBlob(DATA_ROOT, ATLAS, 'Item');
     itemRows = vaultItemDataRows(itemBlob);
     assert(
       itemRows.some((r) => r.score === 999),

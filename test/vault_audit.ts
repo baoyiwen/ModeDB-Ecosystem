@@ -12,16 +12,17 @@ import { rm } from 'node:fs/promises';
 import {
   configureModelDBStorageRoot,
   resolveModelDBStorageRoot,
-} from '../common/storage-root-config.js';
+  PathResolver,
+  AtlasManifestError,
+  DiagnosticCenter,
+  ErrorCodes,
+} from '@mode-db/common';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
 import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
-import { PathResolver } from '../src/common/PathResolver.js';
-import { AtlasManifestError } from '../common/errors.js';
-import { DiagnosticCenter, ErrorCodes } from '../common/diagnostic.js';
 import { AtlasSingleVault } from '../authoring/atlas-single-vault.js';
 import {
-  INTEGRATION_VAULT_SECRET,
   integrationVaultAuthoringOptions,
+  integrationVaultDerivedSecret,
   useIntegrationVaultEnv,
 } from './integration-vault.js';
 
@@ -94,13 +95,12 @@ async function main(): Promise<void> {
     void new AuthoringEngine({
       atlas: ATLAS,
       storageRoot: DATA_ROOT,
-      singleFileVault: true,
-      vaultSecret: 'definitely-not-the-integration-vault-secret-xx',
+      connectToken: 'definitely-not-the-integration-connect-token-xx',
     });
   } catch (e) {
     wrongSecretThrew = e instanceof AtlasManifestError;
   }
-  assert(wrongSecretThrew, 'wrong vault secret throws AtlasManifestError');
+  assert(wrongSecretThrew, 'wrong connectToken throws AtlasManifestError');
 
   const seen: string[] = [];
   const off = DiagnosticCenter.onDiagnostic((d) => {
@@ -108,7 +108,7 @@ async function main(): Promise<void> {
   });
   writeFileSync(vaultPath, Buffer.from('corrupt'));
   const v = new AtlasSingleVault();
-  const loaded = v.loadSync(vaultPath, INTEGRATION_VAULT_SECRET);
+  const loaded = v.loadSync(vaultPath, integrationVaultDerivedSecret);
   off();
   assert(!loaded, 'loadSync returns false on corrupt vault');
   assert(

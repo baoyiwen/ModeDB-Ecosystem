@@ -1,6 +1,11 @@
 node_modules
 dist
+**/dist/**
 coverage
 data
 package-lock.json
 *.min.js
+
+# No format checks under integration / template trees (line endings & style left as-is)
+test
+templates

@@ -1,33 +1,34 @@
 /**
  * 双轨制压测点火器：通过 **`@mode-db/sdk`** 的 **`connectRemote`** + **`insertMany`** 向服务端灌数。
  *
- * 若本地尚无 **`Sensor`** 模型（无 atlas、或仅有不含 **`Sensor`** 的 **`atlas-manifest.json`**、或加密 **`atlas.mld`** 内未注册），会在**与服务端相同的存储根**上自动补齐（**`AuthoringEngine`** 注册 **`Sensor`** 并 **`writeAtlasManifest`** + **`flushAll`**）。
- * 设置 **`IGNITION_SKIP_BOOTSTRAP=1`** 可关闭该行为（仅当你已自行建好图谱时）。更新 manifest 后若 **`modeldb-server` 已在跑**，需**重启**以重新加载目录签名与引擎缓存。
+ * 若本地尚无 **`Sensor`** 模型，会在**与服务端相同的存储根**上自动补齐（**`AuthoringEngine`** 注册 **`Sensor`** 并 **`writeAtlasManifest`** + **`flushAll`**）。
+ * 磁盘布局仅为单文件 vault：**`<workspace>/<dbName>/atlas.mld`**；密钥由与服务端相同的 **`connectToken`** 派生。
+ * 设置 **`IGNITION_SKIP_BOOTSTRAP=1`** 可关闭该行为。若 **`modeldb-server` 已在跑**，变更图谱后需**重启**。
  *
  * 环境变量：
  * - **`MODEL_DB_URL`** — 例如 `http://127.0.0.1:9090` 或 `ws://127.0.0.1:9090`
- * - **`MODEL_DB_CONNECT_TOKEN`** — 与 **`modeldb.config.json`** 中 **`connectToken`** 一致
- * - **`MODEL_DB_ATLAS`** — atlas 名（默认 **`world`**）
+ * - **`MODEL_DB_CONNECT_TOKEN`** — 与 **`modeldb.config.json`** 中 **`connectToken`** 一致（同时派生 atlas vault 密钥）
+ * - **`MODEL_DB_DB_NAME`** — 逻辑库名（**`dbName`**，优先；默认 **`world`**）
+ * - **`MODEL_DB_ATLAS`** — 与 **`MODEL_DB_DB_NAME`** 同义（兼容旧环境变量）
  * - **`MODEL_DB_MODE`** — **`short`**（HTTP `/v2/action`）或 **`stream`**（默认 WebSocket）
  * - **`IGNITION_TOTAL`** — 总条数（默认 **100000**）
  * - **`IGNITION_BATCH`** — 每批行数（默认 **5000**，≤ **20000**）
  *
  * Run: `npx tsx test/dual_track_ignition.ts` 或 `npm run ignition`
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { connectRemote } from '@mode-db/sdk';
-import { loadModelDBServerConfig } from '@mode-db/server';
+import { loadModelDBServerConfig } from '../packages/server/dist/index.js';
 import {
   AuthoringEngine,
   configureModelDBStorageRoot,
-  fileLooksLikeAtlasSingleVault,
   resolveModelDBStorageRoot,
 } from 'mode-db-engine';
 
 const url = process.env.MODEL_DB_URL ?? 'http://127.0.0.1:9090';
 const connectToken = process.env.MODEL_DB_CONNECT_TOKEN ?? 'dev-connect-token-change-in-production';
-const atlas = process.env.MODEL_DB_ATLAS ?? 'world';
+const logicalDb = process.env.MODEL_DB_DB_NAME ?? process.env.MODEL_DB_ATLAS ?? 'world';
 const mode = (process.env.MODEL_DB_MODE === 'short' ? 'short' : 'stream') as 'short' | 'stream';
 const skipBootstrap = process.env.IGNITION_SKIP_BOOTSTRAP === '1';
 
@@ -39,8 +40,9 @@ async function resolveStorageRootAlignedWithServer(): Promise<string> {
     const cfg = await loadModelDBServerConfig(undefined, {
       connectToken: process.env.MODEL_DB_CONNECT_TOKEN,
     });
-    configureModelDBStorageRoot({ storageRoot: cfg.storageRoot });
-    return cfg.storageRoot;
+    const root = cfg.workspace ?? cfg.storageRoot;
+    configureModelDBStorageRoot({ storageRoot: root });
+    return root;
   } catch {
     const root = resolveModelDBStorageRoot();
     configureModelDBStorageRoot({ storageRoot: root });
@@ -50,74 +52,59 @@ async function resolveStorageRootAlignedWithServer(): Promise<string> {
 
 const IGNITION_MODEL = 'Sensor';
 
-/** Fast path: standalone manifest lists the stress-test model. */
-function splitManifestDefinesIgnitionModel(atlasDir: string): boolean | 'absent' {
-  const manifestPath = join(atlasDir, 'atlas-manifest.json');
-  if (!existsSync(manifestPath)) {
-    return 'absent';
-  }
-  try {
-    const j = JSON.parse(readFileSync(manifestPath, 'utf-8')) as { models?: { name: string }[] };
-    return Array.isArray(j.models) && j.models.some((m) => m.name === IGNITION_MODEL);
-  } catch {
-    return false;
-  }
-}
-
-async function bootstrapAtlasIfNeeded(storageRoot: string, atlasName: string): Promise<void> {
+async function bootstrapLogicalDbIfNeeded(
+  storageRoot: string,
+  atlasName: string,
+  wireConnectToken: string,
+): Promise<void> {
   if (skipBootstrap) {
     console.log('IGNITION_SKIP_BOOTSTRAP=1 — not modifying disk.');
     return;
   }
 
   const atlasDir = join(storageRoot, atlasName);
-  const manifestHint = splitManifestDefinesIgnitionModel(atlasDir);
-  if (manifestHint === true) {
+  const nestedVaultPath = join(atlasDir, 'atlas.mld');
+  const handshakeVaultOnDisk = existsSync(nestedVaultPath);
+
+  const legacyModelsDir = join(atlasDir, 'models');
+  const legacyManifestPath = join(atlasDir, 'atlas-manifest.json');
+  const hasLegacySplitOnDisk =
+    existsSync(legacyModelsDir) || (existsSync(legacyManifestPath) && !existsSync(nestedVaultPath));
+
+  if (hasLegacySplitOnDisk) {
+    throw new Error(
+      `Ignition: legacy split atlas under "${atlasDir}" (models/ and/or standalone atlas-manifest.json). ` +
+        `Only "${nestedVaultPath}" is supported. Remove "${atlasDir}" and re-run.`,
+    );
+  }
+
+  const ct = wireConnectToken.trim();
+  if (!ct) {
+    throw new Error(
+      'Ignition: set connectToken in modeldb.config.json or MODEL_DB_CONNECT_TOKEN (must match the server).',
+    );
+  }
+
+  const engine = new AuthoringEngine({
+    atlas: atlasName,
+    storageRoot,
+    connectToken: ct,
+    engineLogger: true,
+  });
+
+  if (handshakeVaultOnDisk && engine.registry.getModel(IGNITION_MODEL)) {
     console.log(
-      `Atlas "${atlasName}" already defines ${IGNITION_MODEL} in atlas-manifest.json under ${storageRoot}; skip bootstrap.`,
+      `Atlas "${atlasName}" already registers ${IGNITION_MODEL} in vault under ${storageRoot}; skip bootstrap.`,
     );
     return;
   }
-
-  const cfg = await loadModelDBServerConfig(undefined, {
-    connectToken: process.env.MODEL_DB_CONNECT_TOKEN,
-  });
-  const vaultPath = join(atlasDir, 'atlas.mld');
-  const useVault = existsSync(vaultPath) && (await fileLooksLikeAtlasSingleVault(vaultPath));
-  const vaultSecret =
-    cfg.vaultSecret ??
-    (typeof process !== 'undefined' ? process.env.MODEL_DB_VAULT_SECRET : undefined);
-
-  if (useVault && (!vaultSecret || vaultSecret.length === 0)) {
-    throw new Error(
-      `Ignition: atlas "${atlasName}" uses encrypted atlas.mld; set "vaultSecret" in modeldb.config.json or MODEL_DB_VAULT_SECRET.`,
-    );
-  }
-
-  const engine = useVault
-    ? new AuthoringEngine({
-        atlas: atlasName,
-        storageRoot,
-        singleFileVault: true,
-        vaultSecret,
-        engineLogger: true,
-      })
-    : new AuthoringEngine({
-        atlas: atlasName,
-        storageRoot,
-        engineLogger: true,
-      });
 
   if (engine.registry.getModel(IGNITION_MODEL)) {
     console.log(`Atlas "${atlasName}" already registers ${IGNITION_MODEL}; skip bootstrap.`);
     return;
   }
 
-  console.log(
-    `Bootstrapping ${IGNITION_MODEL} for atlas "${atlasName}" under ${storageRoot} (manifest was ${
-      manifestHint === 'absent' ? 'missing' : 'present without ' + IGNITION_MODEL
-    }) …`,
-  );
+  console.log(`Bootstrapping ${IGNITION_MODEL} for atlas "${atlasName}" under ${storageRoot} …`);
   engine.registerModel(IGNITION_MODEL, {
     id: { type: 'String', required: true },
     value: { type: 'Number', required: true },
@@ -133,12 +120,23 @@ async function bootstrapAtlasIfNeeded(storageRoot: string, atlasName: string): P
 
 async function ignition(): Promise<void> {
   const storageRoot = await resolveStorageRootAlignedWithServer();
-  await bootstrapAtlasIfNeeded(storageRoot, atlas);
+  const cfg = await loadModelDBServerConfig(undefined, {
+    connectToken: process.env.MODEL_DB_CONNECT_TOKEN,
+  });
+  const serverConnectToken = cfg.connectToken.trim() || connectToken.trim();
+  await bootstrapLogicalDbIfNeeded(storageRoot, logicalDb, serverConnectToken);
 
-  const client = await connectRemote({ url, connectToken, atlas, mode });
+  const client = await connectRemote({
+    url,
+    connectToken: serverConnectToken,
+    dbName: logicalDb,
+    mode,
+  });
   const Sensor = client.model('Sensor');
 
-  console.log(`Starting injection: total=${TOTAL} batch=${BATCH_SIZE} mode=${mode} atlas=${atlas}`);
+  console.log(
+    `Starting injection: total=${TOTAL} batch=${BATCH_SIZE} mode=${mode} dbName=${logicalDb}`,
+  );
   console.time('StressTest');
 
   const batches = Math.ceil(TOTAL / BATCH_SIZE);

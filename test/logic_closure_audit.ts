@@ -11,13 +11,12 @@
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
-import type { RelationIndexData } from '../common/types.js';
+import { configureModelDBStorageRoot } from '@mode-db/common';
+import type { RelationIndexData } from '@mode-db/common';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
 import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
 import {
   atlasVaultPath,
-  INTEGRATION_VAULT_SECRET,
   integrationVaultAuthoringOptions,
   loadVaultModelBlob,
   loadVaultRelationData,
@@ -98,11 +97,11 @@ async function runAudit(): Promise<void> {
   assert(existsSync(pipeVaultFile), 'pipe_system 应存在 atlas.mld');
   assert(existsSync(tranVaultFile), 'tran_system 应存在 atlas.mld');
   assert(
-    loadVaultModelBlob(root, 'pipe_system', 'Train', INTEGRATION_VAULT_SECRET).trim().length === 0,
+    loadVaultModelBlob(root, 'pipe_system', 'Train').trim().length === 0,
     'pipe vault 不应含 Train 模型 blob（跨库污染）',
   );
   assert(
-    loadVaultModelBlob(root, 'tran_system', 'Pump', INTEGRATION_VAULT_SECRET).trim().length === 0,
+    loadVaultModelBlob(root, 'tran_system', 'Pump').trim().length === 0,
     'tran vault 不应含 Pump 模型 blob（跨库污染）',
   );
 
@@ -142,7 +141,7 @@ async function runAudit(): Promise<void> {
   const ridKey = 'Zone-Pump-has_pump';
   assert(existsSync(pipeVaultFile), 'flush 后 pipe atlas.mld 仍存在');
 
-  const ridJson = loadVaultRelationData(root, 'pipe_system', ridKey, INTEGRATION_VAULT_SECRET);
+  const ridJson = loadVaultRelationData(root, 'pipe_system', ridKey);
   const fwdEdges = Object.values(ridJson.fwd).reduce((n, a) => n + a.length, 0);
   const revEdges = Object.values(ridJson.rev).reduce((n, a) => n + a.length, 0);
   assert(fwdEdges === revEdges && fwdEdges > 0, '正向与逆向边条数应相等且大于 0');

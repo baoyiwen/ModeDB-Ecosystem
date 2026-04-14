@@ -4,9 +4,9 @@ import type {
   MatchPredicate,
   RelationStats,
   RelationBindOptions,
-} from '../common/types.js';
-import type { ModelRegistry } from '../common/registry.js';
-import type { PathResolver } from '../src/common/PathResolver.js';
+  ModelRegistry,
+  PathResolver,
+} from '@mode-db/common';
 import type { RelationIndexer } from './indexer.js';
 import type { PersistenceManager } from './persistence-manager.js';
 import { RuntimeRelation } from '../src/runtime/RuntimeRelation.js';

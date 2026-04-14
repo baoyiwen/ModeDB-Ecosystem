@@ -6,9 +6,13 @@ import { join } from 'node:path';
 import { readFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { AuthoringEngine } from '../authoring/engine.js';
-import { DiagnosticCenter, ErrorCodes, type Diagnostic } from '../common/diagnostic.js';
-import { EngineLogger } from '../common/engine-logger.js';
-import { InternalVault } from '../common/internal-vault.js';
+import {
+  DiagnosticCenter,
+  ErrorCodes,
+  type Diagnostic,
+  EngineLogger,
+  InternalVault,
+} from '@mode-db/common';
 import {
   atlasVaultPath,
   integrationVaultAuthoringOptions,

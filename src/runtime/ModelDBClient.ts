@@ -1,15 +1,17 @@
 import { existsSync } from 'node:fs';
-import { DiskAdapter } from '../../common/disk-adapter.js';
 import type { RuntimeContext } from './context.js';
 import { ModelEntity } from './ModelEntity.js';
 import { RuntimeRelation } from './RuntimeRelation.js';
-import { assertFlatGraphSegment } from '../../common/atlas-segments.js';
-import { PathResolver } from '../common/PathResolver.js';
-import { parseAtlasManifestJson } from '../../common/atlas-manifest.js';
-import { AtlasManifestError } from '../../common/errors.js';
-import { resolveModelDBStorageRoot } from '../../common/storage-root-config.js';
-import { ModelFileReader } from './ModelFileReader.js';
-import { RelationIndexFileReader } from './RelationIndexFileReader.js';
+import {
+  assertFlatGraphSegment,
+  PathResolver,
+  parseAtlasManifestJson,
+  AtlasManifestError,
+  resolveModelDBStorageRoot,
+  DiagnosticCenter,
+  ErrorCodes,
+  deriveAtlasVaultSecretFromConnectToken,
+} from '@mode-db/common';
 import {
   fileLooksLikeAtlasSingleVault,
   AtlasSingleVault,
@@ -17,12 +19,51 @@ import {
 import { VaultModelFileReader } from './vault-model-reader.js';
 import { VaultRelationIndexReader } from './vault-relation-reader.js';
 
-function isEnoent(err: unknown): boolean {
-  return err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT';
+async function connectSingleFileVault(
+  atlasName: string,
+  paths: PathResolver,
+  vaultPath: string,
+): Promise<ModelDBClient> {
+  const connectTok =
+    typeof process !== 'undefined' && process.env.MODEL_DB_CONNECT_TOKEN
+      ? process.env.MODEL_DB_CONNECT_TOKEN.trim()
+      : '';
+  if (!connectTok) {
+    throw new AtlasManifestError(
+      `Atlas "${atlasName}" uses encrypted atlas.mld; set MODEL_DB_CONNECT_TOKEN in the environment (same value as the server wire connect token).`,
+    );
+  }
+  const secret = deriveAtlasVaultSecretFromConnectToken(connectTok);
+  const vault = new AtlasSingleVault();
+  const ok = vault.loadSync(vaultPath, secret);
+  if (!ok) {
+    throw new AtlasManifestError(
+      `Cannot decrypt or parse vault "${vaultPath}" (wrong secret, truncated file, or corrupt payload). See diagnostics E3002.`,
+    );
+  }
+  const manifestRaw = vault.get(AtlasSingleVault.manifestKey);
+  if (!manifestRaw) {
+    throw new AtlasManifestError(
+      `Vault for atlas "${atlasName}" has no embedded manifest key "${AtlasSingleVault.manifestKey}".`,
+    );
+  }
+  const registry = parseAtlasManifestJson(manifestRaw, atlasName);
+  const dataReader = new VaultModelFileReader(paths, vault);
+  const indexReader = new VaultRelationIndexReader(vault);
+  for (const m of registry.getModelDefinitions()) {
+    dataReader.registerSchema({ name: m.name, fields: m.fields, fieldTypes: m.fieldTypes });
+  }
+  const ctx: RuntimeContext = {
+    atlas: atlasName,
+    dataReader,
+    indexReader,
+    registry,
+  };
+  return new ModelDBClient(ctx);
 }
 
 /**
- * Standalone client SDK: open an atlas by name and query `.mld` / `.rid` files read-only.
+ * Standalone client SDK: open a logical database by name (single-file vault only).
  *
  * Third-party entry point: {@link ModelDBClient.connect}. Does not import authoring storage or indexer.
  */
@@ -33,80 +74,23 @@ export class ModelDBClient {
   constructor(private readonly ctx: RuntimeContext) {}
 
   /**
-   * Primary API for external clients: load manifest + read-only readers for one atlas.
+   * Primary API for external clients: load encrypted **`*.mld`** vault (workspace-flat or legacy nested path).
    */
   static async connect(atlasName: string): Promise<ModelDBClient> {
     assertFlatGraphSegment(atlasName, 'atlas name');
     const root = resolveModelDBStorageRoot();
-    const paths = new PathResolver(root, atlasName);
-
-    const vaultPath = paths.atlasSingleVaultPath();
-    if (existsSync(vaultPath) && (await fileLooksLikeAtlasSingleVault(vaultPath))) {
-      const secret =
-        typeof process !== 'undefined' && process.env.MODEL_DB_VAULT_SECRET
-          ? process.env.MODEL_DB_VAULT_SECRET
-          : undefined;
-      if (!secret || secret.length === 0) {
-        throw new AtlasManifestError(
-          `Atlas "${atlasName}" uses encrypted atlas.mld; set MODEL_DB_VAULT_SECRET in the environment to connect.`,
-        );
-      }
-      const vault = new AtlasSingleVault();
-      const ok = vault.loadSync(vaultPath, secret);
-      if (!ok) {
-        throw new AtlasManifestError(
-          `Cannot decrypt or parse vault "${vaultPath}" (wrong secret, truncated file, or corrupt payload). See diagnostics E3002.`,
-        );
-      }
-      const manifestRaw = vault.get(AtlasSingleVault.manifestKey);
-      if (!manifestRaw) {
-        throw new AtlasManifestError(
-          `Vault for atlas "${atlasName}" has no embedded manifest key "${AtlasSingleVault.manifestKey}".`,
-        );
-      }
-      const registry = parseAtlasManifestJson(manifestRaw, atlasName);
-      const dataReader = new VaultModelFileReader(paths, vault);
-      const indexReader = new VaultRelationIndexReader(vault);
-      for (const m of registry.getModelDefinitions()) {
-        dataReader.registerSchema({ name: m.name, fields: m.fields, fieldTypes: m.fieldTypes });
-      }
-      const ctx: RuntimeContext = {
-        atlas: atlasName,
-        dataReader,
-        indexReader,
-        registry,
-      };
-      return new ModelDBClient(ctx);
+    const nestedPaths = new PathResolver(root, atlasName);
+    const nestedVault = nestedPaths.atlasSingleVaultPath();
+    if (existsSync(nestedVault) && (await fileLooksLikeAtlasSingleVault(nestedVault))) {
+      return connectSingleFileVault(atlasName, nestedPaths, nestedVault);
     }
 
-    let raw: string;
-    try {
-      raw = await DiskAdapter.read(paths.manifestFilePath(), 'utf-8');
-    } catch (err) {
-      if (isEnoent(err)) {
-        throw new AtlasManifestError(
-          `No atlas-manifest.json or encrypted atlas.mld for atlas "${atlasName}". Author the atlas and call flush (or writeAtlasManifest) first.`,
-          { cause: err },
-        );
-      }
-      throw err;
-    }
-
-    const registry = parseAtlasManifestJson(raw, atlasName);
-    const dataReader = new ModelFileReader(paths);
-    const indexReader = new RelationIndexFileReader(paths);
-
-    for (const m of registry.getModelDefinitions()) {
-      dataReader.registerSchema({ name: m.name, fields: m.fields, fieldTypes: m.fieldTypes });
-    }
-
-    const ctx: RuntimeContext = {
-      atlas: atlasName,
-      dataReader,
-      indexReader,
-      registry,
-    };
-    return new ModelDBClient(ctx);
+    DiagnosticCenter.report(
+      ErrorCodes.DATABASE_NOT_FOUND,
+      { dbName: atlasName, path: nestedVault },
+      'throw',
+    );
+    throw new Error('ModelDBClient.connect: unreachable after DATABASE_NOT_FOUND');
   }
 
   /**

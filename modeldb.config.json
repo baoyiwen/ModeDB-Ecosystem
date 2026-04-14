@@ -2,10 +2,9 @@
   "port": 9090,
   "host": "127.0.0.1",
   "logDir": "./logs",
-  "dbPath": "./data/world.mld",
+  "workspace": "./data",
   "bufferThreshold": 50000,
   "cacheSize": "2GB",
   "mode": "production",
-  "connectToken": "dev-connect-token-change-in-production",
-  "vaultSecret": ""
+  "connectToken": "dev-connect-token-change-in-production"
 }

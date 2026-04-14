@@ -1,4 +1,4 @@
-import { EngineLogger } from 'mode-db-engine';
+import { EngineLogger } from '@mode-db/common';
 
 /**
  * Per-atlas async queue so mutating RPCs never overlap on the same physical atlas.

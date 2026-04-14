@@ -4,7 +4,7 @@ node_modules
 # Build output
 dist
 
-# Accidental colocated `tsc` emit next to sources (keep types only under dist/)
+# Accidental colocated `tsc` emit next to sources (keep emit under dist/ only)
 /index.js
 /index.js.map
 /index.d.ts
@@ -21,10 +21,28 @@ dist
 /runtime/**/*.js.map
 /runtime/**/*.d.ts
 /runtime/**/*.d.ts.map
+/network/**/*.js
+/network/**/*.js.map
+/network/**/*.d.ts
+/network/**/*.d.ts.map
 /src/**/*.js
 /src/**/*.js.map
 /src/**/*.d.ts
 /src/**/*.d.ts.map
+/test/**/*.js
+/test/**/*.js.map
+/test/**/*.d.ts
+/test/**/*.d.ts.map
+
+# Workspace packages: never commit colocated emit under package `src/`
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map
+templates/**/*.js
+templates/**/*.js.map
+templates/**/*.d.ts
+templates/**/*.d.ts.map
 
 # TypeScript cache
 *.tsbuildinfo

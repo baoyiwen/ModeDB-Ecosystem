@@ -9,7 +9,7 @@
 
 import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
-import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
+import { configureModelDBStorageRoot } from '@mode-db/common';
 import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
 import { integrationVaultAuthoringOptions, useIntegrationVaultEnv } from './integration-vault.js';
 import { ModelDBClient } from '../src/runtime/ModelDBClient.js';

@@ -3,7 +3,7 @@ export {
   getWebSocketServerListeningPort,
   getServerListeningPort,
 } from './modeldb-server.js';
-export { buildDualTrackFastify } from './dual-track-app.js';
+export { buildDualTrackFastify, resolveLogicalDbFromHandshake } from './dual-track-app.js';
 export { BinaryInterceptor, TransportAuthError } from './binary-interceptor.js';
 export { TRANSPORT_OUTER_MAGIC, TRANSPORT_INNER_MAGIC } from '@mode-db/shared';
 export {

@@ -1,8 +1,12 @@
 # 集成测试说明（`test/`）
 
-本目录包含 **集成 / 端到端脚本**（**非** Jest/Vitest 单元测试）。脚本通过 **`tsx`** 直接执行 TypeScript，默认读写仓库下的 **`data/`**（可用 **`MODEL_DB_STORAGE_ROOT`** / **`STORAGE_ROOT`** 覆盖）。**`integration-vault.ts`** 提供统一的 **`singleFileVault: true` + `MODEL_DB_VAULT_SECRET`**（集成密钥常量）。**`verify.ts`** 的 **`pipe` / `tran`** 以及 **`crud_audit`**、**`logic_integrity`**、**`query_chain_extended`**、**`logic_closure_audit`**、**`authoring_dx_audit`** 等脚本在集成场景下落盘为**仅 `atlas.mld` 的单文件 Vault**（不是 `atlas-manifest.json` + `models/` + `relations/` 分文件树；与根 README **「存储布局与 Atlas」** 一致）。除 **`vault_audit`** 故意测错密钥外，与 **`ModelDBClient.connect`** 共用同一密钥。
+本目录包含 **集成 / 端到端脚本**（**非** Jest/Vitest 单元测试）。脚本通过 **`tsx`** 直接执行 TypeScript，默认读写仓库下的 **`data/`**（可用 **`MODEL_DB_STORAGE_ROOT`** / **`STORAGE_ROOT`** 覆盖）。**`integration-vault.ts`** 提供统一的 **`INTEGRATION_CONNECT_TOKEN`**（**`useIntegrationVaultEnv()`** 写入 **`MODEL_DB_CONNECT_TOKEN`**）；**`AuthoringEngine`** 与 **`ModelDBClient.connect`** 用 **`deriveAtlasVaultSecretFromConnectToken(connectToken)`** 派生 atlas vault 密钥（无单独 **`vaultSecret`** 配置）。**`verify.ts`** 的 **`pipe` / `tran`** 以及 **`crud_audit`**、**`logic_integrity`**、**`query_chain_extended`**、**`logic_closure_audit`**、**`authoring_dx_audit`** 等脚本在集成场景下落盘为**仅 `atlas.mld` 的单文件 Vault**（不是 `atlas-manifest.json` + `models/` + `relations/` 分文件树）。除 **`vault_audit`** 故意使用错误 **`connectToken`** 外，各脚本与 **`ModelDBClient.connect`** 共用同一集成令牌。
 
-**引擎能力、治理端持久化、CRUD 缓冲区协议、合并读与 API 细节**见仓库根目录 **[README.md](../README.md)**（含 **「治理端持久化与开发者体验（DX）」** 与 **第六节** 链式查询 / 多维分析）。
+**`modeldb_config_loader_audit.ts`** 在**系统临时目录**生成独立 **`modeldb.config.json`**，校验 **`@mode-db/server`** 的 **`loadModelDBServerConfig`**：CLI 覆盖文件、**`dbPath`** 指向 **`*.mld`** 时 **`storageRoot` / `defaultAtlas`** 推导、**`connectToken`** 缺失抛错、**`mode: production`** → **`accessLog`**；**不**读写仓库根配置。
+
+**双轨压测**见 **`dual_track_ignition.ts`**（**`npm run ignition`**）：依赖已 **`npm run build`** 且 **`modeldb-server`** 可连；环境变量与 **`modeldb.config.json`** 对齐说明见根 README **「运行与配置」**。
+
+**引擎能力、治理端持久化、CRUD 缓冲区协议、合并读与 API 细节**见仓库根目录 **[README.md](../README.md)**（含 **「运行与配置」**、**「治理端持久化与开发者体验（DX）」** 与 **第六节** 链式查询 / 多维分析）。
 
 ---
 
@@ -14,24 +18,26 @@
 npm run test:integration
 ```
 
-顺序为：
+命令会先执行 **`npm run build:lib`**、**`build:shared`**、**`build:server`**（生成根 **`dist/`** 与 **`packages/server/dist/`**，供 server 与集成脚本解析）。随后顺序为（**12** 步）：
 
-1. **`verify.ts`**
-2. **`query_filters.ts`**
-3. **`logic_integrity.ts`**
-4. **`logic_closure_audit.ts`**
-5. **`query_chain_extended.ts`**
-6. **`authoring_dx_audit.ts`**
-7. **`crud_audit.ts`**
-8. **`datatype_audit.ts`**
-9. **`diagnostic_audit.ts`**
-10. **`vault_audit.ts`**
-11. **`wire_server_audit.ts`**
+1. **`modeldb_config_loader_audit.ts`**（系统临时目录，不碰 **`data/`**）
+2. **`verify.ts`**
+3. **`query_filters.ts`**
+4. **`logic_integrity.ts`**
+5. **`logic_closure_audit.ts`**
+6. **`query_chain_extended.ts`**
+7. **`authoring_dx_audit.ts`**
+8. **`crud_audit.ts`**
+9. **`datatype_audit.ts`**
+10. **`diagnostic_audit.ts`**
+11. **`vault_audit.ts`**
+12. **`wire_server_audit.ts`**
 
-首项 **`verify.ts`** 启动时会**删除整个默认 `data/`**，保证从干净状态开始。其余脚本使用各自独立的 Atlas 名，互不覆盖；**末项 `wire_server_audit.ts` 复用 `verify` 已创建的 Vault 图谱 `pipe`**（依赖 **`data/pipe/atlas.mld`** 与集成 Vault 密钥环境）：
+第 2 项 **`verify.ts`** 启动时会**删除整个默认 `data/`**，保证从干净状态开始。其余脚本使用各自独立的 Atlas 名，互不覆盖；**末项 `wire_server_audit.ts` 复用 `verify` 已创建的 Vault 图谱 `pipe`**（依赖 **`data/pipe/atlas.mld`** 与集成 Vault 密钥环境）：
 
 | 脚本                      | Atlas 名                       | 数据清理策略                                               |
 | ------------------------- | ------------------------------ | ---------------------------------------------------------- |
+| `modeldb_config_loader_audit.ts` | —（仅用临时目录）       | 结束时删除临时目录；**不**修改仓库 **`data/`**             |
 | `verify.ts`               | `pipe` / `tran`                | **启动时删除整个 `data/`**                                 |
 | `query_filters.ts`        | `query_filter_demo`            | 脚本内自删后重建                                           |
 | `logic_integrity.ts`      | `integrity_pipe`               | 脚本内自删后重建                                           |
@@ -53,7 +59,8 @@ npm run test:integration
 
 | 命令                        | 入口文件                    | 说明                                                                                                                                                                                                                                                                                     |
 | --------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run test:integration`  | 串联 11 个脚本（见上）      | 首步清空 `data/`；一键回归（含 **`vault_audit`**、**`wire_server_audit`**）                                                                                                                                                                                                              |
+| `npm run test:integration`  | 串联 12 个脚本（见上）      | 首步 **`modeldb_config_loader_audit`**；第 2 步 **`verify`** 清空 `data/`；一键回归（含 **`vault_audit`**、**`wire_server_audit`**）                                                                                                                                                    |
+| `npm run config-loader-audit` | `modeldb_config_loader_audit.ts` | 仅 **`loadModelDBServerConfig`** 行为审计（临时目录）                                                                                                                                                                                                                                |
 | `npx tsx test/verify.ts`    | `verify.ts`                 | 双图谱隔离、骨架补全、PROTOCOL 绑定、Runtime 只读                                                                                                                                                                                                                                        |
 | `npm run query-filters`     | `query_filters.ts`          | 谓词树、AND/OR 短路、`matchAll` / `matchAny`、`getQueryPlan`、`includeRelates`                                                                                                                                                                                                           |
 | `npm run integrity`         | `logic_integrity.ts`        | 句柄缓存、合并读、`insert({ sync: true })`、`explainRelate`、Vault **`r:*`** 关系索引注入                                                                                                                                                                                                |
@@ -65,6 +72,8 @@ npm run test:integration
 | `npm run diagnostic-audit`  | `diagnostic_audit.ts`       | DiagnosticCenter（**122** 个断言）：ErrorCodes 别名（含 **E3002**）、ErrorRegistry（含 E2005/E3002）、ValidationReport（isAllSuccess/getSummary/exportAsJSON/report 流式）、insertMany 批量、ValueObject 联动（required + type mismatch）、Emergency dump；**已**含于 `test:integration` |
 | `npm run vault-audit`       | `vault_audit.ts`            | 单文件 Vault：目录零明文、`ModelDBClient.connect`、`relate`、manifest hydrate、错误密钥、**E3002**；**已**含于 `test:integration`                                                                                                                                                        |
 | `npm run wire-server-audit` | `wire_server_audit.ts`      | WebSocket 服务 + **`@mode-db/sdk`**：`ConnectToken` 拒绝、**`connectRemote`**、**`RemoteHydratedEntity`**；**已**含于 `test:integration`（**必须**排在 `verify` 之后）                                                                                                                   |
+| `npm run ignition`          | `dual_track_ignition.ts`    | **非**默认集成链：需**已启动** **`modeldb-server`**（**`npm run build`** 后 **`npm run start:server`**）；**`@mode-db/sdk`** 经 WS/HTTP 向指定 atlas 灌 **`Sensor`**；环境变量见脚本头与根 README **「运行与配置」**。**未**并入 `test:integration`                                   |
+| `npm run shadow-smart-cache-audit` | `shadow_smartcache_logger_audit.ts` | 单文件 Vault + **`memoryShadowHydration`** + **`enableSmartCache`** + **`EngineLogger`**。**未**并入默认集成                                                                                                                                                                    |
 | `npm run stress-test`       | `million_stress_test.ts`    | 压力测试（34 个断言）：100 万行灌入、1% 错误注入（E1001/E1003）、读写一致性、ValueObject 运行时监控、ErrorCodes 完整性、吞吐量报告。**未**并入默认集成                                                                                                                                   |
 | `npm run first-run`         | `first_run.ts`              | 演示向；`pipe` 重建。**未**并入默认集成                                                                                                                                                                                                                                                  |
 | `npm run transform`         | `transform_aggregate.ts`    | 多维分析全场景（语义见根 README **第六节 6.3**）。**未**并入默认集成                                                                                                                                                                                                                     |
@@ -73,7 +82,27 @@ npm run test:integration
 
 ---
 
+## 启动 `modeldb-server` 与 `ignition`（手动，非 `npm test`）
+
+与「进程内 **`AuthoringEngine`**」类测试不同，下列流程依赖 **已编译** 的 **`packages/server/dist`** 与可选 **`@mode-db/sdk`**。
+
+1. **`npm run build`**
+2. 准备 **`modeldb.config.json`**（可从 **`modeldb.config.example.json`** 复制）：至少设置 **`connectToken`**（同时派生磁盘上 **`atlas.mld`** 的加密密钥）；存储见 **`dbPath`** / **`storageRoot`** / **`workspace`**。
+3. **`npm run start:server`**（**cwd** 须与配置中相对路径一致）。CLI 覆盖项见根 README **「`modeldb-server` CLI 参数」**。
+4. **`npm run ignition`**（另开终端）：设置 **`MODEL_DB_URL`**、**`MODEL_DB_CONNECT_TOKEN`** 与 **`MODEL_DB_ATLAS`**（若不用默认值）与 server 一致；若脚本在磁盘上补写了 **`Sensor`** 与 manifest，**须重启 server** 再继续压测。
+
+**`wire_server_audit`** 在集成链内**自起**随机端口 WebSocket，**不**依赖步骤 3 的长期 server；**`ignition`** 则**必须**有外部 server 进程。
+
+---
+
 ## 各脚本覆盖范围（断言什么）
+
+### `modeldb_config_loader_audit.ts`
+
+- 在 **`os.tmpdir()`** 下 **`mkdtemp`** 创建独立目录，写入含 **`dbPath`**（**绝对路径** 指向 **`…/sand/world.mld`**）、**`connectToken`**、**`mode":"production"`**、**`bufferThreshold`** 的 **`modeldb.config.json`**。
+- **`loadModelDBServerConfig(cfgPath, {})`**：**`storageRoot`** 为 **`sand`** 父目录、**`defaultAtlas`** === **`world`**、**`accessLog`** 为真、**`bufferFlushRowThreshold`** 来自文件。
+- **`loadModelDBServerConfig(cfgPath, { port, connectToken })`**：CLI 覆盖端口与令牌。
+- 空 **`connectToken`** 的配置文件 → **`assert.rejects`** 校验错误信息含 **`connectToken`**。
 
 ### `verify.ts`
 
@@ -204,8 +233,8 @@ npm run test:integration
 
 ### `vault_audit.ts`（13 个断言）
 
-- **`singleFileVault`** + `vaultSecret`：`flushAll` 后仅存在 **`atlas.mld`**，无 **`atlas-manifest.json`** / **`models/`** / **`relations/`**。
-- **`ModelDBClient.connect`**：依赖 **`MODEL_DB_VAULT_SECRET`**；**`getData()`** 返回明文字段；**`relate`** 从 Vault 内关系索引解析目标实体。
+- **单文件 Vault**：`flushAll` 后仅存在 **`atlas.mld`**，无 **`atlas-manifest.json`** / **`models/`** / **`relations/`**。
+- **`ModelDBClient.connect`**：依赖 **`MODEL_DB_CONNECT_TOKEN`**（与治理端 **`connectToken`** 一致）；**`getData()`** 返回明文字段；**`relate`** 从 Vault 内关系索引解析目标实体。
 - **二次 `AuthoringEngine`**：从包内 **`__manifest__`** hydrate **Box / Item** 与关系定义。
 - **错误密钥**：再次构造引擎时抛出 **`AtlasManifestError`**。
 - **损坏文件**：覆写 `atlas.mld` 后 **`AtlasSingleVault.loadSync`** 返回 `false`，**`onDiagnostic`** 收到 **`E3002`（`PHYSICAL_ADDRESS_CORRUPT`）**。
@@ -213,9 +242,9 @@ npm run test:integration
 ### `wire_server_audit.ts`（6 个断言）
 
 - **前置**：**`verify.ts`** 已创建 **`data/pipe/atlas.mld`**（Vault）；本脚本开头若缺少该文件则 **exit 1** 并提示先跑 **`verify`**。
-- **环境**：调用 **`useIntegrationVaultEnv()`**，与服务端 **`loadModelDBServerConfig` 等价配置** 使用同一 **`INTEGRATION_VAULT_SECRET`**，保证 **`ModelDBClient.connect('pipe')`** 在服务端进程内可解密。
+- **环境**：调用 **`useIntegrationVaultEnv()`**，与服务端 **`loadModelDBServerConfig` 等价配置** 使用同一 **`INTEGRATION_CONNECT_TOKEN`**，保证 **`ModelDBClient.connect('pipe')`** 在服务端进程内可解密。
 - **预检**：同进程 **`ModelDBClient.connect('pipe')`**，确保 Vault 密钥与 **`data/pipe`** 与线上一致后再起 WebSocket。
-- **服务**：**`startModelDBWebSocketServer({ port: 0, storageRoot, connectToken, vaultSecret })`**，随机端口；**`getWebSocketServerListeningPort`** 读取实际端口。
+- **服务**：**`startModelDBWebSocketServer({ port: 0, storageRoot, connectToken })`**，随机端口；**`getWebSocketServerListeningPort`** 读取实际端口。
 - **SDK**：**`connectRemote`**（**`@mode-db/sdk`** 源码入口，**`tsx`** 直连 **`packages/sdk/src/index.ts`**）在 Node 下走 **`ws` 包**（与 **`ws` 服务器** 互操作）；**`model('Pump').query().execute()`**；断言 **`RemoteHydratedEntity`** 与 **`getModelName() === 'Pump'`**。
 - **安全**：在成功 RPC 之后，**第二条**裸 **`ws`** 连接发送错误 **`connectToken`**，断言返回 **`{ type: 'error' }`**（避免与首次握手竞态干扰）。
 - **收尾**：**`remote.close()`**、**`wss.close()`**。
@@ -237,7 +266,7 @@ npm run test:integration
 ## 写测试时的注意点
 
 - **直读 `.mld` / manifest**：须在 **`await engine.flushAll()`** 或 **`insert/update/delete(..., { sync: true })`**（或等价刷盘）之后再 `existsSync` / `readFile`。
-- **Vault**：断言「无分文件」时用 **`paths.atlasSingleVaultPath()`** 与 **`existsSync(paths.modelsDir()) === false`**；不要依赖读取明文 JSONL 文件（内容在密文包内）。集成脚本需设置与治理端一致的 **`MODEL_DB_VAULT_SECRET`** 再调用 **`ModelDBClient.connect`**。
+- **Vault**：断言「无分文件」时用 **`paths.atlasSingleVaultPath()`** 与 **`existsSync(paths.modelsDir()) === false`**；不要依赖读取明文 JSONL 文件（内容在密文包内）。集成脚本需设置与治理端一致的 **`MODEL_DB_CONNECT_TOKEN`** 再调用 **`ModelDBClient.connect`**。
 - **同进程业务断言**：可依赖合并读，**不必**先 `flushAll`（见 `logic_integrity`、`crud_audit`）。
 - **`delete` 后读 `.mld`**：flush 会触发压缩重写（全量读取 → 合并缓冲 → 过滤墓碑 → 原子写回），墓碑行不会残留在文件中。
 - **关系层断言**：`delete` / `deleteWhere` 会清理**关系邻接表**（Vault：**`RelationIndexer`** 写回包内 **`r:*`**；分文件：**`.rid`**）。若需验证边状态，用 **`indexer.getForward` / `getReverse`** 或 **`loadVaultRelationData`**（Vault）即可。
@@ -260,7 +289,8 @@ npm run check       # typecheck + lint + format:check
 npm run check
 npm run build
 npm run build:sdk
-npm run test:integration   # 含 vault-audit + wire-server-audit（共 11 步）
+npm run test:integration   # 含 config-loader 审计 + vault-audit + wire-server-audit（共 12 步）
+npm run config-loader-audit
 npm run vault-audit        # 仅单文件 Vault 审计
 npm run wire-server-audit  # 仅 WebSocket + SDK（需先有 verify 的 pipe）
 # 按需补充：

@@ -120,29 +120,30 @@ export {
 } from './runtime/index.js';
 export type { TraceableNull, RemoteExecuteSnapshot } from './runtime/index.js';
 export type { RuntimeAvailableRelation } from './runtime/model-runtime.js';
-export type { DataReader, IndexReader } from './common/provider.js';
+export type { DataReader, IndexReader } from '@mode-db/common';
 
 // ---------------------------------------------------------------------------
 // Common (shared types, errors, registry)
 // ---------------------------------------------------------------------------
-export { ModelRegistry } from './common/registry.js';
+export { ModelRegistry } from '@mode-db/common';
 export {
   PathResolver,
   AtlasPathResolver,
   DEFAULT_STORAGE_ROOT,
   STORAGE_ROOT,
   assertFlatGraphSegment,
-} from './common/atlas-paths.js';
+} from '@mode-db/common';
 export {
   configureModelDBStorageRoot,
+  deriveAtlasVaultSecretFromConnectToken,
   type ModelDBStorageRootConfig,
-} from './common/storage-root-config.js';
+} from '@mode-db/common';
 export {
   ATLAS_MANIFEST_FILENAME,
   ATLAS_MANIFEST_FORMAT_VERSION,
   parseAtlasManifestJson,
   serializeAtlasManifestFile,
-} from './common/atlas-manifest.js';
+} from '@mode-db/common';
 export {
   EngineError,
   AtlasIsolationError,
@@ -159,8 +160,8 @@ export {
   IndexerError,
   QueryError,
   RelationNotFoundError,
-} from './common/errors.js';
-export { DELETED_SENTINEL, isDeletedRecord } from './common/types.js';
+} from '@mode-db/common';
+export { DELETED_SENTINEL, isDeletedRecord } from '@mode-db/common';
 export {
   DataType,
   validateFieldValue,
@@ -168,13 +169,8 @@ export {
   normalizeFieldDefs,
   normalizeFieldDef,
   coerceI18NValue,
-} from './common/data-types.js';
-export type {
-  FieldTypeDef,
-  FieldTypeMap,
-  FieldDefInput,
-  FieldDefsRecord,
-} from './common/data-types.js';
+} from '@mode-db/common';
+export type { FieldTypeDef, FieldTypeMap, FieldDefInput, FieldDefsRecord } from '@mode-db/common';
 export {
   ValueObject,
   I18NValue,
@@ -188,10 +184,10 @@ export {
   JsonValue,
   createValueObject,
   unwrapValue,
-} from './common/value-objects.js';
-export type { ValueSyncFn, I18NDict, RGBA, UnitData } from './common/value-objects.js';
-export type { ValidateFieldOptions } from './common/data-types.js';
-export { DiagnosticCenter, ValidationReport, ErrorCodes } from './common/diagnostic.js';
+} from '@mode-db/common';
+export type { ValueSyncFn, I18NDict, RGBA, UnitData } from '@mode-db/common';
+export type { ValidateFieldOptions } from '@mode-db/common';
+export { DiagnosticCenter, ValidationReport, ErrorCodes } from '@mode-db/common';
 export type {
   Severity,
   DiagnosticCode,
@@ -202,15 +198,15 @@ export type {
   CodeEntry,
   ValidationReportSummary,
   ValidationReportJSON,
-} from './common/diagnostic.js';
-export { EngineLogger, type EngineLoggerConfigureOptions } from './common/engine-logger.js';
-export { DiskAdapter } from './common/disk-adapter.js';
-export type { EngineLogLevel } from './common/engine-logger.js';
-export { InternalVault } from './common/internal-vault.js';
-export { SmartCache } from './common/smart-cache.js';
-export { encodeMldLine, parseMldLine, SHADOW_LINE_PREFIX } from './common/shadow-codec.js';
-export type { ParsedMldLine } from './common/shadow-codec.js';
-export { deriveWireSessionKey, encodeWirePayload, decodeWirePayload } from './common/wire-codec.js';
+} from '@mode-db/common';
+export { EngineLogger, type EngineLoggerConfigureOptions } from '@mode-db/common';
+export { DiskAdapter } from '@mode-db/common';
+export type { EngineLogLevel } from '@mode-db/common';
+export { InternalVault } from '@mode-db/common';
+export { SmartCache } from '@mode-db/common';
+export { encodeMldLine, parseMldLine, SHADOW_LINE_PREFIX } from '@mode-db/common';
+export type { ParsedMldLine } from '@mode-db/common';
+export { deriveWireSessionKey, encodeWirePayload, decodeWirePayload } from '@mode-db/common';
 export type {
   WireClientMessage,
   WireHandshakeRequest,
@@ -221,12 +217,9 @@ export type {
 export type { WireExecuteResultJson } from './src/network/execute-result-wire.js';
 export { serializeExecuteResultForWire } from './src/network/execute-result-wire.js';
 export {
-  startModelDBWebSocketServer,
-  getWebSocketServerListeningPort,
-  getServerListeningPort,
-  loadModelDBServerConfig,
-} from '@mode-db/server';
-export type { ModelDBServerFileConfig, ResolvedModelDBServerConfig } from '@mode-db/server';
+  registerPipeGalleryModels,
+  type PipeGalleryModelNames,
+} from './templates/pipe-gallery/register.js';
 export type {
   ModelSchema,
   ModelDefinition,
@@ -241,4 +234,4 @@ export type {
   BindStrategy,
   BindOptions,
   ConditionFn,
-} from './common/types.js';
+} from '@mode-db/common';

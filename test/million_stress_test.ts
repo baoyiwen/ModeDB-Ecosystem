@@ -30,7 +30,7 @@ import {
   ValidationReport,
   type Diagnostic,
   type ValidationReportSummary,
-} from '../common/diagnostic.js';
+} from '@mode-db/common';
 
 const DATA_ROOT = join(import.meta.dirname ?? '.', '..', 'data');
 const ATLAS = 'stress_world';

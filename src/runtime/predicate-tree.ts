@@ -8,7 +8,7 @@
  *
  * **{@link PredicateNode}** = `AtomNode | GroupNode | CallbackNode`（IR 超集；序列化/教学场景可视为 Atom|Group）。
  */
-import type { ModelRecord } from '../../common/types.js';
+import type { ModelRecord } from '@mode-db/common';
 import { matchesAtomic, type ScalarOperator, type FieldMatchContext } from './query-filter.js';
 
 /** 语义化查询核心算子（与 FilterBuilder 主 API 对齐） */

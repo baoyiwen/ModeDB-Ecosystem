@@ -1,4 +1,4 @@
-import { isDeletedRecord, type ModelRecord } from '../../common/types.js';
+import { isDeletedRecord, type ModelRecord } from '@mode-db/common';
 import {
   evaluatePredicate,
   formatEvaluateFailure,

@@ -1,5 +1,5 @@
-import type { ModelRegistry } from '../../common/registry.js';
-import { RelationNotFoundError } from '../../common/errors.js';
+import type { ModelRegistry } from '@mode-db/common';
+import { RelationNotFoundError } from '@mode-db/common';
 import { resolveRelationOnRegistry } from './relation-resolve.js';
 
 export type ParsedGroupDimension =

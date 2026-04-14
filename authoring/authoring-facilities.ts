@@ -1,5 +1,4 @@
-import type { InternalVault } from '../common/internal-vault.js';
-import type { SmartCache } from '../common/smart-cache.js';
+import type { InternalVault, SmartCache } from '@mode-db/common';
 
 /** Optional hooks passed from {@link AuthoringEngine} into {@link AtlasRegistry} / {@link ModelEntity}. */
 export interface AtlasAuthoringFacilities {

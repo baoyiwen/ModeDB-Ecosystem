@@ -1,11 +1,15 @@
-import type { ModelDefinition, RelationDefinition, ModelRecord } from '../../common/types.js';
-import type { ModelRegistry } from '../../common/registry.js';
-import type { DataReader, IndexReader } from '../../common/provider.js';
+import type {
+  ModelDefinition,
+  RelationDefinition,
+  ModelRecord,
+  ModelRegistry,
+  DataReader,
+  IndexReader,
+  SmartCache,
+} from '@mode-db/common';
 import { QueryChain } from './query.js';
 import type { FieldMatchContext } from './query-filter.js';
 import type { MemoryShadowOptions } from './HydratedEntity.js';
-import type { SmartCache } from '../../common/smart-cache.js';
-
 /**
  * Read-only model view: query / all / schema introspection only.
  */

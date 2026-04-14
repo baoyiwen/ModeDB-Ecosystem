@@ -101,7 +101,7 @@ export {
 } from './relation-resolve.js';
 export { ModelFileReader } from './ModelFileReader.js';
 export { RelationIndexFileReader } from './RelationIndexFileReader.js';
-export type { DataReader, IndexReader } from '../../common/provider.js';
+export type { DataReader, IndexReader } from '@mode-db/common';
 export {
   configureModelDBRuntime,
   resolveModelDBStorageRoot,

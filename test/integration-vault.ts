@@ -2,19 +2,26 @@
  * Shared single-file vault configuration for integration tests.
  * Call {@link useIntegrationVaultEnv} once per process before {@link ModelDBClient.connect}.
  */
-import type { RelationIndexData } from '../common/types.js';
 import { AtlasSingleVault } from '../authoring/atlas-single-vault.js';
-import { PathResolver } from '../src/common/PathResolver.js';
+import {
+  PathResolver,
+  deriveAtlasVaultSecretFromConnectToken,
+  type RelationIndexData,
+} from '@mode-db/common';
 
-export const INTEGRATION_VAULT_SECRET = 'mode-db-engine-integration-vault-secret-fixed-length!!';
+/** Same string used as wire **`connectToken`** in integration scripts (derives the vault key). */
+export const INTEGRATION_CONNECT_TOKEN = 'mode-db-engine-integration-connect-token-fixed-len!!';
+
+/** Derived passphrase for low-level {@link AtlasSingleVault} helpers in tests. */
+export const integrationVaultDerivedSecret =
+  deriveAtlasVaultSecretFromConnectToken(INTEGRATION_CONNECT_TOKEN);
 
 export const integrationVaultAuthoringOptions = {
-  singleFileVault: true as const,
-  vaultSecret: INTEGRATION_VAULT_SECRET,
+  connectToken: INTEGRATION_CONNECT_TOKEN,
 };
 
 export function useIntegrationVaultEnv(): void {
-  process.env.MODEL_DB_VAULT_SECRET = INTEGRATION_VAULT_SECRET;
+  process.env.MODEL_DB_CONNECT_TOKEN = INTEGRATION_CONNECT_TOKEN;
 }
 
 export function atlasVaultPath(storageRoot: string, atlasName: string): string {
@@ -26,7 +33,7 @@ export function loadVaultRelationData(
   storageRoot: string,
   atlasName: string,
   relationBaseKey: string,
-  secret: string,
+  secret: string = integrationVaultDerivedSecret,
 ): RelationIndexData {
   const paths = new PathResolver(storageRoot, atlasName);
   const vault = new AtlasSingleVault();
@@ -46,7 +53,7 @@ export function loadVaultModelBlob(
   storageRoot: string,
   atlasName: string,
   modelName: string,
-  secret: string,
+  secret: string = integrationVaultDerivedSecret,
 ): string {
   const paths = new PathResolver(storageRoot, atlasName);
   const vault = new AtlasSingleVault();
@@ -61,7 +68,7 @@ export function loadVaultModelBlob(
 export function loadVaultManifestJson(
   storageRoot: string,
   atlasName: string,
-  secret: string,
+  secret: string = integrationVaultDerivedSecret,
 ): string {
   const paths = new PathResolver(storageRoot, atlasName);
   const vault = new AtlasSingleVault();
@@ -81,8 +88,8 @@ export function mutateVaultRelationData(
   storageRoot: string,
   atlasName: string,
   relationBaseKey: string,
-  secret: string,
   fn: (data: RelationIndexData) => void,
+  secret: string = integrationVaultDerivedSecret,
 ): void {
   const paths = new PathResolver(storageRoot, atlasName);
   const vault = new AtlasSingleVault();
