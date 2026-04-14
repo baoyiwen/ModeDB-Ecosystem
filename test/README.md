@@ -18,7 +18,7 @@
 npm run test:integration
 ```
 
-命令会先执行 **`npm run build:lib`**、**`build:shared`**、**`build:server`**（生成根 **`dist/`** 与 **`packages/server/dist/`**，供 server 与集成脚本解析）。随后顺序为（**12** 步）：
+命令会先执行 **`npm run build:lib`**、**`build:shared`**、**`build:server`**（生成根 **`dist/`** 与 **`packages/server/dist/`**，供 server 与集成脚本解析）。随后顺序为（**13** 步）：
 
 1. **`modeldb_config_loader_audit.ts`**（系统临时目录，不碰 **`data/`**）
 2. **`verify.ts`**
@@ -32,8 +32,9 @@ npm run test:integration
 10. **`diagnostic_audit.ts`**
 11. **`vault_audit.ts`**
 12. **`wire_server_audit.ts`**
+13. **`meta_crud_audit.ts`**
 
-第 2 项 **`verify.ts`** 启动时会**删除整个默认 `data/`**，保证从干净状态开始。其余脚本使用各自独立的 Atlas 名，互不覆盖；**末项 `wire_server_audit.ts` 复用 `verify` 已创建的 Vault 图谱 `pipe`**（依赖 **`data/pipe/atlas.mld`** 与集成 Vault 密钥环境）：
+第 2 项 **`verify.ts`** 启动时会**删除整个默认 `data/`**，保证从干净状态开始。其余脚本使用各自独立的 Atlas 名，互不覆盖；**`wire_server_audit.ts` 复用 `verify` 已创建的 Vault 图谱 `pipe`**（依赖 **`data/pipe/atlas.mld`** 与集成 Vault 密钥环境）；**末项 `meta_crud_audit.ts`** 仅使用 **`meta_crud_rt` / `meta_crud_wire_rt`**（脚本开头自删对应目录），与 **`pipe`** 无依赖，但需 **`build:server`** 与集成 Vault 环境（与 **`wire_server_audit`** 相同）：
 
 | 脚本                      | Atlas 名                       | 数据清理策略                                               |
 | ------------------------- | ------------------------------ | ---------------------------------------------------------- |
@@ -49,6 +50,7 @@ npm run test:integration
 | `diagnostic_audit.ts`     | `diagnostic-audit`             | 启动时仅删除 `data/diagnostic-audit/`                      |
 | `vault_audit.ts`          | `vault_audit_rt`               | 启动/结束清理 `data/vault_audit_rt/`（单文件 `atlas.mld`） |
 | `wire_server_audit.ts`    | 复用 **`pipe`**（见 `verify`） | 不删目录；需 **`data/pipe/atlas.mld`** 已存在              |
+| `meta_crud_audit.ts`      | `meta_crud_rt` / `meta_crud_wire_rt` | 启动时删除 `data/meta_crud_rt/` 与 `data/meta_crud_wire_rt/` |
 | `million_stress_test.ts`  | `stress_atlas`                 | 启动时仅删除 `data/stress_atlas/`                          |
 
 其他命令见下表。多维分析、高级审计等**未**默认并入 `test:integration`，合并前建议一并手跑或接入 CI。
@@ -59,7 +61,7 @@ npm run test:integration
 
 | 命令                        | 入口文件                    | 说明                                                                                                                                                                                                                                                                                     |
 | --------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run test:integration`  | 串联 12 个脚本（见上）      | 首步 **`modeldb_config_loader_audit`**；第 2 步 **`verify`** 清空 `data/`；一键回归（含 **`vault_audit`**、**`wire_server_audit`**）                                                                                                                                                    |
+| `npm run test:integration`  | 串联 13 个脚本（见上）      | 首步 **`modeldb_config_loader_audit`**；第 2 步 **`verify`** 清空 `data/`；一键回归（含 **`vault_audit`**、**`wire_server_audit`**、**`meta_crud_audit`**）                                                                                                                                                    |
 | `npm run config-loader-audit` | `modeldb_config_loader_audit.ts` | 仅 **`loadModelDBServerConfig`** 行为审计（临时目录）                                                                                                                                                                                                                                |
 | `npx tsx test/verify.ts`    | `verify.ts`                 | 双图谱隔离、骨架补全、PROTOCOL 绑定、Runtime 只读                                                                                                                                                                                                                                        |
 | `npm run query-filters`     | `query_filters.ts`          | 谓词树、AND/OR 短路、`matchAll` / `matchAny`、`getQueryPlan`、`includeRelates`                                                                                                                                                                                                           |
@@ -72,6 +74,7 @@ npm run test:integration
 | `npm run diagnostic-audit`  | `diagnostic_audit.ts`       | DiagnosticCenter（**122** 个断言）：ErrorCodes 别名（含 **E3002**）、ErrorRegistry（含 E2005/E3002）、ValidationReport（isAllSuccess/getSummary/exportAsJSON/report 流式）、insertMany 批量、ValueObject 联动（required + type mismatch）、Emergency dump；**已**含于 `test:integration` |
 | `npm run vault-audit`       | `vault_audit.ts`            | 单文件 Vault：目录零明文、`ModelDBClient.connect`、`relate`、manifest hydrate、错误密钥、**E3002**；**已**含于 `test:integration`                                                                                                                                                        |
 | `npm run wire-server-audit` | `wire_server_audit.ts`      | WebSocket 服务 + **`@mode-db/sdk`**：`ConnectToken` 拒绝、**`connectRemote`**、**`RemoteHydratedEntity`**；**已**含于 `test:integration`（**必须**排在 `verify` 之后）                                                                                                                   |
+| `npm run meta-crud-audit`   | `meta_crud_audit.ts`        | **`alterModel` / `dropRelation` / `dropModel`**、Vault **`orphan:m:*`**、**`RemoteModelDBClient.connectNetwork`** 的 meta RPC；**已**含于 `test:integration`（末步；需 **`build:server`**）                                                                                             |
 | `npm run ignition`          | `dual_track_ignition.ts`    | **非**默认集成链：需**已启动** **`modeldb-server`**（**`npm run build`** 后 **`npm run start:server`**）；**`@mode-db/sdk`** 经 WS/HTTP 向指定 atlas 灌 **`Sensor`**；环境变量见脚本头与根 README **「运行与配置」**。**未**并入 `test:integration`                                   |
 | `npm run shadow-smart-cache-audit` | `shadow_smartcache_logger_audit.ts` | 单文件 Vault + **`memoryShadowHydration`** + **`enableSmartCache`** + **`EngineLogger`**。**未**并入默认集成                                                                                                                                                                    |
 | `npm run stress-test`       | `million_stress_test.ts`    | 压力测试（34 个断言）：100 万行灌入、1% 错误注入（E1001/E1003）、读写一致性、ValueObject 运行时监控、ErrorCodes 完整性、吞吐量报告。**未**并入默认集成                                                                                                                                   |
@@ -249,6 +252,13 @@ npm run test:integration
 - **安全**：在成功 RPC 之后，**第二条**裸 **`ws`** 连接发送错误 **`connectToken`**，断言返回 **`{ type: 'error' }`**（避免与首次握手竞态干扰）。
 - **收尾**：**`remote.close()`**、**`wss.close()`**。
 
+### `meta_crud_audit.ts`（15 个断言）
+
+- **Atlas**：**`meta_crud_rt`**（进程内 **`AuthoringEngine`**）、**`meta_crud_wire_rt`**（线协议）；脚本开头 **`rm -rf`** 两目录，与 **`pipe`** 及其它审计目录隔离。
+- **本地**：**`quickLink` + `bind('owns','MANUAL')` + `flushAll`** 后断言 Vault **`Alpha-Beta-owns`** 索引非空；**`alterModel`** 增加可选字段 **`note`** 并重开引擎校验 **`fieldTypes`**；**`dropRelation('owns')`** 后注册表与 Vault 索引为空；**`dropModel`** 后 **`m:*`** 迁至 **`orphan:m:*`**（用 **`AtlasSingleVault`** 直读）、仍无 **`models/`** 分目录。
+- **RPC**：对 **`meta_crud_wire_rt`** 起 **`startModelDBWebSocketServer`**，**`RemoteModelDBClient.connectNetwork`** 依次 **`alterModel` → `dropRelation` → `dropModel`**，冷启动 **`AuthoringEngine`** 校验拓扑与 **`orphan:m:Beta2`**。
+- **文档**：行为与 API 说明见仓库 **[docs/engine-meta-crud-and-wire.md](../docs/engine-meta-crud-and-wire.md)**。
+
 ### `million_stress_test.ts`（34 个断言，7 个阶段）
 
 | 阶段 | 覆盖点                                                                                                                                                                       |
@@ -289,7 +299,7 @@ npm run check       # typecheck + lint + format:check
 npm run check
 npm run build
 npm run build:sdk
-npm run test:integration   # 含 config-loader 审计 + vault-audit + wire-server-audit（共 12 步）
+npm run test:integration   # 含 config-loader 审计 + vault-audit + wire-server-audit + meta-crud-audit（共 13 步）
 npm run config-loader-audit
 npm run vault-audit        # 仅单文件 Vault 审计
 npm run wire-server-audit  # 仅 WebSocket + SDK（需先有 verify 的 pipe）
@@ -305,3 +315,4 @@ npm run advanced-audit
 ## 延伸阅读
 
 - **产品说明、架构、CRUD 协议、使用指南、DX、链式查询、多维分析**：根目录 **[README.md](../README.md)**。
+- **Meta-CRUD、单文件 Vault `orphan:m:*`、线协议与 SDK RPC**：[docs/engine-meta-crud-and-wire.md](../docs/engine-meta-crud-and-wire.md)。

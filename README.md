@@ -1167,7 +1167,9 @@ mode-db-engine/
 
 **索引**：集成测试的命令、Atlas 对照、各脚本覆盖点与注意事项见 **[test/README.md](test/README.md)**（该文档**仅**写测试相关内容；引擎说明与 DX 见本文档）。
 
-**推荐一键回归**（顺序：**`modeldb_config_loader_audit`**（临时目录校验 **`loadModelDBServerConfig`**）→ **`verify`** → … → **`diagnostic-audit`** → **`vault-audit`** → **`wire_server_audit`**；**`verify`** 会删除整个默认 **`data/`** 目录；**`vault_audit`** 使用独立 Atlas **`vault_audit_rt`** 并在末尾自清理；**`wire_server_audit`** 依赖 **`verify`** 已生成的 **`data/pipe/atlas.mld`**，在随机端口起 WebSocket 并跑 SDK 握手 + 查询断言）：
+**Meta-CRUD 与线协议**（**`alterModel` / `dropRelation` / `dropModel`**、Vault **`orphan:m:*`**、**`RemoteModelDBClient`** RPC）见 **[docs/engine-meta-crud-and-wire.md](docs/engine-meta-crud-and-wire.md)**。
+
+**推荐一键回归**（顺序：**`modeldb_config_loader_audit`**（临时目录校验 **`loadModelDBServerConfig`**）→ **`verify`** → … → **`diagnostic-audit`** → **`vault-audit`** → **`wire_server_audit`** → **`meta_crud_audit`**；**`verify`** 会删除整个默认 **`data/`** 目录；**`vault_audit`** 使用独立 Atlas **`vault_audit_rt`** 并在末尾自清理；**`wire_server_audit`** 依赖 **`verify`** 已生成的 **`data/pipe/atlas.mld`**，在随机端口起 WebSocket 并跑 SDK 握手 + 查询断言；**`meta_crud_audit`** 使用独立 Atlas **`meta_crud_rt` / `meta_crud_wire_rt`**，自删目录后断言 Meta-CRUD 与 RPC）：
 
 ```bash
 npm test
@@ -1190,6 +1192,7 @@ npm run datatype-audit          # DataType 协议：类型校验、I18N、Vault 
 npm run diagnostic-audit        # DiagnosticCenter：错误码注册表、ValidationReport、insertMany 批量、国际化
 npm run vault-audit             # 单文件 Vault：目录零明文、connect、关系、错误密钥、E3002
 npm run wire-server-audit       # WebSocket 服务 + Client SDK（需先有 verify 的 pipe Vault）
+npm run meta-crud-audit         # Meta-CRUD + orphan:m:* + SDK drop/alter RPC（独立 Atlas，见 test/README）
 npm run ignition                # 双轨压测：需已 start:server；环境变量见「运行与配置」
 npm run stress-test             # 压力测试：100 万行灌入、1% 错误注入、读写一致性、诊断审计
 npm run first-run               # 演示：单文件 Vault 写入 atlas.mld → Runtime（未并入 test:integration）
