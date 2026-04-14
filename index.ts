@@ -203,7 +203,8 @@ export type {
   ValidationReportSummary,
   ValidationReportJSON,
 } from './common/diagnostic.js';
-export { EngineLogger } from './common/engine-logger.js';
+export { EngineLogger, type EngineLoggerConfigureOptions } from './common/engine-logger.js';
+export { DiskAdapter } from './common/disk-adapter.js';
 export type { EngineLogLevel } from './common/engine-logger.js';
 export { InternalVault } from './common/internal-vault.js';
 export { SmartCache } from './common/smart-cache.js';
@@ -222,12 +223,10 @@ export { serializeExecuteResultForWire } from './src/network/execute-result-wire
 export {
   startModelDBWebSocketServer,
   getWebSocketServerListeningPort,
-} from './server/modeldb-server.js';
-export { loadModelDBServerConfig } from './server/modeldb-config.js';
-export type {
-  ModelDBServerFileConfig,
-  ResolvedModelDBServerConfig,
-} from './server/modeldb-config.js';
+  getServerListeningPort,
+  loadModelDBServerConfig,
+} from '@mode-db/server';
+export type { ModelDBServerFileConfig, ResolvedModelDBServerConfig } from '@mode-db/server';
 export type {
   ModelSchema,
   ModelDefinition,

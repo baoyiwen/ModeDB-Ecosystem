@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises';
+import { DiskAdapter } from '../common/disk-adapter.js';
 import { join, dirname } from 'node:path';
 import { DELETED_SENTINEL, isDeletedRecord, type ModelRecord } from '../common/types.js';
 import type { ModelStorage } from './storage.js';
@@ -62,8 +62,20 @@ export class PersistenceManager implements BufferedModelSource {
   constructor(
     private readonly storage: ModelStorage,
     private readonly smartCache?: SmartCache,
+    private readonly bufferFlushRowThreshold?: number,
   ) {
     this.merged = new MergedDataReader(storage, this);
+  }
+
+  private async maybeFlushIfOverThreshold(modelName: string): Promise<void> {
+    const t = this.bufferFlushRowThreshold;
+    if (t === undefined || t <= 0) {
+      return;
+    }
+    const buf = this.recordBuffers.get(modelName);
+    if (buf && buf.size >= t) {
+      await this.flushModelToDisk(modelName);
+    }
   }
 
   private invalidateQueryCache(modelName: string): void {
@@ -119,6 +131,7 @@ export class PersistenceManager implements BufferedModelSource {
     buf.set(record._id, record);
     this.dirtyModels.add(modelName);
     this.invalidateQueryCache(modelName);
+    await this.maybeFlushIfOverThreshold(modelName);
     return record;
   }
 
@@ -155,6 +168,7 @@ export class PersistenceManager implements BufferedModelSource {
     }
     if (report.successCount > 0) {
       this.invalidateQueryCache(modelName);
+      await this.maybeFlushIfOverThreshold(modelName);
     }
     return report;
   }
@@ -354,7 +368,7 @@ export class PersistenceManager implements BufferedModelSource {
 
     for (const dumpPath of candidates) {
       try {
-        await writeFile(dumpPath, lines, 'utf-8');
+        await DiskAdapter.writeFile(dumpPath, lines, 'utf-8');
         return;
       } catch {
         /* try next candidate */

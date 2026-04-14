@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { DiskAdapter } from '../../common/disk-adapter.js';
 import type { RuntimeContext } from './context.js';
 import { ModelEntity } from './ModelEntity.js';
 import { RuntimeRelation } from './RuntimeRelation.js';
@@ -81,7 +81,7 @@ export class ModelDBClient {
 
     let raw: string;
     try {
-      raw = await readFile(paths.manifestFilePath(), 'utf-8');
+      raw = await DiskAdapter.read(paths.manifestFilePath(), 'utf-8');
     } catch (err) {
       if (isEnoent(err)) {
         throw new AtlasManifestError(

@@ -4,7 +4,7 @@
   "description": "这是一个关于数据治理的引擎，旨在做一个能够形成数据资产图谱。他是一个超关系型数据引擎，我想使用他来建立物理关系。不在使用传统的数据库主外键关系来关联数据。但是，目前这个只是一个想法，还在实现与构思当中。",
   "type": "module",
   "bin": {
-    "modeldb-server": "./dist/server/cli.js"
+    "modeldb-server": "./packages/server/dist/cli.js"
   },
   "workspaces": [
     "packages/*"
@@ -13,6 +13,7 @@
   "types": "dist/index.d.ts",
   "files": [
     "dist",
+    "packages/server/dist",
     "docs/architecture.svg",
     "modeldb.config.example.json"
   ],
@@ -20,9 +21,11 @@
     "test": "test"
   },
   "scripts": {
-    "build": "tsc",
-    "build:sdk": "npm run build -w @mode-db/model-db-client-sdk",
-    "start:server": "node dist/server/cli.js",
+    "build": "tsc && npm run build:shared && npm run build:server && npm run build:sdk",
+    "build:shared": "npm run build -w @mode-db/shared",
+    "build:server": "npm run build -w @mode-db/server",
+    "build:sdk": "npm run build -w @mode-db/sdk",
+    "start:server": "node ./packages/server/dist/cli.js",
     "dev": "tsc --watch",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -35,6 +38,7 @@
     "datatype-audit": "tsx test/datatype_audit.ts",
     "diagnostic-audit": "tsx test/diagnostic_audit.ts",
     "stress-test": "tsx test/million_stress_test.ts",
+    "ignition": "tsx test/dual_track_ignition.ts",
     "shadow-smart-cache-audit": "tsx test/shadow_smartcache_logger_audit.ts",
     "vault-audit": "tsx test/vault_audit.ts",
     "first-run": "tsx test/first_run.ts",
@@ -71,6 +75,8 @@
   },
   "homepage": "https://github.com/baoyiwen/mode-db-engine#readme",
   "dependencies": {
+    "@mode-db/sdk": "file:packages/sdk",
+    "@mode-db/server": "file:packages/server",
     "ws": "^8.18.0"
   },
   "devDependencies": {

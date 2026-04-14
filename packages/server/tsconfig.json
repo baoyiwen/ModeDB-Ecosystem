@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "paths": {
+      "@mode-db/server": ["./src/index.ts"]
+    },
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true
+  },
+  "files": [
+    "./src/binary-interceptor.ts",
+    "./src/cli.ts",
+    "./src/config-loader.ts",
+    "./src/dual-track-app.ts",
+    "./src/index.ts",
+    "./src/modeldb-server.ts",
+    "./src/request-dispatcher.ts",
+    "./src/stream-backpressure.ts",
+    "./src/write-serialization-gate.ts"
+  ],
+  "include": ["./src/**/*.ts"],
+  "exclude": ["./dist", "./node_modules"]
+}

@@ -22,6 +22,14 @@ export type WireExecuteResultJson =
       readonly limit: number;
       readonly pageCount: number;
       readonly items: WireExecuteResultJson;
+    }
+  | {
+      readonly kind: 'mutation';
+      readonly op: 'insert' | 'update' | 'insertMany';
+      readonly model: string;
+      readonly record: Record<string, unknown> | null;
+      readonly successCount?: number;
+      readonly failureCount?: number;
     };
 
 function serializeRows(rows: HydratedEntity[]): WireExecuteResultJson {

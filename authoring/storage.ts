@@ -1,5 +1,5 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
-import { mkdir, appendFile, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { randomUUID } from 'node:crypto';
 import type { ModelSchema, ModelRecord } from '../common/types.js';
@@ -11,6 +11,7 @@ import type { Diagnostic } from '../common/diagnostic.js';
 import type { FieldMatchContext } from '../src/runtime/query-filter.js';
 import { encodeMldLine, parseMldLine } from '../common/shadow-codec.js';
 import { AtlasSingleVault } from './atlas-single-vault.js';
+import { DiskAdapter } from '../common/disk-adapter.js';
 
 const SCHEMA_HEADER_KEY = '__schema__';
 
@@ -203,7 +204,7 @@ export class ModelStorage implements DataReader {
       body += encodeMldLine(r, this.shadowDiskEncoding) + '\n';
     }
     try {
-      await appendFile(filePath, body, 'utf-8');
+      await DiskAdapter.appendFile(filePath, body, 'utf-8');
     } catch (err) {
       throw new FileIOError(`Failed to write record(s) to "${modelName}"`, filePath, {
         cause: err,
@@ -236,7 +237,7 @@ export class ModelStorage implements DataReader {
       body += encodeMldLine(r, this.shadowDiskEncoding) + '\n';
     }
     try {
-      await writeFile(filePath, body, 'utf-8');
+      await DiskAdapter.writeFile(filePath, body, 'utf-8');
     } catch (err) {
       throw new FileIOError(`Failed to rewrite "${modelName}"`, filePath, { cause: err });
     }
@@ -265,35 +266,38 @@ export class ModelStorage implements DataReader {
       }
     }
 
-    const results: ModelRecord[] = [];
     const filePath = this.filePath(modelName);
+    return DiskAdapter.timedStreamRead(`ModelStorage.getAll:${modelName}`, async () => {
+      const results: ModelRecord[] = [];
+      let stream: ReturnType<typeof createReadStream> | undefined;
+      try {
+        stream = createReadStream(filePath, 'utf-8');
+      } catch (err) {
+        throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
+      }
 
-    let stream: ReturnType<typeof createReadStream> | undefined;
-    try {
-      stream = createReadStream(filePath, 'utf-8');
-    } catch (err) {
-      throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
-    }
+      const rl = createInterface({ input: stream, crlfDelay: Infinity });
 
-    const rl = createInterface({ input: stream, crlfDelay: Infinity });
-
-    try {
-      for await (const line of rl) {
-        const trimmed = line.trim();
-        const parsed = parseMldLine(trimmed);
-        if (!parsed || parsed.kind === 'header') {
-          continue;
+      try {
+        for await (const line of rl) {
+          const trimmed = line.trim();
+          const parsed = parseMldLine(trimmed);
+          if (!parsed || parsed.kind === 'header') {
+            continue;
+          }
+          results.push(parsed.record);
         }
-        results.push(parsed.record);
+      } catch (err) {
+        if (isNodeError(err) && err.code === 'ENOENT') {
+          return [];
+        }
+        throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, {
+          cause: err,
+        });
       }
-    } catch (err) {
-      if (isNodeError(err) && err.code === 'ENOENT') {
-        return [];
-      }
-      throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, { cause: err });
-    }
 
-    return results;
+      return results;
+    });
   }
 
   async scanModelRecords(
@@ -310,31 +314,34 @@ export class ModelStorage implements DataReader {
     }
 
     const filePath = this.filePath(modelName);
+    await DiskAdapter.timedStreamRead(`ModelStorage.scanModelRecords:${modelName}`, async () => {
+      let stream: ReturnType<typeof createReadStream> | undefined;
+      try {
+        stream = createReadStream(filePath, 'utf-8');
+      } catch (err) {
+        throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
+      }
 
-    let stream: ReturnType<typeof createReadStream> | undefined;
-    try {
-      stream = createReadStream(filePath, 'utf-8');
-    } catch (err) {
-      throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
-    }
+      const rl = createInterface({ input: stream, crlfDelay: Infinity });
 
-    const rl = createInterface({ input: stream, crlfDelay: Infinity });
-
-    try {
-      for await (const line of rl) {
-        const trimmed = line.trim();
-        const parsed = parseMldLine(trimmed);
-        if (!parsed || parsed.kind === 'header') {
-          continue;
+      try {
+        for await (const line of rl) {
+          const trimmed = line.trim();
+          const parsed = parseMldLine(trimmed);
+          if (!parsed || parsed.kind === 'header') {
+            continue;
+          }
+          await visitor(parsed.record);
         }
-        await visitor(parsed.record);
+      } catch (err) {
+        if (isNodeError(err) && err.code === 'ENOENT') {
+          return;
+        }
+        throw new FileIOError(`Failed to scan records from "${modelName}"`, filePath, {
+          cause: err,
+        });
       }
-    } catch (err) {
-      if (isNodeError(err) && err.code === 'ENOENT') {
-        return;
-      }
-      throw new FileIOError(`Failed to scan records from "${modelName}"`, filePath, { cause: err });
-    }
+    });
   }
 
   async getByIds(modelName: string, ids: string[]): Promise<ModelRecord[]> {
@@ -350,44 +357,47 @@ export class ModelStorage implements DataReader {
     }
 
     const target = new Set(ids);
-    const results: ModelRecord[] = [];
     const filePath = this.filePath(modelName);
-
-    let stream: ReturnType<typeof createReadStream> | undefined;
-    try {
-      stream = createReadStream(filePath, 'utf-8');
-    } catch (err) {
-      throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
-    }
-
-    const rl = createInterface({ input: stream, crlfDelay: Infinity });
-
-    try {
-      for await (const line of rl) {
-        if (target.size === 0) {
-          break;
-        }
-
-        const trimmed = line.trim();
-        const parsed = parseMldLine(trimmed);
-        if (!parsed || parsed.kind === 'header') {
-          continue;
-        }
-
-        const record = parsed.record;
-        if (target.has(record._id)) {
-          results.push(record);
-          target.delete(record._id);
-        }
+    return DiskAdapter.timedStreamRead(`ModelStorage.getByIds:${modelName}`, async () => {
+      const results: ModelRecord[] = [];
+      let stream: ReturnType<typeof createReadStream> | undefined;
+      try {
+        stream = createReadStream(filePath, 'utf-8');
+      } catch (err) {
+        throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
       }
-    } catch (err) {
-      if (isNodeError(err) && err.code === 'ENOENT') {
-        return [];
-      }
-      throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, { cause: err });
-    }
 
-    return results;
+      const rl = createInterface({ input: stream, crlfDelay: Infinity });
+
+      try {
+        for await (const line of rl) {
+          if (target.size === 0) {
+            break;
+          }
+
+          const trimmed = line.trim();
+          const parsed = parseMldLine(trimmed);
+          if (!parsed || parsed.kind === 'header') {
+            continue;
+          }
+
+          const record = parsed.record;
+          if (target.has(record._id)) {
+            results.push(record);
+            target.delete(record._id);
+          }
+        }
+      } catch (err) {
+        if (isNodeError(err) && err.code === 'ENOENT') {
+          return [];
+        }
+        throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, {
+          cause: err,
+        });
+      }
+
+      return results;
+    });
   }
 
   async findFirstByFieldEq(
@@ -407,37 +417,40 @@ export class ModelStorage implements DataReader {
     }
 
     const filePath = this.filePath(modelName);
-
-    let stream: ReturnType<typeof createReadStream> | undefined;
-    try {
-      stream = createReadStream(filePath, 'utf-8');
-    } catch (err) {
-      throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
-    }
-
-    const rl = createInterface({ input: stream, crlfDelay: Infinity });
-
-    try {
-      for await (const line of rl) {
-        const trimmed = line.trim();
-        const parsed = parseMldLine(trimmed);
-        if (!parsed || parsed.kind === 'header') {
-          continue;
-        }
-        const record = parsed.record;
-        const v = (record as Record<string, unknown>)[field];
-        if (v === value) {
-          return record;
-        }
+    return DiskAdapter.timedStreamRead(`ModelStorage.findFirstByFieldEq:${modelName}`, async () => {
+      let stream: ReturnType<typeof createReadStream> | undefined;
+      try {
+        stream = createReadStream(filePath, 'utf-8');
+      } catch (err) {
+        throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
       }
-    } catch (err) {
-      if (isNodeError(err) && err.code === 'ENOENT') {
-        return undefined;
-      }
-      throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, { cause: err });
-    }
 
-    return undefined;
+      const rl = createInterface({ input: stream, crlfDelay: Infinity });
+
+      try {
+        for await (const line of rl) {
+          const trimmed = line.trim();
+          const parsed = parseMldLine(trimmed);
+          if (!parsed || parsed.kind === 'header') {
+            continue;
+          }
+          const record = parsed.record;
+          const v = (record as Record<string, unknown>)[field];
+          if (v === value) {
+            return record;
+          }
+        }
+      } catch (err) {
+        if (isNodeError(err) && err.code === 'ENOENT') {
+          return undefined;
+        }
+        throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, {
+          cause: err,
+        });
+      }
+
+      return undefined;
+    });
   }
 
   // ---------------------------------------------------------------------------

@@ -15,10 +15,30 @@ export interface WireRpcEnvelope {
   readonly cipher: string;
 }
 
-export interface WireExecuteBody {
-  readonly op: 'executeQuery';
-  readonly snapshot: RemoteExecuteSnapshot;
-}
+export type WireExecuteBody =
+  | {
+      readonly op: 'executeQuery';
+      readonly snapshot: RemoteExecuteSnapshot;
+    }
+  | {
+      readonly op: 'insert';
+      readonly model: string;
+      readonly data: Record<string, unknown>;
+      readonly sync?: boolean;
+    }
+  | {
+      readonly op: 'update';
+      readonly model: string;
+      readonly id: string;
+      readonly partial: Record<string, unknown>;
+      readonly sync?: boolean;
+    }
+  | {
+      readonly op: 'insertMany';
+      readonly model: string;
+      readonly rows: readonly Record<string, unknown>[];
+      readonly sync?: boolean;
+    };
 
 export type WireServerMessage = WireHandshakeOk | WireRpcResponse | WireErrorMessage;
 

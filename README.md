@@ -6,9 +6,9 @@
 
 代码库在 **2.0** 之后分为三条交付线：
 
-- **Authoring（治理端）**：建模、插入、显式绑定索引；默认写 **`atlas-manifest.json`** + 分文件 **`models/*.mld`** 与 **`relations/*.rid`**，可选 **单文件 Vault**（仅 **`atlas.mld`**，manifest 与索引均包在加密目录内）。
-- **Runtime（客户端）**：按图谱名称打开只读视图；**分文件布局**下读取 `.mld` / `.rid` 与 manifest，**Vault 布局**下读取加密的 **`atlas.mld`**（需环境变量密钥）。不依赖写入路径，适合独立交付给第三方。
-- **Network（可选）**：**`ModelDB WebSocket Server`** 在指定存储根上托管只读查询；**`@mode-db/model-db-client-sdk`** 通过 **`connectRemote`** 提供与本地 **`model.query()…execute()`** 相同的链式 API，查询体经 **ConnectToken 握手** 与 **会话密钥混淆** 传输（详见下文 **「网络服务与远程客户端 SDK」**）。
+- **Authoring（治理端）**：建模、插入、显式绑定索引。**未启用 `singleFileVault` 时**落盘为 **`atlas-manifest.json`** + **`models/*.mld`** + **`relations/*.rid`**；**`singleFileVault: true` 时**仅维护加密 **`atlas.mld`**（包内 **`__manifest__`**、**`m:<Model>`**、**`r:<…>`** 与分文件语义等价，不经独立 manifest / models / relations 目录）。
+- **Runtime（客户端）**：按图谱名只读打开；**分文件**走 **`ModelFileReader` / `RelationIndexFileReader`** + 磁盘 manifest；**Vault** 走 **`VaultModelFileReader` / `VaultRelationIndexReader`** + 解密 **`atlas.mld`**（需 **`MODEL_DB_VAULT_SECRET`**）。不依赖写入路径，适合独立交付。
+- **Network（可选）**：**`ModelDB WebSocket Server`** 在指定存储根上托管只读查询；**`@mode-db/sdk`** 通过 **`connectRemote`** 提供与本地 **`model.query()…execute()`** 相同的链式 API，查询体经 **ConnectToken 握手** 与 **会话密钥混淆** 传输（详见下文 **「网络服务与远程客户端 SDK」**）。
 
 > 本项目处于早期设计与实现阶段。
 
@@ -89,18 +89,19 @@ Mode DB Engine 采用完全不同的思路：
 ├────────────────────────────────────┴────────────────────────────────────┤
 │  common/          共享类型、Registry 接口、manifest、错误、存储根解析       │
 │  src/common/      PathResolver（Atlas 下路径解析）                        │
-│  server/          ModelDB WebSocket 服务：CLI、配置加载、会话式查询 RPC    │
+│  packages/server/  ModelDB WebSocket 服务（commander CLI、配置、查询分发）   │
+│  packages/sdk/     远程客户端 SDK（tsup → ESM/CJS + d.ts）                 │
+│  packages/shared/  共享混淆与 diagnostic 再导出（依赖 mode-db-engine）       │
 │  src/network/     线协议类型、execute 结果 JSON 序列化（供服务端/SDK 共用）   │
-│  packages/model-db-client-sdk/  远程客户端 SDK（tsup → ESM/CJS + d.ts）   │
 └─────────────────────────────────────────────────────────────────────────┘
                                       │
-                    STORAGE_ROOT / <atlasName>/     # 默认（分文件）布局
+                    STORAGE_ROOT / <atlasName>/     # 分文件布局（singleFileVault: false）
                     ├── atlas-manifest.json
                     ├── models/*.mld
                     └── relations/*.rid
 
-                    STORAGE_ROOT / <atlasName>/     # 单文件 Vault 布局（可选）
-                    └── atlas.mld                   # 加密包：manifest + 各模型 JSONL + 关系 r:*
+                    STORAGE_ROOT / <atlasName>/     # 单文件 Vault（singleFileVault: true；本仓库 test/verify 的 pipe/tran）
+                    └── atlas.mld                   # 加密包：__manifest__ + m:* + r:*
 ```
 
 **约束**：`src/runtime/` 下的实现**不**依赖 `authoring/storage`、`authoring/indexer` 等写入侧模块；`ModelDBClient.connect()` 仅通过只读 Reader 与 **manifest**（磁盘 JSON 或 Vault 内嵌）工作。
@@ -111,34 +112,52 @@ Mode DB Engine 采用完全不同的思路：
 
 ## 存储布局与 Atlas
 
-默认存储根为 `<cwd>/data`（可通过环境变量 `MODEL_DB_STORAGE_ROOT` / `STORAGE_ROOT` 或 `configureModelDBStorageRoot` 覆盖）。
+默认存储根为 **`<cwd>/data`**（与 **`common/default-storage-root.ts`** 中 **`DEFAULT_STORAGE_ROOT`** 一致；可通过 **`MODEL_DB_STORAGE_ROOT`** / **`STORAGE_ROOT`** 或 **`configureModelDBStorageRoot`** 覆盖）。
 
-每个图谱（Atlas）对应一级子目录，例如管廊 `pipe`、轨道 `tran`：
+每个 **Atlas（图谱）** 对应 **`STORAGE_ROOT/<atlasName>/`** 一级目录。物理落盘为下列两种形态之一，由治理端 **`singleFileVault`** 决定，**同一 Atlas 不应混用两种形态**：
+
+| 形态               | 条件                                 | Runtime `connect` 探测                                                                                                        |
+| ------------------ | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| **分文件（传统）** | **`singleFileVault: false`**（默认） | 存在 **`atlas-manifest.json`**，使用 **`ModelFileReader` + `RelationIndexFileReader`** 读 **`.mld` / `.rid`**                 |
+| **单文件 Vault**   | **`singleFileVault: true`**          | **`atlas.mld`** 文件头为 Vault 魔数 **`MDB4SVLT`**，使用 **`VaultModelFileReader` + `VaultRelationIndexReader`** 解密包内条目 |
+
+**分文件布局示例**（未启用 Vault 时；清单与模型/关系分路径落盘。**图谱目录名仅为示意**；本仓库 **`test/verify.ts`** 里的 **`pipe` / `tran`** 走单文件 Vault，目录树见下一小节。）
 
 ```
 data/
-├── pipe/                          # 图谱「pipe」
-│   ├── atlas-manifest.json        # 模型/关系清单与校验（Runtime connect 依赖）
+├── plant/                         # 示例图谱名（分文件）
+│   ├── atlas-manifest.json
 │   ├── models/
 │   │   ├── Pump.mld
 │   │   └── Zone.mld
 │   └── relations/
 │       └── Pump-Zone-located_in.rid
-└── tran/
+└── fleet/
     ├── atlas-manifest.json
     ├── models/
     │   └── Train.mld
     └── relations/
+        └── Train-Depot-staged_at.rid
 ```
 
-- **`.mld`（分文件）**：JSONL，每行一条模型记录（仅 Schema 声明字段落盘）。
-- **`.rid`（分文件）**：JSON，`fwd` / `rev` 双向邻接表；由 `RelationIndexer` 成对维护，经 `flushAll()` 等落盘。
+**单文件 Vault 示例**（与本仓库 **`test/verify.ts`**、**`integration-vault.ts`** 中 **`pipe` / `tran`** 一致；目录下通常**只有**加密包，无上述分文件树）：
 
-治理端写入或更新图谱后，应调用 `await engine.flushAll()`（或等价地刷新索引并写 manifest），以便 `ModelDBClient.connect('图谱名')` 能读到最新清单（**分文件**下为 `atlas-manifest.json`，**Vault** 下为加密包内的 `__manifest__`）。
+```
+data/
+├── pipe/
+│   └── atlas.mld              # 内含 __manifest__、m:Pump、m:Zone、r:Pump-Zone-located_in 等逻辑键
+└── tran/
+    └── atlas.mld
+```
+
+- **分文件**：**`.mld`** 为 JSONL（每行一条模型记录，仅 Schema 声明字段）；**`.rid`** 为 JSON **`fwd` / `rev`**，由 **`RelationIndexer`** 与 manifest 成对维护，经 **`flushAll()`** 等落盘。
+- **Vault**：磁盘上通常仅 **`atlas.mld`**；模型仍为 **JSONL 逻辑块**（键 **`m:<ModelName>`**），关系索引为 JSON（键 **`r:<Source>-<Target>-<Forward>`**），与分文件 **语义一致**，经 **AES-256-GCM**（**scrypt** 派生密钥）打包；文件头魔数 **`MDB4SVLT`** 供 **`fileLooksLikeAtlasSingleVault`** 与 **`ModelDBClient.connect`** 廉价探测。
+
+治理端写入或更新图谱后，应调用 **`await engine.flushAll()`**（或等价刷新索引并写 manifest / 写回 Vault），以便 **`ModelDBClient.connect('图谱名')`** 读到最新数据：**分文件**更新磁盘 manifest 与 **`.mld` / `.rid`**；**Vault** 经 **`saveSync`** 写回整包。
 
 ### 单文件 Atlas Vault（可选）
 
-开启 **`singleFileVault: true`** 时，图谱目录下**仅**保留 **`atlas.mld`**（以及若启用 **`engineLogger`** 时的 `logs/` 等）；**不创建** `models/`、`relations/`、**也不写** `atlas-manifest.json`。模型行仍以 **JSONL 逻辑块**存于 Vault 目录的 `m:<ModelName>` 键下，关系索引以 JSON 存于 `r:<Source>-<Target>-<Forward>`，与分文件模式语义一致，只是物理上经 **AES-256-GCM**（密钥由 **scrypt** 派生）打包；文件头含固定魔数 **`MDB4SVLT`** 与随机填充块，便于 `ModelDBClient.connect` 做廉价探测。
+开启 **`singleFileVault: true`** 时，图谱目录下**仅**保留 **`atlas.mld`**（以及若启用 **`engineLogger`** 时的 **`logs/`** 等）；**不创建** **`models/`**、**`relations/`**，**也不写** 根级 **`atlas-manifest.json`**。逻辑键与加密细节见上表及下文表格；**物理树**见上文「单文件 Vault 示例」。
 
 | 项                 | 说明                                                                                                                                                                                                                                                                                   |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -456,7 +475,7 @@ await engine.flushAll();
 
 ## 网络服务与远程客户端 SDK（ModelDB Server）
 
-本节描述 **2.0** 新增的 **只读查询网络层**：进程内仍是 **`ModelDBClient` + `QueryChain`**；跨进程时由 **WebSocket 服务** 执行 **`QueryChain.fromWirePlan`** 与 **`execute()`**，客户端使用 **`@mode-db/model-db-client-sdk`** 构造同一套链式计划并发送 **混淆后的 RPC 载荷**。
+本节描述 **2.0** 新增的 **只读查询网络层**：进程内仍是 **`ModelDBClient` + `QueryChain`**；跨进程时由 **WebSocket 服务** 执行 **`QueryChain.fromWirePlan`** 与 **`execute()`**，客户端使用 **`@mode-db/sdk`** 构造同一套链式计划并发送 **混淆后的 RPC 载荷**。
 
 ### 能力与安全边界
 
@@ -475,31 +494,31 @@ await engine.flushAll();
 
 仓库根提供示例 **[modeldb.config.example.json](modeldb.config.example.json)**，可复制为 **`modeldb.config.json`** 并按环境修改（**勿**将真实令牌提交到版本库）。
 
-配置加载逻辑见 **`server/modeldb-config.ts`**，优先级为：**命令行参数 → 环境变量 → 配置文件 → 默认值**（端口默认 **8787**，存储根默认 **`./data`** 相对当前工作目录解析，`connectToken` 必填其一）。
+配置加载逻辑见 **`packages/server/src/config-loader.ts`**（由 **`@mode-db/server`** 导出），优先级为：**命令行参数 → 环境变量 → 配置文件 → 默认值**（端口默认 **9090**，绑定地址默认 **127.0.0.1**，存储根默认 **`./data`** 相对当前工作目录解析，`connectToken` 必填其一）。**`--dev`** 或 **`MODEL_DB_DEV=true`** 时在控制台打印解密后的 RPC 摘要（仅联调）。
 
 **编译后**启动服务（需先 **`npm run build`**）：
 
 ```bash
 # 使用默认 ./modeldb.config.json（若存在）或 CLI/环境变量
-node dist/server/cli.js --port 8787 --token your-secret --storage ./data
+node ./packages/server/dist/cli.js --port 9090 --token your-secret --storage ./data
 
-# 或 npm 脚本（等价于 node dist/server/cli.js，无额外参数时读配置）
+# 或 npm 脚本（等价于 node ./packages/server/dist/cli.js，无额外参数时读配置）
 npm run start:server
 ```
 
-全局安装本包后，可使用 **`npx modeldb-server`**（由 **`package.json` → `bin.modeldb-server`** 指向 **`dist/server/cli.js`**）。
+全局安装本包后，可使用 **`npx modeldb-server`**（由 **`package.json` → `bin.modeldb-server`** 指向 **`packages/server/dist/cli.js`**）。
 
 **程序化启动**（嵌入自有 Node 服务、集成测试等）可从 **`mode-db-engine`** 导入 **`loadModelDBServerConfig`**、**`startModelDBWebSocketServer`**、**`getWebSocketServerListeningPort`**（传入 **`port: 0`** 可由系统分配端口，便于并行测试）。
 
-### 远程客户端 SDK（`@mode-db/model-db-client-sdk`）
+### 远程客户端 SDK（`@mode-db/sdk`）
 
-工作区包路径：**[packages/model-db-client-sdk](packages/model-db-client-sdk)**。构建命令：**`npm run build:sdk`**（依赖根目录已 **`npm run build`** 生成引擎 **`dist/`，因 SDK 以 **`mode-db-engine`\*\* 为 peer/本地依赖）。
+工作区包路径：**[packages/sdk](packages/sdk)**。构建命令：**`npm run build:sdk`**（依赖根目录已 **`npm run build`** 生成引擎 **`dist/`** 与 **`@mode-db/shared`**，因 SDK 以 **`mode-db-engine`** 为 peer/本地依赖）。
 
 ```typescript
-import { connectRemote, RemoteHydratedEntity } from '@mode-db/model-db-client-sdk';
+import { connectRemote, RemoteHydratedEntity } from '@mode-db/sdk';
 
 const db = await connectRemote({
-  url: 'ws://127.0.0.1:8787',
+  url: 'ws://127.0.0.1:9090',
   connectToken: 'your-secret', // 须与服务端一致
   atlas: 'pipe', // 与本地 STORAGE_ROOT 下目录名一致
 });
@@ -918,7 +937,7 @@ mode-db-engine/
 │       └── PathResolver.ts     # Atlas 目录路径解析
 ├── test/
 │   ├── README.md               # 测试命令、Atlas 对照、各脚本覆盖点与注意事项
-│   ├── verify.ts               # 端到端：双图谱、滞后字段、PROTOCOL、Runtime 只读（启动时清空 data/）
+│   ├── verify.ts               # 端到端：双图谱（单文件 Vault）、滞后字段、PROTOCOL、Runtime 只读（启动时清空 data/）
 │   ├── query_filters.ts        # 谓词 / QueryChain / matchAny / 短路 / getQueryPlan / includeRelates / evaluateInto
 │   ├── logic_integrity.ts      # 句柄缓存、合并读、insert sync、explainRelate、幽灵 id
 │   ├── logic_closure_audit.ts  # Atlas 隔离、双向索引守恒、多级 relate、Runtime
@@ -929,7 +948,7 @@ mode-db-engine/
 │   ├── diagnostic_audit.ts    # DiagnosticCenter：错误码注册表（含 E3002）、ValidationReport、insertMany、国际化
 │   ├── vault_audit.ts          # 单文件 Vault：无 manifest/models/relations、connect、relate、错误密钥、E3002
 │   ├── million_stress_test.ts # 压力测试：100 万行灌入、1% 错误注入、读写一致性、诊断审计
-│   ├── transform_aggregate.ts  # §6.3：pivot / groupBy、aggregate、execute → AnalysisResult
+│   ├── transform_aggregate.ts  # 第六节 6.3：pivot / groupBy、aggregate、execute → AnalysisResult
 │   └── first_run.ts            # 演示：治理 → flush → Runtime（点火脚本）
 ├── data/                       # 默认运行时数据（建议 git-ignore）
 ├── dist/                       # tsc 输出
@@ -972,19 +991,19 @@ npm run test:integration
 **单项执行**：
 
 ```bash
-npx tsx test/verify.ts          # 双图谱隔离、骨架补全、PROTOCOL、Runtime 只读（会先清空 data/）
+npx tsx test/verify.ts          # 双图谱（单文件 Vault）、骨架补全、PROTOCOL、Runtime 只读（会先清空 data/）
 npm run query-filters           # 谓词树、AND/OR 短路、matchAll / matchAny、getQueryPlan
-npm run integrity               # 句柄缓存、合并读、insert sync、explainRelate、幽灵 id
+npm run integrity               # 句柄缓存、合并读、insert sync、explainRelate、Vault 关系索引幽灵 id
 npm run audit                   # 多 Atlas 物理隔离、双向索引守恒、多级 relate
 npm run query-extended          # ComputeBuilder、分析分页、wrapGroups、relateRecursive
 npm run dx-audit                # 治理 DX：merge 缓冲、QueryEngine、句柄缓存、updateFields 去重、insert sync
 npm run crud-audit              # CRUD 全链路：update / delete / batch / 关系清理 / 模型独立性 / flush 压缩
-npm run datatype-audit          # DataType 协议：类型校验、I18N、.mld schema header、manifest fieldTypes
+npm run datatype-audit          # DataType 协议：类型校验、I18N、Vault `m:*` schema header、manifest / fieldTypes
 npm run diagnostic-audit        # DiagnosticCenter：错误码注册表、ValidationReport、insertMany 批量、国际化
 npm run vault-audit             # 单文件 Vault：目录零明文、connect、关系、错误密钥、E3002
 npm run wire-server-audit       # WebSocket 服务 + Client SDK（需先有 verify 的 pipe Vault）
 npm run stress-test             # 压力测试：100 万行灌入、1% 错误注入、读写一致性、诊断审计
-npm run first-run               # 演示向，未包含在 test:integration 中
+npm run first-run               # 演示：单文件 Vault 写入 atlas.mld → Runtime（未并入 test:integration）
 npm run transform               # 多维分析：pivot / groupBy / aggregate → AnalysisResult（第六节 6.3）
 npm run final-analysis          # global_atlas / Stats 验收
 npm run advanced-audit          # relateRecursive、wrapGroups、Paginated
@@ -992,20 +1011,20 @@ npm run advanced-audit          # relateRecursive、wrapGroups、Paginated
 
 | 脚本                          | Atlas                         | 主要内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ----------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`verify.ts`**               | `pipe` / `tran`               | 双图谱隔离；**滞后 `updateFields`**；**PROTOCOL** 与 **`.rid` 正逆向成对**；**`ModelDBClient.connect`**、链式查询；Runtime **无 `insert` / `bind` 等**；**遇错计数**，失败时 **exit 1**。                                                                                                                                                                                                                                                                                                                                                                                                                |
+| **`verify.ts`**               | `pipe` / `tran`               | 双图谱隔离（**`integration-vault.ts`**：**单文件 Vault**，仅 **`atlas.mld`**）；**滞后 `updateFields`**；**PROTOCOL** 与 **关系索引 `fwd`/`rev` 成对**（Vault 包内 **`r:*`**，语义同分文件 **`.rid`**）；**`ModelDBClient.connect`**、链式查询；Runtime **无 `insert` / `bind` 等**；**遇错计数**，失败时 **exit 1**。                                                                                                                                                                                                                                                                                   |
 | **`query_filters.ts`**        | `query_filter_demo`           | **第六节** 全链路：**谓词树**、**AND/OR 短路**、**`matchAll` / `matchAllNodes` / `matchAny`**、**`getQueryPlan`**、**`filter`（Callback）**、**`relate` 目标过滤**、**`includeRelates`**；**`getRelateDiagnostic`** + **`failedPredicate`**；**`getRelationStatus`**、**`toSnapshot`**；**`QueryEngine.evaluateInto`** + **`PredicateEvaluateContext`**。                                                                                                                                                                                                                                                |
-| **`logic_integrity.ts`**      | `integrity_pipe`              | **`model` 句柄缓存**、**合并读**、**`insert({ sync: true })` + 文件存在断言**；**`explainRelate`**、**`NOT_REGISTERED`** / **`NO_LINK_IN_INDEX`**；**.rid 幽灵 id** → **`FILTERED_OUT_ORPHAN`**；**`includeRelates` + `toNested()`**。                                                                                                                                                                                                                                                                                                                                                                   |
+| **`logic_integrity.ts`**      | `integrity_pipe`              | **`model` 句柄缓存**、**合并读**、**`insert({ sync: true })` + **`atlas.mld`** 存在断言**；**`explainRelate`**、**`NOT_REGISTERED`** / **`NO_LINK_IN_INDEX`**；**Vault 包内 `r:*` 注入幽灵 id** → **`FILTERED_OUT_ORPHAN`**；**`includeRelates` + `toNested()`**。                                                                                                                                                                                                                                                                                                                                       |
 | **`logic_closure_audit.ts`**  | `pipe_system` / `tran_system` | 多 Atlas 物理隔离；**双向索引守恒**（fwd 边数 === rev 边数）；**多级 `relate`**（三级跳转）；Runtime 只读安全性。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| **`query_chain_extended.ts`** | （复用前序数据）              | **`ComputeBuilder`** + `groupBy`；分析分页（`Paginated`）；**`wrapGroups`** + `GroupInstance`；**`relateRecursive`** BFS（含环防护）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **`query_chain_extended.ts`** | `query_chain_extended`        | 独立 Atlas + **单文件 Vault**；**`ComputeBuilder`** + `groupBy`；分析分页（`Paginated`）；**`wrapGroups`** + `GroupInstance`；**`relateRecursive`** BFS（含环防护）。                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | **`authoring_dx_audit.ts`**   | `dx_audit`                    | **`mergeDiskRowsWithAuthoringBuffer`**（覆盖 / 保留 / 追加 / 空 pending）、**`QueryEngine.execute`** 与 **`evaluate`** 一致、**`model` 句柄缓存**、**`updateFields` 去重**、**合并读**、**`engine.insert(..., { sync: true })`**。                                                                                                                                                                                                                                                                                                                                                                       |
-| **`crud_audit.ts`**           | `crud_audit`                  | **46 个断言**：`update` 缓冲合并 + 合并读即时可见；`delete` 墓碑 + 查询不可见；`updateWhere` / `deleteWhere` 批量条件操作；**关系层清理**（`purgeEntityFromAllRelations`）+ **模型独立性**验证；**flush 压缩** `.mld` 无 `__deleted` 残留。                                                                                                                                                                                                                                                                                                                                                              |
+| **`crud_audit.ts`**           | `crud_audit`                  | **46 个断言**（单文件 Vault）：`update` / `delete` / `updateWhere` / `deleteWhere`、缓冲区与 **flush 压缩**；**关系层清理**；**Vault 内 `m:Item` 明文 JSONL** 无 `__deleted` 残留（分文件布局下等价为 **`.mld`** 压缩）。                                                                                                                                                                                                                                                                                                                                                                                |
 | **`datatype_audit.ts`**       | `datatype_audit`              | **114 个断言 / 20 组**：DataType 常量；类型校验（含 Color/Unit）；I18N 自动包装/查询；ValueObject（`getValue`/`isEmpty`/`update`/`save`）；**`required` 语义空值**（String 空格/I18N 空对象/Color 通道缺失/Unit NaN）；**`default` 值注入**（缺失自动填充、显式覆盖、required+default 组合）；**manifest `default` 持久化**；`.mld` header；向后兼容。                                                                                                                                                                                                                                                   |
 | **`diagnostic_audit.ts`**     | `diagnostic-audit`            | **122 个断言 / 18 组**：ErrorCodes 命名别名（含 `SELF_REFERENTIAL_CYCLE`、`PHYSICAL_ADDRESS_CORRUPT=E3002`）；错误码注册表（含 E2005/E3001/E3002）；throw/collect 双模式 + severity 覆盖；`DiagnosticCenter.create`；国际化消息（en/zh）；`onDiagnostic` 监听器；`ValidationReport` API（`successCount`/`failureCount`/`isAllSuccess`/`getSummary`/`exportAsJSON`/`report()` 流式收集）；`validateFieldValue` collect 模式；throw 向后兼容；`insertMany` 批量校验报告；ValueObject DiagnosticCenter 联动（required + type mismatch）；Severity 分级；`toError` 转换；globalDiagnostics；emergency dump。 |
 | **`vault_audit.ts`**          | `vault_audit_rt`              | **单文件 Vault**：`singleFileVault` + `flushAll` 后无 `atlas-manifest.json` / `models/` / `relations/`；**`ModelDBClient.connect`** + **`getData()`** 明文；**`relate`** 读包内关系索引；**二次 `AuthoringEngine`** 从包内 manifest **hydrate**；错误密钥 → **`AtlasManifestError`**；损坏文件 → **`loadSync` false** 且 **`E3002`** 经 `onDiagnostic`。脚本末尾删除 `data/vault_audit_rt/`。                                                                                                                                                                                                            |
 | **`wire_server_audit.ts`**    | `pipe`（复用 `verify`）       | **WebSocket + SDK**：`startModelDBWebSocketServer`（**`port: 0`**）、**`ConnectToken`** 拒绝错误令牌、**`connectRemote`** 查询 **`Pump`**、**`RemoteHydratedEntity`** 形态断言；依赖集成 Vault 密钥与 **`data/pipe/atlas.mld`**。                                                                                                                                                                                                                                                                                                                                                                        |
-| **`million_stress_test.ts`**  | `stress_atlas`                | **34 个断言**：100 万行 `Sensor` 灌入（批次 10,000）；~1% 错误注入（0.5% 缺 `id` → E1001、0.5% 类型错误 → E1003）；`ValidationReport` 聚合（`successCount`/`failureCount`/错误码收集）；读写一致性（`query` 行数 = 成功数）；`ValueObject.update()` 运行时监控（E1002/E1003）；ErrorCodes 注册表完整性（E2005/E3001/E1008）；`flushAll` + `.mld` 持久化；吞吐量报告。                                                                                                                                                                                                                                    |
+| **`million_stress_test.ts`**  | `stress_atlas`                | **34 个断言**（单文件 Vault）：100 万行 `Sensor` 灌入；~1% 错误注入（E1001/E1003）；`ValidationReport`；读写一致性；`ValueObject.update()` 监控；ErrorCodes 完整性；**`flushAll` + `atlas.mld`**（含 **`m:Sensor`** blob）；吞吐量报告。                                                                                                                                                                                                                                                                                                                                                                 |
 | **`transform_aggregate.ts`**  | （脚本内自建）                | **第六节 6.3**：**`pivot` / `groupBy`**、**`aggregate`（对象与 `Aggregator`）**、**`between`**、**`compute` / `customReduce`**、**`execute()` → `AnalysisResult`**（**`asTree` / `asMatrix`**）、**`analyze()`**、**`traceableNull(all_missing)`**、关系路径分组键。                                                                                                                                                                                                                                                                                                                                     |
-| **`first_run.ts`**            | `pipe`                        | 治理 → **`flushAll`** → Runtime 查询的**可读演示**（弱断言）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **`first_run.ts`**            | `pipe`                        | 单文件 Vault：**治理** → **`flushAll`** → **`ModelDBClient.connect`** 可读演示（弱断言）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 ---
 
@@ -1041,10 +1060,10 @@ npm run format
 # 类型 + lint + 格式
 npm run check
 
-# 编译引擎 + 服务端入口（输出 dist/，含 dist/server/cli.js）
+# 编译引擎 + @mode-db/shared + @mode-db/server + @mode-db/sdk
 npm run build
 
-# 构建远程客户端 SDK（ESM + CJS + 类型声明，输出 packages/model-db-client-sdk/dist/）
+# 仅构建远程客户端 SDK（ESM + CJS + 类型声明，输出 packages/sdk/dist/）
 npm run build:sdk
 
 # 编译后启动 WebSocket 服务（需配置或 CLI 传入 connectToken）
@@ -1063,23 +1082,28 @@ npm run dev
 1. **版本号**：在根目录 **`package.json`** 的 **`version`** 字段递增（建议遵循 [semver](https://semver.org/lang/zh-CN/)）。
 2. **预检**：在干净工作区执行  
    **`npm ci`**（或 **`npm install`**）→ **`npm run check`** → **`npm run build`** → **`npm test`**。  
-   若对外发布 SDK 工作区包，额外执行 **`npm run build:sdk`**，并确认 **`packages/model-db-client-sdk/dist/`** 已生成且 **`npm pack -w @mode-db/model-db-client-sdk --dry-run`** 文件列表符合预期。
-3. **打包内容**：**`npm pack`** 默认按 **`package.json` → `files`** 包含 **`dist/`** 与 **`docs/architecture.svg`**；已编译的 **`dist/server/cli.js`** 会随 **`npm run build`** 一并发布，安装方可直接 **`npx modeldb-server`**（见 **`bin`**）。
+   若对外发布 SDK 工作区包，额外执行 **`npm run build:sdk`**，并确认 **`packages/sdk/dist/`** 已生成且 **`npm pack -w @mode-db/sdk --dry-run`** 文件列表符合预期。
+3. **打包内容**：**`npm pack`** 默认按 **`package.json` → `files`** 包含 **`dist/`**、**`packages/server/dist/`** 与 **`docs/architecture.svg`**；**`npx modeldb-server`** 见根 **`bin`**。
 4. **发布注册表**：登录 npm（**`npm login`**）后执行 **`npm publish --access public`**（作用域包若未公开需显式 **`--access public`**）。建议使用 **`npm publish --dry-run`** 先试打 tarball。
 5. **Git 标签**：发布后与 **`package.json`** 中版本一致的 **annotated tag**（例如 **`v1.0.1`**）便于回溯。
 
-### 工作区包 `@mode-db/model-db-client-sdk`
+### 工作区包 `@mode-db/sdk`
 
-- **路径**：[packages/model-db-client-sdk](packages/model-db-client-sdk)。**`peerDependencies`** 声明 **`mode-db-engine`**，避免与宿主应用重复打包引擎核心。
-- **构建**：根目录 **`npm run build:sdk`**（内部为 **`npm run build -w @mode-db/model-db-client-sdk`**，调用 **`tsup`**）。
-- **发布顺序**：先发布 **`mode-db-engine`** 再发布 SDK，或保证 peer 版本范围与已发布引擎版本一致；SDK 的 **`package.json`** 中 **`dependencies.mode-db-engine`** 当前为 **`file:../..`**，**发布到 npm 前**须改为 **`^x.y.z`** 等与注册表一致的 semver 范围（仅 **`file:`** 无法供外部用户安装）。
-- ** tarball 检查**：在 **`packages/model-db-client-sdk`** 下 **`npm pack`**，检查是否仅含 **`dist/`**、**`package.json`**、**`README`**（若添加）等。
+- **路径**：[packages/sdk](packages/sdk)。**`peerDependencies`** 声明 **`mode-db-engine`**；**`@mode-db/shared`** 提供线协议与 diagnostic 的薄再导出。
+- **构建**：根目录 **`npm run build:sdk`**（内部为 **`npm run build -w @mode-db/sdk`**，调用 **`tsup`**）。
+- **发布顺序**：先发布 **`mode-db-engine`** 再发布 **`@mode-db/shared`** / SDK，或保证 peer 版本范围与已发布引擎版本一致；SDK 的 **`package.json`** 中 **`dependencies.mode-db-engine`** 当前为 **`file:../..`**，**发布到 npm 前**须改为 **`^x.y.z`** 等与注册表一致的 semver 范围（仅 **`file:`** 无法供外部用户安装）。
+- **tarball 检查**：在 **`packages/sdk`** 下 **`npm pack`**，检查是否仅含 **`dist/`**、**`package.json`**、**`README`**（若添加）等。
+
+### 工作区包 `@mode-db/server`
+
+- **路径**：[packages/server](packages/server)。**`commander`** CLI（**`--port` / `--host` / `--config` / `--storage` / `--token` / `--vault-secret` / `--dev`**），**`ws`** WebSocket 服务，**`WireRequestDispatcher`** 与 **`WriteSerializationGate`**（为后续治理端写 RPC 预留串行化）。
+- **构建**：**`npm run build:server`** 或包含在根 **`npm run build`** 中。
 
 ### 部署 WebSocket 服务（运维摘要）
 
 1. 将 **`dist/`** 拷贝至服务器或直接使用 **`npm install mode-db-engine`**。
 2. 准备 **`modeldb.config.json`**（或由环境变量 **`MODEL_DB_CONNECT_TOKEN`**、**`MODEL_DB_STORAGE_ROOT`**、**`MODEL_DB_VAULT_SECRET`** 注入），**不要**在仓库中保存生产密钥。
-3. 使用 **`node dist/server/cli.js`** 或 **`npx modeldb-server`** 启动；生产环境前置 **Nginx / Caddy / 云 LB** 做 **TLS** 与限流。
+3. 使用 **`node ./packages/server/dist/cli.js`** 或 **`npx modeldb-server`** 启动；生产环境前置 **Nginx / Caddy / 云 LB** 做 **TLS** 与限流。
 4. **进程管理**：使用 **systemd**、**PM2** 或容器编排重启策略，确保异常退出后自动拉起。
 
 ---

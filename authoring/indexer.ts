@@ -1,5 +1,5 @@
 import { createReadStream } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { createInterface } from 'node:readline';
 import type {
@@ -14,6 +14,7 @@ import type { IndexReader } from '../common/provider.js';
 import type { PathResolver } from '../src/common/PathResolver.js';
 import { IndexerError } from '../common/errors.js';
 import { AtlasSingleVault } from './atlas-single-vault.js';
+import { DiskAdapter } from '../common/disk-adapter.js';
 
 export interface RelationIndexerVaultOptions {
   readonly vault: AtlasSingleVault;
@@ -406,30 +407,31 @@ export class RelationIndexer implements IndexReader {
 
   private async scanFile(filePath: string, onRecord: (record: ModelRecord) => void): Promise<void> {
     this.paths.assertResolvedUnderModelsDir(filePath);
-
-    let stream;
-    try {
-      stream = createReadStream(filePath, 'utf-8');
-    } catch {
-      return;
-    }
-
-    const rl = createInterface({ input: stream, crlfDelay: Infinity });
-
-    try {
-      for await (const line of rl) {
-        const trimmed = line.trim();
-        if (trimmed.length === 0) {
-          continue;
-        }
-        onRecord(JSON.parse(trimmed) as ModelRecord);
-      }
-    } catch (err) {
-      if (isNodeError(err) && err.code === 'ENOENT') {
+    await DiskAdapter.timedStreamRead(`RelationIndexer.scan:${basename(filePath)}`, async () => {
+      let stream;
+      try {
+        stream = createReadStream(filePath, 'utf-8');
+      } catch {
         return;
       }
-      throw new IndexerError(`Failed to scan file "${filePath}"`, { cause: err });
-    }
+
+      const rl = createInterface({ input: stream, crlfDelay: Infinity });
+
+      try {
+        for await (const line of rl) {
+          const trimmed = line.trim();
+          if (trimmed.length === 0) {
+            continue;
+          }
+          onRecord(JSON.parse(trimmed) as ModelRecord);
+        }
+      } catch (err) {
+        if (isNodeError(err) && err.code === 'ENOENT') {
+          return;
+        }
+        throw new IndexerError(`Failed to scan file "${filePath}"`, { cause: err });
+      }
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -457,7 +459,7 @@ export class RelationIndexer implements IndexReader {
     } else {
       const filePath = this.paths.relationIndexFilePath(key);
       try {
-        const raw = await readFile(filePath, 'utf-8');
+        const raw = await DiskAdapter.read(filePath, 'utf-8');
         data = JSON.parse(raw) as RelationIndexData;
       } catch (err) {
         if (!isNodeError(err) || err.code !== 'ENOENT') {
@@ -489,7 +491,7 @@ export class RelationIndexer implements IndexReader {
 
     const filePath = this.paths.relationIndexFilePath(key);
     try {
-      await writeFile(filePath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+      await DiskAdapter.writeFile(filePath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
     } catch (err) {
       throw new IndexerError(`Failed to write relation index "${key}"`, { cause: err });
     }

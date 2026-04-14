@@ -44,6 +44,7 @@ import {
   type PredicateNode,
 } from './predicate-tree.js';
 import { QueryEngine, type EvaluateResult } from './query-engine.js';
+import { EngineLogger } from '../../common/engine-logger.js';
 import {
   Aggregator,
   AggregatorEngine,
@@ -713,6 +714,23 @@ export class QueryChain<
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 无分页与有分页形态不同，避免破坏既有调用方类型推断
   async execute(options?: QueryExecuteOptions): Promise<any> {
+    const __queryT0 = performance.now();
+    try {
+      return await this.executeImpl(options);
+    } finally {
+      if (EngineLogger.instance.isAccessLogEnabled()) {
+        EngineLogger.instance.accessQueryEngineTask(
+          performance.now() - __queryT0,
+          this.originModel,
+          {
+            cache: this.smartCache ? 'on' : 'off',
+          },
+        );
+      }
+    }
+  }
+
+  private async executeImpl(options?: QueryExecuteOptions): Promise<any> {
     const limitOpt = options?.limit ?? this.paginationPartial?.limit;
     const pageOpt = options?.page ?? this.paginationPartial?.page ?? 0;
     const doPage = limitOpt !== undefined && limitOpt !== null;

@@ -81,9 +81,9 @@ async function main(): Promise<void> {
   );
   assert(bag.length === 1, 'collect diagnostic');
 
-  const logPath = join(atlasDir, 'logs', 'engine.log');
+  const logPath = join(atlasDir, 'logs', 'system.log');
   await new Promise((r) => setTimeout(r, 120));
-  assert(existsSync(logPath), 'engine.log should exist');
+  assert(existsSync(logPath), 'system.log should exist');
   const logText = await readFile(logPath, 'utf-8');
   assert(logText.includes('E1001'), 'log should capture diagnostic code');
 

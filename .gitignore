@@ -4,6 +4,28 @@ node_modules
 # Build output
 dist
 
+# Accidental colocated `tsc` emit next to sources (keep types only under dist/)
+/index.js
+/index.js.map
+/index.d.ts
+/index.d.ts.map
+/common/**/*.js
+/common/**/*.js.map
+/common/**/*.d.ts
+/common/**/*.d.ts.map
+/authoring/**/*.js
+/authoring/**/*.js.map
+/authoring/**/*.d.ts
+/authoring/**/*.d.ts.map
+/runtime/**/*.js
+/runtime/**/*.js.map
+/runtime/**/*.d.ts
+/runtime/**/*.d.ts.map
+/src/**/*.js
+/src/**/*.js.map
+/src/**/*.d.ts
+/src/**/*.d.ts.map
+
 # TypeScript cache
 *.tsbuildinfo
 

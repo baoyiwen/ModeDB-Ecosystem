@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { DiskAdapter } from '../../common/disk-adapter.js';
 import type { RelationDefinition, RelationIndexData } from '../../common/types.js';
 import type { IndexReader } from '../../common/provider.js';
 import type { PathResolver } from '../common/PathResolver.js';
@@ -39,7 +39,7 @@ export class RelationIndexFileReader implements IndexReader {
     let data: RelationIndexData = { fwd: {}, rev: {} };
 
     try {
-      const raw = await readFile(filePath, 'utf-8');
+      const raw = await DiskAdapter.read(filePath, 'utf-8');
       data = JSON.parse(raw) as RelationIndexData;
     } catch (err) {
       if (!isNodeError(err) || err.code !== 'ENOENT') {

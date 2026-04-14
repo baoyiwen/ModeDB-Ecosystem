@@ -1,4 +1,4 @@
-# @mode-db/model-db-client-sdk
+# @mode-db/sdk
 
 Mode DB / ModelDB 的 **远程只读客户端**：通过 WebSocket 与 **`mode-db-engine`** 自带的 **`ModelDB WebSocket Server`** 通信，链式 API 与本地 **`ModelDBClient`** 一致（**`await model.query()…execute()`**）。
 
@@ -16,10 +16,10 @@ npm run build:sdk
 ## 使用
 
 ```typescript
-import { connectRemote } from '@mode-db/model-db-client-sdk';
+import { connectRemote } from '@mode-db/sdk';
 
 const db = await connectRemote({
-  url: 'ws://127.0.0.1:8787',
+  url: 'ws://127.0.0.1:9090',
   connectToken: '与服务器一致',
   atlas: 'your_atlas',
 });

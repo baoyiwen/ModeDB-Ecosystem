@@ -1,7 +1,10 @@
 {
   "compilerOptions": {
     "paths": {
-      "mode-db-engine": ["./index.ts"]
+      "mode-db-engine": ["./index.ts"],
+      "@mode-db/server": ["./packages/server/src/index.ts"],
+      "@mode-db/shared": ["./packages/shared/src/index.ts"],
+      "@mode-db/sdk": ["./packages/sdk/src/index.ts"]
     },
     "target": "ES2022",
     "module": "Node16",
@@ -25,14 +28,6 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true
   },
-  "include": [
-    "src/**/*",
-    "common/**/*",
-    "authoring/**/*",
-    "runtime/**/*",
-    "test/**/*",
-    "index.ts",
-    "server/**/*"
-  ],
+  "include": ["src/**/*", "common/**/*", "authoring/**/*", "runtime/**/*", "test/**/*", "index.ts"],
   "exclude": ["node_modules", "dist", "data"]
 }

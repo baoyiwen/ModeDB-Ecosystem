@@ -12,5 +12,5 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   splitting: false,
-  external: ['mode-db-engine', 'ws'],
+  external: ['mode-db-engine', '@mode-db/shared', 'ws'],
 });

@@ -1,6 +1,6 @@
 # 集成测试说明（`test/`）
 
-本目录包含 **集成 / 端到端脚本**（**非** Jest/Vitest 单元测试）。脚本通过 **`tsx`** 直接执行 TypeScript，默认读写仓库下的 **`data/`**（可用 `MODEL_DB_STORAGE_ROOT` / `STORAGE_ROOT` 覆盖）。**`integration-vault.ts`** 提供统一的 **`singleFileVault` + `MODEL_DB_VAULT_SECRET`**（集成密钥常量），除 **`vault_audit`** 故意测错密钥外，其余脚本与 **`ModelDBClient.connect`** 共用同一密钥。
+本目录包含 **集成 / 端到端脚本**（**非** Jest/Vitest 单元测试）。脚本通过 **`tsx`** 直接执行 TypeScript，默认读写仓库下的 **`data/`**（可用 **`MODEL_DB_STORAGE_ROOT`** / **`STORAGE_ROOT`** 覆盖）。**`integration-vault.ts`** 提供统一的 **`singleFileVault: true` + `MODEL_DB_VAULT_SECRET`**（集成密钥常量）。**`verify.ts`** 的 **`pipe` / `tran`** 以及 **`crud_audit`**、**`logic_integrity`**、**`query_chain_extended`**、**`logic_closure_audit`**、**`authoring_dx_audit`** 等脚本在集成场景下落盘为**仅 `atlas.mld` 的单文件 Vault**（不是 `atlas-manifest.json` + `models/` + `relations/` 分文件树；与根 README **「存储布局与 Atlas」** 一致）。除 **`vault_audit`** 故意测错密钥外，与 **`ModelDBClient.connect`** 共用同一密钥。
 
 **引擎能力、治理端持久化、CRUD 缓冲区协议、合并读与 API 细节**见仓库根目录 **[README.md](../README.md)**（含 **「治理端持久化与开发者体验（DX）」** 与 **第六节** 链式查询 / 多维分析）。
 
@@ -36,7 +36,7 @@ npm run test:integration
 | `query_filters.ts`        | `query_filter_demo`            | 脚本内自删后重建                                           |
 | `logic_integrity.ts`      | `integrity_pipe`               | 脚本内自删后重建                                           |
 | `logic_closure_audit.ts`  | `pipe_system` / `tran_system`  | 脚本内自删后重建                                           |
-| `query_chain_extended.ts` | （复用前序数据）               | —                                                          |
+| `query_chain_extended.ts` | `query_chain_extended`         | 脚本内自建 Atlas + Vault；**不**复用 `verify` 的 `pipe`    |
 | `authoring_dx_audit.ts`   | `dx_audit`                     | 启动时仅删除 `data/dx_audit/`                              |
 | `crud_audit.ts`           | `crud_audit`                   | 启动时仅删除 `data/crud_audit/`                            |
 | `datatype_audit.ts`       | `datatype_audit`               | 启动时仅删除 `data/datatype_audit/`                        |
@@ -56,7 +56,7 @@ npm run test:integration
 | `npm run test:integration`  | 串联 11 个脚本（见上）      | 首步清空 `data/`；一键回归（含 **`vault_audit`**、**`wire_server_audit`**）                                                                                                                                                                                                              |
 | `npx tsx test/verify.ts`    | `verify.ts`                 | 双图谱隔离、骨架补全、PROTOCOL 绑定、Runtime 只读                                                                                                                                                                                                                                        |
 | `npm run query-filters`     | `query_filters.ts`          | 谓词树、AND/OR 短路、`matchAll` / `matchAny`、`getQueryPlan`、`includeRelates`                                                                                                                                                                                                           |
-| `npm run integrity`         | `logic_integrity.ts`        | 句柄缓存、合并读、`insert({ sync: true })`、`explainRelate`、`.rid` 篡改                                                                                                                                                                                                                 |
+| `npm run integrity`         | `logic_integrity.ts`        | 句柄缓存、合并读、`insert({ sync: true })`、`explainRelate`、Vault **`r:*`** 关系索引注入                                                                                                                                                                                                |
 | `npm run audit`             | `logic_closure_audit.ts`    | 多 Atlas 物理隔离、双向索引守恒、多级 `relate`、Runtime 只读                                                                                                                                                                                                                             |
 | `npm run query-extended`    | `query_chain_extended.ts`   | `ComputeBuilder`、分析分页、`wrapGroups`、`relateRecursive`；**已**含于 `test:integration`                                                                                                                                                                                               |
 | `npm run dx-audit`          | `authoring_dx_audit.ts`     | 合并辅助函数、`QueryEngine.execute`、句柄缓存、`updateFields` 去重、合并读、`insert sync`；**已**含于 `test:integration`                                                                                                                                                                 |
@@ -64,7 +64,7 @@ npm run test:integration
 | `npm run datatype-audit`    | `datatype_audit.ts`         | DataType + ValueObject（114 个断言）：类型校验、required/default/isEmpty/save、I18N/Color/Unit、manifest；**已**含于 `test:integration`                                                                                                                                                  |
 | `npm run diagnostic-audit`  | `diagnostic_audit.ts`       | DiagnosticCenter（**122** 个断言）：ErrorCodes 别名（含 **E3002**）、ErrorRegistry（含 E2005/E3002）、ValidationReport（isAllSuccess/getSummary/exportAsJSON/report 流式）、insertMany 批量、ValueObject 联动（required + type mismatch）、Emergency dump；**已**含于 `test:integration` |
 | `npm run vault-audit`       | `vault_audit.ts`            | 单文件 Vault：目录零明文、`ModelDBClient.connect`、`relate`、manifest hydrate、错误密钥、**E3002**；**已**含于 `test:integration`                                                                                                                                                        |
-| `npm run wire-server-audit` | `wire_server_audit.ts`      | WebSocket 服务 + **`@mode-db/model-db-client-sdk`**：`ConnectToken` 拒绝、**`connectRemote`**、**`RemoteHydratedEntity`**；**已**含于 `test:integration`（**必须**排在 `verify` 之后）                                                                                                   |
+| `npm run wire-server-audit` | `wire_server_audit.ts`      | WebSocket 服务 + **`@mode-db/sdk`**：`ConnectToken` 拒绝、**`connectRemote`**、**`RemoteHydratedEntity`**；**已**含于 `test:integration`（**必须**排在 `verify` 之后）                                                                                                                   |
 | `npm run stress-test`       | `million_stress_test.ts`    | 压力测试（34 个断言）：100 万行灌入、1% 错误注入（E1001/E1003）、读写一致性、ValueObject 运行时监控、ErrorCodes 完整性、吞吐量报告。**未**并入默认集成                                                                                                                                   |
 | `npm run first-run`         | `first_run.ts`              | 演示向；`pipe` 重建。**未**并入默认集成                                                                                                                                                                                                                                                  |
 | `npm run transform`         | `transform_aggregate.ts`    | 多维分析全场景（语义见根 README **第六节 6.3**）。**未**并入默认集成                                                                                                                                                                                                                     |
@@ -77,9 +77,9 @@ npm run test:integration
 
 ### `verify.ts`
 
-- 双图谱目录（`pipe` / `tran`）与注册表**物理隔离**。
+- 双图谱目录（`pipe` / `tran`）与注册表**物理隔离**；两图谱均 **`integrationVaultAuthoringOptions`** → 目录下**仅** **`atlas.mld`**（无 `models/` / `relations/` / 根级 `atlas-manifest.json`）。
 - **骨架插入** + `updateFields` 补字段（滞后定义）。
-- **PROTOCOL 绑定**与 `.rid` 正逆向成对校验。
+- **PROTOCOL 绑定**与 **关系索引 `fwd` / `rev` 成对**：在 Vault 内校验 **`r:Pump-Zone-located_in`** 条目（语义与分文件 **`.rid`** 一致）。
 - **`ModelDBClient.connect`** 与 Runtime **无写入 API**（`insert` / `updateFields` / `bind` 均为 `undefined`）。
 
 ### `query_filters.ts`
@@ -98,19 +98,19 @@ npm run test:integration
 - **合并读**：`insert` 后、未 `flushAll` 时 `AuthoringEngine.query` 可见新行。
 - **`insert(..., { sync: true })`** + `existsSync(atlas.mld)`（单文件 Vault）断言。
 - **`explainRelate`** 各类原因：`NOT_REGISTERED` / `NO_LINK_IN_INDEX`。
-- **.rid 幽灵 id** 注入 → `FILTERED_OUT_ORPHAN`。
+- **Vault 包内 `r:*` 幽灵 target id** 注入 → `FILTERED_OUT_ORPHAN`（**`mutateVaultRelationData`**）。
 - **`includeRelates`** + **`toNested()`** 级联结构。
 
 ### `logic_closure_audit.ts`
 
-- 多 Atlas（`pipe_system` / `tran_system`）**物理隔离**。
-- **双向索引守恒**：`fwd` 边数 === `rev` 边数。
+- 多 Atlas（`pipe_system` / `tran_system`）**物理隔离**（**单文件 Vault**）。
+- **双向索引守恒**：`fwd` 边数 === `rev` 边数（包内 **`r:*`** 或分文件 **`.rid`** 同一语义）。
 - **多级链式 `relate`**（Zone → Pump → Sensor 三级跳转）。
 - **Runtime 只读安全性**。
 
 ### `first_run.ts`
 
-演示用；治理 → `flushAll` → Runtime 查询的可读脚本（弱断言）。非严格回归核心。
+演示用；**单文件 Vault**：治理 → **`flushAll`** → **`ModelDBClient.connect`** 查询（弱断言）。非严格回归核心。
 
 ### `transform_aggregate.ts` / `final_analysis_test.ts`
 
@@ -120,6 +120,7 @@ npm run test:integration
 
 ### `query_chain_extended.ts`
 
+- 独立 Atlas **`query_chain_extended`** + **单文件 Vault**（与 **`verify`** 的 **`pipe`** 无依赖）。
 - `ComputeBuilder` + `groupBy`。
 - 分析按桶分页（`bucketCount` / `sliceBuckets` → `Paginated`）。
 - `wrapGroups` + `GroupInstance`。
@@ -150,7 +151,7 @@ npm run test:integration
 | 6    | **`AuthoringEngine` facade**：`engine.update` 合并成功、`engine.delete` → `true` + query 不可见                                                                     |
 | 7    | **`updateWhere` / `deleteWhere`**：条件批量更新（`status: active → archived`）、合并读行数一致、条件批量删除（`idle`）、`engine.updateWhere` / `engine.deleteWhere` |
 | 8    | **关系层清理（模型独立性）**：bind → delete → 正向边清除、反向边不再含已删 id、其他实体边不受影响、目标模型 Zone 数据行不变                                         |
-| 9    | **`deleteWhere` 批量关系清理**：条件删除后所有命中实体的 `.rid` 边均被清理、未命中实体边不受影响、Pump 仅剩预期行                                                   |
+| 9    | **`deleteWhere` 批量关系清理**：条件删除后所有命中实体的**关系边**均被清理（Vault 为包内 **`r:*`**；分文件为 **`.rid`**）、未命中实体边不受影响、Pump 仅剩预期行    |
 | 10   | **`{ sync: true }` + flush 压缩**：insert sync 后 **`atlas.mld`** 存在；delete/update sync 后 Vault 内 **`m:Item`** 明文 JSONL 无墓碑与已删 `_id`、含更新值         |
 
 ### `datatype_audit.ts`（114 个断言，20 个分组）
@@ -215,7 +216,7 @@ npm run test:integration
 - **环境**：调用 **`useIntegrationVaultEnv()`**，与服务端 **`loadModelDBServerConfig` 等价配置** 使用同一 **`INTEGRATION_VAULT_SECRET`**，保证 **`ModelDBClient.connect('pipe')`** 在服务端进程内可解密。
 - **预检**：同进程 **`ModelDBClient.connect('pipe')`**，确保 Vault 密钥与 **`data/pipe`** 与线上一致后再起 WebSocket。
 - **服务**：**`startModelDBWebSocketServer({ port: 0, storageRoot, connectToken, vaultSecret })`**，随机端口；**`getWebSocketServerListeningPort`** 读取实际端口。
-- **SDK**：**`connectRemote`**（**`@mode-db/model-db-client-sdk`** 源码入口，**`tsx`** 直连 **`packages/.../src/index.ts`**）在 Node 下走 **`ws` 包**（与 **`ws` 服务器** 互操作）；**`model('Pump').query().execute()`**；断言 **`RemoteHydratedEntity`** 与 **`getModelName() === 'Pump'`**。
+- **SDK**：**`connectRemote`**（**`@mode-db/sdk`** 源码入口，**`tsx`** 直连 **`packages/sdk/src/index.ts`**）在 Node 下走 **`ws` 包**（与 **`ws` 服务器** 互操作）；**`model('Pump').query().execute()`**；断言 **`RemoteHydratedEntity`** 与 **`getModelName() === 'Pump'`**。
 - **安全**：在成功 RPC 之后，**第二条**裸 **`ws`** 连接发送错误 **`connectToken`**，断言返回 **`{ type: 'error' }`**（避免与首次握手竞态干扰）。
 - **收尾**：**`remote.close()`**、**`wss.close()`**。
 
@@ -239,7 +240,7 @@ npm run test:integration
 - **Vault**：断言「无分文件」时用 **`paths.atlasSingleVaultPath()`** 与 **`existsSync(paths.modelsDir()) === false`**；不要依赖读取明文 JSONL 文件（内容在密文包内）。集成脚本需设置与治理端一致的 **`MODEL_DB_VAULT_SECRET`** 再调用 **`ModelDBClient.connect`**。
 - **同进程业务断言**：可依赖合并读，**不必**先 `flushAll`（见 `logic_integrity`、`crud_audit`）。
 - **`delete` 后读 `.mld`**：flush 会触发压缩重写（全量读取 → 合并缓冲 → 过滤墓碑 → 原子写回），墓碑行不会残留在文件中。
-- **关系层断言**：`delete` / `deleteWhere` 会自动清理 `.rid` 边；若需验证边状态，直接用 `indexer.getForward` / `getReverse` 即可，无需手动 flush 索引。
+- **关系层断言**：`delete` / `deleteWhere` 会清理**关系邻接表**（Vault：**`RelationIndexer`** 写回包内 **`r:*`**；分文件：**`.rid`**）。若需验证边状态，用 **`indexer.getForward` / `getReverse`** 或 **`loadVaultRelationData`**（Vault）即可。
 - **Atlas 命名**：新测试脚本应使用独立的 Atlas 名，避免与已有脚本冲突。启动时用 `await rm(join(DATA_ROOT, ATLAS), { recursive: true, force: true })` 清理自身数据目录。
 - **网络/SDK 测试**：**`wire_server_audit`** 依赖 **`verify`** 产出的 **`pipe`** 数据；单跑时执行 **`npx tsx test/verify.ts && npx tsx test/wire_server_audit.ts`**，或先保证 **`data/pipe/atlas.mld`** 存在后再 **`npm run wire-server-audit`**。修改 **`server/modeldb-server.ts`** 线协议时务必同步跑通本脚本。
 

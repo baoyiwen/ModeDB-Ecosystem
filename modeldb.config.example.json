@@ -1,6 +1,0 @@
-{
-  "port": 8787,
-  "storageRoot": "./data",
-  "connectToken": "change-me-in-production",
-  "vaultSecret": "optional-only-if-atlases-use-encrypted-vault"
-}

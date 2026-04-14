@@ -13,6 +13,9 @@ export default [
       'data/**',
       'packages/**/dist/**',
       'packages/**/tsup.config.ts',
+      // Colocated `tsc` emit under `src/` is not part of the TS program; linting it breaks projectService.
+      'src/**/*.js',
+      'src/**/*.js.map',
     ],
   },
 

@@ -1,5 +1,5 @@
 /**
- * ModelDB WebSocket 服务与 `@mode-db/model-db-client-sdk` 联调。
+ * ModelDB WebSocket 服务与 `@mode-db/sdk` 联调。
  *
  * **前置**：`verify.ts` 已创建 Vault 图谱 `data/pipe/atlas.mld`（默认集成顺序中为首步）。
  * **单跑**：`npx tsx test/wire_server_audit.ts`（需已存在 `data/pipe` 与集成 Vault 密钥环境）。
@@ -11,16 +11,13 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { configureModelDBStorageRoot } from '../common/storage-root-config.js';
 import { ModelDBClient } from '../runtime/client.js';
-import {
-  getWebSocketServerListeningPort,
-  startModelDBWebSocketServer,
-} from '../server/modeldb-server.js';
+import { getWebSocketServerListeningPort, startModelDBWebSocketServer } from '../index.js';
 import {
   atlasVaultPath,
   INTEGRATION_VAULT_SECRET,
   useIntegrationVaultEnv,
 } from './integration-vault.js';
-import { connectRemote, RemoteHydratedEntity } from '../packages/model-db-client-sdk/src/index.js';
+import { connectRemote, RemoteHydratedEntity } from '../packages/sdk/src/index.js';
 
 const DATA_ROOT = join(process.cwd(), 'data');
 const WIRE_TOKEN = 'wire-server-audit-token';
@@ -82,9 +79,11 @@ assert(true, '本地 Runtime 可打开 pipe Vault（与服务端将使用的存�
 section('1. 启动 WebSocket 服务（随机端口 + 集成 Vault 密钥）');
 const wss = await startModelDBWebSocketServer({
   port: 0,
+  host: '127.0.0.1',
   storageRoot: DATA_ROOT,
   connectToken: WIRE_TOKEN,
   vaultSecret: INTEGRATION_VAULT_SECRET,
+  dev: false,
 });
 try {
   const port = getWebSocketServerListeningPort(wss);
@@ -113,10 +112,24 @@ try {
   section('3. 非法 ConnectToken → 服务端拒绝（独立第二条连接）');
   await expectHandshakeDenied(wsUrl);
   assert(true, '错误令牌收到 type=error 并关闭');
-} finally {
-  await new Promise<void>((resolve, reject) => {
-    wss.close((err) => (err ? reject(err) : resolve()));
+
+  section('4. SDK mode=short（HTTP /v2/action）');
+  const httpBase = `http://127.0.0.1:${port}`;
+  const shortRemote = await connectRemote({
+    url: httpBase,
+    mode: 'short',
+    connectToken: WIRE_TOKEN,
+    atlas: 'pipe',
   });
+  try {
+    const rowsShort = (await shortRemote.model('Pump').query().execute()) as unknown[];
+    assert(Array.isArray(rowsShort), 'short 模式 execute 返回数组');
+    assert(rowsShort.length >= 1, 'short 模式至少一行 Pump');
+  } finally {
+    shortRemote.close();
+  }
+} finally {
+  await wss.close();
 }
 
 console.log(`\nwire_server_audit: ${passed} passed, ${failed} failed`);

@@ -4,10 +4,11 @@
  * manifest under `__manifest__`. No separate `.rid` or per-model files when this vault is active.
  */
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { DiagnosticCenter, ErrorCodes } from '../common/diagnostic.js';
+import { DiskAdapter } from '../common/disk-adapter.js';
 
 /** First bytes of `atlas.mld` (single-file vault). */
 export const ATLAS_SINGLE_VAULT_MAGIC = Buffer.from('MDB4SVLT', 'ascii');
@@ -75,7 +76,7 @@ export class AtlasSingleVault {
     }
     let buf: Buffer;
     try {
-      buf = readFileSync(absPath);
+      buf = DiskAdapter.readFileSync(absPath);
     } catch (err) {
       this.reportCorrupt('read', absPath, err);
       return false;
@@ -115,7 +116,7 @@ export class AtlasSingleVault {
     lenBe.writeBigUInt64BE(BigInt(inner.length), 0);
     const out = Buffer.concat([MAGIC, fake, lenBe, inner]);
     mkdirSync(dirname(absPath), { recursive: true });
-    writeFileSync(absPath, out);
+    DiskAdapter.writeFileSync(absPath, out);
   }
 
   private reportCorrupt(phase: string, path: string, cause: unknown): void {

@@ -1,9 +1,9 @@
 {
-  "name": "@mode-db/model-db-client-sdk",
+  "name": "@mode-db/shared",
   "version": "0.1.0",
-  "description": "Remote WebSocket client for Mode DB / ModelDB — same QueryChain fluent API, wire-obfuscated payloads.",
+  "description": "Shared wire obfuscation, diagnostics, and shadow codec re-exports for ModelDB clients.",
   "type": "module",
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -23,9 +23,6 @@
   },
   "dependencies": {
     "mode-db-engine": "file:../.."
-  },
-  "optionalDependencies": {
-    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

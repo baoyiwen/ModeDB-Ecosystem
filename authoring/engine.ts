@@ -7,8 +7,8 @@ import type {
   BindStrategy,
   BindOptions,
 } from '../common/types.js';
-import { existsSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
+import { DiskAdapter } from '../common/disk-adapter.js';
 import { ModelRegistry } from '../common/registry.js';
 import { PathResolver } from '../src/common/PathResolver.js';
 import { resolveModelDBStorageRoot } from '../common/storage-root-config.js';
@@ -83,8 +83,20 @@ export interface AuthoringEngineOptions {
   memoryShadowHydration?: boolean;
   /** Enable query fingerprint cache; entries invalidate when any dependent model is written. */
   enableSmartCache?: boolean;
-  /** Rolling file log under `<atlas>/logs/engine.log` and mirror {@link DiagnosticCenter} output. */
-  engineLogger?: boolean | { maxFileBytes?: number };
+  /**
+   * When set, staging **≥ N** rows for a model triggers **`flushModelToDisk`** for that model
+   * (reduces peak memory before the 200ms scheduler runs).
+   */
+  bufferFlushRowThreshold?: number;
+  /** Rolling file log under `<atlas>/logs/system.log` and mirror {@link DiagnosticCenter} output. */
+  engineLogger?:
+    | boolean
+    | {
+        maxFileBytes?: number;
+        maxRotatedFiles?: number;
+        logEachDiskOp?: boolean;
+        logEachBinaryUnwrap?: boolean;
+      };
   /**
    * Single encrypted `atlas.mld` vault (models + relations + manifest). No `models/`, `relations/`,
    * or `atlas-manifest.json` on disk. Requires {@link vaultSecret} or `process.env.MODEL_DB_VAULT_SECRET`.
@@ -198,7 +210,11 @@ export class AuthoringEngine {
     this.storage = options.storage ?? new ModelStorage(paths, vaultOpts);
     this.storage.locale = this.currentLocale;
     this.storage.shadowDiskEncoding = atlasVault ? false : (options.shadowDiskEncoding ?? false);
-    this.persistence = new PersistenceManager(this.storage, this.smartCacheRef);
+    this.persistence = new PersistenceManager(
+      this.storage,
+      this.smartCacheRef,
+      options.bufferFlushRowThreshold,
+    );
     this.indexer =
       options.indexer ??
       (vaultOpts
@@ -222,14 +238,23 @@ export class AuthoringEngine {
       if (raw) {
         hydrateAuthoringFromManifest(this.registry, this.storage, raw, paths.atlasName);
       }
+    } else if (!atlasVault && options.registry === undefined) {
+      const manifestPath = paths.manifestFilePath();
+      if (existsSync(manifestPath)) {
+        const raw = readFileSync(manifestPath, 'utf-8');
+        hydrateAuthoringFromManifest(this.registry, this.storage, raw, paths.atlasName);
+      }
     }
 
     if (options.engineLogger) {
-      const maxFileBytes =
-        typeof options.engineLogger === 'object' && options.engineLogger.maxFileBytes !== undefined
-          ? options.engineLogger.maxFileBytes
-          : undefined;
-      EngineLogger.instance.configure({ atlasRoot: paths.atlasRoot(), maxFileBytes });
+      const eo = typeof options.engineLogger === 'object' ? options.engineLogger : {};
+      EngineLogger.instance.configure({
+        atlasRoot: paths.atlasRoot(),
+        maxFileBytes: eo.maxFileBytes,
+        maxRotatedFiles: eo.maxRotatedFiles,
+        logEachDiskOp: eo.logEachDiskOp,
+        logEachBinaryUnwrap: eo.logEachBinaryUnwrap,
+      });
       EngineLogger.instance.attachDiagnosticBridge((fn) => DiagnosticCenter.onDiagnostic(fn));
     }
 
@@ -503,7 +528,7 @@ export class AuthoringEngine {
       this.atlasVault.saveSync(this.paths.atlasSingleVaultPath(), this.vaultSecret);
       return;
     }
-    await writeFile(this.paths.manifestFilePath(), body, 'utf-8');
+    await DiskAdapter.writeFile(this.paths.manifestFilePath(), body, 'utf-8');
   }
 
   /**
