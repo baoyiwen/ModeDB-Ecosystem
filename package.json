@@ -1,5 +1,5 @@
 {
-  "name": "mode-db-engine",
+  "name": "@mode-db/engine",
   "version": "1.0.0",
   "description": "这是一个关于数据治理的引擎，旨在做一个能够形成数据资产图谱。他是一个超关系型数据引擎，我想使用他来建立物理关系。不在使用传统的数据库主外键关系来关联数据。但是，目前这个只是一个想法，还在实现与构思当中。",
   "type": "module",
@@ -7,6 +7,7 @@
     "modeldb-server": "./packages/server/dist/cli.js"
   },
   "workspaces": [
+    ".",
     "packages/*"
   ],
   "main": "dist/index.js",
@@ -21,7 +22,7 @@
     "test": "test"
   },
   "scripts": {
-    "build": "npm run build:common && npm run build:lib && npm run build:shared && npm run build:server && npm run build:sdk",
+    "build": "npm run build:shared && npm run build:common && npm run build:lib && npm run build:server && npm run build:sdk",
     "build:common": "npm run build -w @mode-db/common",
     "build:lib": "tsc -p tsconfig.lib.json",
     "build:shared": "npm run build -w @mode-db/shared",
@@ -33,15 +34,15 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{js,ts,json,md}\"",
     "format:check": "prettier --check \"**/*.{js,ts,json,md}\"",
-    "typecheck": "npm run build:common && npm run build:lib && npm run build:server && tsc --noEmit",
+    "typecheck": "npm run build:shared && npm run build:common && npm run build:lib && npm run build:server && tsc --noEmit",
     "test": "npm run test:integration",
-    "test:integration": "npm run build:common && npm run build:lib && npm run build:shared && npm run build:server && tsx test/modeldb_config_loader_audit.ts && tsx test/verify.ts && tsx test/query_filters.ts && tsx test/logic_integrity.ts && tsx test/logic_closure_audit.ts && tsx test/query_chain_extended.ts && tsx test/authoring_dx_audit.ts && tsx test/crud_audit.ts && tsx test/datatype_audit.ts && tsx test/diagnostic_audit.ts && tsx test/vault_audit.ts && tsx test/wire_server_audit.ts",
-    "config-loader-audit": "npm run build:common && npm run build:lib && npm run build:shared && npm run build:server && tsx test/modeldb_config_loader_audit.ts",
-    "wire-server-audit": "npm run build:common && npm run build:lib && npm run build:shared && npm run build:server && tsx test/wire_server_audit.ts",
+    "test:integration": "npm run build:shared && npm run build:common && npm run build:lib && npm run build:server && tsx test/modeldb_config_loader_audit.ts && tsx test/verify.ts && tsx test/query_filters.ts && tsx test/logic_integrity.ts && tsx test/logic_closure_audit.ts && tsx test/query_chain_extended.ts && tsx test/authoring_dx_audit.ts && tsx test/crud_audit.ts && tsx test/datatype_audit.ts && tsx test/diagnostic_audit.ts && tsx test/vault_audit.ts && tsx test/wire_server_audit.ts",
+    "config-loader-audit": "npm run build:shared && npm run build:common && npm run build:lib && npm run build:server && tsx test/modeldb_config_loader_audit.ts",
+    "wire-server-audit": "npm run build:shared && npm run build:common && npm run build:lib && npm run build:server && tsx test/wire_server_audit.ts",
     "datatype-audit": "tsx test/datatype_audit.ts",
     "diagnostic-audit": "tsx test/diagnostic_audit.ts",
     "stress-test": "tsx test/million_stress_test.ts",
-    "ignition": "npm run build:common && npm run build:lib && npm run build:shared && npm run build:server && tsx test/dual_track_ignition.ts",
+    "ignition": "npm run build:shared && npm run build:common && npm run build:lib && npm run build:server && tsx test/dual_track_ignition.ts",
     "shadow-smart-cache-audit": "tsx test/shadow_smartcache_logger_audit.ts",
     "vault-audit": "tsx test/vault_audit.ts",
     "first-run": "tsx test/first_run.ts",
@@ -56,7 +57,9 @@
     "crud-audit": "tsx test/crud_audit.ts",
     "prepare": "husky",
     "check:sources": "node scripts/assert-no-build-artifacts-in-src.mjs",
-    "check": "npm run check:sources && npm run typecheck && npm run lint && npm run format:check"
+    "check": "npm run check:sources && npm run typecheck && npm run lint && npm run format:check",
+    "publish:workspaces": "node scripts/publish-workspaces.mjs",
+    "publish:workspaces:live": "node scripts/publish-workspaces.mjs --live"
   },
   "repository": {
     "type": "git",
@@ -69,13 +72,16 @@
     "url": "https://github.com/baoyiwen/mode-db-engine/issues"
   },
   "homepage": "https://github.com/baoyiwen/mode-db-engine#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "@mode-db/common": "file:packages/common",
-    "@mode-db/shared": "file:packages/shared",
-    "@mode-db/sdk": "file:packages/sdk",
+    "@mode-db/common": "^0.1.0",
+    "@mode-db/shared": "^0.1.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@mode-db/sdk": "^0.1.0",
     "@types/ws": "^8.18.1",
     "@types/node": "^25.5.2",
     "@typescript-eslint/eslint-plugin": "^8.58.1",

@@ -3,31 +3,35 @@
   "version": "0.1.0",
   "description": "Remote WebSocket client for Mode DB / ModelDB — same QueryChain fluent API, wire-obfuscated payloads.",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.js"
     }
   },
   "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@mode-db/shared": "file:../shared"
+    "@mode-db/shared": "^0.1.0"
   },
   "optionalDependencies": {
     "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "tsup": "^8.5.0",
     "typescript": "^5.9.0"
   },
-  "license": "ISC"
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  }
 }

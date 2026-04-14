@@ -15,7 +15,7 @@ import {
   EngineLogger,
   type AuthoringEngine,
   type ModelDBClient,
-} from 'mode-db-engine';
+} from '@mode-db/engine';
 import type { WriteSerializationGate } from './write-serialization-gate.js';
 
 const MAX_INSERT_MANY_ROWS = 20_000;

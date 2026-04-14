@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "paths": {
-      "mode-db-engine": ["./index.ts"],
+      "@mode-db/engine": ["./index.ts"],
       "@mode-db/common": ["./packages/common/src/index.ts"],
       "@mode-db/shared": ["./packages/shared/src/index.ts"],
       "@mode-db/sdk": ["./packages/sdk/src/index.ts"]

@@ -12,16 +12,22 @@
     }
   },
   "sideEffects": false,
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@mode-db/shared": "file:../shared"
+    "@mode-db/shared": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "typescript": "^5.9.0"
   },
-  "license": "ISC"
+  "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  }
 }

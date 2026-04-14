@@ -1,7 +1,7 @@
 {
   "name": "@mode-db/server",
   "version": "0.1.0",
-  "description": "ModelDB WebSocket server: CLI, config loading, wire transport, and query dispatch. Depends on the workspace root package mode-db-engine (file:../..) for runtime, authoring, and wire serialization APIs.",
+  "description": "ModelDB WebSocket server: CLI, config loading, wire transport, and query dispatch. Depends on @mode-db/engine for runtime, authoring, and wire serialization APIs.",
   "keywords": [
     "modeldb",
     "websocket",
@@ -34,20 +34,26 @@
       "import": "./dist/index.js"
     }
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "prebuild": "npm --prefix ../.. run build:common && npm --prefix ../.. run build:shared",
-    "pretypecheck": "npm --prefix ../.. run build:common && npm --prefix ../.. run build:shared",
+    "prebuild": "npm --prefix ../.. run build:common && npm --prefix ../.. run build:shared && npm --prefix ../.. run build:lib",
+    "pretypecheck": "npm --prefix ../.. run build:common && npm --prefix ../.. run build:shared && npm --prefix ../.. run build:lib",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@fastify/websocket": "^11.2.0",
-    "@mode-db/common": "file:../common",
-    "@mode-db/shared": "file:../shared",
+    "@mode-db/common": "^0.1.0",
+    "@mode-db/engine": "^1.0.0",
+    "@mode-db/shared": "^0.1.0",
     "commander": "^12.1.0",
-    "mode-db-engine": "file:../..",
     "fastify": "^5.8.4",
     "ws": "^8.18.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

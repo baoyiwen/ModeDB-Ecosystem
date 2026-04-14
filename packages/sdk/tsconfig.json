@@ -9,10 +9,7 @@
     "noEmit": true,
     "verbatimModuleSyntax": true,
     "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "paths": {
-      "@mode-db/shared": ["../shared/src/index.ts"]
-    }
+    "resolveJsonModule": true
   },
   "include": ["src/**/*.ts"]
 }

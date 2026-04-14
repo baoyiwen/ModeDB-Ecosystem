@@ -6,9 +6,7 @@
     "lib": ["ES2022"],
     "types": ["node"],
     "paths": {
-      "@mode-db/server": ["./src/index.ts"],
-      "@mode-db/shared": ["../shared/dist/index.d.ts"],
-      "@mode-db/common": ["../common/dist/index.d.ts"]
+      "@mode-db/server": ["./src/index.ts"]
     },
     "rootDir": "./src",
     "outDir": "./dist",

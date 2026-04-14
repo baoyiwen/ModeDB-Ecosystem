@@ -24,7 +24,7 @@ import {
   AuthoringEngine,
   configureModelDBStorageRoot,
   resolveModelDBStorageRoot,
-} from 'mode-db-engine';
+} from '@mode-db/engine';
 
 const url = process.env.MODEL_DB_URL ?? 'http://127.0.0.1:9090';
 const connectToken = process.env.MODEL_DB_CONNECT_TOKEN ?? 'dev-connect-token-change-in-production';
