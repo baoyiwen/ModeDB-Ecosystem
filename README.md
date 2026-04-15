@@ -1,6 +1,6 @@
-# Mode DB Engine
+# ModeDB-Ecosystem
 
-一个**超关系型数据引擎**，用于数据治理与数据资产图谱构建。
+**ModeDB-Ecosystem** 是以**超关系型数据引擎**（**`@mode-db/core`**）为核心的 **pnpm monorepo**，用于数据治理与数据资产图谱构建。
 
 它不依赖传统数据库的主外键机制来关联数据，而是通过**物理关系**将实体连接在一起——模型只存储纯净的属性数据，关系作为独立的四元组协议存在，两者在物理层面完全隔离。
 
@@ -26,7 +26,7 @@
 - 关系变更需要修改模型表结构
 - 难以表达多对多、层级继承等复杂拓扑
 
-Mode DB Engine 采用完全不同的思路：
+**ModeDB-Ecosystem** 采用完全不同的思路：
 
 ```
 传统方式:  User { name, email, department_id }     ← 外键嵌入模型
@@ -67,13 +67,13 @@ Mode DB Engine 采用完全不同的思路：
 
 为在各类 Markdown 预览（含不支持 Mermaid 的环境）中稳定显示，架构图使用仓库内的 **SVG** 矢量图；图中标注为英文以避免字体与编码差异导致乱码。
 
-![Mode DB Engine 系统架构](docs/architecture.svg)
+![ModeDB-Ecosystem 系统架构](docs/architecture.svg)
 
 源文件：[docs/architecture.svg](docs/architecture.svg)（可直接用浏览器或设计工具打开编辑。）
 
 ### 模块目录对照（文本）
 
-引擎实现集中在 **`packages/core`**（npm 包 **`@mode-db/core`**）；仓库根为 **pnpm 工作区薄壳**，编排 **`packages/*`** 的构建与集成测试。
+引擎实现集中在 **`packages/core`**（**ModeDB-Ecosystem** 中的 npm 包 **`@mode-db/core`**）；仓库根为 **pnpm 工作区薄壳**（**`package.json` → `name`：`modedb-ecosystem`**），编排 **`packages/*`** 的构建与集成测试。
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -1068,49 +1068,31 @@ EngineError
 
 ## 项目结构
 
+仓库展示名 **ModeDB-Ecosystem**；根 **`package.json` → `name`** 为 **`modedb-ecosystem`**（**`private: true`**，仅编排脚本与开发依赖）。克隆目录名通常与 **Git 远程仓库名**一致（例如当前仍为 **`mode-db-engine`** 时，本地目录多为 **`mode-db-engine`**，与 npm 根包名 **`modedb-ecosystem`** 可以不同）。
+
 ```
-mode-db-engine/                    # 根：private 薄壳（pnpm 编排、测试、文档、配置）
-├── package.json
-├── pnpm-workspace.yaml
-├── tsconfig.json                  # 根 noEmit：test + packages/core 源码路径映射
+<repo-root>/                       # 克隆目录名 = 远程仓库名（如 mode-db-engine/）；npm 根包名仍为 modedb-ecosystem
+├── package.json                  # name: modedb-ecosystem；bin → packages/server/dist/cli.js
+├── pnpm-workspace.yaml           # packages/*
+├── pnpm-lock.yaml
+├── tsconfig.json                 # 根 noEmit：test/、scripts/、packages/core 路径映射（@mode-db/core）
 ├── modeldb.config.example.json
+├── modeldb.config.json           # 本地联调（勿提交密钥）
 ├── docs/
 ├── scripts/
-│   ├── chunnel-cleaner.ts
-│   └── …
 ├── packages/
-│   ├── core/                      # @mode-db/core：index.ts、src/、authoring/、common/、facade/、templates/ → dist/
-│   ├── common/                    # @mode-db/common
-│   ├── shared/                    # @mode-db/shared
-│   ├── server/                    # @mode-db/server
-│   └── sdk/                       # @mode-db/sdk
-├── runtime/                       # 可选生产数据占位（modeldb_vault/、logs/）
-├── test/
-│   ├── README.md               # 测试命令、Atlas 对照、各脚本覆盖点与注意事项
-│   ├── modeldb_config_loader_audit.ts  # loadModelDBServerConfig 优先级与 .mld 路径推导（临时目录）
-│   ├── dual_track_ignition.ts  # pnpm run ignition：SDK 向 server 灌 Sensor（dbName / MODEL_DB_DB_NAME）
-│   ├── templates/pipe-gallery/ # 管廊 Pipe / Node / Monitor 预置 Schema（registerPipeGalleryModels）
-│   ├── verify.ts               # 端到端：双图谱（单文件 Vault）、滞后字段、PROTOCOL、Runtime 只读（启动时清空 data/）
-│   ├── query_filters.ts        # 谓词 / QueryChain / matchAny / 短路 / getQueryPlan / includeRelates / evaluateInto
-│   ├── logic_integrity.ts      # 句柄缓存、合并读、insert sync、explainRelate、幽灵 id
-│   ├── logic_closure_audit.ts  # Atlas 隔离、双向索引守恒、多级 relate、Runtime
-│   ├── query_chain_extended.ts # ComputeBuilder、分析分页、wrapGroups、relateRecursive
-│   ├── authoring_dx_audit.ts   # 治理 DX：merge 缓冲、QueryEngine、句柄缓存、updateFields 去重
-│   ├── crud_audit.ts           # CRUD 全链路：update / delete / batch / 关系清理 / 模型独立性 / flush 压缩
-│   ├── datatype_audit.ts       # DataType 协议 + ValueObject：类型校验、I18N/Color/Unit、对象化访问、Vault m:* schema header、manifest
-│   ├── diagnostic_audit.ts    # DiagnosticCenter：错误码注册表（含 E3002）、ValidationReport、insertMany、国际化
-│   ├── vault_audit.ts          # Vault：仅 atlas.mld、connect、relate、错误密钥、E3002
-│   ├── wire_server_audit.ts    # WebSocket server + @mode-db/sdk（依赖 verify 的 pipe）
-│   ├── million_stress_test.ts # 压力测试：100 万行灌入、1% 错误注入、读写一致性、诊断审计
-│   ├── shadow_smartcache_logger_audit.ts # memoryShadow + SmartCache + EngineLogger（Vault）
-│   ├── transform_aggregate.ts  # 第六节 6.3：pivot / groupBy、aggregate、execute → AnalysisResult
-│   └── first_run.ts            # 演示：治理 → flush → Runtime（点火脚本）
-├── data/                       # 默认运行时数据（建议 git-ignore）
-├── dist/                       # tsc 输出
+│   ├── core/                     # @mode-db/core → packages/core/dist/
+│   ├── common/                   # @mode-db/common
+│   ├── shared/                   # @mode-db/shared
+│   ├── server/                   # @mode-db/server → packages/server/dist/
+│   └── sdk/                      # @mode-db/sdk
+├── runtime/                      # 可选：本地/部署占位（如 modeldb_vault/，见 runtime/README.md）
+├── test/                         # 集成与审计脚本（tsx），详见 test/README.md
+├── data/                         # 默认本地图谱数据（建议 git-ignore）
 ├── eslint.config.js
-├── tsconfig.json
 ├── .prettierrc
 ├── .editorconfig
+├── .gitignore
 └── .cursorrules
 ```
 
@@ -1118,7 +1100,7 @@ mode-db-engine/                    # 根：private 薄壳（pnpm 编排、测试
 
 ## 公共 API 概要
 
-根入口 `index.ts` 主要导出（完整列表以源码为准）：
+**`@mode-db/core`** 包入口 **`packages/core/index.ts`** 主要导出（完整列表以源码为准）；根目录**无**应用级 barrel，请从已发布的 **`@mode-db/core`** 或 workspace 包导入。
 
 | 类别        | 导出                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

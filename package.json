@@ -1,8 +1,8 @@
 {
-  "name": "mode-db-engine",
+  "name": "modedb-ecosystem",
   "private": true,
   "version": "0.0.0",
-  "description": "ModeDB monorepo workspace — orchestration root; engine implementation lives in packages/core",
+  "description": "ModeDB-Ecosystem — pnpm monorepo orchestration root; engine in packages/core (@mode-db/core), server, SDK, shared, common",
   "type": "module",
   "packageManager": "pnpm@9.15.4",
   "bin": {

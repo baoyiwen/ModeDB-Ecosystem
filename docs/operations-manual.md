@@ -1,4 +1,4 @@
-# Mode DB Engine 操作手册
+# ModeDB-Ecosystem 操作手册
 
 本文面向 **运维、后端与前端**，说明从 **部署 → 启动 → 新工程接入 → 业务/前端调用** 的推荐路径。实现细节与 API 边界以仓库根目录 **[README.md](../README.md)** 为准；引擎源码在 **`packages/core`**（**`@mode-db/core`**），仓库根 **`package.json`** 为 **pnpm 薄壳**（编排构建与测试）。Meta-DDL 与线协议见 **[engine-meta-crud-and-wire.md](./engine-meta-crud-and-wire.md)**。
 
@@ -45,7 +45,7 @@
 **方式 A：自仓库构建（开发 / 内网制品）**
 
 ```bash
-git clone <repo-url> && cd mode-db-engine
+git clone <repo-url> && cd <repo-root>   # 目录名与远程仓库名一致（如 mode-db-engine）
 pnpm install
 pnpm run build
 ```

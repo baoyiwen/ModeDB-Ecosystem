@@ -4,10 +4,10 @@
  * Build output must live only under each package's `dist/`.
  */
 import { existsSync, readdirSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import path, { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = fileURLToPath(new URL('..', import.meta.url));
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const coreRoot = join(repoRoot, 'packages', 'core');
 
 const DEV_ROOTS = [

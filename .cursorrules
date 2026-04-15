@@ -1,15 +1,15 @@
-# mode-db-engine — Cursor Rules
+# ModeDB-Ecosystem — Cursor Rules
 
-# Model DB Engine 2.0 核心准则
+# ModelDB / 核心引擎 2.0 准则
 1. 原子化注册：所有模型注册必须通过 Engine 统一入口，同步初始化元数据与物理存储。
 2. 骨架优先：支持模型定义（Schema）与关系逻辑（Logic）的滞后补全。
 3. 双向守恒：关系必须以“正/逆”四元组形式成对存在，禁止单向关系。
 4. 显式绑定：索引构建不再全自动黑盒，支持 GLOBAL（全量）、PROTOCOL（自动匹配）、CONDITIONAL（条件过滤）、MANUAL（精准拉线）四种策略，通过 Engine.bind() 显式触发。
-5. 物理隔离：维持模型属性在 .mld 文件中的纯净性，索引在 .rid 文件中成对存储。
+5. 物理隔离：单文件 Vault（**`atlas.mld`**）内 **`m:*`** 模型块与 **`r:*`** 关系索引分键存放；治理端 **`flushAll()`** 一致落盘。
 
 ## Project Overview
 
-This is a **hyper-relational data engine** for data governance, aimed at building a data asset graph.
+**ModeDB-Ecosystem** is a **pnpm monorepo** around a **hyper-relational data engine** (**`@mode-db/core`**, under **`packages/core`**) for data governance and building a data asset graph.
 It establishes physical relationships between data entities without relying on traditional
 foreign-key constraints. The project is in early-stage design and implementation.
 
@@ -21,34 +21,36 @@ foreign-key constraints. The project is in early-stage design and implementation
 - **Linting:** ESLint 10 (flat config) + @typescript-eslint
 - **Formatting:** Prettier
 - **Git hooks:** Husky + lint-staged
+- **Package manager:** pnpm workspaces (**`pnpm-workspace.yaml`**)
 
 ## Project Structure
 
 ```
-mode-db-engine/
-├── index.ts              # Package entry point, re-exports public API
-├── core/                 # Engine core modules
-│   ├── storage.ts        # Data persistence layer
-│   ├── registry.ts       # Entity/schema registration
-│   ├── query.ts          # Query parsing and execution
-│   └── indexer.ts        # Index management for fast lookups
-├── utils/                # Shared utility functions
-├── data/                 # Runtime data directory (git-ignored, not source code)
-│   ├── models/           # Stored model definitions
-│   └── relations/        # Stored relation data
-├── test/                 # Test files
-├── dist/                 # Build output (git-ignored)
-├── eslint.config.js      # ESLint flat config
-├── tsconfig.json         # TypeScript configuration
-├── .prettierrc           # Prettier configuration
-└── .editorconfig         # Editor configuration
+<repo-root>/                   # Clone dir = Git remote name; root package.json name: modedb-ecosystem
+├── packages/
+│   ├── core/                  # @mode-db/core — authoring/, src/runtime/, common/, dist/
+│   ├── common/                # @mode-db/common
+│   ├── shared/                # @mode-db/shared
+│   ├── server/                # @mode-db/server — modeldb-server CLI
+│   └── sdk/                   # @mode-db/sdk — connectRemote client
+├── test/                      # Integration & audit scripts (tsx)
+├── scripts/                   # Repo maintenance, publish helpers
+├── docs/
+├── data/                      # Local runtime data (git-ignored)
+├── runtime/                   # Optional deployment placeholders (see runtime/README.md)
+├── package.json               # name: modedb-ecosystem; workspace scripts
+├── pnpm-workspace.yaml
+├── tsconfig.json              # Root noEmit + path mapping for tests / core
+├── eslint.config.js
+├── .prettierrc
+└── .editorconfig
 ```
 
 ## Coding Conventions
 
 ### Language & Syntax
 
-- Write all source code in **TypeScript**. Never create `.js` files in `core/`, `utils/`, or `test/`.
+- Write all source code in **TypeScript**. Never create `.js` files in `packages/core/`, `packages/common/`, or `test/` source trees.
 - Use **ESM imports/exports** exclusively (`import`/`export`). Never use `require()`.
 - Use `import type { ... }` for type-only imports (enforced by `consistent-type-imports` rule).
 - Target **ES2022** — use modern syntax: `structuredClone`, `Array.at()`, top-level `await`, etc.
@@ -96,21 +98,21 @@ mode-db-engine/
 ### Module Design
 
 - Each file should have a **single responsibility**.
-- Export public API through `index.ts` barrel file. Internal modules should not be imported
+- Export public API through package entry (**`packages/core/index.ts`** for **`@mode-db/core`**). Internal modules should not be imported
   directly by consumers.
 - Keep circular dependencies at zero. If two modules need each other, extract shared types
   into a separate file.
 
 ### Testing
 
-- Place test files in `test/` with the naming pattern `<module>.test.ts`.
-- Tests may use `console.log` and `any` freely (relaxed ESLint rules for `test/`).
+- Place integration scripts in **`test/`** (see **`test/README.md`** for naming and flow).
+- Tests may use `console.log` and relaxed rules where configured.
 
 ### Git & Workflow
 
 - Commit messages: use conventional format — `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`.
 - Pre-commit hook runs `lint-staged` automatically (ESLint fix + Prettier).
-- Run `npm run check` before pushing to verify typecheck + lint + format.
+- Run **`pnpm run check`** before pushing to verify typecheck + lint + format.
 
 ### Performance Considerations
 
@@ -122,7 +124,7 @@ mode-db-engine/
 ## What NOT to Do
 
 - Do not add runtime dependencies without discussion. Keep the dependency footprint minimal.
-- Do not put application logic in `utils/` — it is for pure, stateless helper functions only.
-- Do not store source code or configuration in `data/`. It is a runtime data directory.
+- Do not put application logic in generic `utils/` without aligning with existing package boundaries.
+- Do not store source code or configuration in **`data/`**. It is a runtime data directory.
 - Do not disable TypeScript strict checks (`@ts-ignore`, `@ts-nocheck`) without a comment
   explaining why.

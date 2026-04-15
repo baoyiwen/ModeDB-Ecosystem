@@ -7,7 +7,7 @@ import { parseGroupDimension, readFieldPathSync, pivotSegmentKey } from './group
 export const PIVOT_UNLINKED_KEY = '__unlinked__';
 
 /** 标记叶子节点上的 {@link BucketAggregator}（避免与普通对象键冲突）。 */
-export const PIVOT_LEAF_SYMBOL = Symbol.for('mode-db-engine.pivotLeaf');
+export const PIVOT_LEAF_SYMBOL = Symbol.for('modedb-ecosystem.pivotLeaf');
 
 export type PivotLeafNode = { readonly [PIVOT_LEAF_SYMBOL]: BucketAggregator };
 

@@ -1,7 +1,7 @@
 {
   "name": "@mode-db/sdk",
   "version": "0.1.0",
-  "description": "Remote WebSocket client for Mode DB / ModelDB — same QueryChain fluent API, wire-obfuscated payloads.",
+  "description": "Remote WebSocket client for ModeDB-Ecosystem / ModelDB — same QueryChain fluent API, wire-obfuscated payloads.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -10,7 +10,7 @@ import {
 } from '@mode-db/common';
 
 /** Same string used as wire **`connectToken`** in integration scripts (derives the vault key). */
-export const INTEGRATION_CONNECT_TOKEN = 'mode-db-engine-integration-connect-token-fixed-len!!';
+export const INTEGRATION_CONNECT_TOKEN = 'modedb-ecosystem-integration-connect-token-fixed-len!!';
 
 /** Derived passphrase for low-level {@link AtlasSingleVault} helpers in tests. */
 export const integrationVaultDerivedSecret =

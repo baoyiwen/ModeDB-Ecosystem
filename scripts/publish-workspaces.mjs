@@ -17,13 +17,15 @@
  * 前置：pnpm login（或 npm login）、各包 version 已 bump、作用域在 npm 已开放 public。
  * 若未提交 git 且 pnpm 拒绝发布，可临时：$env:PUBLISH_NO_GIT_CHECKS='1'（PowerShell）再执行。
  */
+import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const repoRoot = path.dirname(fileURLToPath(new URL('..', import.meta.url)));
+// 本文件在 repo/scripts/：上一级才是 monorepo 根（勿再对 URL('..') 的结果做 dirname，否则会跑到 web_code/）
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const args = new Set(process.argv.slice(2));
 const live = args.has('--live');
@@ -38,6 +40,24 @@ const ORDER = [
   '@mode-db/core',
   '@mode-db/server',
 ];
+
+/** 包名 → 包含其 package.json 的目录（相对 repo 根） */
+const PKG_DIR = {
+  '@mode-db/shared': 'packages/shared',
+  '@mode-db/common': 'packages/common',
+  '@mode-db/sdk': 'packages/sdk',
+  '@mode-db/core': 'packages/core',
+  '@mode-db/server': 'packages/server',
+};
+
+function readPkgVersion(name) {
+  const dir = PKG_DIR[name];
+  if (!dir) {
+    return '?';
+  }
+  const j = JSON.parse(readFileSync(path.join(repoRoot, dir, 'package.json'), 'utf8'));
+  return String(j.version ?? '?');
+}
 
 function run(cmd, argv) {
   const r = spawnSync(cmd, argv, {
@@ -55,8 +75,9 @@ function publishArgs(pkg) {
   const out = ['--filter', pkg, 'publish', '--access', 'public'];
   if (!live) {
     out.push('--dry-run');
-  }
-  if (process.env.PUBLISH_NO_GIT_CHECKS === '1') {
+    // dry-run 仅打 tarball 预览，允许工作区未提交，避免误报 ERR_PNPM_GIT_UNCLEAN
+    out.push('--no-git-checks');
+  } else if (process.env.PUBLISH_NO_GIT_CHECKS === '1') {
     out.push('--no-git-checks');
   }
   return out;
@@ -66,8 +87,16 @@ async function main() {
   console.log(
     live
       ? '\n[mode-db publish] LIVE — 将写入 npm registry\n'
-      : '\n[mode-db publish] DRY-RUN（加 --live 才会真发）\n',
+      : '\n[mode-db publish] DRY-RUN（不会上传；加 --live 才会真发）\n',
   );
+
+  console.log(
+    '当前各包 package.json 版本（必须与 npm 上「尚未占用」的版本一致，否则真发会失败）：\n',
+  );
+  for (const name of ORDER) {
+    console.log(`  ${name.padEnd(22)} ${readPkgVersion(name)}`);
+  }
+  console.log('');
 
   if (live && !yes) {
     const rl = readline.createInterface({ input, output });
@@ -89,9 +118,24 @@ async function main() {
     run('pnpm', publishArgs(pkg));
   }
 
-  console.log(
-    live ? '\n[mode-db publish] 全部包已尝试发布。\n' : '\n[mode-db publish] dry-run 结束。\n',
-  );
+  if (live) {
+    console.log(
+      '\n[mode-db publish] 全部包已尝试发布（若某版本已在 registry 上存在，该步会报错）。\n',
+    );
+  } else {
+    console.log(`
+================================================================
+本次为 DRY-RUN：没有向 npm 上传任何包。
+要真实发布请：
+  1. 登录：npm login
+  2. 在需要发布的子目录里提高 version（registry 上不能已有同名同版本）
+     例：cd packages/shared && npm version patch --no-git-tag-version
+     或对多个包重复；也可用你喜欢的工具统一改版本。
+  3. 执行：pnpm run publish:npm -- --live
+     或一键（跳过输入 YES）：pnpm run publish:npm:go
+================================================================
+`);
+  }
 }
 
 await main();

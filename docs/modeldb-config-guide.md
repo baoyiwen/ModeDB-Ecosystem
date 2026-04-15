@@ -2,7 +2,7 @@
 
 本文说明 **`modeldb.config.json` 应如何写、放在哪、与「配置文件所在目录」和磁盘目录的关系**，并分别给出 **Windows、Linux、macOS** 下的推荐做法。实现以 **`packages/server/src/config-loader.ts`** 与 **`packages/server/src/modeldb-default-home.ts`** 为准。
 
-**仓库布局（与本文件字段无关）**：本仓库为 **pnpm monorepo**；**`modeldb-server`** 在 **`packages/server`**，图谱引擎在 **`packages/core`**（**`@mode-db/core`**），根目录 **`package.json`** 仅做脚本编排（**`private: true`**）。
+**仓库布局（与本文件字段无关）**：**ModeDB-Ecosystem** 为 **pnpm monorepo**；**`modeldb-server`** 在 **`packages/server`**，图谱引擎在 **`packages/core`**（**`@mode-db/core`**），根目录 **`package.json`**（**`modedb-ecosystem`**，**`private: true`**）仅做脚本编排。
 
 ---
 
