@@ -17,7 +17,11 @@
 - 与 **`registerModel(..., FieldDefsRecord)`** / **`updateModelFields`** 使用同一套 **`normalizeFieldDefs`** 规则（**`DataType.*`** 或 **`'String'`** 等简写）。
 - 成功后会写回 manifest 与 Vault 内 schema 头，并打 **`EngineLogger`** 的 **`[META]`** 行。
 
-**典型用法**：上线后仅为某模型增加可选审计字段（如 `note: { type: 'String', required: false }`），且 **`newSchema` 必须仍包含原字段**（例如原有 `id`，则合并后的 record 要同时含 `id` 与 `note`）。
+**`AuthoringEngine.alterModelPatch(name, patch: FieldDefsRecord)`**（Model Designer / 增量 DDL）
+
+- 将 **`patch`** 与当前注册表中的字段定义**合并**后，再调用与 **`alterModel`** 相同的校验与落盘逻辑；调用方**只需**传新增或收紧的字段片段。
+
+**典型用法**：上线后仅为某模型增加可选审计字段（如 `note: { type: 'String', required: false }`），且 **`newSchema` 必须仍包含原字段**（例如原有 `id`，则合并后的 record 要同时含 `id` 与 `note`）。若使用 **`alterModelPatch`**，可只传 **`{ note: { type: 'String', required: false } }`**。
 
 ## 3. `dropRelation`（移除关系与索引）
 
@@ -32,21 +36,24 @@
 **`await engine.dropModel(modelName: string)`**
 
 - 删除所有**触及该模型**的关系（与 **`dropRelation`** 相同的索引清理 + unregister）。
-- 若 Vault 中存在 **`m:<model>`** 负载，则将其**整体搬迁**到 **`orphan:m:<model>`**（便于日后 **Compact** 或取证；当前运行时与查询**不**再加载 orphan 键）。
-- 清空该模型的内存缓冲、**`unregisterSchema`**、**`unregisterModel`**，并重写 manifest。
+- **单文件 Vault**：若存在 **`m:<model>`** 负载，则**整体搬迁**到 **`orphan:m:<model>`**（便于日后 **Compact** 或取证；当前运行时与查询**不**再加载 orphan 键）。
+- **分文件布局**：将 **`models/<Model>.mld`** 移至 **`models/__abandoned__/<Model>.mld`**，原活跃路径废弃，数据文件保留。
+- 清空该模型的写缓冲、**`unregisterSchema`**、**`unregisterModel`**、**`AtlasRegistry.evictModelHandle`**、**`SmartCache`** 中与该模型相关的查询缓存，并重写 manifest。
 - **`EngineLogger`** 输出 **`[META]`** 说明已 drop。
 
-**注意**：**`ModelDBClient`** 只读打开时**不会**看到已 drop 的模型；若需恢复数据，需离线工具读取 **`orphan:m:*`**（当前仓库未提供一键恢复命令）。
+**注意**：**`ModelDBClient`** 只读打开时**不会**看到已 drop 的模型；若需恢复数据，需离线工具读取 **`orphan:m:*`** 或 **`models/__abandoned__/*.mld`**（当前仓库未提供一键恢复命令）。
 
 ## 5. 线协议与 `modeldb-server`
 
+RPC 明文 JSON 在发送前经 **`encodeWirePayload`**（**`@mode-db/shared`**：基于会话密钥的 XOR + **base64url**），对客户端表现为**混淆二进制**载荷（`WireRpcEnvelope.cipher`）；服务端 **`decodeWirePayload`** 还原后交给 **`WireRequestDispatcher`** 执行 **`AuthoringEngine`**。DDL 成功路径额外写入 **`EngineLogger`** 的 **`[REMOTE][META]`** 行（模块 **`Server`**），与治理端 **`[META]`** 区分。
+
 请求体（**`WireExecuteBody`**）在 **`@mode-db/shared`** 中定义；服务端 **`request-dispatcher`** 在已解析逻辑库并构造 **`AuthoringEngine`** 后执行：
 
-| `op`               | 载荷字段                       | 服务端调用                                               |
-| ------------------ | ------------------------------ | -------------------------------------------------------- |
-| **`dropModel`**    | `model`                        | **`await engine.dropModel`**                             |
-| **`dropRelation`** | `relation`（正向名）           | **`await engine.dropRelation`**                          |
-| **`alterModel`**   | `model`, `schema`（JSON 对象） | **`engine.alterModel`**（cast 为 **`FieldDefsRecord`**） |
+| `op`               | 载荷字段                                               | 服务端调用                                                                 |
+| ------------------ | ------------------------------------------------------ | -------------------------------------------------------------------------- |
+| **`dropModel`**    | `model`                                                | **`await engine.dropModel`**                                               |
+| **`dropRelation`** | `relation`（正向名）                                   | **`await engine.dropRelation`**                                            |
+| **`alterModel`**   | `model`, `schema`（JSON 对象）, 可选 **`patch: true`** | **`alterModelPatch`** 或 **`alterModel`**（cast 为 **`FieldDefsRecord`**） |
 
 响应为 **`WireExecuteResultJson`** 中带 **`kind: 'mutation'`**、`**op**` 与 **`ok: true`** 的分支。
 
@@ -54,7 +61,7 @@
 
 - **`RemoteModelDBClient.connectNetwork({ host, port, token, database, mode? })`**：`database` 即逻辑库目录名（与握手 **`dbName`** 一致）。
 - **`ModelDBClient.connect(...)`**：与 **`connectNetwork`** 等价的薄别名，面向「仅网络、无本地引擎」场景。
-- 元方法：**`dropModel(model)`**、**`dropRelation(relation)`**、**`alterModel(model, schema)`**（**`schema`** 为普通 JSON 对象，与 **`FieldDefsRecord`** 同形）。
+- 元方法：**`dropModel(model)`**、**`dropRelation(relation)`**、**`alterModel(model, schema, opts?)`**（第三参 **`{ patch: true }`** 时走 **`alterModelPatch`**，载荷更小，适合 Designer）。
 
 上述 RPC **仅在服务端进程内**执行写路径；客户端仍需合法 **`connectToken`** 与 WebSocket/HTTP 会话。
 
@@ -64,7 +71,7 @@
 
 ## 8. 集成测试与回归
 
-- **`test/meta_crud_audit.ts`**：进程内 **`alterModel` → `dropRelation` → `dropModel`**（断言 **`orphan:m:*`** 与 Vault **`r:*`** 清空）；再起 **`startModelDBWebSocketServer`**，用 **`RemoteModelDBClient.connectNetwork`** 跑一轮 RPC。
+- **`test/meta_crud_audit.ts`**：进程内 **`alterModel` → `dropRelation` → `dropModel`**（断言 **`orphan:m:*`** 与 Vault **`r:*`** 清空）；再起 **`startModelDBWebSocketServer`**，用 **`RemoteModelDBClient.connectNetwork`** 跑 RPC（含 **`alterModel(..., { patch: true })`**）。
 - 默认串联在 **`npm run test:integration`** 末步（在 **`wire_server_audit`** 之后）；单跑：**`npm run meta-crud-audit`**。
 
 ## 9. 运维与后续工作

@@ -58,6 +58,8 @@ export type WireExecuteBody =
       readonly op: 'alterModel';
       readonly model: string;
       readonly schema: Readonly<Record<string, unknown>>;
+      /** When true, **`schema`** is merged onto the current model (see {@link AuthoringEngine.alterModelPatch}). */
+      readonly patch?: boolean;
     };
 
 export type WireServerMessage = WireHandshakeOk | WireRpcResponse | WireErrorMessage;

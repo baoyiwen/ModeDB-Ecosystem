@@ -36,6 +36,24 @@ import type { PredicateNode } from '../src/runtime/predicate-tree.js';
 import type { RuntimeContext } from '../src/runtime/context.js';
 import { AtlasSingleVault } from './atlas-single-vault.js';
 
+function modelDefinitionToFieldDefsRecord(m: ModelDefinition): FieldDefsRecord {
+  const out: FieldDefsRecord = {};
+  for (const f of m.fields) {
+    const ft = m.fieldTypes.get(f);
+    if (!ft) {
+      out[f] = 'String';
+      continue;
+    }
+    out[f] = {
+      type: ft.type,
+      ...(ft.required !== undefined ? { required: ft.required } : {}),
+      ...(ft.unit !== undefined ? { unit: ft.unit } : {}),
+      ...(ft.default !== undefined ? { default: ft.default } : {}),
+    };
+  }
+  return out;
+}
+
 function hydrateAuthoringFromManifest(
   registry: ModelRegistry,
   storage: ModelStorage,
@@ -501,6 +519,19 @@ export class AuthoringEngine {
   }
 
   /**
+   * Incremental schema update for Model Designer: merges **`patch`** onto the live definition,
+   * then applies the same non-destructive rules as {@link alterModel} (no field removal / type change).
+   */
+  alterModelPatch(name: string, patch: FieldDefsRecord): void {
+    const existing = this.registry.getModel(name);
+    if (!existing) {
+      throw new RegistryError(`alterModelPatch: model "${name}" is not registered.`);
+    }
+    const merged: FieldDefsRecord = { ...modelDefinitionToFieldDefsRecord(existing), ...patch };
+    this.alterModel(name, merged);
+  }
+
+  /**
    * Remove a relation: clears vault **`r:*`** / disk index and unregisters topology.
    */
   async dropRelation(relationName: string): Promise<void> {
@@ -535,6 +566,7 @@ export class AuthoringEngine {
       await this.indexer.dropRelationIndex(rel);
       this.registry.unregisterRelation(rel);
     }
+    await this.storage.abandonSplitFileModelData(modelName);
     const mk = AtlasSingleVault.modelKey(modelName);
     if (this.atlasVault && this.vaultSecret) {
       const blob = this.atlasVault.get(mk);
@@ -553,7 +585,7 @@ export class AuthoringEngine {
     this.smartCacheRef?.invalidateModel(modelName);
     await this.flushAll();
     EngineLogger.instance.info(
-      `[META] Model '${modelName}' dropped. Physical blocks marked as orphaned.`,
+      `[META] Model '${modelName}' dropped: relation indices cleared; vault payload → orphan:m: (if vault) or models/__abandoned__/*.mld (if split-file).`,
       undefined,
       'Authoring',
     );

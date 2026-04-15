@@ -176,6 +176,11 @@ try {
       tag: { type: DataType.String, required: false },
     };
     await remote.alterModel('Alpha2', rpcSchema);
+    await remote.alterModel(
+      'Alpha2',
+      { extra: { type: DataType.String, required: false } },
+      { patch: true },
+    );
     await remote.dropRelation('links');
     await remote.dropModel('Beta2');
   } finally {
@@ -204,6 +209,10 @@ assert(
 assert(
   afterRpc.registry.getModel('Alpha2')?.fields.has('tag'),
   'RPC alterModel 后 Alpha2 含 tag 字段（非破坏合并）',
+);
+assert(
+  afterRpc.registry.getModel('Alpha2')?.fields.has('extra'),
+  'RPC alterModel(..., { patch: true }) 增量增加 extra',
 );
 
 console.log(`\nmeta_crud_audit: ${passed} passed, ${failed} failed`);

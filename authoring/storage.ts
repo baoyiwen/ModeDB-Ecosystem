@@ -1,5 +1,6 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, rename, unlink } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { randomUUID } from 'node:crypto';
 import type {
@@ -154,6 +155,26 @@ export class ModelStorage implements DataReader {
   /** Remove in-memory schema (e.g. after {@link AuthoringEngine.dropModel}). */
   unregisterSchema(modelName: string): void {
     this.schemas.delete(modelName);
+  }
+
+  /**
+   * Split-file layout only: move **`models/<name>.mld`** → **`models/__abandoned__/<name>.mld`**
+   * so the active path is cleared (tombstone / abandoned physical slot). Vault mode no-op.
+   */
+  async abandonSplitFileModelData(modelName: string): Promise<void> {
+    if (this.vault) {
+      return;
+    }
+    const src = this.paths.modelDataPath(modelName);
+    if (!existsSync(src)) {
+      return;
+    }
+    const dest = this.paths.abandonedModelFilePath(modelName);
+    await mkdir(dirname(dest), { recursive: true });
+    if (existsSync(dest)) {
+      await unlink(dest);
+    }
+    await rename(src, dest);
   }
 
   /** Build a FieldMatchContext from the current locale (used by ModelEntity for query threading). */

@@ -252,7 +252,7 @@ npm run test:integration
 - **安全**：在成功 RPC 之后，**第二条**裸 **`ws`** 连接发送错误 **`connectToken`**，断言返回 **`{ type: 'error' }`**（避免与首次握手竞态干扰）。
 - **收尾**：**`remote.close()`**、**`wss.close()`**。
 
-### `meta_crud_audit.ts`（15 个断言）
+### `meta_crud_audit.ts`（16 个断言）
 
 - **Atlas**：**`meta_crud_rt`**（进程内 **`AuthoringEngine`**）、**`meta_crud_wire_rt`**（线协议）；脚本开头 **`rm -rf`** 两目录，与 **`pipe`** 及其它审计目录隔离。
 - **本地**：**`quickLink` + `bind('owns','MANUAL')` + `flushAll`** 后断言 Vault **`Alpha-Beta-owns`** 索引非空；**`alterModel`** 增加可选字段 **`note`** 并重开引擎校验 **`fieldTypes`**；**`dropRelation('owns')`** 后注册表与 Vault 索引为空；**`dropModel`** 后 **`m:*`** 迁至 **`orphan:m:*`**（用 **`AtlasSingleVault`** 直读）、仍无 **`models/`** 分目录。

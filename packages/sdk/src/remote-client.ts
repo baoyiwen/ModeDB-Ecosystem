@@ -533,9 +533,20 @@ export class RemoteModelDBClient {
     }
   }
 
-  /** Meta: non-destructive schema merge (server-side {@link AuthoringEngine.alterModel}). */
-  async alterModel(model: string, schema: Readonly<Record<string, unknown>>): Promise<void> {
-    const out = await this.session.executeWireBody({ op: 'alterModel', model, schema });
+  /**
+   * Meta: schema change on the server (`AuthoringEngine.alterModel` or `alterModelPatch`).
+   * Pass **`{ patch: true }`** to send only incremental field defs (Designer DDL).
+   */
+  async alterModel(
+    model: string,
+    schema: Readonly<Record<string, unknown>>,
+    opts?: { readonly patch?: boolean },
+  ): Promise<void> {
+    const body: WireExecuteBody =
+      opts?.patch === true
+        ? { op: 'alterModel', model, schema, patch: true }
+        : { op: 'alterModel', model, schema };
+    const out = await this.session.executeWireBody(body);
     if (!isRecord(out) || out.op !== 'alterModel' || out.ok !== true) {
       throw new Error('alterModel: unexpected remote response.');
     }

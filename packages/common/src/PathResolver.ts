@@ -118,6 +118,18 @@ export class PathResolver {
   }
 
   /**
+   * Split-file tombstone: after {@link AuthoringEngine.dropModel}, active **`models/<name>.mld`**
+   * is moved here so the live path is vacant (physical slot abandoned, data retained for ops).
+   */
+  abandonedModelFilePath(modelName: string): string {
+    assertFlatGraphSegment(modelName, 'model name');
+    const dir = resolve(join(this.modelsRootResolved, '__abandoned__'));
+    const filePath = resolve(join(dir, `${modelName}.mld`));
+    this.assertResolvedUnder(this.modelsRootResolved, filePath, 'abandoned model data file');
+    return filePath;
+  }
+
+  /**
    * Relation index: `${atlas}/relations/${relationName}.rid`
    * @param relationName - Safe base name (e.g. `Source-Target-forward`).
    */

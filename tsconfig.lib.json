@@ -3,7 +3,9 @@
   "compilerOptions": {
     "noEmit": false,
     "outDir": "./dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "sourceMap": false,
+    "declarationMap": false
   },
   "include": [
     "index.ts",

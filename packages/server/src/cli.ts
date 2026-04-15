@@ -6,7 +6,7 @@ import { startModelDBWebSocketServer } from './modeldb-server.js';
 const program = new Command()
   .name('modeldb-server')
   .description(
-    'ModelDB 2.0 daemon: WebSocket/HTTP + disk. Use `modeldb-server start --workspace <dir>` or legacy flags without `start`.',
+    'ModelDB 2.0 daemon (WebSocket/HTTP + disk). Recommended: `modeldb-server start --workspace <dir> --port <n> --token <secret>`. Same flags work without the `start` token for backward compatibility.',
   )
   .option('-c, --config <path>', 'Path to modeldb.config.json', undefined)
   .option('-p, --port <number>', 'Listen port (overrides config / env)')

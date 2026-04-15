@@ -130,6 +130,11 @@ export class WireRequestDispatcher {
         const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
           const engine = await this.opts.getEngine(atlas);
           await engine.dropModel(body.model);
+          EngineLogger.instance.info(
+            `[REMOTE][META] dropModel atlas=${atlas} model=${body.model}`,
+            undefined,
+            'Server',
+          );
           const wireJson: WireExecuteResultJson = {
             kind: 'mutation',
             op: 'dropModel',
@@ -145,6 +150,11 @@ export class WireRequestDispatcher {
         const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
           const engine = await this.opts.getEngine(atlas);
           await engine.dropRelation(body.relation);
+          EngineLogger.instance.info(
+            `[REMOTE][META] dropRelation atlas=${atlas} relation=${body.relation}`,
+            undefined,
+            'Server',
+          );
           const wireJson: WireExecuteResultJson = {
             kind: 'mutation',
             op: 'dropRelation',
@@ -160,8 +170,17 @@ export class WireRequestDispatcher {
       if (body.op === 'alterModel') {
         const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
           const engine = await this.opts.getEngine(atlas);
-          engine.alterModel(body.model, body.schema as FieldDefsRecord);
+          if (body.patch === true) {
+            engine.alterModelPatch(body.model, body.schema as FieldDefsRecord);
+          } else {
+            engine.alterModel(body.model, body.schema as FieldDefsRecord);
+          }
           await engine.flushAll();
+          EngineLogger.instance.info(
+            `[REMOTE][META] alterModel atlas=${atlas} model=${body.model} patch=${body.patch === true}`,
+            undefined,
+            'Server',
+          );
           const wireJson: WireExecuteResultJson = {
             kind: 'mutation',
             op: 'alterModel',
