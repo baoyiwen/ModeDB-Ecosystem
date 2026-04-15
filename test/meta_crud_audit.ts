@@ -10,8 +10,8 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot, PathResolver, DataType, type FieldDefsRecord } from '@mode-db/common';
-import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
-import { AtlasSingleVault } from '../authoring/atlas-single-vault.js';
+import { AuthoringEngine } from '../packages/core/src/authoring/AuthoringEngine.js';
+import { AtlasSingleVault } from '../packages/core/authoring/atlas-single-vault.js';
 import {
   getWebSocketServerListeningPort,
   startModelDBWebSocketServer,
@@ -105,7 +105,7 @@ const reopened = new AuthoringEngine({
   storageRoot: DATA_ROOT,
   ...integrationVaultAuthoringOptions,
 });
-assert(reopened.registry.getModel('Alpha')?.fields.has('note'), '重开引擎后 Alpha 含 note 字段');
+assert(reopened.registry.getModel('Alpha')?.fields.has('note') === true, '重开引擎后 Alpha 含 note 字段');
 
 section('3. dropRelation：拓扑与 Vault r:* 键移除');
 await reopened.dropRelation('owns');
@@ -207,11 +207,11 @@ assert(
   'Beta2 blob 位于 orphan:m:Beta2',
 );
 assert(
-  afterRpc.registry.getModel('Alpha2')?.fields.has('tag'),
+  afterRpc.registry.getModel('Alpha2')?.fields.has('tag') === true,
   'RPC alterModel 后 Alpha2 含 tag 字段（非破坏合并）',
 );
 assert(
-  afterRpc.registry.getModel('Alpha2')?.fields.has('extra'),
+  afterRpc.registry.getModel('Alpha2')?.fields.has('extra') === true,
   'RPC alterModel(..., { patch: true }) 增量增加 extra',
 );
 

@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { DiagnosticCenter, ErrorCodes } from '@mode-db/common';
-import { AuthoringEngine, fileLooksLikeAtlasSingleVault } from '@mode-db/engine';
+import { AuthoringEngine, fileLooksLikeAtlasSingleVault } from '@mode-db/core';
 import { atlasCatalogSignature } from './atlas-catalog-signature.js';
 
 /**

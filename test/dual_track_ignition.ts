@@ -14,7 +14,7 @@
  * - **`IGNITION_TOTAL`** — 总条数（默认 **100000**）
  * - **`IGNITION_BATCH`** — 每批行数（默认 **5000**，≤ **20000**）
  *
- * Run: `npx tsx test/dual_track_ignition.ts` 或 `npm run ignition`
+ * Run: `pnpm exec tsx test/dual_track_ignition.ts` 或 `pnpm run ignition`
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -24,7 +24,7 @@ import {
   AuthoringEngine,
   configureModelDBStorageRoot,
   resolveModelDBStorageRoot,
-} from '@mode-db/engine';
+} from '@mode-db/core';
 
 const url = process.env.MODEL_DB_URL ?? 'http://127.0.0.1:9090';
 const connectToken = process.env.MODEL_DB_CONNECT_TOKEN ?? 'dev-connect-token-change-in-production';

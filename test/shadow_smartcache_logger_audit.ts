@@ -5,7 +5,7 @@
 import { join } from 'node:path';
 import { readFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { AuthoringEngine } from '../authoring/engine.js';
+import { AuthoringEngine } from '../packages/core/authoring/engine.js';
 import {
   DiagnosticCenter,
   ErrorCodes,

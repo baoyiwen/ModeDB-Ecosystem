@@ -117,9 +117,9 @@ export {
   type PivotLeafNode,
   type ParsedGroupDimension,
   type ComputeMetricToken,
-} from './runtime/index.js';
-export type { TraceableNull, RemoteExecuteSnapshot } from './runtime/index.js';
-export type { RuntimeAvailableRelation } from './runtime/model-runtime.js';
+} from './facade/index.js';
+export type { TraceableNull, RemoteExecuteSnapshot } from './facade/index.js';
+export type { RuntimeAvailableRelation } from './facade/model-runtime.js';
 export type { DataReader, IndexReader } from '@mode-db/common';
 
 // ---------------------------------------------------------------------------

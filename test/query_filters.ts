@@ -18,20 +18,20 @@
 import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '@mode-db/common';
-import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import { AuthoringEngine } from '../packages/core/src/authoring/AuthoringEngine.js';
 import { integrationVaultAuthoringOptions, useIntegrationVaultEnv } from './integration-vault.js';
 import type { ModelRecord } from '@mode-db/common';
-import type { HydratedEntity } from '../src/runtime/HydratedEntity.js';
-import { FilterBuilder } from '../src/runtime/filter-builder.js';
-import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
-import { QueryEngine } from '../src/runtime/query-engine.js';
+import type { HydratedEntity } from '../packages/core/src/runtime/HydratedEntity.js';
+import { FilterBuilder } from '../packages/core/src/runtime/filter-builder.js';
+import { ModelDBClient } from '../packages/core/src/runtime/ModelDBClient.js';
+import { QueryEngine } from '../packages/core/src/runtime/query-engine.js';
 import {
   atomNode,
   callbackNode,
   evaluatePredicate,
   groupNode,
   type PredicateEvaluateContext,
-} from '../src/runtime/predicate-tree.js';
+} from '../packages/core/src/runtime/predicate-tree.js';
 
 const DATA_ROOT = join(process.cwd(), 'data');
 const ATLAS = 'query_filter_demo';

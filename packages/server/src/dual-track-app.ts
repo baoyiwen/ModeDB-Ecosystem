@@ -12,7 +12,7 @@ import {
   type WireServerMessage,
 } from '@mode-db/shared';
 import { configureModelDBStorageRoot, EngineLogger } from '@mode-db/common';
-import { ModelDBClient } from '@mode-db/engine';
+import { ModelDBClient } from '@mode-db/core';
 import { BinaryInterceptor, TransportAuthError } from './binary-interceptor.js';
 import type { ResolvedModelDBServerConfig } from './config-loader.js';
 import { AuthoringBridge } from './authoring-bridge.js';

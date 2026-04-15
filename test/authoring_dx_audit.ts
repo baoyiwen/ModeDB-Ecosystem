@@ -11,15 +11,15 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '@mode-db/common';
-import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import { AuthoringEngine } from '../packages/core/src/authoring/AuthoringEngine.js';
 import {
   atlasVaultPath,
   integrationVaultAuthoringOptions,
   useIntegrationVaultEnv,
 } from './integration-vault.js';
-import { mergeDiskRowsWithAuthoringBuffer, QueryEngine } from '../src/runtime/query-engine.js';
+import { mergeDiskRowsWithAuthoringBuffer, QueryEngine } from '../packages/core/src/runtime/query-engine.js';
 import type { ModelRecord } from '@mode-db/common';
-import type { PredicateNode } from '../src/runtime/predicate-tree.js';
+import type { PredicateNode } from '../packages/core/src/runtime/predicate-tree.js';
 
 const DATA_ROOT = join(process.cwd(), 'data');
 const ATLAS = 'dx_audit';

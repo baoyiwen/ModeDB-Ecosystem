@@ -25,18 +25,6 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true
   },
-  "files": [
-    "./src/binary-interceptor.ts",
-    "./src/cli.ts",
-    "./src/config-loader.ts",
-    "./src/dual-track-app.ts",
-    "./src/index.ts",
-    "./src/modeldb-default-home.ts",
-    "./src/modeldb-server.ts",
-    "./src/request-dispatcher.ts",
-    "./src/stream-backpressure.ts",
-    "./src/write-serialization-gate.ts"
-  ],
   "include": ["./src/**/*.ts"],
   "exclude": ["./dist", "./node_modules"]
 }

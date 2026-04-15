@@ -13,15 +13,15 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '@mode-db/common';
-import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
-import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
+import { AuthoringEngine } from '../packages/core/src/authoring/AuthoringEngine.js';
+import { ModelDBClient } from '../packages/core/src/runtime/ModelDBClient.js';
 import {
   atlasVaultPath,
   integrationVaultAuthoringOptions,
   mutateVaultRelationData,
   useIntegrationVaultEnv,
 } from './integration-vault.js';
-import type { HydratedEntity } from '../src/runtime/HydratedEntity.js';
+import type { HydratedEntity } from '../packages/core/src/runtime/HydratedEntity.js';
 
 const DATA_ROOT = join(process.cwd(), 'data');
 const ATLAS = 'integrity_pipe';

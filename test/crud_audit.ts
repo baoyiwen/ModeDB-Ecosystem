@@ -16,15 +16,15 @@ import {
   isDeletedRecord,
   type ModelRecord,
 } from '@mode-db/common';
-import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import { AuthoringEngine } from '../packages/core/src/authoring/AuthoringEngine.js';
 import {
   atlasVaultPath,
   integrationVaultAuthoringOptions,
   loadVaultModelBlob,
   useIntegrationVaultEnv,
 } from './integration-vault.js';
-import { mergeDiskRowsWithAuthoringBuffer } from '../src/runtime/query-engine.js';
-import type { PredicateNode } from '../src/runtime/predicate-tree.js';
+import { mergeDiskRowsWithAuthoringBuffer } from '../packages/core/src/runtime/query-engine.js';
+import type { PredicateNode } from '../packages/core/src/runtime/predicate-tree.js';
 
 const DATA_ROOT = join(process.cwd(), 'data');
 const ATLAS = 'crud_audit';

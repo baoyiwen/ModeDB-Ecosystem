@@ -2,7 +2,7 @@
  * Shared single-file vault configuration for integration tests.
  * Call {@link useIntegrationVaultEnv} once per process before {@link ModelDBClient.connect}.
  */
-import { AtlasSingleVault } from '../authoring/atlas-single-vault.js';
+import { AtlasSingleVault } from '../packages/core/authoring/atlas-single-vault.js';
 import {
   PathResolver,
   deriveAtlasVaultSecretFromConnectToken,

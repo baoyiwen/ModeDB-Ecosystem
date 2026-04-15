@@ -10,7 +10,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { configureModelDBStorageRoot } from '@mode-db/common';
-import { ModelDBClient } from '../runtime/client.js';
+import { ModelDBClient } from '../packages/core/facade/client.js';
 import {
   getWebSocketServerListeningPort,
   startModelDBWebSocketServer,

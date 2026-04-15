@@ -9,10 +9,10 @@
 import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '@mode-db/common';
-import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import { AuthoringEngine } from '../packages/core/src/authoring/AuthoringEngine.js';
 import { integrationVaultAuthoringOptions, useIntegrationVaultEnv } from './integration-vault.js';
-import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
-import type { HydratedEntity } from '../src/runtime/HydratedEntity.js';
+import { ModelDBClient } from '../packages/core/src/runtime/ModelDBClient.js';
+import type { HydratedEntity } from '../packages/core/src/runtime/HydratedEntity.js';
 import {
   Aggregator,
   AggregationProtocol,
@@ -26,7 +26,7 @@ import {
   pivotSegmentKey,
   TRACEABLE_REASON_ALL_MISSING,
   type AnalysisBucketMetadataRow,
-} from '../src/runtime/transform-engine.js';
+} from '../packages/core/src/runtime/transform-engine.js';
 
 const DATA_ROOT = join(process.cwd(), 'data');
 const ATLAS = 'transform_agg_demo';

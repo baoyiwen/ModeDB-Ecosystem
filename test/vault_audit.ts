@@ -17,9 +17,9 @@ import {
   DiagnosticCenter,
   ErrorCodes,
 } from '@mode-db/common';
-import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
-import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
-import { AtlasSingleVault } from '../authoring/atlas-single-vault.js';
+import { AuthoringEngine } from '../packages/core/src/authoring/AuthoringEngine.js';
+import { ModelDBClient } from '../packages/core/src/runtime/ModelDBClient.js';
+import { AtlasSingleVault } from '../packages/core/authoring/atlas-single-vault.js';
 import {
   integrationVaultAuthoringOptions,
   integrationVaultDerivedSecret,

@@ -106,7 +106,7 @@ modeldb-server start --workspace ./digital_chunnel --port 9090 --token 'YOUR_LON
 
 在 **可访问 `workspace` 的机器** 上（可与 Server 同机或 CI）：
 
-1. 安装引擎包（monorepo 根 **`mode-db-engine`** 或已发布的 **`@mode-db/engine`**，以实际为准）。
+1. 安装引擎包（monorepo 根 **`@mode-db/core`** 或已发布的 **`@mode-db/core`** NPM 包，以实际为准）。
 2. **`configureModelDBStorageRoot`** 与 **`AuthoringEngine`** 使用 **同一 `workspace` + `dbName`（atlas）+ 同一 Vault 密钥材料**。
 3. **`registerModel` / `quickLink` / `insert` / `bind` / `flushAll`**。
 4. 确认 **`atlas.mld`** 已生成且 Server 配置的 **`workspace`** 能看到该文件。

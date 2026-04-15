@@ -1,20 +1,21 @@
 #!/usr/bin/env node
 /**
  * Fail if JavaScript / declaration / source-map emit appears under source trees.
- * Build output must live only under each package's `dist/` (or repo `dist/` for the lib).
+ * Build output must live only under each package's `dist/`.
  */
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = fileURLToPath(new URL('..', import.meta.url));
+const coreRoot = join(repoRoot, 'packages', 'core');
 
 const DEV_ROOTS = [
-  join(repoRoot, 'src'),
-  join(repoRoot, 'authoring'),
-  join(repoRoot, 'common'),
-  join(repoRoot, 'runtime'),
-  join(repoRoot, 'network'),
+  join(coreRoot, 'src'),
+  join(coreRoot, 'authoring'),
+  join(coreRoot, 'common'),
+  join(coreRoot, 'facade'),
+  join(coreRoot, 'templates'),
 ];
 
 function isArtifactFile(name) {
@@ -54,7 +55,7 @@ function collectPackageSrcDirs() {
   }
   const out = [];
   for (const ent of readdirSync(packagesDir, { withFileTypes: true })) {
-    if (!ent.isDirectory()) {
+    if (!ent.isDirectory() || ent.name === 'core') {
       continue;
     }
     const src = join(packagesDir, ent.name, 'src');
@@ -85,13 +86,13 @@ for (const root of roots) {
 if (violations.length > 0) {
   console.error(
     '\n[assert-no-build-artifacts-in-src] Build artifacts must not live next to sources.\n' +
-      'Remove these files (use `npm run build:*` so output goes to `dist/` only), then commit:\n',
+      'Remove these files (use `pnpm run build:*` so output goes to `dist/` only), then commit:\n',
   );
   for (const v of violations.sort()) {
     console.error(`  - ${v}`);
   }
   console.error(
-    '\nTip: root `tsconfig.json` uses noEmit; use `tsc -p tsconfig.lib.json` for the library build.\n',
+    '\nTip: use `pnpm run build:core` (packages/core `tsconfig.build.json`) for the engine library build.\n',
   );
   process.exit(1);
 }

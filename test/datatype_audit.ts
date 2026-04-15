@@ -10,7 +10,7 @@
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
-import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import { AuthoringEngine } from '../packages/core/src/authoring/AuthoringEngine.js';
 import {
   integrationVaultAuthoringOptions,
   loadVaultManifestJson,

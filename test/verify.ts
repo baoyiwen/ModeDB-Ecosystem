@@ -12,8 +12,8 @@ import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '@mode-db/common';
 import type { RelationIndexData } from '@mode-db/common';
-import { AuthoringEngine } from '../authoring/engine.js';
-import { ModelDBClient } from '../runtime/client.js';
+import { AuthoringEngine } from '../packages/core/authoring/engine.js';
+import { ModelDBClient } from '../packages/core/facade/client.js';
 import {
   atlasVaultPath,
   integrationVaultAuthoringOptions,

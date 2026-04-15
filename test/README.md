@@ -6,7 +6,7 @@
 
 **`modeldb_default_home_audit.ts`** 将 **`MODELDB_HOME`** 指向临时目录后调用 **`loadModelDBServerConfig(undefined, {})`**，断言惰性创建 **`modeldb.config.json`**、**`vault/`**、**`logs/`** 与稳定 **`connectToken`**。
 
-**双轨压测**见 **`dual_track_ignition.ts`**（**`npm run ignition`**）：依赖已 **`npm run build`** 且 **`modeldb-server`** 可连；环境变量与 **`modeldb.config.json`** 对齐说明见根 README **「运行与配置」**。
+**双轨压测**见 **`dual_track_ignition.ts`**（**`pnpm run ignition`**）：依赖已 **`pnpm run build`** 且 **`modeldb-server`** 可连；环境变量与 **`modeldb.config.json`** 对齐说明见根 README **「运行与配置」**。
 
 **引擎能力、治理端持久化、CRUD 缓冲区协议、合并读与 API 细节**见仓库根目录 **[README.md](../README.md)**（含 **「运行与配置」**、**「治理端持久化与开发者体验（DX）」** 与 **第六节** 链式查询 / 多维分析）。
 
@@ -17,10 +17,10 @@
 在仓库根目录执行：
 
 ```bash
-npm run test:integration
+pnpm run test:integration
 ```
 
-命令会先执行 **`npm run build:lib`**、**`build:shared`**、**`build:server`**（生成根 **`dist/`** 与 **`packages/server/dist/`**，供 server 与集成脚本解析）。随后顺序为（**14** 步）：
+命令会先执行 **`pnpm run build:lib`**、**`build:shared`**、**`build:server`**（生成根 **`dist/`** 与 **`packages/server/dist/`**，供 server 与集成脚本解析）。随后顺序为（**14** 步）：
 
 1. **`modeldb_config_loader_audit.ts`**（系统临时目录，不碰 **`data/`**）
 2. **`modeldb_default_home_audit.ts`**（临时 **`MODELDB_HOME`**，不碰 **`data/`**）
@@ -65,27 +65,27 @@ npm run test:integration
 
 | 命令                        | 入口文件                    | 说明                                                                                                                                                                                                                                                                                     |
 | --------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run test:integration`  | 串联 14 个脚本（见上）      | 前两步 **`modeldb_config_loader_audit`** + **`modeldb_default_home_audit`**；第 3 步 **`verify`** 清空 `data/`；一键回归（含 **`vault_audit`**、**`wire_server_audit`**、**`meta_crud_audit`**）                                                                                                                                                    |
-| `npm run config-loader-audit` | `modeldb_config_loader_audit.ts` + `modeldb_default_home_audit.ts` | **`loadModelDBServerConfig`** 与 **`MODELDB_HOME`** 默认布局审计（临时目录）                                                                                                                                                                                                                                |
+| `pnpm run test:integration`  | 串联 14 个脚本（见上）      | 前两步 **`modeldb_config_loader_audit`** + **`modeldb_default_home_audit`**；第 3 步 **`verify`** 清空 `data/`；一键回归（含 **`vault_audit`**、**`wire_server_audit`**、**`meta_crud_audit`**）                                                                                                                                                    |
+| `pnpm run config-loader-audit` | `modeldb_config_loader_audit.ts` + `modeldb_default_home_audit.ts` | **`loadModelDBServerConfig`** 与 **`MODELDB_HOME`** 默认布局审计（临时目录）                                                                                                                                                                                                                                |
 | `npx tsx test/verify.ts`    | `verify.ts`                 | 双图谱隔离、骨架补全、PROTOCOL 绑定、Runtime 只读                                                                                                                                                                                                                                        |
-| `npm run query-filters`     | `query_filters.ts`          | 谓词树、AND/OR 短路、`matchAll` / `matchAny`、`getQueryPlan`、`includeRelates`                                                                                                                                                                                                           |
-| `npm run integrity`         | `logic_integrity.ts`        | 句柄缓存、合并读、`insert({ sync: true })`、`explainRelate`、Vault **`r:*`** 关系索引注入                                                                                                                                                                                                |
-| `npm run audit`             | `logic_closure_audit.ts`    | 多 Atlas 物理隔离、双向索引守恒、多级 `relate`、Runtime 只读                                                                                                                                                                                                                             |
-| `npm run query-extended`    | `query_chain_extended.ts`   | `ComputeBuilder`、分析分页、`wrapGroups`、`relateRecursive`；**已**含于 `test:integration`                                                                                                                                                                                               |
-| `npm run dx-audit`          | `authoring_dx_audit.ts`     | 合并辅助函数、`QueryEngine.execute`、句柄缓存、`updateFields` 去重、合并读、`insert sync`；**已**含于 `test:integration`                                                                                                                                                                 |
-| `npm run crud-audit`        | `crud_audit.ts`             | CRUD 全链路（46 个断言）：update / delete / batch / 关系清理 / 模型独立性 / flush 压缩；**已**含于 `test:integration`                                                                                                                                                                    |
-| `npm run datatype-audit`    | `datatype_audit.ts`         | DataType + ValueObject（114 个断言）：类型校验、required/default/isEmpty/save、I18N/Color/Unit、manifest；**已**含于 `test:integration`                                                                                                                                                  |
-| `npm run diagnostic-audit`  | `diagnostic_audit.ts`       | DiagnosticCenter（**122** 个断言）：ErrorCodes 别名（含 **E3002**）、ErrorRegistry（含 E2005/E3002）、ValidationReport（isAllSuccess/getSummary/exportAsJSON/report 流式）、insertMany 批量、ValueObject 联动（required + type mismatch）、Emergency dump；**已**含于 `test:integration` |
-| `npm run vault-audit`       | `vault_audit.ts`            | 单文件 Vault：目录零明文、`ModelDBClient.connect`、`relate`、manifest hydrate、错误密钥、**E3002**；**已**含于 `test:integration`                                                                                                                                                        |
-| `npm run wire-server-audit` | `wire_server_audit.ts`      | WebSocket 服务 + **`@mode-db/sdk`**：`ConnectToken` 拒绝、**`connectRemote`**、**`RemoteHydratedEntity`**；**已**含于 `test:integration`（**必须**排在 `verify` 之后）                                                                                                                   |
-| `npm run meta-crud-audit`   | `meta_crud_audit.ts`        | **`alterModel` / `dropRelation` / `dropModel`**、Vault **`orphan:m:*`**、**`RemoteModelDBClient.connectNetwork`** 的 meta RPC；**已**含于 `test:integration`（末步；需 **`build:server`**）                                                                                             |
-| `npm run ignition`          | `dual_track_ignition.ts`    | **非**默认集成链：需**已启动** **`modeldb-server`**（**`npm run build`** 后 **`npm run start:server`**）；**`@mode-db/sdk`** 经 WS/HTTP 向指定 atlas 灌 **`Sensor`**；环境变量见脚本头与根 README **「运行与配置」**。**未**并入 `test:integration`                                   |
-| `npm run shadow-smart-cache-audit` | `shadow_smartcache_logger_audit.ts` | 单文件 Vault + **`memoryShadowHydration`** + **`enableSmartCache`** + **`EngineLogger`**。**未**并入默认集成                                                                                                                                                                    |
-| `npm run stress-test`       | `million_stress_test.ts`    | 压力测试（34 个断言）：100 万行灌入、1% 错误注入（E1001/E1003）、读写一致性、ValueObject 运行时监控、ErrorCodes 完整性、吞吐量报告。**未**并入默认集成                                                                                                                                   |
-| `npm run first-run`         | `first_run.ts`              | 演示向；`pipe` 重建。**未**并入默认集成                                                                                                                                                                                                                                                  |
-| `npm run transform`         | `transform_aggregate.ts`    | 多维分析全场景（语义见根 README **第六节 6.3**）。**未**并入默认集成                                                                                                                                                                                                                     |
-| `npm run final-analysis`    | `final_analysis_test.ts`    | `global_atlas` / Stats 验收。**未**并入默认集成                                                                                                                                                                                                                                          |
-| `npm run advanced-audit`    | `advanced_feature_audit.ts` | `geo_analytics`；`relateRecursive`、`wrapGroups`、`Paginated`。**未**并入默认集成                                                                                                                                                                                                        |
+| `pnpm run query-filters`     | `query_filters.ts`          | 谓词树、AND/OR 短路、`matchAll` / `matchAny`、`getQueryPlan`、`includeRelates`                                                                                                                                                                                                           |
+| `pnpm run integrity`         | `logic_integrity.ts`        | 句柄缓存、合并读、`insert({ sync: true })`、`explainRelate`、Vault **`r:*`** 关系索引注入                                                                                                                                                                                                |
+| `pnpm run audit`             | `logic_closure_audit.ts`    | 多 Atlas 物理隔离、双向索引守恒、多级 `relate`、Runtime 只读                                                                                                                                                                                                                             |
+| `pnpm run query-extended`    | `query_chain_extended.ts`   | `ComputeBuilder`、分析分页、`wrapGroups`、`relateRecursive`；**已**含于 `test:integration`                                                                                                                                                                                               |
+| `pnpm run dx-audit`          | `authoring_dx_audit.ts`     | 合并辅助函数、`QueryEngine.execute`、句柄缓存、`updateFields` 去重、合并读、`insert sync`；**已**含于 `test:integration`                                                                                                                                                                 |
+| `pnpm run crud-audit`        | `crud_audit.ts`             | CRUD 全链路（46 个断言）：update / delete / batch / 关系清理 / 模型独立性 / flush 压缩；**已**含于 `test:integration`                                                                                                                                                                    |
+| `pnpm run datatype-audit`    | `datatype_audit.ts`         | DataType + ValueObject（114 个断言）：类型校验、required/default/isEmpty/save、I18N/Color/Unit、manifest；**已**含于 `test:integration`                                                                                                                                                  |
+| `pnpm run diagnostic-audit`  | `diagnostic_audit.ts`       | DiagnosticCenter（**122** 个断言）：ErrorCodes 别名（含 **E3002**）、ErrorRegistry（含 E2005/E3002）、ValidationReport（isAllSuccess/getSummary/exportAsJSON/report 流式）、insertMany 批量、ValueObject 联动（required + type mismatch）、Emergency dump；**已**含于 `test:integration` |
+| `pnpm run vault-audit`       | `vault_audit.ts`            | 单文件 Vault：目录零明文、`ModelDBClient.connect`、`relate`、manifest hydrate、错误密钥、**E3002**；**已**含于 `test:integration`                                                                                                                                                        |
+| `pnpm run wire-server-audit` | `wire_server_audit.ts`      | WebSocket 服务 + **`@mode-db/sdk`**：`ConnectToken` 拒绝、**`connectRemote`**、**`RemoteHydratedEntity`**；**已**含于 `test:integration`（**必须**排在 `verify` 之后）                                                                                                                   |
+| `pnpm run meta-crud-audit`   | `meta_crud_audit.ts`        | **`alterModel` / `dropRelation` / `dropModel`**、Vault **`orphan:m:*`**、**`RemoteModelDBClient.connectNetwork`** 的 meta RPC；**已**含于 `test:integration`（末步；需 **`build:server`**）                                                                                             |
+| `pnpm run ignition`          | `dual_track_ignition.ts`    | **非**默认集成链：需**已启动** **`modeldb-server`**（**`pnpm run build`** 后 **`pnpm run start:server`**）；**`@mode-db/sdk`** 经 WS/HTTP 向指定 atlas 灌 **`Sensor`**；环境变量见脚本头与根 README **「运行与配置」**。**未**并入 `test:integration`                                   |
+| `pnpm run shadow-smart-cache-audit` | `shadow_smartcache_logger_audit.ts` | 单文件 Vault + **`memoryShadowHydration`** + **`enableSmartCache`** + **`EngineLogger`**。**未**并入默认集成                                                                                                                                                                    |
+| `pnpm run stress-test`       | `million_stress_test.ts`    | 压力测试（34 个断言）：100 万行灌入、1% 错误注入（E1001/E1003）、读写一致性、ValueObject 运行时监控、ErrorCodes 完整性、吞吐量报告。**未**并入默认集成                                                                                                                                   |
+| `pnpm run first-run`         | `first_run.ts`              | 演示向；`pipe` 重建。**未**并入默认集成                                                                                                                                                                                                                                                  |
+| `pnpm run transform`         | `transform_aggregate.ts`    | 多维分析全场景（语义见根 README **第六节 6.3**）。**未**并入默认集成                                                                                                                                                                                                                     |
+| `pnpm run final-analysis`    | `final_analysis_test.ts`    | `global_atlas` / Stats 验收。**未**并入默认集成                                                                                                                                                                                                                                          |
+| `pnpm run advanced-audit`    | `advanced_feature_audit.ts` | `geo_analytics`；`relateRecursive`、`wrapGroups`、`Paginated`。**未**并入默认集成                                                                                                                                                                                                        |
 
 ---
 
@@ -93,10 +93,10 @@ npm run test:integration
 
 与「进程内 **`AuthoringEngine`**」类测试不同，下列流程依赖 **已编译** 的 **`packages/server/dist`** 与可选 **`@mode-db/sdk`**。
 
-1. **`npm run build`**
+1. **`pnpm run build`**
 2. 准备 **`modeldb.config.json`**（可从 **`modeldb.config.example.json`** 复制）：至少设置 **`connectToken`**（同时派生磁盘上 **`atlas.mld`** 的加密密钥）；存储见 **`dbPath`** / **`storageRoot`** / **`workspace`**。
-3. **`npm run start:server -- -c modeldb.config.json`**（或依赖 **`MODELDB_HOME`** 默认配置）。CLI 覆盖项见根 README **「`modeldb-server` CLI 参数」**。
-4. **`npm run ignition`**（另开终端）：设置 **`MODEL_DB_URL`**、**`MODEL_DB_CONNECT_TOKEN`** 与 **`MODEL_DB_ATLAS`**（若不用默认值）与 server 一致；若脚本在磁盘上补写了 **`Sensor`** 与 manifest，**须重启 server** 再继续压测。
+3. **`pnpm run start:server -- -c modeldb.config.json`**（或依赖 **`MODELDB_HOME`** 默认配置）。CLI 覆盖项见根 README **「`modeldb-server` CLI 参数」**。
+4. **`pnpm run ignition`**（另开终端）：设置 **`MODEL_DB_URL`**、**`MODEL_DB_CONNECT_TOKEN`** 与 **`MODEL_DB_ATLAS`**（若不用默认值）与 server 一致；若脚本在磁盘上补写了 **`Sensor`** 与 manifest，**须重启 server** 再继续压测。
 
 **`wire_server_audit`** 在集成链内**自起**随机端口 WebSocket，**不**依赖步骤 3 的长期 server；**`ignition`** 则**必须**有外部 server 进程。
 
@@ -290,33 +290,33 @@ npm run test:integration
 - **`delete` 后读 `.mld`**：flush 会触发压缩重写（全量读取 → 合并缓冲 → 过滤墓碑 → 原子写回），墓碑行不会残留在文件中。
 - **关系层断言**：`delete` / `deleteWhere` 会清理**关系邻接表**（Vault：**`RelationIndexer`** 写回包内 **`r:*`**；分文件：**`.rid`**）。若需验证边状态，用 **`indexer.getForward` / `getReverse`** 或 **`loadVaultRelationData`**（Vault）即可。
 - **Atlas 命名**：新测试脚本应使用独立的 Atlas 名，避免与已有脚本冲突。启动时用 `await rm(join(DATA_ROOT, ATLAS), { recursive: true, force: true })` 清理自身数据目录。
-- **网络/SDK 测试**：**`wire_server_audit`** 依赖 **`verify`** 产出的 **`pipe`** 数据；单跑时执行 **`npx tsx test/verify.ts && npx tsx test/wire_server_audit.ts`**，或先保证 **`data/pipe/atlas.mld`** 存在后再 **`npm run wire-server-audit`**。修改 **`server/modeldb-server.ts`** 线协议时务必同步跑通本脚本。
+- **网络/SDK 测试**：**`wire_server_audit`** 依赖 **`verify`** 产出的 **`pipe`** 数据；单跑时执行 **`npx tsx test/verify.ts && npx tsx test/wire_server_audit.ts`**，或先保证 **`data/pipe/atlas.mld`** 存在后再 **`pnpm run wire-server-audit`**。修改 **`server/modeldb-server.ts`** 线协议时务必同步跑通本脚本。
 
 ---
 
 ## 与 CI / 本地检查
 
 ```bash
-npm run typecheck   # tsc --noEmit
-npm run lint        # eslint
-npm run check       # typecheck + lint + format:check
+pnpm run typecheck   # tsc --noEmit
+pnpm run lint        # eslint
+pnpm run check       # typecheck + lint + format:check
 ```
 
 合并前建议：
 
 ```bash
-npm run check
-npm run build
-npm run build:sdk
-npm run test:integration   # 含 config-loader 审计 + MODELDB_HOME 审计 + vault-audit + wire-server-audit + meta-crud-audit（共 14 步）
-npm run config-loader-audit
-npm run vault-audit        # 仅单文件 Vault 审计
-npm run wire-server-audit  # 仅 WebSocket + SDK（需先有 verify 的 pipe）
+pnpm run check
+pnpm run build
+pnpm run build:sdk
+pnpm run test:integration   # 含 config-loader 审计 + MODELDB_HOME 审计 + vault-audit + wire-server-audit + meta-crud-audit（共 14 步）
+pnpm run config-loader-audit
+pnpm run vault-audit        # 仅单文件 Vault 审计
+pnpm run wire-server-audit  # 仅 WebSocket + SDK（需先有 verify 的 pipe）
 # 按需补充：
-npm run stress-test
-npm run transform
-npm run final-analysis
-npm run advanced-audit
+pnpm run stress-test
+pnpm run transform
+pnpm run final-analysis
+pnpm run advanced-audit
 ```
 
 ---

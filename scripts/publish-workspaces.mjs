@@ -6,11 +6,10 @@
  *   node scripts/publish-workspaces.mjs           # dry-run (default)
  *   node scripts/publish-workspaces.mjs --live  # real publish (requires npm login + OTP if 2FA)
  *
- * Order: shared → common → sdk → @mode-db/engine (repo root) → server
- * (common before engine; sdk only needs shared; server needs engine + common + shared.)
+ * Order: shared → common → sdk → @mode-db/core (repo root) → server
+ * (common before core; sdk only needs shared; server needs core + common + shared.)
  *
- * Internal deps use semver (^) aligned with package versions so `npm install` links
- * workspaces without requiring the `workspace:` protocol.
+ * Uses **pnpm** (`pnpm publish --filter <name>`). Install dependencies with **`pnpm install`** at the repo root.
  */
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -19,18 +18,17 @@ import path from 'node:path';
 const repoRoot = path.dirname(fileURLToPath(new URL('..', import.meta.url)));
 const dryRun = !process.argv.includes('--live');
 
-/** Publish from repo root with `npm publish -w <name>` so workspace metadata is respected. */
 const ORDER = [
   '@mode-db/shared',
   '@mode-db/common',
   '@mode-db/sdk',
-  '@mode-db/engine',
+  '@mode-db/core',
   '@mode-db/server',
 ];
 
 function runPublishFromRoot(workspaceName, extraArgs) {
-  const args = ['publish', '-w', workspaceName, ...extraArgs];
-  const r = spawnSync('npm', args, {
+  const args = ['publish', '--filter', workspaceName, ...extraArgs];
+  const r = spawnSync('pnpm', args, {
     cwd: repoRoot,
     stdio: 'inherit',
     shell: true,

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "paths": {
-      "@mode-db/engine": ["./index.ts"],
+      "@mode-db/core": ["./packages/core/index.ts"],
       "@mode-db/common": ["./packages/common/src/index.ts"],
       "@mode-db/shared": ["./packages/shared/src/index.ts"],
       "@mode-db/sdk": ["./packages/sdk/src/index.ts"]
@@ -29,14 +29,6 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true
   },
-  "include": [
-    "src/**/*",
-    "common/**/*",
-    "authoring/**/*",
-    "runtime/**/*",
-    "templates/**/*",
-    "test/**/*",
-    "index.ts"
-  ],
-  "exclude": ["node_modules", "dist", "data"]
+  "include": ["test/**/*", "scripts/**/*.ts", "scripts/**/*.mjs", "packages/core/**/*.ts"],
+  "exclude": ["node_modules", "dist", "data", "packages/core/dist", "packages/**/dist"]
 }

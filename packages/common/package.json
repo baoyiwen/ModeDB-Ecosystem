@@ -20,7 +20,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@mode-db/shared": "^0.1.0"
+    "@mode-db/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

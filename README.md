@@ -10,7 +10,7 @@
 - **Runtime（客户端）**：按图谱名只读打开 **`atlas.mld`**，经 **`VaultModelFileReader` / `VaultRelationIndexReader`** 与包内 **`__manifest__`** 工作（密钥与治理端一致，常见为 **`MODEL_DB_VAULT_SECRET`** 或与 **`connectToken`** 派生的集成配置）。不依赖写入路径，适合独立交付。
 - **Network（可选）**：**`ModelDB WebSocket Server`** 在指定存储根上托管只读查询；**`@mode-db/sdk`** 通过 **`connectRemote`** 提供与本地 **`model.query()…execute()`** 相同的链式 API，查询体经 **ConnectToken 握手** 与 **会话密钥混淆** 传输（详见下文 **「网络服务与远程客户端 SDK」**）。
 
-**运维入口**：**`modeldb.config.json`**、**`npm run start:server`**、**`npm run ignition`** 与全部参数说明见下文 **「运行与配置（工作区、启动命令、参数与环境）」**。
+**运维入口**：**`modeldb.config.json`**、**`pnpm run start:server`**、**`pnpm run ignition`** 与全部参数说明见下文 **「运行与配置（工作区、启动命令、参数与环境）」**。
 
 > 本项目处于早期设计与实现阶段。
 
@@ -87,7 +87,7 @@ Mode DB Engine 采用完全不同的思路：
 │  ├─ indexer.ts     RelationIndexer │  └─ query.ts → QueryChain          │
 │  ├─ atlas-single-vault.ts (Vault)  │                                    │
 │  └─ atlas-registry.ts              │                                    │
-│                                    │  runtime/index.ts → 再导出上述 API   │
+│                                    │  facade/index.ts → 再导出上述 API    │
 ├────────────────────────────────────┴────────────────────────────────────┤
 │  common/          共享类型、Registry 接口、manifest、错误、存储根解析       │
 │  src/common/      PathResolver（Atlas 下路径解析）                        │
@@ -300,7 +300,7 @@ streamReport.allDiagnostics(); // [Diagnostic]
 - 包内 **`__manifest__`** 的 model 条目携带可选 **`fieldTypes`**，与 header 对齐。
 
 ```typescript
-import { AuthoringEngine, DataType, I18NValue, ColorValue, UnitValue } from 'mode-db-engine';
+import { AuthoringEngine, DataType, I18NValue, ColorValue, UnitValue } from '@mode-db/core';
 
 const engine = new AuthoringEngine({ atlas: 'typed', currentLocale: 'zh' });
 
@@ -399,7 +399,7 @@ weightVO.convertTo('g'); // 200
 ### 代码示例（治理端 CRUD）
 
 ```typescript
-import { AuthoringEngine } from 'mode-db-engine';
+import { AuthoringEngine } from '@mode-db/core';
 
 const engine = new AuthoringEngine({ atlas: 'my_atlas' });
 engine.registerModel('Item', new Set(['id', 'name', 'status', 'score']));
@@ -446,7 +446,7 @@ await engine.flushAll();
 
 ## 运行与配置（工作区、启动命令、参数与环境）
 
-本节汇总 **如何在仓库内构建与启动**、**`modeldb.config.json` 各字段**、**`modeldb-server` CLI**、**环境变量**与 **`npm run ignition`** 压测点火；与 **`packages/server/src/config-loader.ts`**、**`packages/server/src/modeldb-default-home.ts`** 实现一致。
+本节汇总 **如何在仓库内构建与启动**、**`modeldb.config.json` 各字段**、**`modeldb-server` CLI**、**环境变量**与 **`pnpm run ignition`** 压测点火；与 **`packages/server/src/config-loader.ts`**、**`packages/server/src/modeldb-default-home.ts`** 实现一致。
 
 ### 当前系统能力速览（2.0）
 
@@ -458,37 +458,38 @@ await engine.flushAll();
 | **共享包**     | **`@mode-db/shared`**：线协议编解码等，供 server / SDK 共用。                                                       |
 | **诊断与类型** | **`DiagnosticCenter`**、**`ValidationReport`**、**DataType / ValueObject** 等见上文各节。                           |
 
-### 仓库工作区（npm workspaces）
+### 仓库工作区（pnpm workspaces）
 
-| 包名                  | 路径              | 作用                                                                                                                                                                                                                       |
-| --------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`mode-db-engine`**  | 仓库根            | 引擎 **`dist/`**；根 **`package.json`** 聚合脚本与 **`bin.modeldb-server`**。                                                                                                                                              |
-| **`@mode-db/shared`** | `packages/shared` | **Wire codec**、**传输帧**、**握手/RPC 类型**（**`tsup`**；**不**依赖 **mode-db-engine**）。                                                                                                                               |
-| **`@mode-db/server`** | `packages/server` | **Fastify + ws**、配置加载、查询分发（**`tsc`** → `packages/server/dist/`）。**`package.json`** 不声明 **`mode-db-engine`**；源码在编译期以相对路径引用仓库根 **`dist/`** 下的已编译模块（须先 **`npm run build:lib`**）。 |
-| **`@mode-db/sdk`**    | `packages/sdk`    | 远程客户端（**`tsup`** → ESM/CJS + **`.d.ts`**）。                                                                                                                                                                         |
+| 包名                  | 路径                | 作用                                                                                                                                                        |
+| --------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`@mode-db/core`**   | **`packages/core`** | 黑盒存储引擎与运行时；**`tsc -p packages/core/tsconfig.build.json` → `packages/core/dist/`**；由根 **`package.json`** 脚本 **`pnpm run build:core`** 触发。 |
+| **`@mode-db/common`** | `packages/common`   | 类型、registry、manifest、诊断、存储根等可发布子包。                                                                                                        |
+| **`@mode-db/shared`** | `packages/shared`   | **Wire codec**、**传输帧**、**握手/RPC 类型**（**`tsc`**；**不**依赖 **`@mode-db/core`**）。                                                                |
+| **`@mode-db/server`** | `packages/server`   | **Fastify + ws**、配置加载、查询分发（**`tsc` → `packages/server/dist/`**）；依赖 **`@mode-db/core`**（**`workspace:*`**）及 common、shared。               |
+| **`@mode-db/sdk`**    | `packages/sdk`      | 远程客户端（**`tsc`** → ESM + **`.d.ts`**）。                                                                                                               |
 
-根目录使用 **npm workspaces** 链接 **`@mode-db/sdk`** 等子包（**`devDependencies`** 等），便于 **`tsx`** 与脚本解析。**`@mode-db/server`** 与 **`@mode-db/sdk`** 的 **`package.json`** 以 semver 引用兄弟包；server 在编译后的 **`dist/`** 上链接根引擎产物；SDK 仅依赖 **`@mode-db/shared`**。根包名仍为 **`mode-db-engine`**，**`npm run build:lib`**（**`tsconfig.lib.json`**）产出根 **`dist/`**，再 **`build:server`**。
+根目录 **`pnpm-workspace.yaml`** 声明 **`packages/*`**；根 **`package.json`** 为 **`private`** 薄壳，仅编排脚本；兄弟包使用 **`workspace:*`**。**`pnpm run build:core`** 编译 **`packages/core`** → **`packages/core/dist/`**，再 **`build:server`**。详见 **`packages/core/README.md`**。
 
 ### 构建顺序
 
 ```bash
-npm install
-npm run build    # build:lib（根 tsconfig.lib.json → dist/）→ build:shared → build:server → build:sdk
+pnpm install
+pnpm run build    # shared → common → core（packages/core/dist）→ server → sdk
 ```
 
-单独构建：**`npm run build:lib`**（仅引擎）、**`npm run build:sdk`**、**`npm run build:server`**、**`npm run build:shared`**。
+单独构建：**`pnpm run build:lib`**（仅 **`@mode-db/core`**）、**`pnpm run build:sdk`**、**`pnpm run build:server`**、**`pnpm run build:shared`**。
 
-### 根目录常用 npm 脚本
+### 根目录常用 pnpm 脚本
 
-| 脚本                                                               | 说明                                                                                                                                                                               |
-| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`npm run build`**                                                | 编译引擎 + shared + server + sdk。                                                                                                                                                 |
-| **`npm run start:server`**                                         | 等价 **`node ./packages/server/dist/cli.js`**（无 **`-c`** 时使用 **`MODELDB_HOME`** 下 **`modeldb.config.json`**，不存在则首次自动创建；见 **`docs/modeldb-config-guide.md`**）。 |
-| **`npm run dev`**                                                  | 根目录引擎 **`tsc -p tsconfig.lib.json --watch`**。                                                                                                                                |
-| **`npm test`** / **`npm run test:integration`**                    | 集成测试链（含配置加载审计，见 **`test/README.md`**）。                                                                                                                            |
-| **`npm run ignition`**                                             | 双轨压测点火：**`test/dual_track_ignition.ts`**（需已启动 server，见下文）。                                                                                                       |
-| **`npm run typecheck`** / **`npm run lint`** / **`npm run check`** | 类型检查、ESLint、类型+lint+Prettier 检查。                                                                                                                                        |
-| **`npm run wire-server-audit`** 等                                 | 单项集成脚本，见 **`test/README.md`** 命令对照表。                                                                                                                                 |
+| 脚本                                                                  | 说明                                                                                                                                                                               |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`pnpm run build`**                                                  | 编译引擎 + shared + server + sdk。                                                                                                                                                 |
+| **`pnpm run start:server`**                                           | 等价 **`node ./packages/server/dist/cli.js`**（无 **`-c`** 时使用 **`MODELDB_HOME`** 下 **`modeldb.config.json`**，不存在则首次自动创建；见 **`docs/modeldb-config-guide.md`**）。 |
+| **`pnpm run dev`**                                                    | **`@mode-db/core`** 源码监听：**`pnpm --filter @mode-db/core run dev`**（**`packages/core` 内 `tsc --watch`**）。                                                                  |
+| **`pnpm test`** / **`pnpm run test:integration`**                     | 集成测试链（含配置加载审计，见 **`test/README.md`**）。                                                                                                                            |
+| **`pnpm run ignition`**                                               | 双轨压测点火：**`test/dual_track_ignition.ts`**（需已启动 server，见下文）。                                                                                                       |
+| **`pnpm run typecheck`** / **`pnpm run lint`** / **`pnpm run check`** | 类型检查、ESLint、类型+lint+Prettier 检查。                                                                                                                                        |
+| **`pnpm run wire-server-audit`** 等                                   | 单项集成脚本，见 **`test/README.md`** 命令对照表。                                                                                                                                 |
 
 ### `modeldb.config.json` 字段说明
 
@@ -521,7 +522,7 @@ npm run build    # build:lib（根 tsconfig.lib.json → dist/）→ build:share
 
 ### `modeldb-server` CLI 参数
 
-入口：**`node ./packages/server/dist/cli.js`** 或 **`npm run start:server`** 或 **`npx modeldb-server`**（见根 **`package.json` → `bin`**）。
+入口：**`node ./packages/server/dist/cli.js`** 或 **`pnpm run start:server`** 或 **`pnpm exec modeldb-server`**（见根 **`package.json` → `bin`**）。
 
 | 选项                                     | 说明                                                                                                                                                                   |
 | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -562,7 +563,7 @@ npm run build    # build:lib（根 tsconfig.lib.json → dist/）→ build:share
 
 客户端**没有**向服务器「申请令牌」的 HTTP 接口；你必须从**自己部署配置**里复制到客户端环境：
 
-- 脚本 / 压测：**`MODEL_DB_CONNECT_TOKEN`**（须与 **`modeldb.config.json`** 里 **`connectToken`** 一致），例如 **`npm run ignition`** 使用的 **`test/dual_track_ignition.ts`**。
+- 脚本 / 压测：**`MODEL_DB_CONNECT_TOKEN`**（须与 **`modeldb.config.json`** 里 **`connectToken`** 一致），例如 **`pnpm run ignition`** 使用的 **`test/dual_track_ignition.ts`**。
 - **`@mode-db/sdk`** **`connectRemote({ connectToken, … })`**：把同一字符串传入代码或 CI Secret。
 - **短连接 HTTP 模式**：请求头 **`x-modeldb-connect-token`** 也携带同一值（见 **`packages/sdk/src/remote-client.ts`**）。
 
@@ -590,13 +591,13 @@ npm run build    # build:lib（根 tsconfig.lib.json → dist/）→ build:share
 
 ### 启动 WebSocket 服务的推荐流程
 
-1. **`npm run build`**
+1. **`pnpm run build`**
 2. **`cp modeldb.config.example.json modeldb.config.json`**（Windows 可用复制），编辑 **`connectToken`**；若使用加密 **`atlas.mld`**，填写 **`vaultSecret`** 或导出 **`MODEL_DB_VAULT_SECRET`**。
-3. 执行 **`npm run start:server -c modeldb.config.json`**（或 **`node ./packages/server/dist/cli.js start -c ./modeldb.config.json`**），使服务读取仓库根的配置；**无 `-c`** 时使用 **`MODELDB_HOME`** 下默认配置（见配置指南）。
+3. 执行 **`pnpm run start:server -- -c modeldb.config.json`**（或 **`node ./packages/server/dist/cli.js start -c ./modeldb.config.json`**），使服务读取仓库根的配置；**无 `-c`** 时使用 **`MODELDB_HOME`** 下默认配置（见配置指南）。
 4. 若报 **`EADDRINUSE`**，更换 **`port`** 或结束占用端口的进程。
 5. 修改磁盘上的 Vault（或包内 **`__manifest__`** 所描述拓扑）后，**已运行的进程**不会自动重载全部缓存；需**重启 server** 再接受客户端。
 
-### 双轨压测点火 `npm run ignition`
+### 双轨压测点火 `pnpm run ignition`
 
 脚本：**`test/dual_track_ignition.ts`**。通过 **`@mode-db/sdk`** **`connectRemote`** + **`insertMany`** 向服务端灌入 **`Sensor`** 数据；启动前会按 **`loadModelDBServerConfig`** 对齐存储根，并在缺少 **`Sensor`** 模型时自动 **`AuthoringEngine`** 补 manifest（**`IGNITION_SKIP_BOOTSTRAP=1`** 可关闭）。
 
@@ -610,7 +611,7 @@ npm run build    # build:lib（根 tsconfig.lib.json → dist/）→ build:share
 | **`IGNITION_BATCH`**          | 每批条数（默认 **5000**，上限 **20000**）。                             |
 | **`IGNITION_SKIP_BOOTSTRAP`** | 设为 **`1`** 时不改磁盘。                                               |
 
-**注意**：补写 manifest 后若 server 已在运行，需**重启 server** 后再 **`npm run ignition`**，否则可能仍报模型未注册。
+**注意**：补写 manifest 后若 server 已在运行，需**重启 server** 后再 **`pnpm run ignition`**，否则可能仍报模型未注册。
 
 ### 集成测试与本文档的关系
 
@@ -637,13 +638,13 @@ npm run build    # build:lib（根 tsconfig.lib.json → dist/）→ build:share
 
 ### 配置文件与 CLI（摘要）
 
-**`modeldb.config.json` 全字段**、**CLI 表格**、**环境变量**、**配置优先级**与 **`npm run ignition`** 已集中在上一节 **「运行与配置（工作区、启动命令、参数与环境）」**。
+**`modeldb.config.json` 全字段**、**CLI 表格**、**环境变量**、**配置优先级**与 **`pnpm run ignition`** 已集中在上一节 **「运行与配置（工作区、启动命令、参数与环境）」**。
 
 **编译后**启动示例：
 
 ```bash
 node ./packages/server/dist/cli.js --port 9090 --token your-secret --storage ./data
-npm run start:server
+pnpm run start:server
 ```
 
 全局安装本包后：**`npx modeldb-server`**（根 **`package.json` → `bin`** → **`packages/server/dist/cli.js`**）。
@@ -652,9 +653,9 @@ npm run start:server
 
 ### 远程客户端 SDK（`@mode-db/sdk`）
 
-工作区包路径：**[packages/sdk](packages/sdk)**。构建命令：**`npm run build:sdk`**（需已 **`npm run build:shared`**；根目录 **`npm run build`** 会顺序编译引擎、shared、server、sdk）。
+工作区包路径：**[packages/sdk](packages/sdk)**。构建命令：**`pnpm run build:sdk`**（需已 **`pnpm run build:shared`**；根目录 **`pnpm run build`** 会顺序编译引擎、shared、server、sdk）。
 
-**依赖**：SDK 的 **`package.json`** 仅声明 **`@mode-db/shared`**（线编解码、**`WireQueryChain`**、**`RemoteExecuteSnapshot`**、**`WireExecuteResultJson`** 等）。**不**将 **`mode-db-engine`** 作为 npm 依赖；与进程内 **`ModelDBClient` + `QueryChain`** 共用同一套**线计划语义**，由服务端 **`QueryChain.fromWirePlan`** 回放执行。
+**依赖**：SDK 的 **`package.json`** 仅声明 **`@mode-db/shared`**（线编解码、**`WireQueryChain`**、**`RemoteExecuteSnapshot`**、**`WireExecuteResultJson`** 等）。**不**将 **`@mode-db/core`** 作为 SDK 的 npm 依赖；与进程内 **`ModelDBClient` + `QueryChain`** 共用同一套**线计划语义**，由服务端 **`QueryChain.fromWirePlan`** 回放执行。
 
 **与进程内 Runtime 的差异（兼容性）**：**`RemoteRuntimeModel`** **不是** **`RuntimeModel`** 的子类，**勿使用** **`instanceof RuntimeModel`**。远程句柄不挂载 **`ModelRegistry`** / **`DataReader`**，因此 **不提供** **`getSchema()`**、**`all()`**、**`getAvailableRelations()`**、**`getAncestors()`** 等依赖本地注册表或存储的 API。远程侧当前保证：**`model(name).query(…)`** 返回 **`RemoteQueryChain`**（内部继承 **`@mode-db/shared`** 的 **`WireQueryChain`**，**`.execute()`** 走 RPC），以及 **`insertMany`** 等已暴露的写 RPC。
 
@@ -682,7 +683,7 @@ db.close();
 ### 0. 存储根（治理端与 Runtime 共用）
 
 ```typescript
-import { configureModelDBStorageRoot } from 'mode-db-engine';
+import { configureModelDBStorageRoot } from '@mode-db/core';
 import { join } from 'node:path';
 
 configureModelDBStorageRoot({ storageRoot: join(process.cwd(), 'data') });
@@ -695,7 +696,7 @@ Runtime 的 `ModelDBClient.connect()` 使用同一套 `resolveModelDBStorageRoot
 推荐使用 **`AuthoringEngine`**（或兼容别名 `Engine`）。每个实例绑定一个 `atlas` 名称，数据落在 `STORAGE_ROOT/<atlas>/`。
 
 ```typescript
-import { AuthoringEngine } from 'mode-db-engine';
+import { AuthoringEngine } from '@mode-db/core';
 
 const pipe = new AuthoringEngine({ atlas: 'pipe' });
 const tran = new AuthoringEngine({ atlas: 'tran' });
@@ -707,7 +708,7 @@ const tran = new AuthoringEngine({ atlas: 'tran' });
 **Vault 图谱示例**（目录下仅有 **`atlas.mld`**；Runtime 与治理端须使用**同一** Vault 密钥材料，常见为 **`connectToken` → 派生密钥** 或 **`MODEL_DB_VAULT_SECRET`**）：
 
 ```typescript
-import { AuthoringEngine, ModelDBClient } from 'mode-db-engine';
+import { AuthoringEngine, ModelDBClient } from '@mode-db/core';
 
 const CONNECT = 'your-long-random-connect-token';
 
@@ -888,7 +889,7 @@ const distributed = await client
   .execute();
 
 // 独立 PredicateNode（不经 QueryChain）：FilterBuilder.compose + QueryEngine
-import { FilterBuilder, QueryEngine } from 'mode-db-engine';
+import { FilterBuilder, QueryEngine } from '@mode-db/core';
 type Row = { level: number };
 const pc = FilterBuilder.compose<Row>();
 const levelNode = pc.and(pc.is('level', 1), pc.lt('level', 99));
@@ -956,7 +957,7 @@ const why = await hydrated[0]?.explainRelate('some_rel');
 **流式累加**：在 **无 `relate` 跳步**、谓词树**不含** **`CallbackNode`**、且 **`DataReader`** 实现了 **`scanModelRecords`**（**`VaultModelFileReader` / `ModelStorage`** 已提供）时，按 **模型行流**过滤并写入桶。带 **`relate`** 或多段跳步时，仍先按现有查询路径得到末端行集，再对该行集累加。
 
 ```typescript
-import { Aggregator, isAnalysisResult } from 'mode-db-engine';
+import { Aggregator, isAnalysisResult } from '@mode-db/core';
 
 // 对象式 aggregate，与 groupBy 等价写法也可用 pivot
 const report = await client
@@ -981,7 +982,7 @@ if (isAnalysisResult(report)) {
 ### 7. Runtime / ModelDBClient — 第三方只读接入
 
 ```typescript
-import { ModelDBClient } from 'mode-db-engine';
+import { ModelDBClient } from '@mode-db/core';
 
 const client = await ModelDBClient.connect('pipe');
 const PumpRO = client.model('Pump');
@@ -1063,28 +1064,26 @@ EngineError
 ## 项目结构
 
 ```
-mode-db-engine/
-├── index.ts                    # 包入口，统一导出
-├── modeldb.config.example.json # 服务端配置示例（复制为 modeldb.config.json）
+mode-db-engine/                    # 根：private 薄壳（pnpm 编排、测试、文档、配置）
+├── package.json
+├── pnpm-workspace.yaml
+├── tsconfig.json                  # 根 noEmit：test + packages/core 源码路径映射
+├── modeldb.config.example.json
 ├── docs/
-│   └── architecture.svg        # README 系统架构图（矢量）
+├── scripts/
+│   ├── chunnel-cleaner.ts
+│   └── …
 ├── packages/
-│   ├── shared/                 # @mode-db/shared
-│   ├── server/                 # @mode-db/server（CLI、Fastify、配置加载）
-│   └── sdk/                    # @mode-db/sdk（connectRemote）
-├── authoring/                  # 治理端：引擎、实体、存储、索引、Admin
-├── common/                     # 共享：类型、registry、manifest、错误、存储根、DataType 协议、ValueObject、DiagnosticCenter
-├── runtime/                    # 对 src/runtime 的薄再导出（便于从包根 import）
-├── src/
-│   ├── runtime/                # 只读 Runtime SDK：query、transform-engine（分组/聚合）
-│   ├── authoring/
-│   │   └── AuthoringEngine.ts  # 指向 authoring/engine 的规范入口路径
-│   └── common/
-│       └── PathResolver.ts     # Atlas 目录路径解析
+│   ├── core/                      # @mode-db/core：index.ts、src/、authoring/、common/、facade/、templates/ → dist/
+│   ├── common/                    # @mode-db/common
+│   ├── shared/                    # @mode-db/shared
+│   ├── server/                    # @mode-db/server
+│   └── sdk/                       # @mode-db/sdk
+├── runtime/                       # 可选生产数据占位（modeldb_vault/、logs/）
 ├── test/
 │   ├── README.md               # 测试命令、Atlas 对照、各脚本覆盖点与注意事项
 │   ├── modeldb_config_loader_audit.ts  # loadModelDBServerConfig 优先级与 .mld 路径推导（临时目录）
-│   ├── dual_track_ignition.ts  # npm run ignition：SDK 向 server 灌 Sensor（dbName / MODEL_DB_DB_NAME）
+│   ├── dual_track_ignition.ts  # pnpm run ignition：SDK 向 server 灌 Sensor（dbName / MODEL_DB_DB_NAME）
 │   ├── templates/pipe-gallery/ # 管廊 Pipe / Node / Monitor 预置 Schema（registerPipeGalleryModels）
 │   ├── verify.ts               # 端到端：双图谱（单文件 Vault）、滞后字段、PROTOCOL、Runtime 只读（启动时清空 data/）
 │   ├── query_filters.ts        # 谓词 / QueryChain / matchAny / 短路 / getQueryPlan / includeRelates / evaluateInto
@@ -1126,7 +1125,7 @@ mode-db-engine/
 | 类型 / 协议 | `ModelRegistry`, `PathResolver`, manifest 常量与解析函数，`DataReader`, `IndexReader`，各类 `export type { … }` 与错误类                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | 行业模板    | **`registerPipeGalleryModels`**（**`Pipe` / `Node` / `Monitor`**，含 **Unit**/**Color**/**required**），见 **`templates/pipe-gallery/register.ts`** 与 **`docs/logical-workspace-and-single-file.md`**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
-> **网络服务 API**（**`loadModelDBServerConfig`**、**`startModelDBWebSocketServer`** 等）由 **`@mode-db/server`** 导出，**不再**从 **`mode-db-engine`** 根 barrel 再导出，以避免 **engine ⇄ server** 循环依赖。
+> **网络服务 API**（**`loadModelDBServerConfig`**、**`startModelDBWebSocketServer`** 等）由 **`@mode-db/server`** 导出，**不再**从 **`@mode-db/core`** 根 barrel 再导出，以避免 **core ⇄ server** 循环依赖。
 
 ---
 
@@ -1141,32 +1140,32 @@ mode-db-engine/
 **推荐一键回归**（顺序：**`modeldb_config_loader_audit`**（临时目录校验 **`loadModelDBServerConfig`**）→ **`verify`** → … → **`diagnostic-audit`** → **`vault-audit`** → **`wire_server_audit`** → **`meta_crud_audit`**；**`verify`** 会删除整个默认 **`data/`** 目录；**`vault_audit`** 使用独立 Atlas **`vault_audit_rt`** 并在末尾自清理；**`wire_server_audit`** 依赖 **`verify`** 已生成的 **`data/pipe/atlas.mld`**，在随机端口起 WebSocket 并跑 SDK 握手 + 查询断言；**`meta_crud_audit`** 使用独立 Atlas **`meta_crud_rt` / `meta_crud_wire_rt`**，自删目录后断言 Meta-CRUD 与 RPC）：
 
 ```bash
-npm test
+pnpm test
 # 等价于
-npm run test:integration
+pnpm run test:integration
 ```
 
 **单项执行**：
 
 ```bash
-npm run config-loader-audit   # loadModelDBServerConfig：CLI 覆盖、.mld→storageRoot、connectToken 必填
-npx tsx test/verify.ts          # 双图谱（单文件 Vault）、骨架补全、PROTOCOL、Runtime 只读（会先清空 data/）
-npm run query-filters           # 谓词树、AND/OR 短路、matchAll / matchAny、getQueryPlan
-npm run integrity               # 句柄缓存、合并读、insert sync、explainRelate、Vault 关系索引幽灵 id
-npm run audit                   # 多 Atlas 物理隔离、双向索引守恒、多级 relate
-npm run query-extended          # ComputeBuilder、分析分页、wrapGroups、relateRecursive
-npm run dx-audit                # 治理 DX：merge 缓冲、QueryEngine、句柄缓存、updateFields 去重、insert sync
-npm run crud-audit              # CRUD 全链路：update / delete / batch / 关系清理 / 模型独立性 / flush 压缩
-npm run datatype-audit          # DataType 协议：类型校验、I18N、Vault `m:*` schema header、manifest / fieldTypes
-npm run diagnostic-audit        # DiagnosticCenter：错误码注册表、ValidationReport、insertMany 批量、国际化
-npm run vault-audit             # 单文件 Vault：目录零明文、connect、关系、错误密钥、E3002
-npm run wire-server-audit       # WebSocket 服务 + Client SDK（需先有 verify 的 pipe Vault）
-npm run ignition                # 双轨压测：需已 start:server；环境变量见「运行与配置」
-npm run stress-test             # 压力测试：100 万行灌入、1% 错误注入、读写一致性、诊断审计
-npm run first-run               # 演示：单文件 Vault 写入 atlas.mld → Runtime（未并入 test:integration）
-npm run transform               # 多维分析：pivot / groupBy / aggregate → AnalysisResult（第六节 6.3）
-npm run final-analysis          # global_atlas / Stats 验收
-npm run advanced-audit          # relateRecursive、wrapGroups、Paginated
+pnpm run config-loader-audit   # loadModelDBServerConfig：CLI 覆盖、.mld→storageRoot、connectToken 必填
+pnpm exec tsx test/verify.ts          # 双图谱（单文件 Vault）、骨架补全、PROTOCOL、Runtime 只读（会先清空 data/）
+pnpm run query-filters           # 谓词树、AND/OR 短路、matchAll / matchAny、getQueryPlan
+pnpm run integrity               # 句柄缓存、合并读、insert sync、explainRelate、Vault 关系索引幽灵 id
+pnpm run audit                   # 多 Atlas 物理隔离、双向索引守恒、多级 relate
+pnpm run query-extended          # ComputeBuilder、分析分页、wrapGroups、relateRecursive
+pnpm run dx-audit                # 治理 DX：merge 缓冲、QueryEngine、句柄缓存、updateFields 去重、insert sync
+pnpm run crud-audit              # CRUD 全链路：update / delete / batch / 关系清理 / 模型独立性 / flush 压缩
+pnpm run datatype-audit          # DataType 协议：类型校验、I18N、Vault `m:*` schema header、manifest / fieldTypes
+pnpm run diagnostic-audit        # DiagnosticCenter：错误码注册表、ValidationReport、insertMany 批量、国际化
+pnpm run vault-audit             # 单文件 Vault：目录零明文、connect、关系、错误密钥、E3002
+pnpm run wire-server-audit       # WebSocket 服务 + Client SDK（需先有 verify 的 pipe Vault）
+pnpm run ignition                # 双轨压测：需已 start:server；环境变量见「运行与配置」
+pnpm run stress-test             # 压力测试：100 万行灌入、1% 错误注入、读写一致性、诊断审计
+pnpm run first-run               # 演示：单文件 Vault 写入 atlas.mld → Runtime（未并入 test:integration）
+pnpm run transform               # 多维分析：pivot / groupBy / aggregate → AnalysisResult（第六节 6.3）
+pnpm run final-analysis          # global_atlas / Stats 验收
+pnpm run advanced-audit          # relateRecursive、wrapGroups、Paginated
 ```
 
 | 脚本                                 | Atlas                         | 主要内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -1197,6 +1196,7 @@ npm run advanced-audit          # relateRecursive、wrapGroups、Paginated
 - **检查：** ESLint 10 + @typescript-eslint
 - **格式化：** Prettier
 - **Git Hooks：** Husky + lint-staged
+- **包管理：** **pnpm** 9（**`pnpm-workspace.yaml`** + 根 **`packageManager`**）
 - **生产依赖：** **`ws`**（WebSocket 服务端；客户端在 Node 下可选 **`ws`**，浏览器使用原生 **`WebSocket`**）
 
 ---
@@ -1204,34 +1204,34 @@ npm run advanced-audit          # relateRecursive、wrapGroups、Paginated
 ## 快速开始
 
 ```bash
-npm install
+pnpm install
 
 # 编译引擎 + shared + server + sdk（启动 server 或跑 ignition 前需要）
-npm run build
+pnpm run build
 
 # 准备配置（示例见 modeldb.config.example.json）
 cp modeldb.config.example.json modeldb.config.json   # Windows: 手动复制后编辑 connectToken
 
 # 启动 WebSocket 服务（显式 -c 使用仓库根配置；无 -c 则用 MODELDB_HOME 默认）
-npm run start:server -- -c modeldb.config.json
+pnpm run start:server -- -c modeldb.config.json
 
 # 另开终端：双轨压测点火（须与 server 的 URL / token / atlas 一致）
-npm run ignition
+pnpm run ignition
 
 # 集成验证（config-loader 审计 → MODELDB_HOME 审计 → verify → … → meta_crud_audit，共 14 步）
-npm test
+pnpm test
 
 # 类型检查 / 代码检查 / 格式化 / 三合一
-npm run typecheck
-npm run lint
-npm run format
-npm run check
+pnpm run typecheck
+pnpm run lint
+pnpm run format
+pnpm run check
 
 # 仅构建远程客户端 SDK（输出 packages/sdk/dist/）
-npm run build:sdk
+pnpm run build:sdk
 
 # 监听编译（仅根目录引擎 tsc --watch）
-npm run dev
+pnpm run dev
 ```
 
 更完整的 **`modeldb.config.json` 字段**、**CLI**、**环境变量**与 **`ignition`** 说明见上文 **「运行与配置（工作区、启动命令、参数与环境）」**。
@@ -1240,34 +1240,34 @@ npm run dev
 
 ## 打包与发布
 
-### 引擎包 `mode-db-engine`
+### 引擎包 `@mode-db/core`
 
 1. **版本号**：在根目录 **`package.json`** 的 **`version`** 字段递增（建议遵循 [semver](https://semver.org/lang/zh-CN/)）。
 2. **预检**：在干净工作区执行  
-   **`npm ci`**（或 **`npm install`**）→ **`npm run check`** → **`npm run build`** → **`npm test`**。  
-   若对外发布 SDK 工作区包，额外执行 **`npm run build:sdk`**，并确认 **`packages/sdk/dist/`** 已生成且 **`npm pack -w @mode-db/sdk --dry-run`** 文件列表符合预期。
-3. **打包内容**：**`npm pack`** 默认按 **`package.json` → `files`** 包含 **`dist/`**、**`packages/server/dist/`** 与 **`docs/architecture.svg`**；**`npx modeldb-server`** 见根 **`bin`**。
-4. **发布注册表**：登录 npm（**`npm login`**）后执行 **`npm publish --access public`**（作用域包若未公开需显式 **`--access public`**）。建议使用 **`npm publish --dry-run`** 先试打 tarball。
+   **`pnpm install --frozen-lockfile`**（或 **`pnpm install`**）→ **`pnpm run check`** → **`pnpm run build`** → **`pnpm test`**。  
+   若对外发布 SDK 工作区包，额外执行 **`pnpm run build:sdk`**，并确认 **`packages/sdk/dist/`** 已生成且 **`pnpm pack --filter @mode-db/sdk --dry-run`** 文件列表符合预期。
+3. **打包内容**：根目录 **`pnpm pack`** 按 **`package.json` → `files`** 包含 **`dist/`**、**`packages/server/dist/`** 与文档等；**`pnpm exec modeldb-server`** 见根 **`bin`**。
+4. **发布注册表**：见 **`docs/PUBLISH.md`**；工作区多包可用 **`pnpm run publish:workspaces`**（干跑）或 **`pnpm run publish:workspaces:live`**。
 5. **Git 标签**：发布后与 **`package.json`** 中版本一致的 **annotated tag**（例如 **`v1.0.1`**）便于回溯。
 
 ### 工作区包 `@mode-db/sdk`
 
-- **路径**：[packages/sdk](packages/sdk)。**`dependencies`** 仅 **`@mode-db/shared`**；与 **`mode-db-engine`** 无 npm 依赖关系（运行时仍须配合 **ModelDB WebSocket Server**，由 **`@mode-db/server`** + 引擎提供）。
-- **构建**：根目录 **`npm run build:sdk`**（内部为 **`npm run build -w @mode-db/sdk`**，调用 **`tsup`**）。
+- **路径**：[packages/sdk](packages/sdk)。**`dependencies`** 仅 **`@mode-db/shared`**；与 **`@mode-db/core`** 无 npm 依赖关系（运行时仍须配合 **ModelDB WebSocket Server**，由 **`@mode-db/server`** + 引擎提供）。
+- **构建**：根目录 **`pnpm run build:sdk`**（**`pnpm --filter @mode-db/sdk run build`**，内部 **`tsc`**）。
 - **发布顺序**：可先发布 **`@mode-db/shared`**，再发布 **`@mode-db/sdk`**；与引擎版本解耦，但线计划与服务端 **`QueryChain`** 语义须保持大版本一致。
-- **tarball 检查**：在 **`packages/sdk`** 下 **`npm pack`**，检查是否仅含 **`dist/`**、**`package.json`**、**`README`**（若添加）等。
+- **tarball 检查**：**`pnpm pack --filter @mode-db/sdk`**，检查是否仅含 **`dist/`**、**`package.json`**、**`README`**（若添加）等。
 
 ### 工作区包 `@mode-db/server`
 
 - **路径**：[packages/server](packages/server)。**`commander`** CLI（**`--port` / `--host` / `--config` / `--storage` / `--token` / `--vault-secret` / `--dev`**），**`ws`** WebSocket 服务，**`WireRequestDispatcher`** 与 **`WriteSerializationGate`**（为后续治理端写 RPC 预留串行化）。
-- **依赖**：**`package.json`** 仅 **`@mode-db/shared`**、**`fastify`**、**`ws`** 等；**不**声明 **`mode-db-engine`**。编译期通过 **`../../../dist/...`** 引用仓库根 **`dist/`**（由 **`npm run build:lib`** 生成），故 **`npm run build:server`** 必须排在 **`build:lib`** 之后。
-- **构建**：**`npm run build:server`** 或根目录 **`npm run build`**（已含 **`build:lib`**）。
+- **依赖**：**`package.json`** 声明 **`@mode-db/core`**、**`@mode-db/common`**、**`@mode-db/shared`** 等（**`workspace:*`**）；编译 **`@mode-db/server`** 前须先 **`pnpm run build:lib`** 生成根 **`dist/`**。
+- **构建**：**`pnpm run build:server`** 或根目录 **`pnpm run build`**（已含 **`build:lib`**）。
 
 ### 部署 WebSocket 服务（运维摘要）
 
-1. 将 **`dist/`** 拷贝至服务器或直接使用 **`npm install mode-db-engine`**。
+1. 将 **`dist/`** 拷贝至服务器或直接使用 **`pnpm add @mode-db/core`**（以注册表实际包名为准）。
 2. 准备 **`modeldb.config.json`**（或由环境变量 **`MODEL_DB_CONNECT_TOKEN`**、**`MODEL_DB_STORAGE_ROOT`**、**`MODEL_DB_VAULT_SECRET`** 注入），**不要**在仓库中保存生产密钥。
-3. 使用 **`node ./packages/server/dist/cli.js`** 或 **`npx modeldb-server`** 启动；生产环境前置 **Nginx / Caddy / 云 LB** 做 **TLS** 与限流。
+3. 使用 **`node ./packages/server/dist/cli.js`** 或 **`pnpm exec modeldb-server`** 启动；生产环境前置 **Nginx / Caddy / 云 LB** 做 **TLS** 与限流。
 4. **进程管理**：使用 **systemd**、**PM2** 或容器编排重启策略，确保异常退出后自动拉起。
 
 ---

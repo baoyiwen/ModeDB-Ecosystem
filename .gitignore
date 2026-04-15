@@ -17,10 +17,10 @@ dist
 /authoring/**/*.js.map
 /authoring/**/*.d.ts
 /authoring/**/*.d.ts.map
-/runtime/**/*.js
-/runtime/**/*.js.map
-/runtime/**/*.d.ts
-/runtime/**/*.d.ts.map
+/facade/**/*.js
+/facade/**/*.js.map
+/facade/**/*.d.ts
+/facade/**/*.d.ts.map
 /network/**/*.js
 /network/**/*.js.map
 /network/**/*.d.ts

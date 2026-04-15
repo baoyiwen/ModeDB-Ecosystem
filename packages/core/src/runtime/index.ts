@@ -106,7 +106,7 @@ export {
   configureModelDBRuntime,
   resolveModelDBStorageRoot,
   type ModelDBRuntimeConfig,
-} from '../../runtime/config.js';
+} from '../../facade/config.js';
 
 /** @deprecated Use {@link RuntimeModel}. */
 export { RuntimeModel as ReadonlyModelEntity } from './RuntimeModel.js';

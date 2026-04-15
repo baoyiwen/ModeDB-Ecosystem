@@ -12,7 +12,7 @@
 import { join, dirname } from 'node:path';
 import { existsSync } from 'node:fs';
 import { mkdir, rm, readFile, rename } from 'node:fs/promises';
-import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import { AuthoringEngine } from '../packages/core/src/authoring/AuthoringEngine.js';
 import { integrationVaultAuthoringOptions, useIntegrationVaultEnv } from './integration-vault.js';
 import {
   ValidationError,

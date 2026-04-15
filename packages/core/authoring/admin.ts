@@ -1,4 +1,4 @@
-import { ModelDBClient } from '../runtime/client.js';
+import { ModelDBClient } from '../facade/client.js';
 import { AuthoringEngine, type AuthoringEngineOptions } from './engine.js';
 
 /**

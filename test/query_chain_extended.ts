@@ -7,17 +7,17 @@
 import { join } from 'node:path';
 import { rm } from 'node:fs/promises';
 import { configureModelDBStorageRoot } from '@mode-db/common';
-import { AuthoringEngine } from '../src/authoring/AuthoringEngine.js';
+import { AuthoringEngine } from '../packages/core/src/authoring/AuthoringEngine.js';
 import { integrationVaultAuthoringOptions, useIntegrationVaultEnv } from './integration-vault.js';
-import { ModelDBClient } from '../src/runtime/ModelDBClient.js';
-import type { HydratedEntity } from '../src/runtime/HydratedEntity.js';
+import { ModelDBClient } from '../packages/core/src/runtime/ModelDBClient.js';
+import type { HydratedEntity } from '../packages/core/src/runtime/HydratedEntity.js';
 import {
   ComputeBuilder,
   type GroupInstance,
   isAnalysisResult,
   isGroupInstance,
   isPaginatedExecuteResult,
-} from '../src/runtime/query.js';
+} from '../packages/core/src/runtime/query.js';
 
 const DATA_ROOT = join(process.cwd(), 'data');
 const ATLAS = 'query_chain_extended';

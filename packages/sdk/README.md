@@ -2,7 +2,7 @@
 
 **远程客户端**：仅通过 **`connectRemote`** / **`RemoteModelDBClient.connect`** / **`ModelDBClient.connect`**（网络）与 **`@mode-db/server`** 托管的进程通信。**不包含**、也**不得**依赖 **`ModelDBServer`** 或任何在 SDK 内启动监听端口的逻辑——服务由运维单独执行 **`modeldb-server start`**（见根 README）。
 
-实现上依赖 **`@mode-db/shared`**（线协议、**`encodeWirePayload`** 混淆载荷、**`WireExecuteBody`**），**不**依赖 **`@mode-db/engine`** 源码树。
+实现上依赖 **`@mode-db/shared`**（线协议、**`encodeWirePayload`** 混淆载荷、**`WireExecuteBody`**），**不**依赖 **`@mode-db/core`** 源码树。
 
 ## 构建
 

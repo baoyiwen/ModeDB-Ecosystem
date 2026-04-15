@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@mode-db/shared": "^0.1.0"
+    "@mode-db/shared": "workspace:*"
   },
   "optionalDependencies": {
     "ws": "^8.18.0"

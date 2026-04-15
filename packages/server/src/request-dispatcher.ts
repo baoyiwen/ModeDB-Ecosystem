@@ -15,7 +15,7 @@ import {
   EngineLogger,
   type AuthoringEngine,
   type ModelDBClient,
-} from '@mode-db/engine';
+} from '@mode-db/core';
 import type { WriteSerializationGate } from './write-serialization-gate.js';
 import type { FieldDefsRecord } from '@mode-db/common';
 
