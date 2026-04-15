@@ -21,6 +21,8 @@ Publish (or dry-run) in this order so dependents exist on the registry:
 | `pnpm run publish:npm:go`                         | **真发布**且自动确认（无人值守 / CI，慎用）     |
 | `pnpm run publish:npm -- --live --yes --no-build` | 真发布、跳过确认、跳过构建                      |
 
+**Git 分支**：加 **`--branch <name>`** 或 **`--branch=name`** 会在构建/发布前执行 **`git fetch origin <name>`** 并检出该分支（必要时从 **`origin/<name>`** 创建本地跟踪分支）。交互式 **`--live`**（未加 **`--yes`**）且未在命令行写 **`--branch`** 时，会提示输入分支名；直接回车表示不切换，沿用当前 **`HEAD`**。无人值守真发（**`--yes`**）若需固定分支，务必显式传 **`--branch`**。
+
 兼容旧名：`publish:workspaces` / `publish:workspaces:live`（等价于带 `--yes` 的真发布）。
 
 发布前请 **`npm login`**（pnpm 默认走 npm registry）。

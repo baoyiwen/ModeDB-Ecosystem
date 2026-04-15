@@ -11,6 +11,8 @@
  *   pnpm run publish:npm -- --live        # 真发布（会提示输入 YES）
  *   pnpm run publish:npm:go               # 真发布 + 自动确认（CI / 无人值守）
  *   pnpm run publish:npm -- --live --yes --no-build
+ *   pnpm run publish:npm -- --branch develop              # 先检出该分支再 dry-run / 后续步骤
+ *   pnpm run publish:npm -- --live --branch release/1.2 --yes
  *
  * 发布顺序：shared → common → sdk → core → server
  *
@@ -27,10 +29,63 @@ import path from 'node:path';
 // 本文件在 repo/scripts/：上一级才是 monorepo 根（勿再对 URL('..') 的结果做 dirname，否则会跑到 web_code/）
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const args = new Set(process.argv.slice(2));
+const rawArgs = process.argv.slice(2);
+const args = new Set(rawArgs);
 const live = args.has('--live');
 const yes = args.has('--yes');
 const noBuild = args.has('--no-build');
+
+/** `--branch foo` 或 `--branch=foo` */
+function parseBranchArg(argv) {
+  const idx = argv.indexOf('--branch');
+  if (idx !== -1 && argv[idx + 1] && !argv[idx + 1].startsWith('-')) {
+    return argv[idx + 1].trim();
+  }
+  const eq = argv.find((a) => a.startsWith('--branch='));
+  if (eq) {
+    return eq.slice('--branch='.length).trim();
+  }
+  return '';
+}
+
+/**
+ * 检出到指定分支（先 fetch，再本地 checkout / 必要时跟踪 `origin/<branch>`）。
+ */
+function ensureGitBranch(branch) {
+  const b = branch.trim();
+  if (!b) {
+    return;
+  }
+  console.log(`\n--- git: 检出分支 ${b} ---\n`);
+  let r = spawnSync('git', ['fetch', 'origin', b], {
+    cwd: repoRoot,
+    stdio: 'inherit',
+    shell: true,
+  });
+  if (r.status !== 0) {
+    console.error(`[mode-db publish] git fetch origin ${b} 失败。`);
+    process.exit(r.status ?? 1);
+  }
+  r = spawnSync('git', ['checkout', b], { cwd: repoRoot, stdio: 'inherit', shell: true });
+  if (r.status !== 0) {
+    r = spawnSync('git', ['checkout', '-B', b, `origin/${b}`], {
+      cwd: repoRoot,
+      stdio: 'inherit',
+      shell: true,
+    });
+  }
+  if (r.status !== 0) {
+    console.error(
+      `[mode-db publish] 无法检出分支 ${b}。请确认远端存在 origin/${b}，或本地已有该分支。`,
+    );
+    process.exit(r.status ?? 1);
+  }
+  const head = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  console.log(`[mode-db publish] 当前分支: ${head.stdout?.trim() ?? '?'}\n`);
+}
 
 /** 与仓库依赖顺序一致：先 leaf 依赖，后 server */
 const ORDER = [
@@ -97,6 +152,29 @@ async function main() {
     console.log(`  ${name.padEnd(22)} ${readPkgVersion(name)}`);
   }
   console.log('');
+
+  let publishBranch = parseBranchArg(rawArgs);
+
+  if (rawArgs.includes('--branch') && !publishBranch) {
+    console.error('[mode-db publish] 请使用 --branch <名称> 或 --branch=名称');
+    process.exit(1);
+  }
+
+  if (!publishBranch && live && !yes) {
+    const rl = readline.createInterface({ input, output });
+    publishBranch = (
+      await rl.question('发布基于哪个 Git 分支？(回车=不切换，保持当前 HEAD): ')
+    ).trim();
+    rl.close();
+  }
+
+  if (publishBranch) {
+    ensureGitBranch(publishBranch);
+  } else if (live && yes) {
+    console.log(
+      '[mode-db publish] 未指定 --branch：将使用当前 HEAD（CI 请传 --branch <name>）。\n',
+    );
+  }
 
   if (live && !yes) {
     const rl = readline.createInterface({ input, output });
