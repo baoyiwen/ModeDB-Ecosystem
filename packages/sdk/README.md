@@ -9,8 +9,9 @@
 在 monorepo 根目录：
 
 ```bash
-npm run build
-npm run build:sdk
+pnpm install
+pnpm run build
+pnpm run build:sdk
 ```
 
 ## 查询

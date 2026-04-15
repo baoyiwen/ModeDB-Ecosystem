@@ -1,6 +1,6 @@
 # Mode DB Engine 操作手册
 
-本文面向 **运维、后端与前端**，说明从 **部署 → 启动 → 新工程接入 → 业务/前端调用** 的推荐路径。实现细节与 API 边界以仓库根目录 **[README.md](../README.md)** 为准；Meta-DDL 与线协议见 **[engine-meta-crud-and-wire.md](./engine-meta-crud-and-wire.md)**。
+本文面向 **运维、后端与前端**，说明从 **部署 → 启动 → 新工程接入 → 业务/前端调用** 的推荐路径。实现细节与 API 边界以仓库根目录 **[README.md](../README.md)** 为准；引擎源码在 **`packages/core`**（**`@mode-db/core`**），仓库根 **`package.json`** 为 **pnpm 薄壳**（编排构建与测试）。Meta-DDL 与线协议见 **[engine-meta-crud-and-wire.md](./engine-meta-crud-and-wire.md)**。
 
 ---
 
@@ -21,7 +21,7 @@
 ### 2.1 运行环境
 
 - **Node.js**：建议 **≥ 20**（与 **`@mode-db/server`** 的 `engines` 一致）。
-- **npm**：支持 **workspaces** 的 npm 版本（用于在 monorepo 内开发；生产部署可使用已 **`npm pack` / 发布** 的包）。
+- **pnpm**：monorepo 使用 **`pnpm-workspace.yaml`**；本地开发在仓库根执行 **`pnpm install`** / **`pnpm run build`**。生产部署可使用 registry 上已发布的 **`@mode-db/server`**、**`@mode-db/core`** 等包，或自源码在 CI 中 **`pnpm run build`** 产出各工作区包下的 **`dist/`**（例如 **`packages/core/dist/`**、**`packages/server/dist/`**）。
 - **磁盘**：为 **`workspace`** 预留足够空间；Vault 为整包读写，避免与高 I/O 噪声任务同盘争抢（生产建议独立数据盘）。
 
 ### 2.2 你需要准备的密钥
@@ -46,19 +46,20 @@
 
 ```bash
 git clone <repo-url> && cd mode-db-engine
-npm install
-npm run build
+pnpm install
+pnpm run build
 ```
 
 可执行入口：
 
-- **`npx modeldb-server`**（根 **`package.json` → `bin`** 指向 **`packages/server/dist/cli.js`**），或
+- **`pnpm exec modeldb-server`**（根 **`package.json` → `bin`** 指向 **`packages/server/dist/cli.js`**），或
 - **`node ./packages/server/dist/cli.js`**
 
-**方式 B：npm 安装已发布包（若已发布 `@mode-db/server`）**
+**方式 B：安装已发布包（若已发布 `@mode-db/server`）**
 
 ```bash
-npm install -g @mode-db/server
+pnpm add -g @mode-db/server
+# 或 npm install -g @mode-db/server
 modeldb-server start --help
 ```
 
@@ -106,7 +107,7 @@ modeldb-server start --workspace ./digital_chunnel --port 9090 --token 'YOUR_LON
 
 在 **可访问 `workspace` 的机器** 上（可与 Server 同机或 CI）：
 
-1. 安装引擎包（monorepo 根 **`@mode-db/core`** 或已发布的 **`@mode-db/core`** NPM 包，以实际为准）。
+1. 安装引擎包：在 monorepo 内依赖 **`@mode-db/core`**（**`workspace:*`**，实现位于 **`packages/core`**）；或从 registry 安装已发布的 **`@mode-db/core`**（以实际包名为准）。
 2. **`configureModelDBStorageRoot`** 与 **`AuthoringEngine`** 使用 **同一 `workspace` + `dbName`（atlas）+ 同一 Vault 密钥材料**。
 3. **`registerModel` / `quickLink` / `insert` / `bind` / `flushAll`**。
 4. 确认 **`atlas.mld`** 已生成且 Server 配置的 **`workspace`** 能看到该文件。
@@ -122,7 +123,8 @@ modeldb-server start --workspace ./digital_chunnel --port 9090 --token 'YOUR_LON
 在业务仓库中安装远程客户端（包名以 registry 为准）：
 
 ```bash
-npm install @mode-db/sdk
+pnpm add @mode-db/sdk
+# 或 npm install @mode-db/sdk
 ```
 
 **不要**在纯前端或业务服务里依赖 **`@mode-db/server`** 来「顺带启动」数据库；Server 由运维单独进程托管。

@@ -28,7 +28,7 @@
   <text x="560" y="84" text-anchor="middle" fill="#92400e" font-size="11">Third-party read-only</text>
 
   <rect x="340" y="118" width="240" height="32" rx="6" fill="#e0e7ff" stroke="#6366f1"/>
-  <text x="460" y="138" text-anchor="middle" fill="#3730a3" font-weight="600">index.ts (package entry)</text>
+  <text x="460" y="138" text-anchor="middle" fill="#3730a3" font-weight="600">packages/core/index.ts (@mode-db/core)</text>
 
   <line x1="360" y1="98" x2="400" y2="118" stroke="#9ca3af" marker-end="url(#arrow)"/>
   <line x1="560" y1="98" x2="520" y2="118" stroke="#9ca3af" marker-end="url(#arrow)"/>
@@ -36,7 +36,7 @@
   <line x1="520" y1="150" x2="700" y2="178" stroke="#6366f1" marker-end="url(#arrow)"/>
 
   <rect x="40" y="178" width="380" height="248" rx="8" fill="url(#gAuth)" stroke="#3b82f6" stroke-width="1.5"/>
-  <text x="60" y="198" font-weight="700" fill="#1e40af">Authoring (authoring/)</text>
+  <text x="60" y="198" font-weight="700" fill="#1e40af">Authoring (packages/core/authoring/)</text>
 
   <rect x="56" y="210" width="168" height="28" rx="4" fill="#ffffff" stroke="#93c5fd"/>
   <text x="140" y="228" text-anchor="middle" font-size="11" fill="#1e3a8a">AuthoringEngine</text>
@@ -55,10 +55,10 @@
   <rect x="232" y="286" width="168" height="26" rx="4" fill="#ffffff" stroke="#93c5fd"/>
   <text x="316" y="303" text-anchor="middle" font-size="11">RelationIndexer</text>
 
-  <text x="56" y="332" font-size="10" fill="#1d4ed8">Write path: .mld, .rid, atlas-manifest.json</text>
+  <text x="56" y="332" font-size="10" fill="#1d4ed8">Write path: encrypted atlas.mld (Vault, __manifest__ + m:* + r:*)</text>
 
   <rect x="500" y="178" width="380" height="248" rx="8" fill="url(#gRun)" stroke="#22c55e" stroke-width="1.5"/>
-  <text x="520" y="198" font-weight="700" fill="#166534">Runtime (src/runtime/)</text>
+  <text x="520" y="198" font-weight="700" fill="#166534">Runtime (packages/core/src/runtime/)</text>
 
   <rect x="516" y="210" width="348" height="30" rx="4" fill="#ffffff" stroke="#86efac"/>
   <text x="690" y="230" text-anchor="middle" font-size="11" fill="#14532d">ModelDBClient.connect / fromContext</text>
@@ -78,20 +78,16 @@
   <text x="516" y="332" font-size="10" fill="#15803d">Read path: no dependency on ModelStorage / RelationIndexer impl</text>
 
   <rect x="180" y="448" width="560" height="56" rx="8" fill="url(#gSh)" stroke="#9ca3af"/>
-  <text x="200" y="468" font-weight="600" fill="#374151">Shared: common/ + src/common/</text>
+  <text x="200" y="468" font-weight="600" fill="#374151">Shared: packages/core/common/ + src/common/</text>
   <text x="200" y="486" font-size="11" fill="#4b5563">Types, registry contracts, manifest, errors, storage root, PathResolver</text>
 
   <line x1="230" y1="426" x2="280" y2="448" stroke="#9ca3af" marker-end="url(#arrow)"/>
   <line x1="690" y1="426" x2="640" y2="448" stroke="#9ca3af" marker-end="url(#arrow)"/>
 
   <rect x="120" y="528" width="680" height="56" rx="8" fill="#f9fafb" stroke="#6b7280"/>
-  <text x="140" y="548" font-weight="600" fill="#374151">Disk: STORAGE_ROOT / atlas /</text>
-  <rect x="140" y="556" width="200" height="22" rx="4" fill="#ffffff" stroke="#d1d5db"/>
-  <text x="240" y="571" text-anchor="middle" font-size="10">atlas-manifest.json</text>
-  <rect x="360" y="556" width="200" height="22" rx="4" fill="#ffffff" stroke="#d1d5db"/>
-  <text x="460" y="571" text-anchor="middle" font-size="10">models/*.mld</text>
-  <rect x="580" y="556" width="200" height="22" rx="4" fill="#ffffff" stroke="#d1d5db"/>
-  <text x="680" y="571" text-anchor="middle" font-size="10">relations/*.rid</text>
+  <text x="140" y="548" font-weight="600" fill="#374151">Disk: STORAGE_ROOT / &lt;atlasName&gt; /</text>
+  <rect x="260" y="556" width="400" height="22" rx="4" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="460" y="571" text-anchor="middle" font-size="10">atlas.mld (single-file Vault)</text>
 
   <line x1="230" y1="504" x2="280" y2="528" stroke="#6b7280" marker-end="url(#arrow)"/>
   <line x1="460" y1="504" x2="460" y2="528" stroke="#6b7280" marker-end="url(#arrow)"/>

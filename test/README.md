@@ -20,7 +20,7 @@
 pnpm run test:integration
 ```
 
-命令会先执行 **`pnpm run build:lib`**、**`build:shared`**、**`build:server`**（生成根 **`dist/`** 与 **`packages/server/dist/`**，供 server 与集成脚本解析）。随后顺序为（**14** 步）：
+命令会先执行 **`pnpm run build:shared`**、**`build:common`**、**`build:core`**、**`build:server`**（生成 **`packages/core/dist/`** 与 **`packages/server/dist/`**，供 server 与集成脚本解析）。随后顺序为（**14** 步）：
 
 1. **`modeldb_config_loader_audit.ts`**（系统临时目录，不碰 **`data/`**）
 2. **`modeldb_default_home_audit.ts`**（临时 **`MODELDB_HOME`**，不碰 **`data/`**）

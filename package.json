@@ -51,8 +51,10 @@
     "prepare": "husky",
     "check:sources": "node scripts/assert-no-build-artifacts-in-src.mjs",
     "check": "pnpm run check:sources && pnpm run typecheck && pnpm run lint && pnpm run format:check",
+    "publish:npm": "node scripts/publish-workspaces.mjs",
+    "publish:npm:go": "node scripts/publish-workspaces.mjs --live --yes",
     "publish:workspaces": "node scripts/publish-workspaces.mjs",
-    "publish:workspaces:live": "node scripts/publish-workspaces.mjs --live"
+    "publish:workspaces:live": "node scripts/publish-workspaces.mjs --live --yes"
   },
   "repository": {
     "type": "git",
