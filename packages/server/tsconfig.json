@@ -31,6 +31,7 @@
     "./src/config-loader.ts",
     "./src/dual-track-app.ts",
     "./src/index.ts",
+    "./src/modeldb-default-home.ts",
     "./src/modeldb-server.ts",
     "./src/request-dispatcher.ts",
     "./src/stream-backpressure.ts",

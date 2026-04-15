@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
+import { ensureModelDbHomeLayout } from './modeldb-default-home.js';
+
 export interface ModelDBServerFileConfig {
   readonly port?: number;
   readonly host?: string;
@@ -76,14 +78,22 @@ function boolEnv(name: string): boolean | undefined {
   return undefined;
 }
 
+/** 未传 **`-c`** 时：初始化 **`MODELDB_HOME`** 并返回其下的 **`modeldb.config.json`**；否则为显式路径。 */
+function resolveConfigFilePath(cliConfigPath: string | undefined): string {
+  if (cliConfigPath) {
+    return resolve(cliConfigPath);
+  }
+  return ensureModelDbHomeLayout();
+}
+
 function resolveStorageRootAndAtlas(
   raw: string | undefined,
-  cwd: string,
+  pathBase: string,
 ): { readonly storageRoot: string; readonly defaultAtlas?: string } {
   if (!raw) {
-    return { storageRoot: resolve(cwd, 'modeldb_vault') };
+    return { storageRoot: resolve(pathBase, 'vault') };
   }
-  const abs = resolve(cwd, raw);
+  const abs = resolve(pathBase, raw);
   const base = basename(abs);
   if (base.toLowerCase().endsWith('.mld')) {
     return { storageRoot: dirname(abs), defaultAtlas: base.replace(/\.mld$/i, '') };
@@ -113,7 +123,8 @@ export async function loadModelDBServerConfig(
   cli: CliConfigOverrides,
 ): Promise<ResolvedModelDBServerConfig> {
   let file: ModelDBServerFileConfig = {};
-  const path = configPath ? resolve(configPath) : resolve(process.cwd(), 'modeldb.config.json');
+  const path = resolveConfigFilePath(configPath);
+  const pathBase = dirname(path);
   if (existsSync(path)) {
     const raw = await readFile(path, 'utf-8');
     file = JSON.parse(raw) as ModelDBServerFileConfig;
@@ -133,8 +144,8 @@ export async function loadModelDBServerConfig(
     strEnv('MODEL_DB_WORKSPACE') ??
     strEnv('MODEL_DB_STORAGE_ROOT') ??
     strEnv('STORAGE_ROOT') ??
-    'modeldb_vault';
-  const { storageRoot, defaultAtlas } = resolveStorageRootAndAtlas(storageRootRaw, process.cwd());
+    'vault';
+  const { storageRoot, defaultAtlas } = resolveStorageRootAndAtlas(storageRootRaw, pathBase);
 
   const connectTokenRaw =
     cli.connectToken ?? file.connectToken ?? strEnv('MODEL_DB_CONNECT_TOKEN') ?? '';
@@ -145,7 +156,7 @@ export async function loadModelDBServerConfig(
 
   const serverLogDirectory =
     file.logDir !== undefined && file.logDir.length > 0
-      ? resolve(process.cwd(), file.logDir)
+      ? resolve(pathBase, file.logDir)
       : undefined;
 
   const bufferFlushRowThreshold =

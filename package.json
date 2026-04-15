@@ -17,6 +17,8 @@
     "packages/server/dist",
     "docs/architecture.svg",
     "docs/engine-meta-crud-and-wire.md",
+    "docs/operations-manual.md",
+    "docs/modeldb-config-guide.md",
     "modeldb.config.example.json"
   ],
   "directories": {
@@ -37,8 +39,8 @@
     "format:check": "prettier --check \"**/*.{js,ts,json,md}\"",
     "typecheck": "npm run build:shared && npm run build:common && npm run build:lib && npm run build:server && tsc --noEmit",
     "test": "npm run test:integration",
-    "test:integration": "npm run build:shared && npm run build:common && npm run build:lib && npm run build:server && tsx test/modeldb_config_loader_audit.ts && tsx test/verify.ts && tsx test/query_filters.ts && tsx test/logic_integrity.ts && tsx test/logic_closure_audit.ts && tsx test/query_chain_extended.ts && tsx test/authoring_dx_audit.ts && tsx test/crud_audit.ts && tsx test/datatype_audit.ts && tsx test/diagnostic_audit.ts && tsx test/vault_audit.ts && tsx test/wire_server_audit.ts && tsx test/meta_crud_audit.ts",
-    "config-loader-audit": "npm run build:shared && npm run build:common && npm run build:lib && npm run build:server && tsx test/modeldb_config_loader_audit.ts",
+    "test:integration": "npm run build:shared && npm run build:common && npm run build:lib && npm run build:server && tsx test/modeldb_config_loader_audit.ts && tsx test/modeldb_default_home_audit.ts && tsx test/verify.ts && tsx test/query_filters.ts && tsx test/logic_integrity.ts && tsx test/logic_closure_audit.ts && tsx test/query_chain_extended.ts && tsx test/authoring_dx_audit.ts && tsx test/crud_audit.ts && tsx test/datatype_audit.ts && tsx test/diagnostic_audit.ts && tsx test/vault_audit.ts && tsx test/wire_server_audit.ts && tsx test/meta_crud_audit.ts",
+    "config-loader-audit": "npm run build:shared && npm run build:common && npm run build:lib && npm run build:server && tsx test/modeldb_config_loader_audit.ts && tsx test/modeldb_default_home_audit.ts",
     "wire-server-audit": "npm run build:shared && npm run build:common && npm run build:lib && npm run build:server && tsx test/wire_server_audit.ts",
     "meta-crud-audit": "npm run build:shared && npm run build:common && npm run build:lib && npm run build:server && tsx test/meta_crud_audit.ts",
     "datatype-audit": "tsx test/datatype_audit.ts",

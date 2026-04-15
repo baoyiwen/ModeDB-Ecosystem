@@ -18,3 +18,4 @@ export {
 } from './config-loader.js';
 export { WriteSerializationGate } from './write-serialization-gate.js';
 export { WireRequestDispatcher } from './request-dispatcher.js';
+export { getModelDbHome, getDefaultModelDbConfigPath } from './modeldb-default-home.js';

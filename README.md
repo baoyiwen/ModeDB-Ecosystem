@@ -446,7 +446,7 @@ await engine.flushAll();
 
 ## 运行与配置（工作区、启动命令、参数与环境）
 
-本节汇总 **如何在仓库内构建与启动**、**`modeldb.config.json` 各字段**、**`modeldb-server` CLI**、**环境变量**与 **`npm run ignition`** 压测点火；与 **`packages/server/src/config-loader.ts`** 实现一致。
+本节汇总 **如何在仓库内构建与启动**、**`modeldb.config.json` 各字段**、**`modeldb-server` CLI**、**环境变量**与 **`npm run ignition`** 压测点火；与 **`packages/server/src/config-loader.ts`**、**`packages/server/src/modeldb-default-home.ts`** 实现一致。
 
 ### 当前系统能力速览（2.0）
 
@@ -480,19 +480,19 @@ npm run build    # build:lib（根 tsconfig.lib.json → dist/）→ build:share
 
 ### 根目录常用 npm 脚本
 
-| 脚本                                                               | 说明                                                                                                    |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| **`npm run build`**                                                | 编译引擎 + shared + server + sdk。                                                                      |
-| **`npm run start:server`**                                         | 等价 **`node ./packages/server/dist/cli.js`**（无参时读取当前目录 **`modeldb.config.json`**，若存在）。 |
-| **`npm run dev`**                                                  | 根目录引擎 **`tsc -p tsconfig.lib.json --watch`**。                                                     |
-| **`npm test`** / **`npm run test:integration`**                    | 集成测试链（含配置加载审计，见 **`test/README.md`**）。                                                 |
-| **`npm run ignition`**                                             | 双轨压测点火：**`test/dual_track_ignition.ts`**（需已启动 server，见下文）。                            |
-| **`npm run typecheck`** / **`npm run lint`** / **`npm run check`** | 类型检查、ESLint、类型+lint+Prettier 检查。                                                             |
-| **`npm run wire-server-audit`** 等                                 | 单项集成脚本，见 **`test/README.md`** 命令对照表。                                                      |
+| 脚本                                                               | 说明                                                                                                                                                                               |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`npm run build`**                                                | 编译引擎 + shared + server + sdk。                                                                                                                                                 |
+| **`npm run start:server`**                                         | 等价 **`node ./packages/server/dist/cli.js`**（无 **`-c`** 时使用 **`MODELDB_HOME`** 下 **`modeldb.config.json`**，不存在则首次自动创建；见 **`docs/modeldb-config-guide.md`**）。 |
+| **`npm run dev`**                                                  | 根目录引擎 **`tsc -p tsconfig.lib.json --watch`**。                                                                                                                                |
+| **`npm test`** / **`npm run test:integration`**                    | 集成测试链（含配置加载审计，见 **`test/README.md`**）。                                                                                                                            |
+| **`npm run ignition`**                                             | 双轨压测点火：**`test/dual_track_ignition.ts`**（需已启动 server，见下文）。                                                                                                       |
+| **`npm run typecheck`** / **`npm run lint`** / **`npm run check`** | 类型检查、ESLint、类型+lint+Prettier 检查。                                                                                                                                        |
+| **`npm run wire-server-audit`** 等                                 | 单项集成脚本，见 **`test/README.md`** 命令对照表。                                                                                                                                 |
 
 ### `modeldb.config.json` 字段说明
 
-将根目录 **[modeldb.config.example.json](modeldb.config.example.json)** 复制为 **`modeldb.config.json`** 并按环境修改（**勿**提交真实令牌与密钥）。
+将根目录 **[modeldb.config.example.json](modeldb.config.example.json)** 复制为 **`modeldb.config.json`** 并按环境修改（**勿**提交真实令牌与密钥）。**默认 `MODELDB_HOME`、`-c`、相对路径与配置文件目录的关系、各操作系统注意点** 见 **[docs/modeldb-config-guide.md](docs/modeldb-config-guide.md)**。
 
 | 字段                               | 类型      | 说明                                                                                                                                                                                                       |
 | ---------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -501,7 +501,7 @@ npm run build    # build:lib（根 tsconfig.lib.json → dist/）→ build:share
 | **`workspace`**                    | `string`  | **首选**：逻辑库工作区根目录；每个逻辑库为 **`<workspace>/<dbName>/`**（内含 **`atlas.mld`** 等）。合并顺序见 **`packages/server/src/config-loader.ts`**（**`workspace` → `storageRoot` → `dbPath`** …）。 |
 | **`dbPath`**                       | `string`  | **兼容**：与 **`workspace`** 同语义（目录或 **`*.mld` 文件路径**）；为 **`.mld` 文件**时父目录为根，**`defaultAtlas`** = basename 去扩展名。                                                               |
 | **`storageRoot`**                  | `string`  | **兼容**：显式存储根；与 **`workspace` / `dbPath`** 同一合并链。                                                                                                                                           |
-| **`logDir`**                       | `string`  | 相对 **进程 cwd** 解析的日志目录；写入 **`system.log`**、**`access.log`**（当 **`accessLog`** 开启时）。                                                                                                   |
+| **`logDir`**                       | `string`  | 相对 **正在加载的 `modeldb.config.json` 所在目录** 解析的日志目录；写入 **`system.log`**、**`access.log`**（当 **`accessLog`** 开启时）。                                                                  |
 | **`bufferThreshold`**              | `number`  | 某模型暂存行数 ≥ 该值时触发该模型的 **`flushModelToDisk`**（服务端 **`AuthoringEngine`**）；可被 **`MODEL_DB_BUFFER_THRESHOLD`** 覆盖。                                                                    |
 | **`cacheSize`**                    | `string`  | 当前版本为预留/提示（如 **`2GB`**），不参与核心逻辑。                                                                                                                                                      |
 | **`mode`**                         | `string`  | 设为 **`"production"`**（不区分大小写）时启用 **`access.log`** 中的请求/解码/写门控等访问日志；等价于环境变量 **`MODEL_DB_ACCESS_LOG=true`**。                                                             |
@@ -523,35 +523,36 @@ npm run build    # build:lib（根 tsconfig.lib.json → dist/）→ build:share
 
 入口：**`node ./packages/server/dist/cli.js`** 或 **`npm run start:server`** 或 **`npx modeldb-server`**（见根 **`package.json` → `bin`**）。
 
-| 选项                                     | 说明                                                                               |
-| ---------------------------------------- | ---------------------------------------------------------------------------------- |
-| **`-c, --config <path>`**                | **`modeldb.config.json`** 路径；默认 **`./modeldb.config.json`**（相对 **cwd**）。 |
-| **`-p, --port <number>`**                | 监听端口。                                                                         |
-| **`-H, --host <host>`**                  | 绑定 host。                                                                        |
-| **`-w, --workspace <path>`**             | 逻辑库工作区根（写入配置合并链的 **`workspace`**）。                               |
-| **`-s, --storage <path>`**               | 兼容别名，同 **`--workspace`**。                                                   |
-| **`--db-path <path>`**                   | 兼容别名，同 **`--workspace`**。                                                   |
-| **`-t, --token <secret>`**               | **`connectToken`**。                                                               |
-| **`--vault-secret`** / **`--vault-key`** | Vault 口令。                                                                       |
-| **`--dev`**                              | 开发模式（如打印解密后的 RPC 摘要，**勿**用于生产）。                              |
+| 选项                                     | 说明                                                                                                                                                                   |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`-c, --config <path>`**                | **`modeldb.config.json`** 路径（**可选**）；省略时使用 **`MODELDB_HOME/modeldb.config.json`**（见 **`docs/modeldb-config-guide.md`**），首次会自动创建目录与默认文件。 |
+| **`-p, --port <number>`**                | 监听端口。                                                                                                                                                             |
+| **`-H, --host <host>`**                  | 绑定 host。                                                                                                                                                            |
+| **`-w, --workspace <path>`**             | 逻辑库工作区根（写入配置合并链的 **`workspace`**）。                                                                                                                   |
+| **`-s, --storage <path>`**               | 兼容别名，同 **`--workspace`**。                                                                                                                                       |
+| **`--db-path <path>`**                   | 兼容别名，同 **`--workspace`**。                                                                                                                                       |
+| **`-t, --token <secret>`**               | **`connectToken`**。                                                                                                                                                   |
+| **`--vault-secret`** / **`--vault-key`** | Vault 口令。                                                                                                                                                           |
+| **`--dev`**                              | 开发模式（如打印解密后的 RPC 摘要，**勿**用于生产）。                                                                                                                  |
 
 ### 环境变量一览
 
-| 变量                                             | 作用                                                                                                        |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| **`MODEL_DB_PORT`**                              | 端口。                                                                                                      |
-| **`MODEL_DB_HOST`**                              | Host。                                                                                                      |
-| **`MODEL_DB_WORKSPACE`**                         | 逻辑库工作区根（优先于下列存储根变量）。                                                                    |
-| **`MODEL_DB_STORAGE_ROOT`** / **`STORAGE_ROOT`** | 存储根原始串（与 **`workspace` / `dbPath`** 相同解析规则）。                                                |
-| **`MODEL_DB_CONNECT_TOKEN`**                     | 连接令牌。                                                                                                  |
-| **`MODEL_DB_VAULT_SECRET`**                      | Vault 口令（运行时 **`ModelDBClient.connect`** 读 Vault atlas **同样**依赖此变量）。                        |
-| **`MODEL_DB_BUFFER_THRESHOLD`**                  | 同 **`bufferThreshold`**。                                                                                  |
-| **`MODEL_DB_DEV`**                               | 开发标志。                                                                                                  |
-| **`MODEL_DB_ACCESS_LOG`**                        | 设为 **`true`** 等效强制打开访问日志（与 **`mode: production`** 二选一或叠加，见 **`config-loader.ts`**）。 |
+| 变量                                             | 作用                                                                                                                                                                                                      |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`MODELDB_HOME`**                               | 无 **`-c`** 时的数据与配置根目录（**`modeldb.config.json`**、默认 **`logs/`**、**`cache/`**、**`vault/`**）；未设置时按 OS 选择用户本地目录（实现见 **`packages/server/src/modeldb-default-home.ts`**）。 |
+| **`MODEL_DB_PORT`**                              | 端口。                                                                                                                                                                                                    |
+| **`MODEL_DB_HOST`**                              | Host。                                                                                                                                                                                                    |
+| **`MODEL_DB_WORKSPACE`**                         | 逻辑库工作区根（优先于下列存储根变量）。                                                                                                                                                                  |
+| **`MODEL_DB_STORAGE_ROOT`** / **`STORAGE_ROOT`** | 存储根原始串（与 **`workspace` / `dbPath`** 相同解析规则）。                                                                                                                                              |
+| **`MODEL_DB_CONNECT_TOKEN`**                     | 连接令牌。                                                                                                                                                                                                |
+| **`MODEL_DB_VAULT_SECRET`**                      | Vault 口令（运行时 **`ModelDBClient.connect`** 读 Vault atlas **同样**依赖此变量）。                                                                                                                      |
+| **`MODEL_DB_BUFFER_THRESHOLD`**                  | 同 **`bufferThreshold`**。                                                                                                                                                                                |
+| **`MODEL_DB_DEV`**                               | 开发标志。                                                                                                                                                                                                |
+| **`MODEL_DB_ACCESS_LOG`**                        | 设为 **`true`** 等效强制打开访问日志（与 **`mode: production`** 二选一或叠加，见 **`config-loader.ts`**）。                                                                                               |
 
 ### ConnectToken（连接令牌）：从哪里来、如何用、与 Vault 密钥的区别
 
-**本仓库不会替你「生成」或「颁发」** **`connectToken`**。它是一个由**运维 / 开发者自行选定**的**共享口令字符串**（类似 API Key）：**服务端**保存一份期望值，**客户端**在连接时出示**完全相同**的字符串，通过后才进入会话。
+**`connectToken`** 是由**运维 / 开发者**配置的**共享口令字符串**（类似 API Key）：**服务端**保存一份期望值，**客户端**在连接时出示**完全相同**的字符串，通过后才进入会话。若使用 **无 `-c` 的首次启动**，**`MODELDB_HOME`** 下自动生成的 **`modeldb.config.json`** 会写入**随机** **`connectToken`**；生产环境仍应替换为你管控的密钥并备份配置。
 
 #### 服务端在哪里配置（三选一或组合，按优先级合并）
 
@@ -591,7 +592,7 @@ npm run build    # build:lib（根 tsconfig.lib.json → dist/）→ build:share
 
 1. **`npm run build`**
 2. **`cp modeldb.config.example.json modeldb.config.json`**（Windows 可用复制），编辑 **`connectToken`**；若使用加密 **`atlas.mld`**，填写 **`vaultSecret`** 或导出 **`MODEL_DB_VAULT_SECRET`**。
-3. 在**配置文件所在目录或项目根**执行 **`npm run start:server`**（保证 **cwd** 与相对 **`dbPath` / `logDir`** 一致）。
+3. 执行 **`npm run start:server -c modeldb.config.json`**（或 **`node ./packages/server/dist/cli.js start -c ./modeldb.config.json`**），使服务读取仓库根的配置；**无 `-c`** 时使用 **`MODELDB_HOME`** 下默认配置（见配置指南）。
 4. 若报 **`EADDRINUSE`**，更换 **`port`** 或结束占用端口的进程。
 5. 修改磁盘上的 Vault（或包内 **`__manifest__`** 所描述拓扑）后，**已运行的进程**不会自动重载全部缓存；需**重启 server** 再接受客户端。
 
@@ -1135,6 +1136,8 @@ mode-db-engine/
 
 **Meta-CRUD 与线协议**（**`alterModel` / `dropRelation` / `dropModel`**、Vault **`orphan:m:*`**、**`RemoteModelDBClient`** RPC）见 **[docs/engine-meta-crud-and-wire.md](docs/engine-meta-crud-and-wire.md)**。
 
+**部署、启动、新工程接入与前后端调用（操作手册）**见 **[docs/operations-manual.md](docs/operations-manual.md)**。
+
 **推荐一键回归**（顺序：**`modeldb_config_loader_audit`**（临时目录校验 **`loadModelDBServerConfig`**）→ **`verify`** → … → **`diagnostic-audit`** → **`vault-audit`** → **`wire_server_audit`** → **`meta_crud_audit`**；**`verify`** 会删除整个默认 **`data/`** 目录；**`vault_audit`** 使用独立 Atlas **`vault_audit_rt`** 并在末尾自清理；**`wire_server_audit`** 依赖 **`verify`** 已生成的 **`data/pipe/atlas.mld`**，在随机端口起 WebSocket 并跑 SDK 握手 + 查询断言；**`meta_crud_audit`** 使用独立 Atlas **`meta_crud_rt` / `meta_crud_wire_rt`**，自删目录后断言 Meta-CRUD 与 RPC）：
 
 ```bash
@@ -1209,13 +1212,13 @@ npm run build
 # 准备配置（示例见 modeldb.config.example.json）
 cp modeldb.config.example.json modeldb.config.json   # Windows: 手动复制后编辑 connectToken
 
-# 启动 WebSocket 服务（读取当前目录 modeldb.config.json；须含 connectToken）
-npm run start:server
+# 启动 WebSocket 服务（显式 -c 使用仓库根配置；无 -c 则用 MODELDB_HOME 默认）
+npm run start:server -- -c modeldb.config.json
 
 # 另开终端：双轨压测点火（须与 server 的 URL / token / atlas 一致）
 npm run ignition
 
-# 集成验证（config-loader 审计 → verify → … → meta_crud_audit，共 13 步）
+# 集成验证（config-loader 审计 → MODELDB_HOME 审计 → verify → … → meta_crud_audit，共 14 步）
 npm test
 
 # 类型检查 / 代码检查 / 格式化 / 三合一

@@ -2,7 +2,9 @@
 
 本目录包含 **集成 / 端到端脚本**（**非** Jest/Vitest 单元测试）。脚本通过 **`tsx`** 直接执行 TypeScript，默认读写仓库下的 **`data/`**（可用 **`MODEL_DB_STORAGE_ROOT`** / **`STORAGE_ROOT`** 覆盖）。**`integration-vault.ts`** 提供统一的 **`INTEGRATION_CONNECT_TOKEN`**（**`useIntegrationVaultEnv()`** 写入 **`MODEL_DB_CONNECT_TOKEN`**）；**`AuthoringEngine`** 与 **`ModelDBClient.connect`** 用 **`deriveAtlasVaultSecretFromConnectToken(connectToken)`** 派生 atlas vault 密钥（无单独 **`vaultSecret`** 配置）。**`verify.ts`** 的 **`pipe` / `tran`** 以及 **`crud_audit`**、**`logic_integrity`**、**`query_chain_extended`**、**`logic_closure_audit`**、**`authoring_dx_audit`** 等脚本在集成场景下落盘为**仅 `atlas.mld` 的单文件 Vault**（不是 `atlas-manifest.json` + `models/` + `relations/` 分文件树）。除 **`vault_audit`** 故意使用错误 **`connectToken`** 外，各脚本与 **`ModelDBClient.connect`** 共用同一集成令牌。
 
-**`modeldb_config_loader_audit.ts`** 在**系统临时目录**生成独立 **`modeldb.config.json`**，校验 **`@mode-db/server`** 的 **`loadModelDBServerConfig`**：CLI 覆盖文件、**`dbPath`** 指向 **`*.mld`** 时 **`storageRoot` / `defaultAtlas`** 推导、**`connectToken`** 缺失抛错、**`mode: production`** → **`accessLog`**；**不**读写仓库根配置。
+**`modeldb_config_loader_audit.ts`** 在**系统临时目录**生成独立 **`modeldb.config.json`**，校验 **`@mode-db/server`** 的 **`loadModelDBServerConfig`**：CLI 覆盖文件、**`dbPath`** 指向 **`*.mld`** 时 **`storageRoot` / `defaultAtlas`** 推导、**`connectToken`** 缺失抛错、**`mode: production`** → **`accessLog`**、相对 **`workspace` / `logDir`** 相对配置文件目录解析；**不**读写仓库根配置。
+
+**`modeldb_default_home_audit.ts`** 将 **`MODELDB_HOME`** 指向临时目录后调用 **`loadModelDBServerConfig(undefined, {})`**，断言惰性创建 **`modeldb.config.json`**、**`vault/`**、**`logs/`** 与稳定 **`connectToken`**。
 
 **双轨压测**见 **`dual_track_ignition.ts`**（**`npm run ignition`**）：依赖已 **`npm run build`** 且 **`modeldb-server`** 可连；环境变量与 **`modeldb.config.json`** 对齐说明见根 README **「运行与配置」**。
 
@@ -18,27 +20,29 @@
 npm run test:integration
 ```
 
-命令会先执行 **`npm run build:lib`**、**`build:shared`**、**`build:server`**（生成根 **`dist/`** 与 **`packages/server/dist/`**，供 server 与集成脚本解析）。随后顺序为（**13** 步）：
+命令会先执行 **`npm run build:lib`**、**`build:shared`**、**`build:server`**（生成根 **`dist/`** 与 **`packages/server/dist/`**，供 server 与集成脚本解析）。随后顺序为（**14** 步）：
 
 1. **`modeldb_config_loader_audit.ts`**（系统临时目录，不碰 **`data/`**）
-2. **`verify.ts`**
-3. **`query_filters.ts`**
-4. **`logic_integrity.ts`**
-5. **`logic_closure_audit.ts`**
-6. **`query_chain_extended.ts`**
-7. **`authoring_dx_audit.ts`**
-8. **`crud_audit.ts`**
-9. **`datatype_audit.ts`**
-10. **`diagnostic_audit.ts`**
-11. **`vault_audit.ts`**
-12. **`wire_server_audit.ts`**
-13. **`meta_crud_audit.ts`**
+2. **`modeldb_default_home_audit.ts`**（临时 **`MODELDB_HOME`**，不碰 **`data/`**）
+3. **`verify.ts`**
+4. **`query_filters.ts`**
+5. **`logic_integrity.ts`**
+6. **`logic_closure_audit.ts`**
+7. **`query_chain_extended.ts`**
+8. **`authoring_dx_audit.ts`**
+9. **`crud_audit.ts`**
+10. **`datatype_audit.ts`**
+11. **`diagnostic_audit.ts`**
+12. **`vault_audit.ts`**
+13. **`wire_server_audit.ts`**
+14. **`meta_crud_audit.ts`**
 
-第 2 项 **`verify.ts`** 启动时会**删除整个默认 `data/`**，保证从干净状态开始。其余脚本使用各自独立的 Atlas 名，互不覆盖；**`wire_server_audit.ts` 复用 `verify` 已创建的 Vault 图谱 `pipe`**（依赖 **`data/pipe/atlas.mld`** 与集成 Vault 密钥环境）；**末项 `meta_crud_audit.ts`** 仅使用 **`meta_crud_rt` / `meta_crud_wire_rt`**（脚本开头自删对应目录），与 **`pipe`** 无依赖，但需 **`build:server`** 与集成 Vault 环境（与 **`wire_server_audit`** 相同）：
+第 3 项 **`verify.ts`** 启动时会**删除整个默认 `data/`**，保证从干净状态开始。其余脚本使用各自独立的 Atlas 名，互不覆盖；**`wire_server_audit.ts` 复用 `verify` 已创建的 Vault 图谱 `pipe`**（依赖 **`data/pipe/atlas.mld`** 与集成 Vault 密钥环境）；**末项 `meta_crud_audit.ts`** 仅使用 **`meta_crud_rt` / `meta_crud_wire_rt`**（脚本开头自删对应目录），与 **`pipe`** 无依赖，但需 **`build:server`** 与集成 Vault 环境（与 **`wire_server_audit`** 相同）：
 
 | 脚本                      | Atlas 名                       | 数据清理策略                                               |
 | ------------------------- | ------------------------------ | ---------------------------------------------------------- |
 | `modeldb_config_loader_audit.ts` | —（仅用临时目录）       | 结束时删除临时目录；**不**修改仓库 **`data/`**             |
+| `modeldb_default_home_audit.ts` | —（临时 **`MODELDB_HOME`**） | 结束时删除临时目录；**不**修改仓库 **`data/`**             |
 | `verify.ts`               | `pipe` / `tran`                | **启动时删除整个 `data/`**                                 |
 | `query_filters.ts`        | `query_filter_demo`            | 脚本内自删后重建                                           |
 | `logic_integrity.ts`      | `integrity_pipe`               | 脚本内自删后重建                                           |
@@ -61,8 +65,8 @@ npm run test:integration
 
 | 命令                        | 入口文件                    | 说明                                                                                                                                                                                                                                                                                     |
 | --------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run test:integration`  | 串联 13 个脚本（见上）      | 首步 **`modeldb_config_loader_audit`**；第 2 步 **`verify`** 清空 `data/`；一键回归（含 **`vault_audit`**、**`wire_server_audit`**、**`meta_crud_audit`**）                                                                                                                                                    |
-| `npm run config-loader-audit` | `modeldb_config_loader_audit.ts` | 仅 **`loadModelDBServerConfig`** 行为审计（临时目录）                                                                                                                                                                                                                                |
+| `npm run test:integration`  | 串联 14 个脚本（见上）      | 前两步 **`modeldb_config_loader_audit`** + **`modeldb_default_home_audit`**；第 3 步 **`verify`** 清空 `data/`；一键回归（含 **`vault_audit`**、**`wire_server_audit`**、**`meta_crud_audit`**）                                                                                                                                                    |
+| `npm run config-loader-audit` | `modeldb_config_loader_audit.ts` + `modeldb_default_home_audit.ts` | **`loadModelDBServerConfig`** 与 **`MODELDB_HOME`** 默认布局审计（临时目录）                                                                                                                                                                                                                                |
 | `npx tsx test/verify.ts`    | `verify.ts`                 | 双图谱隔离、骨架补全、PROTOCOL 绑定、Runtime 只读                                                                                                                                                                                                                                        |
 | `npm run query-filters`     | `query_filters.ts`          | 谓词树、AND/OR 短路、`matchAll` / `matchAny`、`getQueryPlan`、`includeRelates`                                                                                                                                                                                                           |
 | `npm run integrity`         | `logic_integrity.ts`        | 句柄缓存、合并读、`insert({ sync: true })`、`explainRelate`、Vault **`r:*`** 关系索引注入                                                                                                                                                                                                |
@@ -91,7 +95,7 @@ npm run test:integration
 
 1. **`npm run build`**
 2. 准备 **`modeldb.config.json`**（可从 **`modeldb.config.example.json`** 复制）：至少设置 **`connectToken`**（同时派生磁盘上 **`atlas.mld`** 的加密密钥）；存储见 **`dbPath`** / **`storageRoot`** / **`workspace`**。
-3. **`npm run start:server`**（**cwd** 须与配置中相对路径一致）。CLI 覆盖项见根 README **「`modeldb-server` CLI 参数」**。
+3. **`npm run start:server -- -c modeldb.config.json`**（或依赖 **`MODELDB_HOME`** 默认配置）。CLI 覆盖项见根 README **「`modeldb-server` CLI 参数」**。
 4. **`npm run ignition`**（另开终端）：设置 **`MODEL_DB_URL`**、**`MODEL_DB_CONNECT_TOKEN`** 与 **`MODEL_DB_ATLAS`**（若不用默认值）与 server 一致；若脚本在磁盘上补写了 **`Sensor`** 与 manifest，**须重启 server** 再继续压测。
 
 **`wire_server_audit`** 在集成链内**自起**随机端口 WebSocket，**不**依赖步骤 3 的长期 server；**`ignition`** 则**必须**有外部 server 进程。
@@ -106,6 +110,11 @@ npm run test:integration
 - **`loadModelDBServerConfig(cfgPath, {})`**：**`storageRoot`** 为 **`sand`** 父目录、**`defaultAtlas`** === **`world`**、**`accessLog`** 为真、**`bufferFlushRowThreshold`** 来自文件。
 - **`loadModelDBServerConfig(cfgPath, { port, connectToken })`**：CLI 覆盖端口与令牌。
 - 空 **`connectToken`** 的配置文件 → **`assert.rejects`** 校验错误信息含 **`connectToken`**。
+- 子目录下的配置中 **`workspace: "./wv"`**、**`logDir: "./logs"`** → 解析为相对该 JSON 所在目录的绝对路径。
+
+### `modeldb_default_home_audit.ts`
+
+- 设置 **`process.env.MODELDB_HOME`** 为 **`os.tmpdir()`** 下独立目录，**`loadModelDBServerConfig(undefined, {})`** 创建默认文件与 **`vault` / `logs` / `cache`**，**`connectToken`** 两次加载一致。
 
 ### `verify.ts`
 
@@ -299,7 +308,7 @@ npm run check       # typecheck + lint + format:check
 npm run check
 npm run build
 npm run build:sdk
-npm run test:integration   # 含 config-loader 审计 + vault-audit + wire-server-audit + meta-crud-audit（共 13 步）
+npm run test:integration   # 含 config-loader 审计 + MODELDB_HOME 审计 + vault-audit + wire-server-audit + meta-crud-audit（共 14 步）
 npm run config-loader-audit
 npm run vault-audit        # 仅单文件 Vault 审计
 npm run wire-server-audit  # 仅 WebSocket + SDK（需先有 verify 的 pipe）
