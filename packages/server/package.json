@@ -8,13 +8,13 @@
     "fastify",
     "data-governance"
   ],
-  "homepage": "https://github.com/baoyiwen/mode-db-engine#readme",
+  "homepage": "https://github.com/baoyiwen/ModeDB-Ecosystem#readme",
   "bugs": {
-    "url": "https://github.com/baoyiwen/mode-db-engine/issues"
+    "url": "https://github.com/baoyiwen/ModeDB-Ecosystem/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/baoyiwen/mode-db-engine.git",
+    "url": "git+https://github.com/baoyiwen/ModeDB-Ecosystem.git",
     "directory": "packages/server"
   },
   "license": "ISC",

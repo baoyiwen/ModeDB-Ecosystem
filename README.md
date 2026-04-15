@@ -1068,10 +1068,10 @@ EngineError
 
 ## 项目结构
 
-仓库展示名 **ModeDB-Ecosystem**；根 **`package.json` → `name`** 为 **`modedb-ecosystem`**（**`private: true`**，仅编排脚本与开发依赖）。克隆目录名通常与 **Git 远程仓库名**一致（例如当前仍为 **`mode-db-engine`** 时，本地目录多为 **`mode-db-engine`**，与 npm 根包名 **`modedb-ecosystem`** 可以不同）。
+仓库展示名 **ModeDB-Ecosystem**；根 **`package.json` → `name`** 为 **`modedb-ecosystem`**（**`private: true`**，仅编排脚本与开发依赖）。克隆目录名通常与 **Git 远程仓库名**一致（例如 **`ModeDB-Ecosystem`**，与 npm 根包名 **`modedb-ecosystem`** 可以不同）。
 
 ```
-<repo-root>/                       # 克隆目录名 = 远程仓库名（如 mode-db-engine/）；npm 根包名仍为 modedb-ecosystem
+<repo-root>/                       # 克隆目录名 = 远程仓库名（如 ModeDB-Ecosystem/）；npm 根包名仍为 modedb-ecosystem
 ├── package.json                  # name: modedb-ecosystem；bin → packages/server/dist/cli.js
 ├── pnpm-workspace.yaml           # packages/*
 ├── pnpm-lock.yaml

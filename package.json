@@ -58,15 +58,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/baoyiwen/mode-db-engine.git"
+    "url": "git+https://github.com/baoyiwen/ModeDB-Ecosystem.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/baoyiwen/mode-db-engine/issues"
+    "url": "https://github.com/baoyiwen/ModeDB-Ecosystem/issues"
   },
-  "homepage": "https://github.com/baoyiwen/mode-db-engine#readme",
+  "homepage": "https://github.com/baoyiwen/ModeDB-Ecosystem#readme",
   "devDependencies": {
     "@mode-db/core": "workspace:*",
     "@mode-db/sdk": "workspace:*",

@@ -45,7 +45,7 @@
 **方式 A：自仓库构建（开发 / 内网制品）**
 
 ```bash
-git clone <repo-url> && cd <repo-root>   # 目录名与远程仓库名一致（如 mode-db-engine）
+git clone https://github.com/baoyiwen/ModeDB-Ecosystem.git && cd ModeDB-Ecosystem
 pnpm install
 pnpm run build
 ```
