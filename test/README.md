@@ -79,7 +79,7 @@ pnpm run test:integration
 | `pnpm run vault-audit`       | `vault_audit.ts`            | 单文件 Vault：目录零明文、`ModelDBClient.connect`、`relate`、manifest hydrate、错误密钥、**E3002**；**已**含于 `test:integration`                                                                                                                                                        |
 | `pnpm run wire-server-audit` | `wire_server_audit.ts`      | WebSocket 服务 + **`@mode-db/sdk`**：`ConnectToken` 拒绝、**`connectRemote`**、**`RemoteHydratedEntity`**；**已**含于 `test:integration`（**必须**排在 `verify` 之后）                                                                                                                   |
 | `pnpm run meta-crud-audit`   | `meta_crud_audit.ts`        | **`alterModel` / `dropRelation` / `dropModel`**、Vault **`orphan:m:*`**、**`RemoteModelDBClient.connectNetwork`** 的 meta RPC；**已**含于 `test:integration`（末步；需 **`build:server`**）                                                                                             |
-| `pnpm run ignition`          | `dual_track_ignition.ts`    | **非**默认集成链：需**已启动** **`modeldb-server`**（**`pnpm run build`** 后 **`pnpm run start:server`**）；**`@mode-db/sdk`** 经 WS/HTTP 向指定 atlas 灌 **`Sensor`**；环境变量见脚本头与根 README **「运行与配置」**。**未**并入 `test:integration`                                   |
+| `pnpm run ignition`          | `dual_track_ignition.ts`    | **非**默认集成链：需**已启动** **`modeldb-server`**（建议 **`pnpm run build`** 后 **`pnpm run start:server`**；**`start:server`** 会先 **`build:server`**）；**`@mode-db/sdk`** 经 WS/HTTP 向指定 atlas 灌 **`Sensor`**；环境变量见脚本头与根 README **「运行与配置」**。**未**并入 `test:integration`                                   |
 | `pnpm run shadow-smart-cache-audit` | `shadow_smartcache_logger_audit.ts` | 单文件 Vault + **`memoryShadowHydration`** + **`enableSmartCache`** + **`EngineLogger`**。**未**并入默认集成                                                                                                                                                                    |
 | `pnpm run stress-test`       | `million_stress_test.ts`    | 压力测试（34 个断言）：100 万行灌入、1% 错误注入（E1001/E1003）、读写一致性、ValueObject 运行时监控、ErrorCodes 完整性、吞吐量报告。**未**并入默认集成                                                                                                                                   |
 | `pnpm run first-run`         | `first_run.ts`              | 演示向；`pipe` 重建。**未**并入默认集成                                                                                                                                                                                                                                                  |
@@ -93,9 +93,9 @@ pnpm run test:integration
 
 与「进程内 **`AuthoringEngine`**」类测试不同，下列流程依赖 **已编译** 的 **`packages/server/dist`** 与可选 **`@mode-db/sdk`**。
 
-1. **`pnpm run build`**
+1. **`pnpm run build`**（若仅起服务、不立刻跑 **`ignition`** / 本地 SDK，根目录 **`pnpm run start:server`** 会先 **`build:server`**，可省略本步的全量 **`build`**，但 **`ignition`** 仍建议全量或至少 **`pnpm run build:sdk`**）。
 2. 准备 **`modeldb.config.json`**（可从 **`modeldb.config.example.json`** 复制）：至少设置 **`connectToken`**（同时派生磁盘上 **`atlas.mld`** 的加密密钥）；存储见 **`dbPath`** / **`storageRoot`** / **`workspace`**。
-3. **`pnpm run start:server -- -c modeldb.config.json`**（或依赖 **`MODELDB_HOME`** 默认配置）。CLI 覆盖项见根 README **「`modeldb-server` CLI 参数」**。
+3. **`pnpm run start:server -- -c modeldb.config.json`**（或依赖 **`MODELDB_HOME`** 默认配置；该脚本会先 **`build:server`**）。CLI 覆盖项见根 README **「`modeldb-server` CLI 参数」**。
 4. **`pnpm run ignition`**（另开终端）：设置 **`MODEL_DB_URL`**、**`MODEL_DB_CONNECT_TOKEN`** 与 **`MODEL_DB_ATLAS`**（若不用默认值）与 server 一致；若脚本在磁盘上补写了 **`Sensor`** 与 manifest，**须重启 server** 再继续压测。
 
 **`wire_server_audit`** 在集成链内**自起**随机端口 WebSocket，**不**依赖步骤 3 的长期 server；**`ignition`** 则**必须**有外部 server 进程。

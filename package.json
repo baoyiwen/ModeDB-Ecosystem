@@ -20,7 +20,7 @@
     "build:server": "pnpm --filter @mode-db/server run build",
     "build:sdk": "pnpm --filter @mode-db/sdk run build",
     "chunnel:clean": "tsx scripts/chunnel-cleaner.ts",
-    "start:server": "node ./packages/server/dist/cli.js",
+    "start:server": "pnpm run build:server && node ./packages/server/dist/cli.js",
     "dev": "pnpm --filter @mode-db/core run dev",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

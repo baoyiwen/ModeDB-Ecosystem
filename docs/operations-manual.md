@@ -36,6 +36,15 @@
 
 生产环境通常 **两者都配置**：网络准入 + 磁盘解密。
 
+### 2.3 Monorepo 根目录与 `dist/`
+
+在 **ModeDB-Ecosystem** 仓库根：
+
+- **`pnpm run start:server`** 会先执行 **`pnpm run build:server`**，再启动 **`packages/server/dist/cli.js`**，避免未编译时出现 **`Cannot find module ... dist/cli.js`**。
+- **`pnpm exec modeldb-server`** 与直接 **`node ./packages/server/dist/cli.js`** 一样，依赖 **`dist/`** 已生成；若你跳过 **`start:server`** 而只用上述入口，请先 **`pnpm run build:server`**（或全量 **`pnpm run build`**）。
+
+**PATH**：`pnpm` 需要能找到 **`node`**。若在 Git Bash 下出现 **`exec: node: not found`**，请换用 PowerShell / Windows Terminal，或修正系统 **`PATH`** 使 **`node -v`** 在所用 shell 中可用。
+
 ---
 
 ## 3. 服务端部署（`modeldb-server`）
@@ -50,7 +59,9 @@ pnpm install
 pnpm run build
 ```
 
-可执行入口：
+日常联调也可在根目录 **`pnpm run start:server`**（会先 **`build:server`** 再启动，见 **[user-handbook.md](./user-handbook.md)**）。
+
+可执行入口（均需 **`packages/server/dist/`** 已存在，除非你用上面的 **`start:server`**）：
 
 - **`pnpm exec modeldb-server`**（根 **`package.json` → `bin`** 指向 **`packages/server/dist/cli.js`**），或
 - **`node ./packages/server/dist/cli.js`**
@@ -65,13 +76,44 @@ modeldb-server start --help
 
 （具体包名与版本以 registry 为准。）
 
-### 3.2 工作区目录约定
+### 3.2 系统默认数据根（`MODELDB_HOME`）与惰性创建
+
+**`@mode-db/server` 不会在 `npm install` / `pnpm add` 时创建任何系统目录**；目录与默认配置文件是在 **进程启动并加载配置** 时、且 **未** 传入 **`-c` / `--config`** 时，由 **`loadModelDBServerConfig`** → **`ensureModelDbHomeLayout()`**（源码 **`packages/server/src/modeldb-default-home.ts`**、**`packages/server/src/config-loader.ts`**）写入磁盘。
+
+| 步骤         | 行为                                                                                                                                                                                                                                                                                   |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 解析配置路径 | 无 **`-c`** 时，配置固定为 **`MODELDB_HOME/modeldb.config.json`**（**`MODELDB_HOME`** 见下表）；有 **`-c`** 时**不会**走本节逻辑，也**不会**自动创建默认主目录树。                                                                                                                     |
+| 创建目录     | **`mkdirSync(..., { recursive: true })`**：确保 **`MODELDB_HOME`** 及其子目录 **`logs/`**、**`cache/`**、**`vault/`** 存在（每次无 **`-c`** 启动都会执行；与配置文件是否已存在无关）。                                                                                                 |
+| 默认配置文件 | 若 **`MODELDB_HOME/modeldb.config.json`** 尚不存在，则**新建**一份 JSON：内含随机 **`connectToken`**、**`port`**（9090）、**`host`**（127.0.0.1）、**`bufferThreshold`** 等；**`logDir`**、**`workspace`** 为指向 **`MODELDB_HOME/logs`** 与 **`MODELDB_HOME/vault`** 的**绝对路径**。 |
+
+**默认 `MODELDB_HOME` 根路径**（当环境变量 **`MODELDB_HOME`** 未设置或为空时，与实现一致）：
+
+| 操作系统                | 默认绝对路径语义                                                                                           |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Windows**             | **`%LOCALAPPDATA%\modeldb`**；若 **`LOCALAPPDATA`** 未设置，则为 **`%USERPROFILE%\AppData\Local\modeldb`** |
+| **macOS**               | **`~/Library/Application Support/modeldb`**（即用户主目录下 **`Library/Application Support/modeldb`**）    |
+| **Linux 及其他类 Unix** | **`$XDG_DATA_HOME/modeldb`**；若 **`XDG_DATA_HOME`** 未设置，则为 **`~/.local/share/modeldb`**             |
+
+设置环境变量 **`MODELDB_HOME`** 为任意目录时，上述子目录与默认配置文件均落在该目录下（路径为 **`resolve(MODELDB_HOME)`**）。
+
+**各子目录用途（默认布局下）**：
+
+| 路径                                   | 用途                                                                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **`MODELDB_HOME/modeldb.config.json`** | 服务静态配置；无 **`-c`** 时唯一加载路径。                                                                                     |
+| **`MODELDB_HOME/logs/`**               | 默认 **`logDir`**；服务端 **`system.log`**、条件开启的 **`access.log`** 等（见 **[README.md](../README.md)**「运行与配置」）。 |
+| **`MODELDB_HOME/cache/`**              | 预创建目录；当前默认 JSON 中 **`cacheSize`** 为预留提示，核心逻辑不强制写此路径。                                              |
+| **`MODELDB_HOME/vault/`**              | 默认 **`workspace`**（逻辑库根）；各图谱为 **`MODELDB_HOME/vault/<dbName>/atlas.mld`**。                                       |
+
+生产环境建议：显式设置 **`MODELDB_HOME`** 或始终使用 **`-c`** 指向受控路径；将默认 **`connectToken`** 替换为运维发放的密钥并纳入备份策略。
+
+### 3.3 工作区目录约定
 
 - 配置项 **`workspace`**：逻辑库根目录。
 - 每个库：**`<workspace>/<dbName>/`**，内含 **`atlas.mld`**（及可选 **`logs/`** 等）。
 - 示例： **`workspace`** = `./digital_chunnel`，库名 **`Asset_Graph`** → 数据路径 **`./digital_chunnel/Asset_Graph/atlas.mld`**。
 
-### 3.3 配置文件
+### 3.4 配置文件
 
 **`modeldb.config.json` 放置位置、`workspace` 与磁盘路径、Windows / Linux / macOS 实践** 见专文 **[modeldb-config-guide.md](./modeldb-config-guide.md)**。
 
@@ -86,7 +128,7 @@ modeldb-server start --help
 
 敏感字段 **勿** 提交 Git。
 
-### 3.4 推荐启动命令
+### 3.5 推荐启动命令
 
 在 **配置文件所在目录**（或显式传 **`-c`**）启动，保证相对路径解析正确：
 
@@ -96,7 +138,7 @@ modeldb-server start --workspace ./digital_chunnel --port 9090 --token 'YOUR_LON
 
 未写 **`start`** 时，部分版本仍支持将 **`--workspace`** 等直接挂在根命令上（兼容旧用法）；**推荐统一使用 `start`**，便于 systemd / K8s 脚本化。
 
-### 3.5 进程与日志
+### 3.6 进程与日志
 
 - 日志目录由配置 **`logDir`** 等决定（见 **[README.md](../README.md)**「运行与配置」）。
 - 修改磁盘上的 Vault 或拓扑后，**已运行进程不会自动全量热重载**；变更后请 **重启 Server**。
@@ -197,6 +239,7 @@ sequenceDiagram
 
 ## 7. 端到端检查清单
 
+- [ ] 若使用 **无 `-c`** 启动：已知晓 **`MODELDB_HOME`** 默认路径（见 **§3.2**），并确认 **`logs/`**、**`cache/`**、**`vault/`** 与自动生成的 **`modeldb.config.json`** 符合备份、权限与合规要求。
 - [ ] **`workspace`** 磁盘可写，且包含目标 **`dbName`** 目录。
 - [ ] **`atlas.mld`** 已由治理端 **`flushAll`** 生成（或空库首次由 Server 按需创建策略与你们流程一致）。
 - [ ] **`connectToken`** 服务端与客户端完全一致（含空格注意 **`trim`** 习惯）。
@@ -208,17 +251,19 @@ sequenceDiagram
 
 ## 8. 排障速查
 
-| 现象                                | 可能原因                                                                         |
-| ----------------------------------- | -------------------------------------------------------------------------------- |
-| 握手立即断开                        | **`connectToken`** 错误或未传。                                                  |
-| **`AtlasManifestError` / 解密失败** | Vault 密钥与写库时不一致；或文件损坏。                                           |
-| 查不到新数据                        | 治理端未 **`flushAll`**；或 Server 未重启仍持有旧缓存。                          |
-| 浏览器连不上                        | 混用 **`http` URL 与 stream 模式**；或需 **`wss`** / 代理路径 **`/v2/stream`**。 |
+| 现象                                | 可能原因                                                                                                                                                                                                        |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 用户目录下出现 **`modeldb`** 文件夹 | **无 `-c`** 启动时的预期行为：**`MODELDB_HOME`** 下自动创建 **`logs/`**、**`cache/`**、**`vault/`** 与默认配置（见 **§3.2**）。若不需要，请改用 **`-c`** 指向专用配置路径或设置 **`MODELDB_HOME`** 到受控目录。 |
+| 握手立即断开                        | **`connectToken`** 错误或未传。                                                                                                                                                                                 |
+| **`AtlasManifestError` / 解密失败** | Vault 密钥与写库时不一致；或文件损坏。                                                                                                                                                                          |
+| 查不到新数据                        | 治理端未 **`flushAll`**；或 Server 未重启仍持有旧缓存。                                                                                                                                                         |
+| 浏览器连不上                        | 混用 **`http` URL 与 stream 模式**；或需 **`wss`** / 代理路径 **`/v2/stream`**。                                                                                                                                |
 
 ---
 
 ## 9. 延伸阅读
 
+- 使用手册（安装、构建、启动、FAQ）：**[user-handbook.md](./user-handbook.md)**
 - **`modeldb.config.json` 与 `workspace` 路径（含 Windows/Linux/macOS）**：[modeldb-config-guide.md](./modeldb-config-guide.md)
 - 产品能力、链式查询、DX、配置项全集：**[README.md](../README.md)**
 - 逻辑库路径与单文件 Vault 概念：**[logical-workspace-and-single-file.md](./logical-workspace-and-single-file.md)**

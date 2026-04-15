@@ -22,4 +22,4 @@
 pnpm run build:core
 ```
 
-或完整链 **`pnpm run build`**（shared → common → **core** → server → sdk）。
+或完整链 **`pnpm run build`**（shared → common → **core** → server → sdk）。仓库根 **[docs/user-handbook.md](../../docs/user-handbook.md)** 汇总了 monorepo 安装、构建与启动服务步骤。

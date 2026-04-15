@@ -274,6 +274,7 @@ modeldb-server start
 
 ## 9. 延伸阅读
 
+- 使用手册（安装、构建、启动、FAQ）：**[user-handbook.md](./user-handbook.md)**
 - 仓库根 **[README.md](../README.md)** —「运行与配置」整节
 - 操作手册 **[operations-manual.md](./operations-manual.md)**
 - 配置加载源码：**`packages/server/src/config-loader.ts`**、默认主目录：**`packages/server/src/modeldb-default-home.ts`**

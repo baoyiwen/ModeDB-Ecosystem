@@ -10,7 +10,7 @@
 - **Runtime（客户端）**：按图谱名只读打开 **`atlas.mld`**，经 **`VaultModelFileReader` / `VaultRelationIndexReader`** 与包内 **`__manifest__`** 工作（密钥与治理端一致，常见为 **`MODEL_DB_VAULT_SECRET`** 或与 **`connectToken`** 派生的集成配置）。不依赖写入路径，适合独立交付。
 - **Network（可选）**：**`ModelDB WebSocket Server`** 在指定存储根上托管只读查询；**`@mode-db/sdk`** 通过 **`connectRemote`** 提供与本地 **`model.query()…execute()`** 相同的链式 API，查询体经 **ConnectToken 握手** 与 **会话密钥混淆** 传输（详见下文 **「网络服务与远程客户端 SDK」**）。
 
-**运维入口**：**`modeldb.config.json`**、**`pnpm run start:server`**、**`pnpm run ignition`** 与全部参数说明见下文 **「运行与配置（工作区、启动命令、参数与环境）」**。
+**运维入口**：**`modeldb.config.json`**、**`pnpm run start:server`**、**`pnpm run ignition`** 与全部参数说明见下文 **「运行与配置（工作区、启动命令、参数与环境）」**。从零到跑通服务的步骤摘要见 **[docs/user-handbook.md](docs/user-handbook.md)**。
 
 > 本项目处于早期设计与实现阶段。
 
@@ -486,15 +486,15 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 
 ### 根目录常用 pnpm 脚本
 
-| 脚本                                                                  | 说明                                                                                                                                                                               |
-| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`pnpm run build`**                                                  | **`shared` → `common` → `core` → `server` → `sdk`**（见上文构建顺序）。                                                                                                            |
-| **`pnpm run start:server`**                                           | 等价 **`node ./packages/server/dist/cli.js`**（无 **`-c`** 时使用 **`MODELDB_HOME`** 下 **`modeldb.config.json`**，不存在则首次自动创建；见 **`docs/modeldb-config-guide.md`**）。 |
-| **`pnpm run dev`**                                                    | **`@mode-db/core`** 源码监听：**`pnpm --filter @mode-db/core run dev`**（**`packages/core` 内 `tsc --watch`**）。                                                                  |
-| **`pnpm test`** / **`pnpm run test:integration`**                     | 集成测试链（含配置加载审计，见 **`test/README.md`**）。                                                                                                                            |
-| **`pnpm run ignition`**                                               | 双轨压测点火：**`test/dual_track_ignition.ts`**（需已启动 server，见下文）。                                                                                                       |
-| **`pnpm run typecheck`** / **`pnpm run lint`** / **`pnpm run check`** | 类型检查、ESLint、类型+lint+Prettier 检查。                                                                                                                                        |
-| **`pnpm run wire-server-audit`** 等                                   | 单项集成脚本，见 **`test/README.md`** 命令对照表。                                                                                                                                 |
+| 脚本                                                                  | 说明                                                                                                                                                                                                                                                                                                                                                                         |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`pnpm run build`**                                                  | **`shared` → `common` → `core` → `server` → `sdk`**（见上文构建顺序）。                                                                                                                                                                                                                                                                                                      |
+| **`pnpm run start:server`**                                           | **`pnpm run build:server && node ./packages/server/dist/cli.js`**：启动前编译 **`@mode-db/server`**（**`prebuild`** 顺序：**`shared` → `common` → `core`**），避免缺少 **`dist/cli.js`**；无 **`-c`** 时使用 **`MODELDB_HOME`** 下 **`modeldb.config.json`**（见 **`docs/modeldb-config-guide.md`**）。已构建且需跳过编译时可直接 **`node ./packages/server/dist/cli.js`**。 |
+| **`pnpm run dev`**                                                    | **`@mode-db/core`** 源码监听：**`pnpm --filter @mode-db/core run dev`**（**`packages/core` 内 `tsc --watch`**）。                                                                                                                                                                                                                                                            |
+| **`pnpm test`** / **`pnpm run test:integration`**                     | 集成测试链（含配置加载审计，见 **`test/README.md`**）。                                                                                                                                                                                                                                                                                                                      |
+| **`pnpm run ignition`**                                               | 双轨压测点火：**`test/dual_track_ignition.ts`**（需已启动 server，见下文）。                                                                                                                                                                                                                                                                                                 |
+| **`pnpm run typecheck`** / **`pnpm run lint`** / **`pnpm run check`** | 类型检查、ESLint、类型+lint+Prettier 检查。                                                                                                                                                                                                                                                                                                                                  |
+| **`pnpm run wire-server-audit`** 等                                   | 单项集成脚本，见 **`test/README.md`** 命令对照表。                                                                                                                                                                                                                                                                                                                           |
 
 ### `modeldb.config.json` 字段说明
 
@@ -596,11 +596,10 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 
 ### 启动 WebSocket 服务的推荐流程
 
-1. **`pnpm run build`**
-2. **`cp modeldb.config.example.json modeldb.config.json`**（Windows 可用复制），编辑 **`connectToken`**；若使用加密 **`atlas.mld`**，填写 **`vaultSecret`** 或导出 **`MODEL_DB_VAULT_SECRET`**。
-3. 执行 **`pnpm run start:server -- -c modeldb.config.json`**（或 **`node ./packages/server/dist/cli.js start -c ./modeldb.config.json`**），使服务读取仓库根的配置；**无 `-c`** 时使用 **`MODELDB_HOME`** 下默认配置（见配置指南）。
-4. 若报 **`EADDRINUSE`**，更换 **`port`** 或结束占用端口的进程。
-5. 修改磁盘上的 Vault（或包内 **`__manifest__`** 所描述拓扑）后，**已运行的进程**不会自动重载全部缓存；需**重启 server** 再接受客户端。
+1. **`cp modeldb.config.example.json modeldb.config.json`**（Windows 可手动复制），编辑 **`connectToken`**；若使用加密 **`atlas.mld`**，填写 **`vaultSecret`** 或导出 **`MODEL_DB_VAULT_SECRET`**。
+2. 执行 **`pnpm run start:server -- -c modeldb.config.json`**：已内含 **`pnpm run build:server`**，会生成 **`packages/server/dist/cli.js`** 再启动；**无 `-c`** 时使用 **`MODELDB_HOME`** 下默认配置（见配置指南）。也可 **`node ./packages/server/dist/cli.js -c modeldb.config.json`**（须事先已 **`build:server`**）。若还要跑 **`pnpm run ignition`** 或消费 **`@mode-db/sdk`** 的本地 **`dist`**，另执行一次 **`pnpm run build`** 或至少 **`pnpm run build:sdk`**。
+3. 若报 **`EADDRINUSE`**，更换 **`port`** 或结束占用端口的进程。
+4. 修改磁盘上的 Vault（或包内 **`__manifest__`** 所描述拓扑）后，**已运行的进程**不会自动重载全部缓存；需**重启 server** 再接受客户端。
 
 ### 双轨压测点火 `pnpm run ignition`
 
@@ -645,11 +644,11 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 
 **`modeldb.config.json` 全字段**、**CLI 表格**、**环境变量**、**配置优先级**与 **`pnpm run ignition`** 已集中在上一节 **「运行与配置（工作区、启动命令、参数与环境）」**。
 
-**编译后**启动示例：
+**编译后**启动示例（**`pnpm run start:server`** 会先 **`build:server`**；下面第一条假设 **`dist/`** 已存在）：
 
 ```bash
 node ./packages/server/dist/cli.js --port 9090 --token your-secret --storage ./data
-pnpm run start:server
+pnpm run start:server -- --port 9090 --token your-secret --storage ./data
 ```
 
 在 monorepo 根使用：**`pnpm exec modeldb-server`**（根 **`package.json` → `bin`** → **`packages/server/dist/cli.js`**）；若全局安装了 **`@mode-db/server`**，可直接 **`modeldb-server`**。
@@ -1078,7 +1077,7 @@ EngineError
 ├── tsconfig.json                 # 根 noEmit：test/、scripts/、packages/core 路径映射（@mode-db/core）
 ├── modeldb.config.example.json
 ├── modeldb.config.json           # 本地联调（勿提交密钥）
-├── docs/
+├── docs/                         # user-handbook、配置指南、操作手册、架构图等
 ├── scripts/
 ├── packages/
 │   ├── core/                     # @mode-db/core → packages/core/dist/
@@ -1190,16 +1189,18 @@ pnpm run advanced-audit          # relateRecursive、wrapGroups、Paginated
 
 ## 快速开始
 
+更细的说明与排障见 **[docs/user-handbook.md](docs/user-handbook.md)**。
+
 ```bash
 pnpm install
 
-# 编译引擎 + shared + server + sdk（启动 server 或跑 ignition 前需要）
+# 全量编译（跑 pnpm test / ignition / 本地 SDK dist 时使用）
 pnpm run build
 
 # 准备配置（示例见 modeldb.config.example.json）
 cp modeldb.config.example.json modeldb.config.json   # Windows: 手动复制后编辑 connectToken
 
-# 启动 WebSocket 服务（显式 -c 使用仓库根配置；无 -c 则用 MODELDB_HOME 默认）
+# 启动 WebSocket 服务：已内含 build:server（shared→common→core→server）；显式 -c 使用仓库根配置；无 -c 则用 MODELDB_HOME 默认
 pnpm run start:server -- -c modeldb.config.json
 
 # 另开终端：双轨压测点火（须与 server 的 URL / token / atlas 一致）

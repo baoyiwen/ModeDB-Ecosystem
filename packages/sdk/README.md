@@ -14,6 +14,8 @@ pnpm run build
 pnpm run build:sdk
 ```
 
+从零搭建环境与启动 **`modeldb-server`** 的摘要见 **[docs/user-handbook.md](../../docs/user-handbook.md)**。
+
 ## 查询
 
 ```typescript

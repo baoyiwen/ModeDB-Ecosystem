@@ -38,8 +38,8 @@
     "dist"
   ],
   "scripts": {
-    "prebuild": "pnpm -C ../.. run build:common && pnpm -C ../.. run build:shared && pnpm -C ../.. run build:core",
-    "pretypecheck": "pnpm -C ../.. run build:common && pnpm -C ../.. run build:shared && pnpm -C ../.. run build:core",
+    "prebuild": "pnpm -C ../.. run build:shared && pnpm -C ../.. run build:common && pnpm -C ../.. run build:core",
+    "pretypecheck": "pnpm -C ../.. run build:shared && pnpm -C ../.. run build:common && pnpm -C ../.. run build:core",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
