@@ -1,18 +1,20 @@
 # ModeDB-Ecosystem 使用手册
 
-面向 **首次克隆仓库的开发者** 与 **需要起本地/内网服务的运维**：从环境、安装、构建到启动 **`modeldb-server`**、跑集成测试与压测的最短路径。设计细节、API 与链式查询语义仍以仓库根 **[README.md](../README.md)** 为准；部署与前后端接入见 **[operations-manual.md](./operations-manual.md)**；数据根与 **`modeldb.config.json`** 见 **[modeldb-config-guide.md](./modeldb-config-guide.md)**。
+面向 **首次克隆仓库的开发者** 与 **需要起本地/内网服务的运维**：从环境、安装、构建到启动 **`modeldb-server`**、跑集成测试与压测的最短路径。设计细节、API 与链式查询语义仍以仓库根 **[README.md](../README.md)** 为准；**引擎与 SDK 的 API 索引**见 **[developer-handbook.md](./developer-handbook.md)**；部署与前后端接入见 **[operations-manual.md](./operations-manual.md)**；数据根与 **`modeldb.config.json`** 见 **[modeldb-config-guide.md](./modeldb-config-guide.md)**。
 
 ---
 
 ## 1. 文档地图
 
-| 文档                                                     | 适合谁               | 内容侧重                                        |
-| -------------------------------------------------------- | -------------------- | ----------------------------------------------- |
-| **本文**                                                 | 新人、日常联调       | 安装 → 构建 → 启动 → 排障                       |
-| **[README.md](../README.md)**                            | 引擎使用者、架构评审 | 理念、存储、治理/DX、运行参数全集、SDK          |
-| **[operations-manual.md](./operations-manual.md)**       | 运维、后端、前端     | 部署、密钥、**`connectRemote`**、检查清单       |
-| **[modeldb-config-guide.md](./modeldb-config-guide.md)** | 运维                 | **`modeldb.config.json`** 放哪、相对路径、各 OS |
-| **[test/README.md](../test/README.md)**                  | 贡献者、CI           | 集成脚本说明与命令表                            |
+| 文档                                                     | 适合谁               | 内容侧重                                                                                   |
+| -------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------ |
+| **本文**                                                 | 新人、日常联调       | 安装 → 构建 → 启动 → 排障                                                                  |
+| **[README.md](../README.md)**                            | 引擎使用者、架构评审 | 理念、存储、治理/DX、运行参数全集、SDK                                                     |
+| **[operations-manual.md](./operations-manual.md)**       | 运维、后端、前端     | 部署、密钥、**`connectRemote`**、检查清单                                                  |
+| **[modeldb-config-guide.md](./modeldb-config-guide.md)** | 运维                 | **`modeldb.config.json`** 放哪、相对路径、各 OS                                            |
+| **[test/README.md](../test/README.md)**                  | 贡献者、CI           | 集成脚本说明与命令表                                                                       |
+| **[developer-handbook.md](./developer-handbook.md)**     | 应用开发者           | **`@mode-db/core`** / **SDK** API 入口与典型调用                                           |
+| **`@mode-db/common`**（`packages/common/src`）           | 引擎 / Server 贡献者 | 共享类型、**`PathResolver`**、**`EngineLogger`**、**`DiskAdapter`**、manifest 与存储根约定 |
 
 ---
 

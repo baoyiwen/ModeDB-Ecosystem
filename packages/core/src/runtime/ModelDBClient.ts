@@ -74,7 +74,7 @@ export class ModelDBClient {
   constructor(private readonly ctx: RuntimeContext) {}
 
   /**
-   * Primary API for external clients: load encrypted **`*.mld`** vault (workspace-flat or legacy nested path).
+   * Primary API for external clients: load encrypted **`*.mld`** (workspace-flat **`${root}/${name}.mld`** or nested **`${root}/${name}/atlas.mld`**).
    */
   static async connect(atlasName: string): Promise<ModelDBClient> {
     assertFlatGraphSegment(atlasName, 'atlas name');

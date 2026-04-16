@@ -16,6 +16,7 @@
 - **拒绝**：删除字段、修改已有字段类型、将原必填改为非必填。
 - 与 **`registerModel(..., FieldDefsRecord)`** / **`updateModelFields`** 使用同一套 **`normalizeFieldDefs`** 规则（**`DataType.*`** 或 **`'String'`** 等简写）。
 - 成功后会写回 manifest 与 Vault 内 schema 头，并打 **`EngineLogger`** 的 **`[META]`** 行。
+- **读侧兼容**：**`alterModel`** 追加可选字段后，持久化 JSONL 行可能仍缺少新键；**`ModelStorage`** 在解析行后按当前 schema **`materializeRowForCurrentSchema`** 补 **`default`** 或 **`undefined`**（不会为无 default 的必填字段捏造值）。
 
 **`AuthoringEngine.alterModelPatch(name, patch: FieldDefsRecord)`**（Model Designer / 增量 DDL）
 
@@ -31,17 +32,17 @@
 - 行为：先 **`flushPendingToDisk`**；在 Vault 中删除对应 **`r:*`** 条目（或分文件布局下删除索引文件）；从注册表 **`unregisterRelation`**；**`flushAll`** 重写 manifest。
 - 不删除两侧模型上的**行数据**；仅移除拓扑与邻接表。
 
-## 4. `dropModel`（移除模型与邻接、保留数据快照）
+## 4. `dropModel`（逻辑删除：注册表退役，物理 payload 暂留）
 
 **`await engine.dropModel(modelName: string)`**
 
-- 删除所有**触及该模型**的关系（与 **`dropRelation`** 相同的索引清理 + unregister）。
-- **单文件 Vault**：若存在 **`m:<model>`** 负载，则**整体搬迁**到 **`orphan:m:<model>`**（便于日后 **Compact** 或取证；当前运行时与查询**不**再加载 orphan 键）。
-- **分文件布局**：将 **`models/<Model>.mld`** 移至 **`models/__abandoned__/<Model>.mld`**，原活跃路径废弃，数据文件保留。
-- 清空该模型的写缓冲、**`unregisterSchema`**、**`unregisterModel`**、**`AtlasRegistry.evictModelHandle`**、**`SmartCache`** 中与该模型相关的查询缓存，并重写 manifest。
-- **`EngineLogger`** 输出 **`[META]`** 说明已 drop。
+- 删除所有**触及该模型**的关系（与 **`dropRelation`** 相同的 Vault **`r:*`** 索引清理 + **`unregisterRelation`**）。
+- **单文件 Vault**：**不**再搬迁 **`m:<model>`**；JSONL 仍留在包内，仅通过 **manifest / 注册表**使运行时**不可见**（为后续 **Compact / freelist** 预留空间回收；在未 compact 前**勿**复用同名模型，以免与陈旧行合并）。
+- **分文件布局**：**`models/<Model>.mld`** 仍留在原路径；仅注册表 / manifest 退役，逻辑上不可见。
+- 清空该模型的写缓冲、**`unregisterSchema`**、**`unregisterModel`**、**`AtlasRegistry.evictModelHandle`**、**`SmartCache`** 中与该模型相关的查询缓存，**`flushAll`** 重写 manifest。
+- **`EngineLogger`** 输出 **`[META]`** 记录逻辑删除完成。
 
-**注意**：**`ModelDBClient`** 只读打开时**不会**看到已 drop 的模型；若需恢复数据，需离线工具读取 **`orphan:m:*`** 或 **`models/__abandoned__/*.mld`**（当前仓库未提供一键恢复命令）。
+**注意**：**`ModelDBClient`** / 冷读 manifest **不会**再看到已 drop 的模型；取证或空间回收需离线读取仍存在的 **`m:*`** 分块（或日后专用 compact 工具）。
 
 ## 5. 线协议与 `modeldb-server`
 
@@ -71,10 +72,24 @@ RPC 明文 JSON 在发送前经 **`encodeWirePayload`**（**`@mode-db/shared`**�
 
 ## 8. 集成测试与回归
 
-- **`test/meta_crud_audit.ts`**：进程内 **`alterModel` → `dropRelation` → `dropModel`**（断言 **`orphan:m:*`** 与 Vault **`r:*`** 清空）；再起 **`startModelDBWebSocketServer`**，用 **`RemoteModelDBClient.connectNetwork`** 跑 RPC（含 **`alterModel(..., { patch: true })`**）。
+- **`test/meta_crud_audit.ts`**：进程内 **`alterModel` → `dropRelation` → `dropModel`**（断言 **`dropModel` 后 `m:*` 仍在且非空**、**`orphan:m:*` 键未被创建**，以及 Vault **`r:*`** 在 **`dropRelation`** 后清空）；再起 **`startModelDBWebSocketServer`**，用 **`RemoteModelDBClient.connectNetwork`** 跑 RPC（含 **`alterModel(..., { patch: true })`**）。
 - 默认串联在 **`npm run test:integration`** 末步（在 **`wire_server_audit`** 之后）；单跑：**`npm run meta-crud-audit`**。
 
 ## 9. 运维与后续工作
 
-- **Compact**：未来可扫描 **`orphan:m:*`** 做空间回收；当前行为仅为**搬迁**而非立即物理删除，避免误删后不可恢复。
+- **Compact**：未来可扫描 manifest 外的 **`m:*`** / 分文件 **`.mld`** 做空间回收；**`dropModel`** 当前不创建 **`orphan:m:*`** 键。
 - 修改线协议或 dispatcher 时，应同步更新 **`@mode-db/shared`** 类型、**`@mode-db/sdk`** 的 **`executeWireBody`** 分支与 **`meta_crud_audit`**。
+
+## 10. 物理层演进路线（与当前实现的差异）
+
+当前实现（**单文件 Vault** + **JSONL `m:` 负载** / **分文件 `.mld`**）与「整块物理地址表 + Header 墓碑 + 同容量块复用」式引擎**不是同一套磁盘格式**。下列为**目标语义**与建议落地阶段，供后续大版本或独立存储后端演进：
+
+| 目标                            | 当前行为                                                                                                                                                                    | 建议演进                                                                                         |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **模型级逻辑删除（Tombstone）** | Registry + manifest 退役；**`m:<name>`** / 分文件 **`.mld`** **原地保留**；内存 **`unregisterModel` / `evictModelHandle` / 缓冲清空**（见 **`AuthoringEngine.dropModel`**） | 未来可选 **`meta:inactive:m:<name>`**、Vault 内键搬迁或 Header 位图（需 Vault 版本号与迁移工具） |
+| **碎片 / 空间回收**             | 行级删除走 **`PersistenceManager`** 缓冲墓碑 + flush 时 **compact rewrite**；逻辑删模型后 stale **`.mld`/`m:*`** 占位，**Compact** 未实现                                   | 维护 **freelist** 或扫描 manifest 外键回收；与 **Vault 加密块布局**强相关                        |
+| **`alterModel` 仅追加字段**     | 内存 **`registry`/`ModelStorage.updateSchema`**；RPC 路径 **`flushAll`** 写 manifest；Vault 内模型体为 **JSONL 追加行**，schema 头在 flush 路径更新                         | 若引入定长列存，再在「仅追加列」时走 **segment 尾部 append**，避免全表 rewrite                   |
+
+**`@mode-db/sdk`**：仅含 **`@mode-db/shared`** 上的连接、编解码与远程查询 façade；**不得**依赖 **`@mode-db/server`** / **`@mode-db/core`**。仓库根 **`pnpm run check:sources`** 含 **`scripts/assert-sdk-client-only.mjs`** 静态断言。
+
+**Daemon**：**`startModelDBWebSocketServer`** 已可独立进程运行；**`buildDualTrackFastify`** 对 **`storageRoot`** **`mkdirSync(..., { recursive: true })`**；握手前 **`assertLogicalDatabaseExists`**——无 **`atlas.mld`**（或 workspace-flat 等价文件）则 **DATABASE_NOT_FOUND**。

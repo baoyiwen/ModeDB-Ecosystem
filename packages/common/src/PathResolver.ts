@@ -83,7 +83,7 @@ export class PathResolver {
     return this.relationsRootResolved;
   }
 
-  /** `<atlas>/atlas-manifest.json` (legacy layout only; vault mode stores manifest inside {@link atlasSingleVaultPath}). */
+  /** `<atlas>/atlas-manifest.json` (split-file layout; vault mode stores manifest inside {@link atlasSingleVaultPath}). */
   manifestFilePath(): string {
     const filePath = resolve(join(this.atlasRootResolved, 'atlas-manifest.json'));
     this.assertResolvedUnderAtlasRoot(filePath);
@@ -112,21 +112,9 @@ export class PathResolver {
     return filePath;
   }
 
-  /** @inheritdoc modelFilePath — legacy name */
+  /** @inheritdoc modelFilePath — alternate name */
   modelDataPath(modelName: string): string {
     return this.modelFilePath(modelName);
-  }
-
-  /**
-   * Split-file tombstone: after {@link AuthoringEngine.dropModel}, active **`models/<name>.mld`**
-   * is moved here so the live path is vacant (physical slot abandoned, data retained for ops).
-   */
-  abandonedModelFilePath(modelName: string): string {
-    assertFlatGraphSegment(modelName, 'model name');
-    const dir = resolve(join(this.modelsRootResolved, '__abandoned__'));
-    const filePath = resolve(join(dir, `${modelName}.mld`));
-    this.assertResolvedUnder(this.modelsRootResolved, filePath, 'abandoned model data file');
-    return filePath;
   }
 
   /**
@@ -140,7 +128,7 @@ export class PathResolver {
     return filePath;
   }
 
-  /** @inheritdoc relationFilePath — legacy name */
+  /** @inheritdoc relationFilePath — alternate name */
   relationIndexFilePath(indexBaseName: string): string {
     return this.relationFilePath(indexBaseName);
   }

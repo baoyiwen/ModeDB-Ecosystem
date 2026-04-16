@@ -69,7 +69,7 @@ const program = new Command()
   )
   .option(
     '-c, --config <path>',
-    'Session data root (modeldb.config.json + logs/ + cache/ + vault/) or legacy path to a .json config file',
+    'Session data root (modeldb.config.json + logs/ + cache/ + vault/) or path to a standalone .json config file',
     undefined,
   )
   .option('-p, --port <number>', 'Listen port (overrides config / env)')

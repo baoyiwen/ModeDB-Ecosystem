@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 /** Outer binary frame: XOR-mixed payload (same key material = symmetric). */
 export const TRANSPORT_OUTER_MAGIC = Buffer.from('MDBX', 'ascii');
 
-/** Inner envelope (UTF-8 JSON) optional wrapper (legacy). */
+/** Inner envelope (UTF-8 JSON) optional wrapper marker. */
 export const TRANSPORT_INNER_MAGIC = Buffer.from('MDB1', 'ascii');
 
 /**

@@ -23,13 +23,6 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true
   },
-  "include": [
-    "index.ts",
-    "src/**/*",
-    "common/**/*",
-    "authoring/**/*",
-    "facade/**/*",
-    "templates/**/*"
-  ],
+  "include": ["index.ts", "src/**/*", "authoring/**/*", "facade/**/*", "templates/**/*"],
   "exclude": ["node_modules", "dist"]
 }

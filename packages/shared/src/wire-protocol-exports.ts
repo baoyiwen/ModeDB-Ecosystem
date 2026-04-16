@@ -67,7 +67,7 @@ export type WireServerMessage = WireHandshakeOk | WireRpcResponse | WireErrorMes
 export interface WireHandshakeOk {
   readonly type: 'handshake.ok';
   readonly dbName?: string;
-  /** Echoed when client used legacy **`atlas`** field. */
+  /** Echoed when the client sent **`atlas`** (synonym for **`dbName`**). */
   readonly atlas?: string;
 }
 

@@ -36,7 +36,7 @@ export interface ResolvedModelDBServerConfig {
   readonly storageRoot: string;
   /** Same as **`storageRoot`** when loaded from file; optional when callers pass **`storageRoot`** only. */
   readonly workspace?: string;
-  /** When legacy **`dbPath`** pointed at **`world.mld`**, suggested default logical name **`world`**. */
+  /** When **`dbPath`** resolves to a **`.mld`** file, the inferred default logical library name (basename without suffix). */
   readonly defaultAtlas?: string;
   /** Absolute directory for **`system.log`** / **`access.log`** when **`logDir`** is set in config. */
   readonly serverLogDirectory?: string;

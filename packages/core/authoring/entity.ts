@@ -73,7 +73,7 @@ export class ModelEntity extends RuntimeModel {
    * Replace persisted field set for this model (Registry + storage schema stay in sync).
    *
    * Accepts either:
-   * - `string[]` (legacy): field names only, no type metadata; duplicates removed.
+   * - `string[]`: field names only, no type metadata; duplicates removed.
    * - `Record<string, DataType | FieldTypeDef>`: typed fields, e.g. `{ age: 'Int', name: 'I18N' }`.
    */
   updateFields(fields: readonly string[] | FieldDefsRecord): this {

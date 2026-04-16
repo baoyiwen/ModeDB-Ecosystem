@@ -199,7 +199,7 @@ export interface ConnectRemoteOptions {
   readonly webSocketCtor?: WebSocketCtor;
 }
 
-/** Logical library directory name under the server **`workspace`** (`dbName` preferred; `atlas` is legacy alias). */
+/** Logical library directory name under the server **`workspace`** (`dbName` preferred; **`atlas`** is a synonym). */
 function resolveConnectLogicalDb(options: ConnectRemoteOptions): string {
   const v = (options.dbName?.trim() || options.atlas?.trim() || '').trim();
   if (!v) {

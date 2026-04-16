@@ -1,6 +1,7 @@
 /**
  * Meta-CRUD: `AuthoringEngine.alterModel` / `dropRelation` / `dropModel`，以及
- * WebSocket 线路上 `RemoteModelDBClient` 的同名 RPC（`orphan:m:*` 快照、Vault 关系键清理）。
+ * WebSocket 线路上 `RemoteModelDBClient` 的同名 RPC（`dropModel` 为逻辑注销，**`m:*`** 负载保留；
+ * Vault **`r:*`** 关系键在 `dropRelation` 时清理）。
  *
  * **独立 Atlas**：`meta_crud_rt`（进程内编排）、`meta_crud_wire_rt`（RPC）。与其它脚本无目录冲突。
  * **单跑**：`npx tsx test/meta_crud_audit.ts`（需集成 Vault 环境；见 [README.md](./README.md)）。
@@ -48,10 +49,10 @@ function section(title: string): void {
   console.log('═'.repeat(60));
 }
 
-function orphanModelBlob(
+function vaultBlob(
   storageRoot: string,
   atlas: string,
-  modelName: string,
+  vaultKey: string,
 ): string | undefined {
   const paths = new PathResolver(storageRoot, atlas);
   const vault = new AtlasSingleVault();
@@ -59,7 +60,20 @@ function orphanModelBlob(
   if (!ok) {
     return undefined;
   }
-  return vault.get(AtlasSingleVault.orphanModelKey(modelName));
+  return vault.get(vaultKey);
+}
+
+function activeModelBlob(storageRoot: string, atlas: string, modelName: string): string | undefined {
+  return vaultBlob(storageRoot, atlas, AtlasSingleVault.modelKey(modelName));
+}
+
+/** `orphan:m:` 前缀键；`dropModel` 不创建该键（测试用于断言 Vault 无此路径）。 */
+function orphanPrefixVaultKey(modelName: string): string {
+  return `orphan:m:${modelName}`;
+}
+
+function orphanModelBlob(storageRoot: string, atlas: string, modelName: string): string | undefined {
+  return vaultBlob(storageRoot, atlas, orphanPrefixVaultKey(modelName));
 }
 
 useIntegrationVaultEnv();
@@ -116,13 +130,16 @@ assert(
   'Vault 中关系索引被清空',
 );
 
-section('4. dropModel：orphan:m:* 与注册表');
+section('4. dropModel：逻辑删除（注册表退役，m:* 物理保留）');
 await reopened.dropModel('Beta');
 assert(reopened.registry.getModel('Beta') === undefined, 'Beta 已从注册表移除');
 assert(
-  orphanModelBlob(DATA_ROOT, ATLAS_LOCAL, 'Beta') !== undefined &&
-    (orphanModelBlob(DATA_ROOT, ATLAS_LOCAL, 'Beta')?.length ?? 0) > 0,
-  'Beta 模型 blob 迁至 orphan:m:Beta',
+  (activeModelBlob(DATA_ROOT, ATLAS_LOCAL, 'Beta')?.length ?? 0) > 0,
+  'Vault 仍保留 m:Beta JSONL',
+);
+assert(
+  (orphanModelBlob(DATA_ROOT, ATLAS_LOCAL, 'Beta')?.length ?? 0) === 0,
+  'orphan:m:Beta 不存在或为空',
 );
 assert(
   !existsSync(join(DATA_ROOT, ATLAS_LOCAL, 'models')) &&
@@ -133,9 +150,10 @@ assert(
 await reopened.dropModel('Alpha');
 assert(reopened.registry.getModel('Alpha') === undefined, 'Alpha 已从注册表移除');
 assert(
-  (orphanModelBlob(DATA_ROOT, ATLAS_LOCAL, 'Alpha')?.length ?? 0) > 0,
-  'Alpha 数据迁至 orphan:m:Alpha',
+  (activeModelBlob(DATA_ROOT, ATLAS_LOCAL, 'Alpha')?.length ?? 0) > 0,
+  'Vault 仍保留 m:Alpha JSONL',
 );
+assert((orphanModelBlob(DATA_ROOT, ATLAS_LOCAL, 'Alpha')?.length ?? 0) === 0, 'orphan:m:Alpha 为空');
 
 // ---------------------------------------------------------------------------
 // B. RemoteModelDBClient（线协议）
@@ -203,8 +221,12 @@ assert(
   'Alpha2-Beta2-links 的 Vault 索引已空',
 );
 assert(
-  (orphanModelBlob(DATA_ROOT, ATLAS_WIRE, 'Beta2')?.length ?? 0) > 0,
-  'Beta2 blob 位于 orphan:m:Beta2',
+  (activeModelBlob(DATA_ROOT, ATLAS_WIRE, 'Beta2')?.length ?? 0) > 0,
+  'RPC dropModel 后仍保留 m:Beta2（逻辑删除）',
+);
+assert(
+  (orphanModelBlob(DATA_ROOT, ATLAS_WIRE, 'Beta2')?.length ?? 0) === 0,
+  'orphan:m:Beta2 不应存在',
 );
 assert(
   afterRpc.registry.getModel('Alpha2')?.fields.has('tag') === true,

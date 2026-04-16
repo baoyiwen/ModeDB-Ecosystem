@@ -131,7 +131,7 @@ export class RelationIndexer implements IndexReader {
   }
 
   /**
-   * Remove a relation index from memory and storage (vault **`r:*`** key or legacy `.rid` file).
+   * Remove a relation index from memory and storage (vault **`r:*`** key or split-file **`.rid`**).
    */
   async dropRelationIndex(rel: RelationDefinition): Promise<void> {
     const key = relationFileKey(rel);

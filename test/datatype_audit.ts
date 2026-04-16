@@ -73,10 +73,10 @@ async function assertRejects(
 }
 
 // ---------------------------------------------------------------------------
-// 1. updateFields — typed record vs legacy string[]
+// 1. updateFields — typed record vs field-name array
 // ---------------------------------------------------------------------------
 async function auditUpdateFields(): Promise<void> {
-  console.log('\n═══ 1. updateFields — typed record 与 legacy string[] ═══');
+  console.log('\n═══ 1. updateFields — typed record 与字段名数组 ═══');
 
   const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 
@@ -104,12 +104,12 @@ async function auditUpdateFields(): Promise<void> {
   assert(def.fieldTypes.get('color')?.type === 'Color', 'fieldTypes color → Color');
   assert(def.fieldTypes.get('size')?.type === 'Unit', 'fieldTypes size → Unit');
 
-  engine.registerModel('LegacyModel');
-  const legacy = engine.model('LegacyModel');
-  legacy.updateFields(['x', 'y', 'z']);
-  const legacyDef = engine.registry.getModel('LegacyModel')!;
-  assert(legacyDef.fields.has('x'), 'legacy string[]: fields 包含 x');
-  assert(legacyDef.fieldTypes.size === 0, 'legacy string[]: fieldTypes 为空');
+  engine.registerModel('NamesOnlyModel');
+  const namesOnly = engine.model('NamesOnlyModel');
+  namesOnly.updateFields(['x', 'y', 'z']);
+  const namesOnlyDef = engine.registry.getModel('NamesOnlyModel')!;
+  assert(namesOnlyDef.fields.has('x'), '字段名数组: fields 包含 x');
+  assert(namesOnlyDef.fieldTypes.size === 0, '字段名数组: fieldTypes 为空');
 
   await engine.flushAll();
 }
@@ -313,17 +313,17 @@ async function auditManifestFieldTypes(): Promise<void> {
   assert(model!.fieldTypes!.size?.type === 'Unit', 'manifest fieldTypes.size.type = Unit');
   assert(model!.fieldTypes!.size?.unit === 'm', 'manifest fieldTypes.size.unit = m');
 
-  const legacyModel = manifest.models.find((m) => m.name === 'LegacyModel');
-  if (legacyModel) {
-    assert(legacyModel.fieldTypes === undefined, 'legacy model 在 manifest 中无 fieldTypes');
+  const namesOnlyEntry = manifest.models.find((m) => m.name === 'NamesOnlyModel');
+  if (namesOnlyEntry) {
+    assert(namesOnlyEntry.fieldTypes === undefined, '字段名数组 model 在 manifest 中无 fieldTypes');
   }
 }
 
 // ---------------------------------------------------------------------------
-// 7. Backward compatibility — untyped fields skip validation
+// 7. Untyped models — field values skip type validation
 // ---------------------------------------------------------------------------
 async function auditBackwardCompat(): Promise<void> {
-  console.log('\n═══ 7. Backward compatibility — untyped fields ═══');
+  console.log('\n═══ 7. Untyped models — arbitrary field values ═══');
 
   const engine = new AuthoringEngine({ ...VAULT_ENGINE_BASE, currentLocale: 'zh' });
 

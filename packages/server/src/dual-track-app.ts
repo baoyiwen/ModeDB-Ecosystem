@@ -1,4 +1,5 @@
 import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
@@ -246,6 +247,9 @@ export async function buildDualTrackFastify(
   }
 
   mkdirSync(dataRoot, { recursive: true });
+  mkdirSync(join(dataRoot, 'vault'), { recursive: true });
+  mkdirSync(join(dataRoot, 'logs'), { recursive: true });
+  mkdirSync(join(dataRoot, 'cache'), { recursive: true });
   EngineLogger.instance.info('Workspace directory ready', { workspace: dataRoot }, 'ModelDBServer');
   EngineLogger.instance.info(
     'ModelDB Server starting (dual-track)',

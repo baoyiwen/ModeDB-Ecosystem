@@ -66,14 +66,14 @@ async function bootstrapLogicalDbIfNeeded(
   const nestedVaultPath = join(atlasDir, 'atlas.mld');
   const handshakeVaultOnDisk = existsSync(nestedVaultPath);
 
-  const legacyModelsDir = join(atlasDir, 'models');
-  const legacyManifestPath = join(atlasDir, 'atlas-manifest.json');
-  const hasLegacySplitOnDisk =
-    existsSync(legacyModelsDir) || (existsSync(legacyManifestPath) && !existsSync(nestedVaultPath));
+  const splitModelsDir = join(atlasDir, 'models');
+  const splitManifestPath = join(atlasDir, 'atlas-manifest.json');
+  const hasSplitFileLayoutOnDisk =
+    existsSync(splitModelsDir) || (existsSync(splitManifestPath) && !existsSync(nestedVaultPath));
 
-  if (hasLegacySplitOnDisk) {
+  if (hasSplitFileLayoutOnDisk) {
     throw new Error(
-      `Ignition: legacy split atlas under "${atlasDir}" (models/ and/or standalone atlas-manifest.json). ` +
+      `Ignition: split-file atlas under "${atlasDir}" (models/ and/or standalone atlas-manifest.json). ` +
         `Only "${nestedVaultPath}" is supported. Remove "${atlasDir}" and re-run.`,
     );
   }

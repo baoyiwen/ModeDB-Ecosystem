@@ -52,11 +52,6 @@ export class AtlasSingleVault {
     return `r:${ridBaseName}`;
   }
 
-  /** Tombstone prefix for compact: former `m:<model>` payload moved here when a model is dropped. */
-  static orphanModelKey(modelName: string): string {
-    return `orphan:m:${modelName}`;
-  }
-
   get(key: string): string | undefined {
     return this.entries.get(key);
   }

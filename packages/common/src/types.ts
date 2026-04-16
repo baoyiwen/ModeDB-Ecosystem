@@ -4,7 +4,7 @@ import type { FieldTypeDef } from './data-types.js';
  * Schema definition for a registered model.
  * Only the declared property names are persisted — enforcing model purity.
  * `fieldTypes` carries optional per-field DataType metadata; fields absent
- * from this map are treated as untyped (legacy String, no validation).
+ * from this map are treated as untyped strings with no validation.
  */
 export interface ModelSchema {
   readonly name: string;

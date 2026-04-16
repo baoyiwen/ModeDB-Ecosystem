@@ -63,6 +63,9 @@ interface RunMetrics {
   binaryInterceptorMs: number;
   handledRequestCount: number;
   handledRequestMs: number;
+  /** Full-model / stream scan timings (Vault JSONL parse + `.mld` line scans). */
+  seekScanCount: number;
+  seekScanMs: number;
 }
 
 let processExitHooked = false;
@@ -100,6 +103,8 @@ export class EngineLogger {
     binaryInterceptorMs: 0,
     handledRequestCount: 0,
     handledRequestMs: 0,
+    seekScanCount: 0,
+    seekScanMs: 0,
   };
 
   /** True when **`access.log`** profiling is enabled (see **`configure`**). */
@@ -207,6 +212,18 @@ export class EngineLogger {
     }
   }
 
+  /**
+   * Telemetry for **whole-model** reads (Vault **`m:`** blob materialisation or `.mld` stream scans).
+   * When **`access.log`** is on, emits **`SeekTime`** lines for million-row import / regression studies.
+   */
+  recordSeekScan(totalMs: number, context: string, detail?: Record<string, unknown>): void {
+    this.metrics.seekScanCount += 1;
+    this.metrics.seekScanMs += totalMs;
+    if (this.enableAccessLog && this.logDir) {
+      this.accessInfo(`SeekTime: ${totalMs.toFixed(3)}ms`, { context, ...detail }, 'DiskSeek');
+    }
+  }
+
   recordDiskWrite(ms: number, bytes?: number, context = 'write'): void {
     this.metrics.diskWriteCount += 1;
     this.metrics.diskWriteMs += ms;
@@ -250,6 +267,7 @@ export class EngineLogger {
     const avgWrite = m.diskWriteCount > 0 ? m.diskWriteMs / m.diskWriteCount : 0;
     const avgBin =
       m.binaryInterceptorCount > 0 ? m.binaryInterceptorMs / m.binaryInterceptorCount : 0;
+    const avgSeek = m.seekScanCount > 0 ? m.seekScanMs / m.seekScanCount : 0;
     const line = this.formatLine('INFO', 'EngineLogger', 'Run summary (process exit)', {
       requests: m.handledRequestCount,
       avgRequestMs: Number(avgReq.toFixed(3)),
@@ -259,6 +277,8 @@ export class EngineLogger {
       avgDiskWriteMs: Number(avgWrite.toFixed(3)),
       binaryUnwraps: m.binaryInterceptorCount,
       avgBinaryUnwrapMs: Number(avgBin.toFixed(3)),
+      seekScans: m.seekScanCount,
+      avgSeekScanMs: Number(avgSeek.toFixed(3)),
     });
     try {
       mkdirSync(this.logDir, { recursive: true });
@@ -278,6 +298,8 @@ export class EngineLogger {
     this.metrics.binaryInterceptorMs = 0;
     this.metrics.handledRequestCount = 0;
     this.metrics.handledRequestMs = 0;
+    this.metrics.seekScanCount = 0;
+    this.metrics.seekScanMs = 0;
   }
 
   private formatLine(

@@ -45,7 +45,7 @@ export type ParsedMldLine =
   | { readonly kind: 'record'; record: ModelRecord };
 
 /**
- * Parse one non-empty `.mld` line: legacy JSON or {@link SHADOW_LINE_PREFIX} obfuscated form.
+ * Parse one non-empty `.mld` line: plain JSON or {@link SHADOW_LINE_PREFIX} obfuscated form.
  */
 export function parseMldLine(trimmed: string): ParsedMldLine | null {
   if (trimmed.length === 0) {

@@ -4,7 +4,7 @@ import { DiagnosticCenter, ErrorCodes, PathResolver } from '@mode-db/common';
 
 /**
  * Require a logical database to exist on disk before accepting a session.
- * Accepts workspace-flat **`${workspace}/${dbName}.mld`** or legacy nested **`${workspace}/${dbName}/atlas.mld`**.
+ * Accepts workspace-flat **`${workspace}/${dbName}.mld`** or per-atlas **`${workspace}/${dbName}/atlas.mld`**.
  */
 export function assertLogicalDatabaseExists(workspaceRoot: string, logicalDb: string): void {
   const root = resolve(workspaceRoot);

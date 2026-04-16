@@ -15,3 +15,5 @@
 ## 管廊 Schema 模板
 
 见仓库 **`templates/pipe-gallery/register.ts`** 及根入口 **`registerPipeGalleryModels`**：预置 **Pipe / Node / Monitor** 模型（**Unit**、**Color**、**required**）。
+
+API 与包依赖索引见 **[developer-handbook.md](./developer-handbook.md)**。

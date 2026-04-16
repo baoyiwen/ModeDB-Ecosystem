@@ -1,4 +1,4 @@
-/** Runtime-facing names for {@link ../common/storage-root-config.js}. */
+/** Runtime-facing names for storage-root helpers in {@link @mode-db/common}. */
 export {
   configureModelDBStorageRoot as configureModelDBRuntime,
   resolveModelDBStorageRoot,

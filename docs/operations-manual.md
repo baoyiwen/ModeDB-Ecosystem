@@ -275,6 +275,7 @@ sequenceDiagram
 
 ## 9. 延伸阅读
 
+- 开发者手册（引擎与 SDK API）：**[developer-handbook.md](./developer-handbook.md)**
 - 使用手册（安装、构建、启动、FAQ）：**[user-handbook.md](./user-handbook.md)**
 - **`modeldb.config.json` 与 `workspace` 路径（含 Windows/Linux/macOS）**：[modeldb-config-guide.md](./modeldb-config-guide.md)
 - 产品能力、链式查询、DX、配置项全集：**[README.md](../README.md)**

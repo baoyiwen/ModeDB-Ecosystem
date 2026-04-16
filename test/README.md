@@ -74,11 +74,11 @@ pnpm run test:integration
 | `pnpm run query-extended`    | `query_chain_extended.ts`   | `ComputeBuilder`、分析分页、`wrapGroups`、`relateRecursive`；**已**含于 `test:integration`                                                                                                                                                                                               |
 | `pnpm run dx-audit`          | `authoring_dx_audit.ts`     | 合并辅助函数、`QueryEngine.execute`、句柄缓存、`updateFields` 去重、合并读、`insert sync`；**已**含于 `test:integration`                                                                                                                                                                 |
 | `pnpm run crud-audit`        | `crud_audit.ts`             | CRUD 全链路（46 个断言）：update / delete / batch / 关系清理 / 模型独立性 / flush 压缩；**已**含于 `test:integration`                                                                                                                                                                    |
-| `pnpm run datatype-audit`    | `datatype_audit.ts`         | DataType + ValueObject（114 个断言）：类型校验、required/default/isEmpty/save、I18N/Color/Unit、manifest；**已**含于 `test:integration`                                                                                                                                                  |
+| `pnpm run datatype-audit`    | `datatype_audit.ts`         | DataType + ValueObject（115 个断言）：类型校验、required/default/isEmpty/save、I18N/Color/Unit、manifest；**已**含于 `test:integration`                                                                                                                                                  |
 | `pnpm run diagnostic-audit`  | `diagnostic_audit.ts`       | DiagnosticCenter（**122** 个断言）：ErrorCodes 别名（含 **E3002**）、ErrorRegistry（含 E2005/E3002）、ValidationReport（isAllSuccess/getSummary/exportAsJSON/report 流式）、insertMany 批量、ValueObject 联动（required + type mismatch）、Emergency dump；**已**含于 `test:integration` |
 | `pnpm run vault-audit`       | `vault_audit.ts`            | 单文件 Vault：目录零明文、`ModelDBClient.connect`、`relate`、manifest hydrate、错误密钥、**E3002**；**已**含于 `test:integration`                                                                                                                                                        |
 | `pnpm run wire-server-audit` | `wire_server_audit.ts`      | WebSocket 服务 + **`@mode-db/sdk`**：`ConnectToken` 拒绝、**`connectRemote`**、**`RemoteHydratedEntity`**；**已**含于 `test:integration`（**必须**排在 `verify` 之后）                                                                                                                   |
-| `pnpm run meta-crud-audit`   | `meta_crud_audit.ts`        | **`alterModel` / `dropRelation` / `dropModel`**、Vault **`orphan:m:*`**、**`RemoteModelDBClient.connectNetwork`** 的 meta RPC；**已**含于 `test:integration`（末步；需 **`build:server`**）                                                                                             |
+| `pnpm run meta-crud-audit`   | `meta_crud_audit.ts`        | **`alterModel` / `dropRelation` / `dropModel`**（**`m:*` 保留**、**`orphan:m:*` 不创建**）、**`RemoteModelDBClient.connectNetwork`** 的 meta RPC；**已**含于 `test:integration`（末步；需 **`build:server`**）                                                                           |
 | `pnpm run ignition`          | `dual_track_ignition.ts`    | **非**默认集成链：需**已启动** **`modeldb-server`**（建议 **`pnpm run build`** 后 **`pnpm run start:server`**；**`start:server`** 会先 **`build:server`**）；**`@mode-db/sdk`** 经 WS/HTTP 向指定 atlas 灌 **`Sensor`**；环境变量见脚本头与根 README **「运行与配置」**。**未**并入 `test:integration`                                   |
 | `pnpm run shadow-smart-cache-audit` | `shadow_smartcache_logger_audit.ts` | 单文件 Vault + **`memoryShadowHydration`** + **`enableSmartCache`** + **`EngineLogger`**。**未**并入默认集成                                                                                                                                                                    |
 | `pnpm run stress-test`       | `million_stress_test.ts`    | 压力测试（34 个断言）：100 万行灌入、1% 错误注入（E1001/E1003）、读写一致性、ValueObject 运行时监控、ErrorCodes 完整性、吞吐量报告。**未**并入默认集成                                                                                                                                   |
@@ -195,16 +195,16 @@ pnpm run test:integration
 | 9    | **`deleteWhere` 批量关系清理**：条件删除后所有命中实体的**关系边**均被清理（Vault 为包内 **`r:*`**；分文件为 **`.rid`**）、未命中实体边不受影响、Pump 仅剩预期行    |
 | 10   | **`{ sync: true }` + flush 压缩**：insert sync 后 **`atlas.mld`** 存在；delete/update sync 后 Vault 内 **`m:Item`** 明文 JSONL 无墓碑与已删 `_id`、含更新值         |
 
-### `datatype_audit.ts`（114 个断言，20 个分组）
+### `datatype_audit.ts`（115 个断言，20 个分组）
 
 | 分组 | 覆盖点                                                                                                                                |
 | ---- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| 1    | **`updateFields`** typed record（含 Color/Unit）：`fields` 集合与 `fieldTypes` Map 同步更新；legacy `string[]` 路径 `fieldTypes` 为空 |
+| 1    | **`updateFields`** typed record（含 Color/Unit）：`fields` 集合与 `fieldTypes` Map 同步更新；**仅字段名数组**路径下 `fieldTypes` 为空 |
 | 2    | **Pre-insert validation**：Int/Number/Boolean/DateTime/String/Color/Unit 各类型拒绝错误值；合法数据插入成功；null 非 required 通过    |
 | 3    | **I18N insert auto-wrap**：plain string 自动包装为 `{ [locale]: value }`；object form 保持不变                                        |
 | 4    | **I18N query**：`where('name', 'eq', '苹果')` 按 `currentLocale` 解析 `row.name[locale]` 命中；非当前 locale 值不命中                 |
 | 5    | **Vault 模型 blob schema**：`m:HeaderTest` 首行以 `{"__schema__":` 开头；header 含 `fields` / `fieldTypes`；数据行正常解析            |
-| 6    | **包内 `__manifest__` fieldTypes**：与 legacy manifest 相同字段；legacy model 无 `fieldTypes`                                         |
+| 6    | **包内 `__manifest__` fieldTypes**：与完整 manifest 相同字段；**仅 Set 注册**的 model 无 `fieldTypes`                                   |
 | 7    | **Backward compatibility**：untyped model（`string[]`）插入任意类型成功，不做校验                                                     |
 | 8    | **DataType 常量**：9 个常量值与字符串一致（无 Enum）                                                                                  |
 | 9    | **I18N without locale**：无 `currentLocale` 时 plain string 被拒绝；object form 接受                                                  |
@@ -261,11 +261,11 @@ pnpm run test:integration
 - **安全**：在成功 RPC 之后，**第二条**裸 **`ws`** 连接发送错误 **`connectToken`**，断言返回 **`{ type: 'error' }`**（避免与首次握手竞态干扰）。
 - **收尾**：**`remote.close()`**、**`wss.close()`**。
 
-### `meta_crud_audit.ts`（16 个断言）
+### `meta_crud_audit.ts`（19 个断言）
 
 - **Atlas**：**`meta_crud_rt`**（进程内 **`AuthoringEngine`**）、**`meta_crud_wire_rt`**（线协议）；脚本开头 **`rm -rf`** 两目录，与 **`pipe`** 及其它审计目录隔离。
-- **本地**：**`quickLink` + `bind('owns','MANUAL')` + `flushAll`** 后断言 Vault **`Alpha-Beta-owns`** 索引非空；**`alterModel`** 增加可选字段 **`note`** 并重开引擎校验 **`fieldTypes`**；**`dropRelation('owns')`** 后注册表与 Vault 索引为空；**`dropModel`** 后 **`m:*`** 迁至 **`orphan:m:*`**（用 **`AtlasSingleVault`** 直读）、仍无 **`models/`** 分目录。
-- **RPC**：对 **`meta_crud_wire_rt`** 起 **`startModelDBWebSocketServer`**，**`RemoteModelDBClient.connectNetwork`** 依次 **`alterModel` → `dropRelation` → `dropModel`**，冷启动 **`AuthoringEngine`** 校验拓扑与 **`orphan:m:Beta2`**。
+- **本地**：**`quickLink` + `bind('owns','MANUAL')` + `flushAll`** 后断言 Vault **`Alpha-Beta-owns`** 索引非空；**`alterModel`** 增加可选字段 **`note`** 并重开引擎校验 **`fieldTypes`**；**`dropRelation('owns')`** 后注册表与 Vault 索引为空；**`dropModel`** 后注册表无模型、**`m:*`** 仍在 Vault 内（**`orphan:m:*` 为空**）、仍无 **`models/`** 分目录。
+- **RPC**：对 **`meta_crud_wire_rt`** 起 **`startModelDBWebSocketServer`**，**`RemoteModelDBClient.connectNetwork`** 依次 **`alterModel` → `dropRelation` → `dropModel`**，冷启动 **`AuthoringEngine`** 校验拓扑与 **`m:Beta2`** 仍存、**`orphan:m:Beta2`** 为空。
 - **文档**：行为与 API 说明见仓库 **[docs/engine-meta-crud-and-wire.md](../docs/engine-meta-crud-and-wire.md)**。
 
 ### `million_stress_test.ts`（34 个断言，7 个阶段）
@@ -324,4 +324,4 @@ pnpm run advanced-audit
 ## 延伸阅读
 
 - **产品说明、架构、CRUD 协议、使用指南、DX、链式查询、多维分析**：根目录 **[README.md](../README.md)**。
-- **Meta-CRUD、单文件 Vault `orphan:m:*`、线协议与 SDK RPC**：[docs/engine-meta-crud-and-wire.md](../docs/engine-meta-crud-and-wire.md)。
+- **Meta-CRUD、单文件 Vault、线协议与 SDK RPC**：[docs/engine-meta-crud-and-wire.md](../docs/engine-meta-crud-and-wire.md)；**开发者 API**：[docs/developer-handbook.md](../docs/developer-handbook.md)。

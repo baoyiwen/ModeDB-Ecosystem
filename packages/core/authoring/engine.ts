@@ -90,7 +90,7 @@ export interface AuthoringEngineOptions {
   paths?: PathResolver;
   registry?: ModelRegistry;
   /**
-   * When true, `.mld` body lines are obfuscated (see `common/shadow-codec.ts`); reads auto-detect.
+   * When true, `.mld` body lines are obfuscated (see **`@mode-db/common`** shadow codec); reads auto-detect.
    */
   shadowDiskEncoding?: boolean;
   /**
@@ -335,7 +335,7 @@ export class AuthoringEngine {
     );
   }
 
-  /** Replace model fields; accepts `string[]` (legacy) or typed `Record<string, DataType | FieldTypeDef>`. */
+  /** Replace model fields; accepts `string[]` (names only) or typed `Record<string, DataType | FieldTypeDef>`. */
   updateModelFields(name: string, fields: readonly string[] | FieldDefsRecord): void {
     if (Array.isArray(fields)) {
       const set = new Set(fields as readonly string[]);
@@ -553,8 +553,14 @@ export class AuthoringEngine {
   }
 
   /**
-   * Drop a model: removes relations touching it, moves **`m:<name>`** payload to **`orphan:m:<name>`**,
-   * evicts buffers and registry; manifest rewritten.
+   * **Meta-CRUD (logical drop)**: removes relations touching the model, then unregisters it from
+   * **`ModelRegistry` / `AtlasRegistry`** and in-memory handles (**`evictModelHandle`**), clears buffers
+   * and schema registration, and rewrites the manifest so **cold readers no longer see the model**.
+   *
+   * **Physical payloads are intentionally left in place**: Vault **`m:<name>`** JSONL and split-file
+   * **`models/<name>.mld`** are **not** renamed or relocated, deferring
+   * compaction / freelist work to a later storage release. Re-using the same model name before a
+   * dedicated compact tool runs can merge with stale on-disk rows — avoid in production.
    */
   async dropModel(modelName: string): Promise<void> {
     if (!this.registry.getModel(modelName)) {
@@ -566,16 +572,6 @@ export class AuthoringEngine {
       await this.indexer.dropRelationIndex(rel);
       this.registry.unregisterRelation(rel);
     }
-    await this.storage.abandonSplitFileModelData(modelName);
-    const mk = AtlasSingleVault.modelKey(modelName);
-    if (this.atlasVault && this.vaultSecret) {
-      const blob = this.atlasVault.get(mk);
-      if (blob !== undefined) {
-        this.atlasVault.set(AtlasSingleVault.orphanModelKey(modelName), blob);
-        this.atlasVault.delete(mk);
-        this.atlasVault.saveSync(this.paths.atlasSingleVaultPath(), this.vaultSecret);
-      }
-    }
     this.persistence.clearModelBuffer(modelName);
     this.storage.unregisterSchema(modelName);
     this.registry.unregisterModel(modelName);
@@ -585,7 +581,7 @@ export class AuthoringEngine {
     this.smartCacheRef?.invalidateModel(modelName);
     await this.flushAll();
     EngineLogger.instance.info(
-      `[META] Model '${modelName}' dropped: relation indices cleared; vault payload → orphan:m: (if vault) or models/__abandoned__/*.mld (if split-file).`,
+      `[META] Model '${modelName}' dropped (logical): relations cleared; registry + mapping retired; physical model payload retained on disk.`,
       undefined,
       'Authoring',
     );

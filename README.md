@@ -10,7 +10,7 @@
 - **Runtime（客户端）**：按图谱名只读打开 **`atlas.mld`**，经 **`VaultModelFileReader` / `VaultRelationIndexReader`** 与包内 **`__manifest__`** 工作（密钥与治理端一致，常见为 **`MODEL_DB_VAULT_SECRET`** 或与 **`connectToken`** 派生的集成配置）。不依赖写入路径，适合独立交付。
 - **Network（可选）**：**`ModelDB WebSocket Server`** 在指定存储根上托管只读查询；**`@mode-db/sdk`** 通过 **`connectRemote`** 提供与本地 **`model.query()…execute()`** 相同的链式 API，查询体经 **ConnectToken 握手** 与 **会话密钥混淆** 传输（详见下文 **「网络服务与远程客户端 SDK」**）。
 
-**运维入口**：**`modeldb.config.json`**、**`pnpm run start:server`**、**`pnpm run ignition`** 与全部参数说明见下文 **「运行与配置（工作区、启动命令、参数与环境）」**。从零到跑通服务的步骤摘要见 **[docs/user-handbook.md](docs/user-handbook.md)**。
+**运维入口**：**`modeldb.config.json`**、**`pnpm run start:server`**、**`pnpm run ignition`** 与全部参数说明见下文 **「运行与配置（工作区、启动命令、参数与环境）」**。从零到跑通服务的步骤摘要见 **[docs/user-handbook.md](docs/user-handbook.md)**；引擎与 SDK 的 API 入口见 **[docs/developer-handbook.md](docs/developer-handbook.md)**。
 
 > 本项目处于早期设计与实现阶段。
 
@@ -92,14 +92,12 @@
 │  └─ atlas-registry.ts              │                                    │
 │                                    │  facade/index.ts → 再导出上述 API    │
 ├────────────────────────────────────┴────────────────────────────────────┤
-│  common/          共享类型、Registry 接口、manifest、错误、存储根解析       │
-│  src/common/      PathResolver（Atlas 下路径解析）                        │
 │  src/network/     线协议类型、execute 结果 JSON 序列化（供服务端/SDK 共用）   │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  packages/server/  ModelDB WebSocket 服务（commander CLI、配置、查询分发）   │
 │  packages/sdk/     远程客户端 SDK（tsup → ESM/CJS + d.ts）                 │
 │  packages/shared/  线协议编解码、握手/RPC 类型、远程查询计划                 │
-│  packages/common/  跨包共享常量与类型（独立包 @mode-db/common）              │
+│  packages/common/  @mode-db/common：PathResolver、类型、manifest、EngineLogger… │
 └─────────────────────────────────────────────────────────────────────────┘
                                       │
                     STORAGE_ROOT / <atlasName>/
@@ -114,7 +112,7 @@
 
 ## 存储布局与 Atlas
 
-默认存储根为 **`<cwd>/data`**（与 **`packages/core/common/default-storage-root.ts`** 中 **`DEFAULT_STORAGE_ROOT`** 一致；可通过 **`MODEL_DB_STORAGE_ROOT`** / **`STORAGE_ROOT`** 或 **`configureModelDBStorageRoot`** 覆盖）。
+默认存储根为 **`<cwd>/data`**（与 **`packages/common/src/default-storage-root.ts`** 中 **`DEFAULT_STORAGE_ROOT`** 一致；可通过 **`MODEL_DB_STORAGE_ROOT`** / **`STORAGE_ROOT`** 或 **`configureModelDBStorageRoot`** 覆盖）。
 
 每个 **Atlas（图谱）** 对应 **`STORAGE_ROOT/<atlasName>/`** 一级目录。**引擎仅支持单文件 Vault**：磁盘上为加密 **`atlas.mld`**；**`ModelDBClient.connect`** 通过文件头魔数 **`MDB4SVLT`**（**`fileLooksLikeAtlasSingleVault`**）识别 Vault，并使用 **`VaultModelFileReader` + `VaultRelationIndexReader`** 解密包内条目。
 
@@ -175,7 +173,7 @@ data/
 | **Color**    | 颜色值，接受 hex 字符串或 `{r,g,b,a?}` 对象               |
 | **Unit**     | 带单位数值，存储为 `{value, unit}` 对象，支持基础单位换算 |
 
-> **Enum 已移除**：引导用户使用关联模型（`registerRelation`）替代枚举约束。
+> **无独立 Enum 类型**：请用关联模型（**`registerRelation`**）表达受控取值空间。
 
 **Schema 配置结构**：字段定义支持 `{ type, required?, default?, unit? }`：
 
@@ -188,7 +186,7 @@ engine.registerModel('Task', {
 });
 ```
 
-**Pre-insert validation**：`insert()` / `update()` 时自动校验字段值与声明类型是否匹配；不匹配则抛出 `ValidationError`。未声明类型的字段（legacy `string[]` 路径）跳过校验。
+**Pre-insert validation**：`insert()` / `update()` 时自动校验字段值与声明类型是否匹配；不匹配则抛出 `ValidationError`。若模型仅以**字段名数组**注册、未提供 **`fieldTypes`**，则不对该字段做类型校验。
 
 **`required` 语义空值检查**：`required: true` 不仅拒绝 `null` / `undefined`，还拒绝类型特定的"空值"：
 
@@ -438,14 +436,14 @@ await engine.flushAll();
 
 ### 相关源码
 
-| 模块                                                             | 路径                                             |
-| ---------------------------------------------------------------- | ------------------------------------------------ |
-| 写缓冲、`flushPendingToDisk` / `flushModelToDisk`                | `packages/core/authoring/persistence-manager.ts` |
-| `ModelEntity`、`InsertOptions`、`UpdateOptions`、`DeleteOptions` | `packages/core/authoring/entity.ts`              |
-| `AuthoringEngine`、调度、`beforeExit`                            | `packages/core/authoring/engine.ts`              |
-| `mergeDiskRowsWithAuthoringBuffer`、`QueryEngine.execute`        | `packages/core/src/runtime/query-engine.ts`      |
-| 磁盘 + 缓冲合并读（含 `__deleted` 过滤）                         | `packages/core/authoring/merged-data-reader.ts`  |
-| `DELETED_SENTINEL`、`isDeletedRecord`、`ModelRecord`             | `packages/core/common/types.ts`                  |
+| 模块                                                             | 路径                                                    |
+| ---------------------------------------------------------------- | ------------------------------------------------------- |
+| 写缓冲、`flushPendingToDisk` / `flushModelToDisk`                | `packages/core/authoring/persistence-manager.ts`        |
+| `ModelEntity`、`InsertOptions`、`UpdateOptions`、`DeleteOptions` | `packages/core/authoring/entity.ts`                     |
+| `AuthoringEngine`、调度、`beforeExit`                            | `packages/core/authoring/engine.ts`                     |
+| `mergeDiskRowsWithAuthoringBuffer`、`QueryEngine.execute`        | `packages/core/src/runtime/query-engine.ts`             |
+| 磁盘 + 缓冲合并读（含 `__deleted` 过滤）                         | `packages/core/authoring/merged-data-reader.ts`         |
+| `DELETED_SENTINEL`、`isDeletedRecord`、`ModelRecord`             | `packages/common/src/types.ts`（**`@mode-db/common`**） |
 
 ---
 
@@ -468,7 +466,7 @@ await engine.flushAll();
 | 包名                  | 路径                | 作用                                                                                                                                                        |
 | --------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`@mode-db/core`**   | **`packages/core`** | 黑盒存储引擎与运行时；**`tsc -p packages/core/tsconfig.build.json` → `packages/core/dist/`**；由根 **`package.json`** 脚本 **`pnpm run build:core`** 触发。 |
-| **`@mode-db/common`** | `packages/common`   | 类型、registry、manifest、诊断、存储根等可发布子包。                                                                                                        |
+| **`@mode-db/common`** | `packages/common`   | 类型、registry、manifest、**`PathResolver`**、**`EngineLogger`**、**`DiskAdapter`**、诊断、存储根等可发布子包。                                             |
 | **`@mode-db/shared`** | `packages/shared`   | **Wire codec**、**传输帧**、**握手/RPC 类型**（**`tsc`**；**不**依赖 **`@mode-db/core`**）。                                                                |
 | **`@mode-db/server`** | `packages/server`   | **Fastify + ws**、配置加载、查询分发（**`tsc` → `packages/server/dist/`**）；依赖 **`@mode-db/core`**（**`workspace:*`**）及 common、shared。               |
 | **`@mode-db/sdk`**    | `packages/sdk`      | 远程客户端（**`tsc`** → ESM + **`.d.ts`**）。                                                                                                               |
@@ -1020,7 +1018,7 @@ const rows = (await PumpRO.query([somePumpId]).relate('located_in').execute()).m
 {"_id":"a1b2c3d4-...","_createdAt":"2026-04-09T10:00:00.000Z","name":{"zh":"张三"},"email":"zhang@example.com"}
 ```
 
-无 DataType 的 legacy 块可不包含 header（仍受 **`ModelStorage`** 读写路径支持）。
+无 **DataType** 的字段块可不包含 schema header（仍受 **`ModelStorage`** 读写路径支持）。
 
 ### 包内关系索引（`r:<Source>-<Target>-<Forward>`）
 
@@ -1074,7 +1072,7 @@ EngineError
 ├── tsconfig.json                 # 根 noEmit：test/、scripts/、packages/core 路径映射（@mode-db/core）
 ├── modeldb.config.example.json
 ├── modeldb.config.json           # 本地联调（勿提交密钥）
-├── docs/                         # user-handbook、配置指南、操作手册、架构图等
+├── docs/                         # user-handbook、developer-handbook、配置指南、操作手册、架构图等
 ├── scripts/
 ├── packages/
 │   ├── core/                     # @mode-db/core → packages/core/dist/
@@ -1116,7 +1114,7 @@ EngineError
 
 **索引**：集成测试的命令、Atlas 对照、各脚本覆盖点与注意事项见 **[test/README.md](test/README.md)**（该文档**仅**写测试相关内容；引擎说明与 DX 见本文档）。
 
-**Meta-CRUD 与线协议**（**`alterModel` / `dropRelation` / `dropModel`**、Vault **`orphan:m:*`**、**`RemoteModelDBClient`** RPC）见 **[docs/engine-meta-crud-and-wire.md](docs/engine-meta-crud-and-wire.md)**。
+**Meta-CRUD 与线协议**（**`alterModel` / `dropRelation` / `dropModel`**、逻辑删与 **`m:*` 保留**、**`RemoteModelDBClient`** RPC）见 **[docs/engine-meta-crud-and-wire.md](docs/engine-meta-crud-and-wire.md)**。**开发者 API 索引**见 **[docs/developer-handbook.md](docs/developer-handbook.md)**。
 
 **部署、启动、新工程接入与前后端调用（操作手册）**见 **[docs/operations-manual.md](docs/operations-manual.md)**。
 
@@ -1161,7 +1159,7 @@ pnpm run advanced-audit          # relateRecursive、wrapGroups、Paginated
 | **`query_chain_extended.ts`**        | `query_chain_extended`        | 独立 Atlas + **单文件 Vault**；**`ComputeBuilder`** + `groupBy`；分析分页（`Paginated`）；**`wrapGroups`** + `GroupInstance`；**`relateRecursive`** BFS（含环防护）。                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | **`authoring_dx_audit.ts`**          | `dx_audit`                    | **`mergeDiskRowsWithAuthoringBuffer`**（覆盖 / 保留 / 追加 / 空 pending）、**`QueryEngine.execute`** 与 **`evaluate`** 一致、**`model` 句柄缓存**、**`updateFields` 去重**、**合并读**、**`engine.insert(..., { sync: true })`**。                                                                                                                                                                                                                                                                                                                                                                       |
 | **`crud_audit.ts`**                  | `crud_audit`                  | **46 个断言**（Vault）：`update` / `delete` / `updateWhere` / `deleteWhere`、缓冲区与 **flush 压缩**；**关系层清理**；**Vault 内 `m:Item` 明文 JSONL** 无 `__deleted` 残留。                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| **`datatype_audit.ts`**              | `datatype_audit`              | **114 个断言 / 20 组**：DataType 常量；类型校验（含 Color/Unit）；I18N 自动包装/查询；ValueObject（`getValue`/`isEmpty`/`update`/`save`）；**`required` 语义空值**（String 空格/I18N 空对象/Color 通道缺失/Unit NaN）；**`default` 值注入**（缺失自动填充、显式覆盖、required+default 组合）；**manifest `default` 持久化**；Vault **`m:*`** 内 **`__schema__`** header；向后兼容。                                                                                                                                                                                                                      |
+| **`datatype_audit.ts`**              | `datatype_audit`              | **115 个断言 / 20 组**：DataType 常量；类型校验（含 Color/Unit）；I18N 自动包装/查询；ValueObject（`getValue`/`isEmpty`/`update`/`save`）；**`required` 语义空值**（String 空格/I18N 空对象/Color 通道缺失/Unit NaN）；**`default` 值注入**（缺失自动填充、显式覆盖、required+default 组合）；**manifest `default` 持久化**；Vault **`m:*`** 内 **`__schema__`** header；无 **`fieldTypes`** 模型宽松插入。                                                                                                                                                                                              |
 | **`diagnostic_audit.ts`**            | `diagnostic-audit`            | **122 个断言 / 18 组**：ErrorCodes 命名别名（含 `SELF_REFERENTIAL_CYCLE`、`PHYSICAL_ADDRESS_CORRUPT=E3002`）；错误码注册表（含 E2005/E3001/E3002）；throw/collect 双模式 + severity 覆盖；`DiagnosticCenter.create`；国际化消息（en/zh）；`onDiagnostic` 监听器；`ValidationReport` API（`successCount`/`failureCount`/`isAllSuccess`/`getSummary`/`exportAsJSON`/`report()` 流式收集）；`validateFieldValue` collect 模式；throw 向后兼容；`insertMany` 批量校验报告；ValueObject DiagnosticCenter 联动（required + type mismatch）；Severity 分级；`toError` 转换；globalDiagnostics；emergency dump。 |
 | **`vault_audit.ts`**                 | `vault_audit_rt`              | **Vault**：`flushAll` 后图谱目录无独立分路径清单树，仅 **`atlas.mld`**（及可选 **`logs/`**）；**`ModelDBClient.connect`** + **`getData()`** 明文；**`relate`** 读包内关系索引；**二次 `AuthoringEngine`** 从包内 **`__manifest__` hydrate**；错误密钥 → **`AtlasManifestError`**；损坏文件 → **`loadSync` false** 且 **`E3002`** 经 `onDiagnostic`。脚本末尾删除 `data/vault_audit_rt/`。                                                                                                                                                                                                                |
 | **`wire_server_audit.ts`**           | `pipe`（复用 `verify`）       | **WebSocket + SDK**：`startModelDBWebSocketServer`（**`port: 0`**）、**`ConnectToken`** 拒绝错误令牌、**`connectRemote`** 查询 **`Pump`**、**`RemoteHydratedEntity`** 形态断言；依赖集成 Vault 密钥与 **`data/pipe/atlas.mld`**。                                                                                                                                                                                                                                                                                                                                                                        |

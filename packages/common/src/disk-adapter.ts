@@ -61,7 +61,8 @@ export const DiskAdapter = {
     try {
       return await fn();
     } finally {
-      EngineLogger.instance.recordDiskRead(performance.now() - t0, undefined, context);
+      const ms = performance.now() - t0;
+      EngineLogger.instance.recordDiskRead(ms, undefined, context);
     }
   },
 };

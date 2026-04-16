@@ -50,7 +50,7 @@
     "dx-audit": "tsx test/authoring_dx_audit.ts",
     "crud-audit": "tsx test/crud_audit.ts",
     "prepare": "husky",
-    "check:sources": "node scripts/assert-no-build-artifacts-in-src.mjs",
+    "check:sources": "node scripts/assert-no-build-artifacts-in-src.mjs && node scripts/assert-sdk-client-only.mjs",
     "check": "pnpm run check:sources && pnpm run typecheck && pnpm run lint && pnpm run format:check",
     "publish:npm": "node scripts/publish-workspaces.mjs",
     "publish:npm:go": "node scripts/publish-workspaces.mjs --live --yes",

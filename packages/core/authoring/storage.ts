@@ -1,6 +1,5 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
-import { mkdir, rename, unlink } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { mkdir } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { randomUUID } from 'node:crypto';
 import type {
@@ -19,6 +18,7 @@ import {
   encodeMldLine,
   parseMldLine,
   DiskAdapter,
+  EngineLogger,
 } from '@mode-db/common';
 import type { FieldMatchContext } from '../src/runtime/query-filter.js';
 import { AtlasSingleVault } from './atlas-single-vault.js';
@@ -74,7 +74,7 @@ export class ModelStorage implements DataReader {
   locale: string | undefined;
   /**
    * When true, `.mld` data and schema header lines are written with {@link encodeMldLine}
-   * (no plaintext JSON). Reads accept both legacy plain lines and obfuscated lines.
+   * (no plaintext JSON). Reads accept both plaintext JSON lines and obfuscated lines.
    */
   shadowDiskEncoding = false;
 
@@ -104,7 +104,36 @@ export class ModelStorage implements DataReader {
     return AtlasSingleVault.modelKey(modelName);
   }
 
+  /**
+   * After **`alterModel`** adds optional fields, persisted rows may omit those keys. Merge missing
+   * keys from the **current** in-memory schema so reads stay compatible (defaults applied when set).
+   */
+  private materializeRowForCurrentSchema(modelName: string, row: ModelRecord): ModelRecord {
+    const schema = this.schemas.get(modelName);
+    if (!schema) {
+      return row;
+    }
+    const out = { ...(row as Record<string, unknown>) };
+    for (const field of schema.fields) {
+      if (Object.prototype.hasOwnProperty.call(out, field)) {
+        continue;
+      }
+      const def = schema.fieldTypes.get(field);
+      if (!def) {
+        continue;
+      }
+      if (def.default !== undefined) {
+        out[field] =
+          typeof def.default === 'function' ? (def.default as () => unknown)() : def.default;
+      } else if (!def.required) {
+        out[field] = undefined;
+      }
+    }
+    return out as ModelRecord;
+  }
+
   private parseVaultModelLines(modelName: string): ModelRecord[] {
+    const t0 = performance.now();
     const raw = this.vault!.get(this.modelVaultKey(modelName)) ?? '';
     const results: ModelRecord[] = [];
     for (const line of raw.split('\n')) {
@@ -116,8 +145,11 @@ export class ModelStorage implements DataReader {
       if (SCHEMA_HEADER_KEY in obj) {
         continue;
       }
-      results.push(obj as ModelRecord);
+      results.push(this.materializeRowForCurrentSchema(modelName, obj as ModelRecord));
     }
+    EngineLogger.instance.recordSeekScan(performance.now() - t0, `vault:${modelName}`, {
+      blobChars: raw.length,
+    });
     return results;
   }
 
@@ -155,26 +187,6 @@ export class ModelStorage implements DataReader {
   /** Remove in-memory schema (e.g. after {@link AuthoringEngine.dropModel}). */
   unregisterSchema(modelName: string): void {
     this.schemas.delete(modelName);
-  }
-
-  /**
-   * Split-file layout only: move **`models/<name>.mld`** → **`models/__abandoned__/<name>.mld`**
-   * so the active path is cleared (tombstone / abandoned physical slot). Vault mode no-op.
-   */
-  async abandonSplitFileModelData(modelName: string): Promise<void> {
-    if (this.vault) {
-      return;
-    }
-    const src = this.paths.modelDataPath(modelName);
-    if (!existsSync(src)) {
-      return;
-    }
-    const dest = this.paths.abandonedModelFilePath(modelName);
-    await mkdir(dirname(dest), { recursive: true });
-    if (existsSync(dest)) {
-      await unlink(dest);
-    }
-    await rename(src, dest);
   }
 
   /** Build a FieldMatchContext from the current locale (used by ModelEntity for query threading). */
@@ -303,6 +315,7 @@ export class ModelStorage implements DataReader {
 
     const filePath = this.filePath(modelName);
     return DiskAdapter.timedStreamRead(`ModelStorage.getAll:${modelName}`, async () => {
+      const seekT0 = performance.now();
       const results: ModelRecord[] = [];
       let stream: ReturnType<typeof createReadStream> | undefined;
       try {
@@ -320,10 +333,17 @@ export class ModelStorage implements DataReader {
           if (!parsed || parsed.kind === 'header') {
             continue;
           }
-          results.push(parsed.record);
+          results.push(this.materializeRowForCurrentSchema(modelName, parsed.record));
         }
       } catch (err) {
         if (isNodeError(err) && err.code === 'ENOENT') {
+          EngineLogger.instance.recordSeekScan(
+            performance.now() - seekT0,
+            `splitfile:${modelName}`,
+            {
+              op: 'getAll',
+            },
+          );
           return [];
         }
         throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, {
@@ -331,6 +351,10 @@ export class ModelStorage implements DataReader {
         });
       }
 
+      EngineLogger.instance.recordSeekScan(performance.now() - seekT0, `splitfile:${modelName}`, {
+        op: 'getAll',
+        rows: results.length,
+      });
       return results;
     });
   }
@@ -350,6 +374,7 @@ export class ModelStorage implements DataReader {
 
     const filePath = this.filePath(modelName);
     await DiskAdapter.timedStreamRead(`ModelStorage.scanModelRecords:${modelName}`, async () => {
+      const seekT0 = performance.now();
       let stream: ReturnType<typeof createReadStream> | undefined;
       try {
         stream = createReadStream(filePath, 'utf-8');
@@ -366,16 +391,26 @@ export class ModelStorage implements DataReader {
           if (!parsed || parsed.kind === 'header') {
             continue;
           }
-          await visitor(parsed.record);
+          await visitor(this.materializeRowForCurrentSchema(modelName, parsed.record));
         }
       } catch (err) {
         if (isNodeError(err) && err.code === 'ENOENT') {
+          EngineLogger.instance.recordSeekScan(
+            performance.now() - seekT0,
+            `splitfile:${modelName}`,
+            {
+              op: 'scanModelRecords',
+            },
+          );
           return;
         }
         throw new FileIOError(`Failed to scan records from "${modelName}"`, filePath, {
           cause: err,
         });
       }
+      EngineLogger.instance.recordSeekScan(performance.now() - seekT0, `splitfile:${modelName}`, {
+        op: 'scanModelRecords',
+      });
     });
   }
 
@@ -394,6 +429,7 @@ export class ModelStorage implements DataReader {
     const target = new Set(ids);
     const filePath = this.filePath(modelName);
     return DiskAdapter.timedStreamRead(`ModelStorage.getByIds:${modelName}`, async () => {
+      const seekT0 = performance.now();
       const results: ModelRecord[] = [];
       let stream: ReturnType<typeof createReadStream> | undefined;
       try {
@@ -416,7 +452,7 @@ export class ModelStorage implements DataReader {
             continue;
           }
 
-          const record = parsed.record;
+          const record = this.materializeRowForCurrentSchema(modelName, parsed.record);
           if (target.has(record._id)) {
             results.push(record);
             target.delete(record._id);
@@ -424,6 +460,13 @@ export class ModelStorage implements DataReader {
         }
       } catch (err) {
         if (isNodeError(err) && err.code === 'ENOENT') {
+          EngineLogger.instance.recordSeekScan(
+            performance.now() - seekT0,
+            `splitfile:${modelName}`,
+            {
+              op: 'getByIds',
+            },
+          );
           return [];
         }
         throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, {
@@ -431,6 +474,10 @@ export class ModelStorage implements DataReader {
         });
       }
 
+      EngineLogger.instance.recordSeekScan(performance.now() - seekT0, `splitfile:${modelName}`, {
+        op: 'getByIds',
+        rows: results.length,
+      });
       return results;
     });
   }
@@ -453,6 +500,7 @@ export class ModelStorage implements DataReader {
 
     const filePath = this.filePath(modelName);
     return DiskAdapter.timedStreamRead(`ModelStorage.findFirstByFieldEq:${modelName}`, async () => {
+      const seekT0 = performance.now();
       let stream: ReturnType<typeof createReadStream> | undefined;
       try {
         stream = createReadStream(filePath, 'utf-8');
@@ -469,14 +517,29 @@ export class ModelStorage implements DataReader {
           if (!parsed || parsed.kind === 'header') {
             continue;
           }
-          const record = parsed.record;
+          const record = this.materializeRowForCurrentSchema(modelName, parsed.record);
           const v = (record as Record<string, unknown>)[field];
           if (v === value) {
+            EngineLogger.instance.recordSeekScan(
+              performance.now() - seekT0,
+              `splitfile:${modelName}`,
+              {
+                op: 'findFirstByFieldEq',
+                hit: true,
+              },
+            );
             return record;
           }
         }
       } catch (err) {
         if (isNodeError(err) && err.code === 'ENOENT') {
+          EngineLogger.instance.recordSeekScan(
+            performance.now() - seekT0,
+            `splitfile:${modelName}`,
+            {
+              op: 'findFirstByFieldEq',
+            },
+          );
           return undefined;
         }
         throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, {
@@ -484,6 +547,10 @@ export class ModelStorage implements DataReader {
         });
       }
 
+      EngineLogger.instance.recordSeekScan(performance.now() - seekT0, `splitfile:${modelName}`, {
+        op: 'findFirstByFieldEq',
+        hit: false,
+      });
       return undefined;
     });
   }
@@ -538,7 +605,7 @@ export class ModelStorage implements DataReader {
     return clean;
   }
 
-  /** Resolve the `.mld` file path for a model (legacy); vault mode returns the atlas vault path. */
+  /** Resolve the per-model `.mld` path in split-file layout; vault mode returns the atlas vault path. */
   filePath(modelName: string): string {
     if (this.vault) {
       return this.paths.atlasSingleVaultPath();
