@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { Command } from 'commander';
+/** ESM 入口，便于 esbuild 打成单文件时不混入 CJS 的 `require('events')`。 */
+import { Command } from 'commander/esm.mjs';
 import { loadModelDBServerConfig } from './config-loader.js';
 import { startModelDBWebSocketServer } from './modeldb-server.js';
 

@@ -12,7 +12,8 @@
     "test": "test"
   },
   "scripts": {
-    "build": "pnpm run build:shared && pnpm run build:common && pnpm run build:core && pnpm run build:server && pnpm run build:sdk",
+    "build": "pnpm run build:shared && pnpm run build:common && pnpm run build:core && pnpm run build:server && pnpm run build:sdk && node scripts/obfuscate-dist.mjs",
+    "obfuscate:dist": "node scripts/obfuscate-dist.mjs",
     "build:core": "pnpm --filter @mode-db/core run build",
     "build:lib": "pnpm run build:core",
     "build:common": "pnpm --filter @mode-db/common run build",
@@ -80,8 +81,9 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
-    "tsx": "^4.21.0",
+    "terser": "^5.39.0",
     "tsup": "^8.5.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.0"
   }
 }

@@ -3,6 +3,7 @@ node_modules
 
 # Build output
 dist
+dist-bundle
 
 # Accidental colocated `tsc` emit next to sources (keep emit under dist/ only)
 /index.js

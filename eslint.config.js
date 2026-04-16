@@ -11,6 +11,7 @@ export default [
       'templates/**',
       'node_modules/**',
       'dist/**',
+      'dist-bundle/**',
       'coverage/**',
       'data/**',
       'packages/**/dist/**',
