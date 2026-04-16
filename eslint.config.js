@@ -63,6 +63,7 @@ export default [
             '*.config.ts',
             'lint-staged.config.mjs',
             'scripts/*.mjs',
+            'packages/server/scripts/*.mjs',
           ],
         },
       },

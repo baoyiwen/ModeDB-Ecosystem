@@ -1,6 +1,6 @@
 # `modeldb.config.json` 配置指南（放置位置、`workspace` 与磁盘路径）
 
-本文说明 **`modeldb.config.json` 应如何写、放在哪、与「配置文件所在目录」和磁盘目录的关系**，并分别给出 **Windows、Linux、macOS** 下的推荐做法。实现以 **`packages/server/src/config-loader.ts`** 与 **`packages/server/src/modeldb-default-home.ts`** 为准。
+本文说明 **`modeldb.config.json` 应如何写、放在哪、与「配置文件所在目录」和磁盘目录的关系**，并分别给出 **Windows、Linux、macOS** 下的推荐做法。实现以 **`packages/server/src/config-loader.ts`**、**`packages/server/src/modeldb-default-home.ts`** 与 **`modeldb-persisted-home.ts`**（**`set`** 持久路径）为准。
 
 **仓库布局（与本文件字段无关）**：**ModeDB-Ecosystem** 为 **pnpm monorepo**；**`modeldb-server`** 在 **`packages/server`**，图谱引擎在 **`packages/core`**（**`@mode-db/core`**），根目录 **`package.json`**（**`modedb-ecosystem`**，**`private: true`**）仅做脚本编排。
 
@@ -25,26 +25,33 @@
 
 若启动时 **没有** 传 **`-c` / `--config`**：
 
-1. 使用 **`MODELDB_HOME`** 下的 **`modeldb.config.json`**（**`MODELDB_HOME`** 未设置时按操作系统选择用户数据目录，见 **`getModelDbHome()`**）：
+1. 数据根目录由 **`getModelDbHome()`** 决定，顺序为：**环境变量 `MODELDB_HOME`** → **`~/.modeldb/home`**（由 **`modeldb-server set <dir>`** 写入的单行绝对路径）→ **OS 默认**：
    - **Windows**：**`%LOCALAPPDATA%\modeldb`**
    - **macOS**：**`~/Library/Application Support/modeldb`**
    - **Linux 等**：**`$XDG_DATA_HOME/modeldb`**，缺省为 **`~/.local/share/modeldb`**
-2. 若该文件尚不存在，**首次启动**会自动创建目录 **`logs/`**、**`cache/`**、**`vault/`**，并写入一份带随机 **`connectToken`** 的默认 JSON（**`workspace`**、**`logDir`** 为指向上述子目录的**绝对路径**）。
+2. 配置文件路径恒为 **`<数据根>/modeldb.config.json`**。若该 JSON 尚不存在，**首次启动**会在该根下创建 **`logs/`**、**`cache/`**、**`vault/`**，并写入默认 JSON；其中 **`logDir`**、**`workspace`** 为相对字符串 **`logs`**、**`vault`**（相对 JSON 所在目录解析，见 **`config-loader`**）。
 
-因此：**无 `-c` 时与「你从哪个目录 `cd` 启动」无关**，数据与配置集中在 **`MODELDB_HOME`**。在仓库内开发若仍想用根目录的 **`modeldb.config.json`**，请显式传入 **`-c`**（见下节）。
+因此：**无 `-c` 时与「你从哪个目录 `cd` 启动」无关**；持久默认路径可用 **`modeldb-server set`**。在仓库内开发若仍想用根目录的 **`modeldb.config.json`**，请对**会话根目录**或**该 JSON 文件路径**使用 **`-c`**（见下节）。
 
-### 2.2 显式指定路径
+### 2.2 显式指定会话根（`-c`）
 
-若希望配置文件与启动目录分离，使用 CLI：
+**`-c` / `--config`** 表示**本次启动的数据根目录**（临时或固定盘符均可），其下约定为：
+
+- **`modeldb.config.json`**
+- **`logs/`**、**`cache/`**、**`vault/`**（逻辑库数据默认在 **`vault/<dbName>/`**）
+
+示例：
 
 ```bash
-modeldb-server start -c /绝对路径/或/相对路径/modeldb.config.json
+modeldb-server start -c /绝对路径/或/相对路径/某数据根
 ```
 
-- 传入 **相对路径** 时，Node 的 **`path.resolve`** 会按 **当时进程的 `cwd`** 拼成绝对路径。
+若 **`-c`** 指向**已存在的 `.json` 文件`**（例如旧版传入 **`…/modeldb.config.json`** 本身），则以**该文件所在目录**为会话根，并仍保证同级的 **`logs/`**、**`cache/`**、**`vault/`** 存在（兼容旧 CLI）。
+
+- 传入 **相对路径** 时，按进程 **`cwd`** 经 **`path.resolve`** 得到绝对路径。
 - 传入 **绝对路径** 时与 **`cwd`** 无关。
 
-**生产建议**：在 systemd、Windows 服务、Docker **`WORKDIR`** 里写死 **`WorkingDirectory`** / **`WORKDIR`**，并要么把 **`modeldb.config.json`** 放在该目录，要么 **`-c` 使用绝对路径**，避免运维 `cd` 错目录导致读到错误配置或找不到文件。
+**生产建议**：在 systemd、Windows 服务、Docker 中写死 **`-c`** 为**数据根绝对路径**，避免运维 `cd` 错目录。
 
 ---
 

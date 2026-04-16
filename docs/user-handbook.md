@@ -78,7 +78,12 @@ pnpm run start:server -- -c modeldb.config.json
 
 根目录脚本 **`start:server`** 会先执行 **`pnpm run build:server`**，再执行 **`node ./packages/server/dist/cli.js`**。这样可避免「忘记编译导致找不到 `dist/cli.js`」；代价是每次启动都会跑一遍服务端及其 **`prebuild`** 依赖的编译（改代码频繁时可改用下面「加速」方式）。
 
-**无 `-c`** 时，服务按 **[modeldb-config-guide.md](./modeldb-config-guide.md)** 使用 **`MODELDB_HOME`** 下的 **`modeldb.config.json`**（不存在则首次自动创建目录与默认配置）。
+**无 `-c`** 时，数据根为 **`MODELDB_HOME`** → **`~/.modeldb/home`（`modeldb-server set <dir>`）** → OS 默认；详见 **[modeldb-config-guide.md](./modeldb-config-guide.md)**。首次启动会在该根下自动创建 **`logs/`**、**`cache/`**、**`vault/`** 与默认 **`modeldb.config.json`**（若目录曾被删也会重建）。
+
+其它子命令（见 **`packages/server/src/cli.ts`**）：
+
+- **`modeldb-server set <目录>`**：持久化默认数据根到 **`~/.modeldb/home`**。
+- **`modeldb-server export-token`**：根据当前（或 **`export-token -c <会话根>`**）配置打印 **`MODEL_DB_CONNECT_TOKEN`** 的 shell 写法并提示保存。
 
 ### 5.2 等价入口（需已有 `dist/`）
 
@@ -89,7 +94,7 @@ node ./packages/server/dist/cli.js -- -c modeldb.config.json
 pnpm exec modeldb-server -- -c modeldb.config.json
 ```
 
-CLI 实现上支持可选子命令 **`start`**（**`modeldb-server start -c ...`** 与 **`modeldb-server -c ...`** 均可，见 **`packages/server/src/cli.ts`**）。
+**`-c`** 可为**会话数据根目录**（内含 **`modeldb.config.json`** 与子目录），或如上例指向**已存在的 JSON 文件**（以父目录为根）。可选子命令 **`start`**（**`modeldb-server start -c ...`** 与 **`modeldb-server -c ...`** 均可）。
 
 ### 5.3 准备配置文件
 

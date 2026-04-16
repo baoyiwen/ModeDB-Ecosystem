@@ -1,17 +1,75 @@
 #!/usr/bin/env node
 /** ESM 入口，便于 esbuild 打成单文件时不混入 CJS 的 `require('events')`。 */
+import { join, resolve } from 'node:path';
 import { Command } from 'commander/esm.mjs';
 import { loadModelDBServerConfig } from './config-loader.js';
 import { startModelDBWebSocketServer } from './modeldb-server.js';
+import { getModelDbCliSettingsDir, setPersistedModelDbHomePath } from './modeldb-persisted-home.js';
+
+function parseExportTokenArgv(argv: string[]): { config?: string } {
+  const out: { config?: string } = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '-c' || a === '--config') {
+      out.config = argv[++i];
+    } else if (a.startsWith('--config=')) {
+      out.config = a.slice('--config='.length);
+    }
+  }
+  return out;
+}
+
+async function runExportToken(configArg: string | undefined): Promise<void> {
+  const cfg = await loadModelDBServerConfig(configArg, {});
+  const token = cfg.connectToken;
+  const out = [
+    '# POSIX — 写入 ~/.bashrc / ~/.zshrc 或 CI Secret：',
+    `export MODEL_DB_CONNECT_TOKEN='${token}'`,
+    '',
+    '# Windows CMD：',
+    `set MODEL_DB_CONNECT_TOKEN=${token}`,
+    '',
+    '# Windows PowerShell：',
+    `$env:MODEL_DB_CONNECT_TOKEN='${token}'`,
+    '',
+  ].join('\n');
+  process.stdout.write(out);
+  console.error('');
+  console.error(
+    '[ModelDB] 请妥善保存 MODEL_DB_CONNECT_TOKEN；须与 modeldb.config.json 中 connectToken 一致且勿泄露。',
+  );
+}
+
+const argv = process.argv.slice(2);
+
+if (argv[0] === 'set') {
+  const dir = argv[1];
+  if (!dir?.trim()) {
+    console.error('Usage: modeldb-server set <directory>');
+    process.exit(1);
+  }
+  const abs = resolve(dir.trim());
+  setPersistedModelDbHomePath(abs);
+  console.error(`ModelDB default home: ${abs}`);
+  console.error(`Persisted in: ${join(getModelDbCliSettingsDir(), 'home')}`);
+  console.error('之后不带 -c 的 start 会使用该目录（若未设置环境变量 MODELDB_HOME）。');
+  process.exit(0);
+}
+
+if (argv[0] === 'export-token') {
+  const { config: c } = parseExportTokenArgv(argv.slice(1));
+  await runExportToken(c);
+  process.exit(0);
+}
 
 const program = new Command()
   .name('modeldb-server')
   .description(
-    'ModelDB 2.0 daemon (WebSocket/HTTP + disk). Without --config, uses MODELDB_HOME (see docs) and auto-creates modeldb.config.json, logs/, cache/, vault/ on first start. Override paths in that file; optional CLI flags merge on top.',
+    'ModelDB 2.0 daemon. Subcommands: start (default), set <dir>, export-token. Without -c, data root is MODELDB_HOME, ~/.modeldb/home (from "set"), or OS default; auto-creates layout on start.',
   )
   .option(
     '-c, --config <path>',
-    'modeldb.config.json path (optional; default: <MODELDB_HOME>/modeldb.config.json)',
+    'Session data root (modeldb.config.json + logs/ + cache/ + vault/) or legacy path to a .json config file',
     undefined,
   )
   .option('-p, --port <number>', 'Listen port (overrides config / env)')
@@ -25,8 +83,8 @@ const program = new Command()
   .option('-t, --token <secret>', 'Client connect token (also derives the atlas vault key)')
   .option('--dev', 'Print decrypted RPC payloads to stderr (development only)', false);
 
-const argv = process.argv.slice(2);
-program.parse(argv[0] === 'start' ? argv.slice(1) : argv, { from: 'user' });
+const startArgv = argv[0] === 'start' ? argv.slice(1) : argv;
+program.parse(startArgv, { from: 'user' });
 const o = program.opts<{
   config?: string;
   port?: string;
@@ -38,11 +96,15 @@ const o = program.opts<{
   dev?: boolean;
 }>();
 
+const tokenArg = o.token;
+const connectTokenFromCli =
+  tokenArg !== undefined && String(tokenArg).trim() !== '' ? String(tokenArg).trim() : undefined;
+
 const cfg = await loadModelDBServerConfig(o.config, {
   port: o.port !== undefined && o.port !== '' ? Number(o.port) : undefined,
   host: o.host,
   workspace: o.workspace ?? o.storage ?? o.dbPath,
-  connectToken: o.token,
+  connectToken: connectTokenFromCli,
   dev: Boolean(o.dev),
 });
 

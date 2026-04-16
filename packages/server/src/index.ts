@@ -18,4 +18,14 @@ export {
 } from './config-loader.js';
 export { WriteSerializationGate } from './write-serialization-gate.js';
 export { WireRequestDispatcher } from './request-dispatcher.js';
-export { getModelDbHome, getDefaultModelDbConfigPath } from './modeldb-default-home.js';
+export {
+  getModelDbHome,
+  getDefaultModelDbConfigPath,
+  ensureModelDbLayoutAtRoot,
+  resolveModelDbConfigPathFromCli,
+} from './modeldb-default-home.js';
+export {
+  getModelDbCliSettingsDir,
+  readPersistedModelDbHomePath,
+  setPersistedModelDbHomePath,
+} from './modeldb-persisted-home.js';

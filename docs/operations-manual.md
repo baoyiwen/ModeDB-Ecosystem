@@ -76,17 +76,25 @@ modeldb-server start --help
 
 （具体包名与版本以 registry 为准。）
 
+### 3.1b 子命令：`set` / `export-token`
+
+| 命令                                 | 作用                                                                                                                                                                                                  |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`modeldb-server set <directory>`** | 将默认数据根写入 **`~/.modeldb/home`**（单行绝对路径）。之后不带 **`-c`** 的 **`start`** 优先使用该目录（仍低于环境变量 **`MODELDB_HOME`**）。目录若尚不存在，**首次 `start` 时会自动创建**完整布局。 |
+| **`modeldb-server export-token`**    | 读取当前默认主目录（或 **`export-token -c <会话根>`**）下的配置，在 stdout 打印 **`export MODEL_DB_CONNECT_TOKEN=…`**（及 Windows CMD/PowerShell 写法），stderr 提示妥善保存。                        |
+
 ### 3.2 系统默认数据根（`MODELDB_HOME`）与惰性创建
 
-**`@mode-db/server` 不会在 `npm install` / `pnpm add` 时创建任何系统目录**；目录与默认配置文件是在 **进程启动并加载配置** 时、且 **未** 传入 **`-c` / `--config`** 时，由 **`loadModelDBServerConfig`** → **`ensureModelDbHomeLayout()`**（源码 **`packages/server/src/modeldb-default-home.ts`**、**`packages/server/src/config-loader.ts`**）写入磁盘。
+**`@mode-db/server` 不会在 `npm install` / `pnpm add` 时创建任何系统目录**；目录与默认配置文件是在 **进程启动并加载配置** 时，由 **`loadModelDBServerConfig`** → **`resolveModelDbConfigPathFromCli`** / **`ensureModelDbLayoutAtRoot`**（源码 **`packages/server/src/modeldb-default-home.ts`**、**`packages/server/src/config-loader.ts`**）写入磁盘。
 
-| 步骤         | 行为                                                                                                                                                                                                                                                                                   |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 解析配置路径 | 无 **`-c`** 时，配置固定为 **`MODELDB_HOME/modeldb.config.json`**（**`MODELDB_HOME`** 见下表）；有 **`-c`** 时**不会**走本节逻辑，也**不会**自动创建默认主目录树。                                                                                                                     |
-| 创建目录     | **`mkdirSync(..., { recursive: true })`**：确保 **`MODELDB_HOME`** 及其子目录 **`logs/`**、**`cache/`**、**`vault/`** 存在（每次无 **`-c`** 启动都会执行；与配置文件是否已存在无关）。                                                                                                 |
-| 默认配置文件 | 若 **`MODELDB_HOME/modeldb.config.json`** 尚不存在，则**新建**一份 JSON：内含随机 **`connectToken`**、**`port`**（9090）、**`host`**（127.0.0.1）、**`bufferThreshold`** 等；**`logDir`**、**`workspace`** 为指向 **`MODELDB_HOME/logs`** 与 **`MODELDB_HOME/vault`** 的**绝对路径**。 |
+| 步骤            | 行为                                                                                                                                                                                                                                                                        |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 解析数据根      | 无 **`-c`** 时：数据根为 **`MODELDB_HOME`**；若未设置环境变量，则读 **`~/.modeldb/home`**（**`modeldb-server set`** 写入）；再否则为下表 OS 默认目录。配置文件路径恒为 **`<数据根>/modeldb.config.json`**。                                                                 |
+| **`-c` 会话根** | **`-c`** 指向**本次启动的临时数据根目录**（其下为 **`modeldb.config.json`**、**`logs/`**、**`cache/`**、**`vault/`**）；若路径为已存在的 **`.json` 文件`**，则按兼容旧版行为，以该文件父目录为会话根。目录或默认 **`modeldb.config.json`** 不存在时会在该根下**自动创建**。 |
+| 创建目录        | **`mkdirSync(..., { recursive: true })`**：确保数据根及其子目录 **`logs/`**、**`cache/`**、**`vault/`** 存在（每次解析到该根时执行；与 JSON 是否已存在无关）。                                                                                                              |
+| 默认配置文件    | 若 **`modeldb.config.json`** 尚不存在，则**新建**一份 JSON：内含随机 **`connectToken`** 等；**`logDir`**、**`workspace`** 为相对路径 **`logs`**、**`vault`**（相对该 JSON 所在目录解析，避免写死绝对路径）。                                                                |
 
-**默认 `MODELDB_HOME` 根路径**（当环境变量 **`MODELDB_HOME`** 未设置或为空时，与实现一致）：
+**默认数据根**（当 **`MODELDB_HOME`** 未设置、且 **`~/.modeldb/home`** 不存在或无效时，与 **`getModelDbHome()`** 一致）：
 
 | 操作系统                | 默认绝对路径语义                                                                                           |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -94,7 +102,7 @@ modeldb-server start --help
 | **macOS**               | **`~/Library/Application Support/modeldb`**（即用户主目录下 **`Library/Application Support/modeldb`**）    |
 | **Linux 及其他类 Unix** | **`$XDG_DATA_HOME/modeldb`**；若 **`XDG_DATA_HOME`** 未设置，则为 **`~/.local/share/modeldb`**             |
 
-设置环境变量 **`MODELDB_HOME`** 为任意目录时，上述子目录与默认配置文件均落在该目录下（路径为 **`resolve(MODELDB_HOME)`**）。
+设置环境变量 **`MODELDB_HOME`** 为任意目录时，上述子目录与默认配置文件均落在该目录下（路径为 **`resolve(MODELDB_HOME)`**），且**不再**读取 **`~/.modeldb/home`**。
 
 **各子目录用途（默认布局下）**：
 
@@ -106,6 +114,10 @@ modeldb-server start --help
 | **`MODELDB_HOME/vault/`**              | 默认 **`workspace`**（逻辑库根）；各图谱为 **`MODELDB_HOME/vault/<dbName>/atlas.mld`**。                                       |
 
 生产环境建议：显式设置 **`MODELDB_HOME`** 或始终使用 **`-c`** 指向受控路径；将默认 **`connectToken`** 替换为运维发放的密钥并纳入备份策略。
+
+**无 `-c` 时的 `workspace` 来源**：逻辑库根**仅**来自默认 **`modeldb.config.json`** 内的 **`workspace` / `storageRoot` / `dbPath`** 与 CLI **`-w` / `--workspace`** 等；**不会**读取 **`MODEL_DB_WORKSPACE`**、**`MODEL_DB_STORAGE_ROOT`**、**`STORAGE_ROOT`**。若部署要靠环境变量指定盘路径，请使用 **`-c`** 指向由编排渲染的配置文件，或把路径写进默认主目录下的 JSON。
+
+**卸载全局包**：执行 **`pnpm remove -g @mode-db/server`**（或 **`npm uninstall -g @mode-db/server`**）时，**`postuninstall`** 会**尽力**删除 **`MODELDB_HOME/cache/`**（不动 **`vault/`**、日志与 **`modeldb.config.json`**）。若进程占用导致删失败，可手动删除该 **`cache`** 目录。
 
 ### 3.3 工作区目录约定
 

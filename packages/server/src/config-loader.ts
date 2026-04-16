@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
-import { ensureModelDbHomeLayout } from './modeldb-default-home.js';
+import { resolveModelDbConfigPathFromCli } from './modeldb-default-home.js';
 
 export interface ModelDBServerFileConfig {
   readonly port?: number;
@@ -48,6 +48,8 @@ export interface ResolvedModelDBServerConfig {
   readonly dev: boolean;
   /** When true, **`access.log`** profiling is enabled (see **`loadModelDBServerConfig`**). */
   readonly accessLog?: boolean;
+  /** Absolute path of the loaded **`modeldb.config.json`** (implicit default or **`-c`**). */
+  readonly configFilePath: string;
 }
 
 function numEnv(name: string): number | undefined {
@@ -78,12 +80,12 @@ function boolEnv(name: string): boolean | undefined {
   return undefined;
 }
 
-/** 未传 **`-c`** 时：初始化 **`MODELDB_HOME`** 并返回其下的 **`modeldb.config.json`**；否则为显式路径。 */
+/**
+ * **`-c`**：会话**数据根目录**（内含 **`modeldb.config.json`**、**`logs/`**、**`cache/`**、**`vault/`**），
+ * 或指向已存在的配置文件路径（兼容旧 CLI）；详见 **`resolveModelDbConfigPathFromCli`**。
+ */
 function resolveConfigFilePath(cliConfigPath: string | undefined): string {
-  if (cliConfigPath) {
-    return resolve(cliConfigPath);
-  }
-  return ensureModelDbHomeLayout();
+  return resolveModelDbConfigPathFromCli(cliConfigPath);
 }
 
 function resolveStorageRootAndAtlas(
@@ -117,15 +119,26 @@ export interface CliConfigOverrides {
 /**
  * Per-key merge order: CLI overrides → `modeldb.config.json` → environment variables → defaults
  * (e.g. port **9090**, host **127.0.0.1**, dev **false**).
+ *
+ * **`connectToken`**：同一顺序 **CLI → 文件 → `MODEL_DB_CONNECT_TOKEN`**；仅当左侧为 **`null`/`undefined`**
+ * 时才继续（空字符串的 CLI 入参在 **`cli.ts`** 中已归一为 **`undefined`**，避免误覆盖文件中的令牌）。
+ *
+ * 当 **`configPath === undefined`**（未传 **`-c`**）时：配置文件**仅**来自默认主目录下的
+ * **`modeldb.config.json`**；**`workspace`/`storageRoot`/`dbPath`** **不**再读取
+ * **`MODEL_DB_WORKSPACE` / `MODEL_DB_STORAGE_ROOT` / `STORAGE_ROOT`**，以免与默认主目录配置「串线」。
+ * 端口等仍可由 **`MODEL_DB_PORT`** 等覆盖（便于容器编排）。
  */
 export async function loadModelDBServerConfig(
   configPath: string | undefined,
   cli: CliConfigOverrides,
 ): Promise<ResolvedModelDBServerConfig> {
+  const implicitDefaultHome = configPath === undefined;
+
   let file: ModelDBServerFileConfig = {};
   const path = resolveConfigFilePath(configPath);
   const pathBase = dirname(path);
-  if (existsSync(path)) {
+  const fileExists = existsSync(path);
+  if (fileExists) {
     const raw = await readFile(path, 'utf-8');
     file = JSON.parse(raw) as ModelDBServerFileConfig;
   }
@@ -134,6 +147,10 @@ export async function loadModelDBServerConfig(
 
   const host = cli.host ?? file.host ?? strEnv('MODEL_DB_HOST') ?? '127.0.0.1';
 
+  const storageEnvBranch = implicitDefaultHome
+    ? undefined
+    : (strEnv('MODEL_DB_WORKSPACE') ?? strEnv('MODEL_DB_STORAGE_ROOT') ?? strEnv('STORAGE_ROOT'));
+
   const storageRootRaw =
     cli.workspace ??
     cli.storageRoot ??
@@ -141,14 +158,18 @@ export async function loadModelDBServerConfig(
     file.workspace ??
     file.storageRoot ??
     file.dbPath ??
-    strEnv('MODEL_DB_WORKSPACE') ??
-    strEnv('MODEL_DB_STORAGE_ROOT') ??
-    strEnv('STORAGE_ROOT') ??
+    storageEnvBranch ??
     'vault';
   const { storageRoot, defaultAtlas } = resolveStorageRootAndAtlas(storageRootRaw, pathBase);
 
+  const envTokenPresent = strEnv('MODEL_DB_CONNECT_TOKEN') !== undefined;
+  const cliTokenEffective =
+    cli.connectToken !== undefined && String(cli.connectToken).trim() !== ''
+      ? String(cli.connectToken).trim()
+      : undefined;
+
   const connectTokenRaw =
-    cli.connectToken ?? file.connectToken ?? strEnv('MODEL_DB_CONNECT_TOKEN') ?? '';
+    cliTokenEffective ?? file.connectToken ?? strEnv('MODEL_DB_CONNECT_TOKEN') ?? '';
   const connectToken =
     typeof connectTokenRaw === 'string' ? connectTokenRaw.trim() : String(connectTokenRaw).trim();
 
@@ -167,7 +188,10 @@ export async function loadModelDBServerConfig(
 
   if (!connectToken) {
     throw new Error(
-      'ModelDB server: missing connectToken — set modeldb.config.json "connectToken", MODEL_DB_CONNECT_TOKEN, or --token.',
+      'ModelDB server: missing connectToken. ' +
+        `config file: ${path} (exists=${fileExists}). ` +
+        `MODEL_DB_CONNECT_TOKEN: ${envTokenPresent ? 'set' : 'not set'}. ` +
+        'Merge order: CLI --token → file "connectToken" → MODEL_DB_CONNECT_TOKEN.',
     );
   }
 
@@ -186,6 +210,7 @@ export async function loadModelDBServerConfig(
     mode: file.mode,
     connectToken,
     dev,
+    configFilePath: path,
     ...(accessLog ? { accessLog: true as const } : {}),
   };
 }

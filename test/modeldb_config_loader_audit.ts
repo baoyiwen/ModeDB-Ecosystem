@@ -5,7 +5,7 @@
  */
 import { strict as assert } from 'node:assert';
 import { mkdir, mkdtemp, writeFile, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { loadModelDBServerConfig } from '../packages/server/dist/index.js';
 
@@ -29,6 +29,7 @@ async function run(): Promise<void> {
     );
 
     const fromFile = await loadModelDBServerConfig(cfgPath, {});
+    assert.equal(fromFile.configFilePath, resolve(cfgPath));
     assert.equal(fromFile.port, 7001);
     assert.equal(fromFile.host, '0.0.0.0');
     assert.equal(fromFile.connectToken, 'file-token');
@@ -63,6 +64,13 @@ async function run(): Promise<void> {
     assert.equal(relLoaded.storageRoot, join(relDir, 'wv'));
     assert.equal(relLoaded.serverLogDirectory, join(relDir, 'logs'));
 
+    const sessionRoot = join(dir, 'session_run');
+    const fromSessionDir = await loadModelDBServerConfig(sessionRoot, {});
+    assert.equal(fromSessionDir.configFilePath, resolve(join(sessionRoot, 'modeldb.config.json')));
+    assert.ok(fromSessionDir.connectToken.length >= 32);
+    assert.equal(fromSessionDir.storageRoot, join(sessionRoot, 'vault'));
+    assert.equal(fromSessionDir.serverLogDirectory, join(sessionRoot, 'logs'));
+
     const emptyPath = join(dir, 'empty.json');
     await writeFile(emptyPath, '{}', 'utf-8');
     await assert.rejects(
@@ -71,7 +79,7 @@ async function run(): Promise<void> {
     );
 
     console.log(
-      'modeldb_config_loader_audit: ok (priority, dbPath→storageRoot+defaultAtlas, connectToken required, accessLog from mode, relative paths vs config dir).',
+      'modeldb_config_loader_audit: ok (priority, -c session dir, dbPath→storageRoot+defaultAtlas, connectToken required, accessLog from mode, relative paths vs config dir).',
     );
   } finally {
     await rm(dir, { recursive: true, force: true });

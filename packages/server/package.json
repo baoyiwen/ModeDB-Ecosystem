@@ -35,13 +35,15 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "scripts/clear-modeldb-cache.mjs"
   ],
   "scripts": {
     "prebuild": "pnpm -C ../.. run build:shared && pnpm -C ../.. run build:common && pnpm -C ../.. run build:core",
     "pretypecheck": "pnpm -C ../.. run build:shared && pnpm -C ../.. run build:common && pnpm -C ../.. run build:core",
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "postuninstall": "node ./scripts/clear-modeldb-cache.mjs"
   },
   "dependencies": {
     "@fastify/websocket": "^11.2.0",
