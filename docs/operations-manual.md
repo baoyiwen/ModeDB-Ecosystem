@@ -115,7 +115,7 @@ modeldb-server start --help
 
 生产环境建议：显式设置 **`MODELDB_HOME`** 或始终使用 **`-c`** 指向受控路径；将默认 **`connectToken`** 替换为运维发放的密钥并纳入备份策略。
 
-**无 `-c` 时的 `workspace` 来源**：逻辑库根**仅**来自默认 **`modeldb.config.json`** 内的 **`workspace` / `storageRoot` / `dbPath`** 与 CLI **`-w` / `--workspace`** 等；**不会**读取 **`MODEL_DB_WORKSPACE`**、**`MODEL_DB_STORAGE_ROOT`**、**`STORAGE_ROOT`**。若部署要靠环境变量指定盘路径，请使用 **`-c`** 指向由编排渲染的配置文件，或把路径写进默认主目录下的 JSON。
+**无 `-c` 时的路径约定**：逻辑库数据与日志目录由会话根下的 **`modeldb.config.json`** 决定；自动生成的模板使用相对路径 **`workspace: "vault"`**、**`logDir: "logs"`**（相对该 JSON 所在目录，即数据根下的 **`vault/`**、**`logs/`**）。**`modeldb-server` CLI 不再提供 `--workspace` / `--storage` / `--db-path`**。无 **`-c`** 时**不会**读取 **`MODEL_DB_WORKSPACE`**、**`MODEL_DB_STORAGE_ROOT`**、**`STORAGE_ROOT`**；若使用 **`-c`** 载入的 JSON 需要自定义盘路径，仍可在该文件内写 **`workspace` / `dbPath`** 等。
 
 **卸载全局包**：执行 **`pnpm remove -g @mode-db/server`**（或 **`npm uninstall -g @mode-db/server`**）时，**`postuninstall`** 会**尽力**删除 **`MODELDB_HOME/cache/`**（不动 **`vault/`**、日志与 **`modeldb.config.json`**）。若进程占用导致删失败，可手动删除该 **`cache`** 目录。
 
@@ -129,26 +129,26 @@ modeldb-server start --help
 
 **`modeldb.config.json` 放置位置、`workspace` 与磁盘路径、Windows / Linux / macOS 实践** 见专文 **[modeldb-config-guide.md](./modeldb-config-guide.md)**。
 
-复制 **[modeldb.config.example.json](../modeldb.config.example.json)** 为运行目录下的 **`modeldb.config.json`**，至少修改：
+复制 **[modeldb.config.example.json](../modeldb.config.example.json)** 为数据根下的 **`modeldb.config.json`**（与 **`logs/`**、**`cache/`**、**`vault/`** 同级），至少修改：
 
-| 字段                      | 说明                                                                                                                                                |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`workspace`**           | 逻辑库根（绝对路径或相对 **配置文件所在目录**；无 **`-c`** 时见 **`MODELDB_HOME`**，详 **[modeldb-config-guide.md](./modeldb-config-guide.md)**）。 |
-| **`connectToken`**        | 长随机串；与所有合法客户端一致。                                                                                                                    |
-| **`port` / `host`**       | 监听地址；公网须配合 **TLS 终结（WSS）** 与防火墙。                                                                                                 |
-| **`vaultSecret`**（可选） | 若与 **`connectToken`** 派生策略不同，可单独配置 Vault 口令；也可统一用环境变量 **`MODEL_DB_VAULT_SECRET`**。                                       |
+| 字段                       | 说明                                                                                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **`connectToken`**         | 长随机串；与所有合法客户端一致。                                                                                                          |
+| **`port` / `host`**        | 监听地址；公网须配合 **TLS 终结（WSS）** 与防火墙。                                                                                       |
+| **`workspace` / `logDir`** | 一般保持模板中的 **`vault`** / **`logs`** 即可（相对配置文件目录）；高级场景见 **[modeldb-config-guide.md](./modeldb-config-guide.md)**。 |
+| **`vaultSecret`**（可选）  | 若与 **`connectToken`** 派生策略不同，可单独配置 Vault 口令；也可统一用环境变量 **`MODEL_DB_VAULT_SECRET`**。                             |
 
 敏感字段 **勿** 提交 Git。
 
 ### 3.5 推荐启动命令
 
-在 **配置文件所在目录**（或显式传 **`-c`**）启动，保证相对路径解析正确：
+在已 **`modeldb-server set <数据根>`** 或默认 **`MODELDB_HOME`** 就绪后：
 
 ```bash
-modeldb-server start --workspace ./digital_chunnel --port 9090 --token 'YOUR_LONG_CONNECT_TOKEN'
+modeldb-server start --port 9090 --token 'YOUR_LONG_CONNECT_TOKEN'
 ```
 
-未写 **`start`** 时，部分版本仍支持将 **`--workspace`** 等直接挂在根命令上（兼容旧用法）；**推荐统一使用 `start`**，便于 systemd / K8s 脚本化。
+临时会话根：**`modeldb-server start -c /path/to/session-root`**。未写 **`start`** 时仍可将 **`--port`** 等直接挂在根命令上（兼容旧用法）。
 
 ### 3.6 进程与日志
 

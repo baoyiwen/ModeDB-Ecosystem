@@ -67,7 +67,7 @@ RPC 明文 JSON 在发送前经 **`encodeWirePayload`**（**`@mode-db/shared`**�
 
 ## 7. CLI：`modeldb-server start`
 
-支持 **`modeldb-server start --workspace …`** 形式：第一个参数为 **`start`** 时，剩余参数按子命令解析，便于与进程管理器、文档中的「daemon + start」用法一致（详见 **`packages/server/src/cli.ts`**）。
+支持 **`modeldb-server start`**（可选前缀 **`start`**，参数见 **`packages/server/src/cli.ts`**），便于与进程管理器、文档中的「daemon + start」用法一致。
 
 ## 8. 集成测试与回归
 

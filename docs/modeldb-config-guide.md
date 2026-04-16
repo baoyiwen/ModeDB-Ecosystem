@@ -1,4 +1,4 @@
-# `modeldb.config.json` 配置指南（放置位置、`workspace` 与磁盘路径）
+# `modeldb.config.json` 配置指南（放置位置、数据根与磁盘路径）
 
 本文说明 **`modeldb.config.json` 应如何写、放在哪、与「配置文件所在目录」和磁盘目录的关系**，并分别给出 **Windows、Linux、macOS** 下的推荐做法。实现以 **`packages/server/src/config-loader.ts`**、**`packages/server/src/modeldb-default-home.ts`** 与 **`modeldb-persisted-home.ts`**（**`set`** 持久路径）为准。
 
@@ -15,7 +15,7 @@
 - 客户端握手必需的 **`connectToken`**
 - 日志目录、缓冲阈值、运行模式等
 
-**不会**自动被 Node 读取；只有启动 **`modeldb-server`** 且 **`loadModelDBServerConfig`** 被调用时才会读入（或通过 **`-c`** 指定路径）。
+**不会**自动被 Node 读取；只有启动 **`modeldb-server`** 且 **`loadModelDBServerConfig`** 被调用时才会读入（或通过 **`-c`** 指定会话根 / 配置文件）。**`modeldb-server` CLI 不提供 `--workspace` / `--storage` / `--db-path`**；逻辑库根与日志路径由本文件中的 **`workspace` / `logDir`**（及数据根目录布局）决定，模板 **[modeldb.config.example.json](../modeldb.config.example.json)** 默认 **`vault`** / **`logs`**。
 
 ---
 

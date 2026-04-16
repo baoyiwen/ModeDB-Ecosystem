@@ -1,6 +1,6 @@
 # ModeDB-Ecosystem 使用手册
 
-面向 **首次克隆仓库的开发者** 与 **需要起本地/内网服务的运维**：从环境、安装、构建到启动 **`modeldb-server`**、跑集成测试与压测的最短路径。设计细节、API 与链式查询语义仍以仓库根 **[README.md](../README.md)** 为准；部署与前后端接入见 **[operations-manual.md](./operations-manual.md)**；配置文件路径与 **`workspace`** 见 **[modeldb-config-guide.md](./modeldb-config-guide.md)**。
+面向 **首次克隆仓库的开发者** 与 **需要起本地/内网服务的运维**：从环境、安装、构建到启动 **`modeldb-server`**、跑集成测试与压测的最短路径。设计细节、API 与链式查询语义仍以仓库根 **[README.md](../README.md)** 为准；部署与前后端接入见 **[operations-manual.md](./operations-manual.md)**；数据根与 **`modeldb.config.json`** 见 **[modeldb-config-guide.md](./modeldb-config-guide.md)**。
 
 ---
 
@@ -98,9 +98,9 @@ pnpm exec modeldb-server -- -c modeldb.config.json
 
 ### 5.3 准备配置文件
 
-1. 复制 **`modeldb.config.example.json`** → **`modeldb.config.json`**（勿提交真实密钥）。
+1. 复制 **`modeldb.config.example.json`** → 数据根下的 **`modeldb.config.json`**（勿提交真实密钥）。
 2. 至少填写 **`connectToken`**；若磁盘 **`atlas.mld`** 使用独立 Vault 口令，配置 **`vaultSecret`** 或环境变量 **`MODEL_DB_VAULT_SECRET`**（与 README「运行与配置」一致）。
-3. 设置 **`workspace`**（逻辑库根：**`<workspace>/<dbName>/atlas.mld`**）。
+3. 模板中 **`logDir`/`workspace`** 已为 **`logs`** / **`vault`**（与数据根下目录一致），一般无需再改。
 
 ### 5.4 双轨压测 `ignition`
 

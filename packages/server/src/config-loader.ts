@@ -106,22 +106,18 @@ function resolveStorageRootAndAtlas(
 export interface CliConfigOverrides {
   readonly port?: number;
   readonly host?: string;
-  readonly workspace?: string;
-  /** @deprecated Prefer **`workspace`**. */
-  readonly storageRoot?: string;
-  /** @deprecated Prefer **`workspace`**. */
-  readonly dbPath?: string;
   readonly connectToken?: string;
   readonly dev?: boolean;
   readonly bufferThreshold?: number;
 }
 
 /**
- * Per-key merge order: CLI overrides → `modeldb.config.json` → environment variables → defaults
- * (e.g. port **9090**, host **127.0.0.1**, dev **false**).
+ * Per-key merge order: CLI overrides（**`port`/`host`/`connectToken`/`dev`/`bufferThreshold`**）→ **`modeldb.config.json`**
+ * → 环境变量 → 默认值（如 port **9090**，host **127.0.0.1**，dev **false**）。**`workspace`/`logDir`** 等路径**仅**来自 JSON（及 **`-c`** 会话根），不由 CLI 覆盖。
  *
  * **`connectToken`**：同一顺序 **CLI → 文件 → `MODEL_DB_CONNECT_TOKEN`**；仅当左侧为 **`null`/`undefined`**
  * 时才继续（空字符串的 CLI 入参在 **`cli.ts`** 中已归一为 **`undefined`**，避免误覆盖文件中的令牌）。
+ * 逻辑库根等路径**仅**来自 **`modeldb.config.json`**（及 **`-c`** 会话根下的相对 **`vault`/`logs`** 约定），**`modeldb-server` CLI 不提供 `--workspace`**。
  *
  * 当 **`configPath === undefined`**（未传 **`-c`**）时：配置文件**仅**来自默认主目录下的
  * **`modeldb.config.json`**；**`workspace`/`storageRoot`/`dbPath`** **不**再读取
@@ -152,14 +148,7 @@ export async function loadModelDBServerConfig(
     : (strEnv('MODEL_DB_WORKSPACE') ?? strEnv('MODEL_DB_STORAGE_ROOT') ?? strEnv('STORAGE_ROOT'));
 
   const storageRootRaw =
-    cli.workspace ??
-    cli.storageRoot ??
-    cli.dbPath ??
-    file.workspace ??
-    file.storageRoot ??
-    file.dbPath ??
-    storageEnvBranch ??
-    'vault';
+    file.workspace ?? file.storageRoot ?? file.dbPath ?? storageEnvBranch ?? 'vault';
   const { storageRoot, defaultAtlas } = resolveStorageRootAndAtlas(storageRootRaw, pathBase);
 
   const envTokenPresent = strEnv('MODEL_DB_CONNECT_TOKEN') !== undefined;

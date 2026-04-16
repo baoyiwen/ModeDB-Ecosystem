@@ -534,9 +534,6 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 | **`-c, --config <path>`**                | **会话数据根目录**（其下为 **`modeldb.config.json`**、**`logs/`**、**`cache/`**、**`vault/`**），或兼容旧版：指向已存在的 **`.json`** 配置文件；省略时见 **`MODELDB_HOME` / `~/.modeldb/home` / OS 默认**（**`docs/modeldb-config-guide.md`**）。 |
 | **`-p, --port <number>`**                | 监听端口。                                                                                                                                                                                                                                        |
 | **`-H, --host <host>`**                  | 绑定 host。                                                                                                                                                                                                                                       |
-| **`-w, --workspace <path>`**             | 逻辑库工作区根（写入配置合并链的 **`workspace`**）。                                                                                                                                                                                              |
-| **`-s, --storage <path>`**               | 兼容别名，同 **`--workspace`**。                                                                                                                                                                                                                  |
-| **`--db-path <path>`**                   | 兼容别名，同 **`--workspace`**。                                                                                                                                                                                                                  |
 | **`-t, --token <secret>`**               | **`connectToken`**。                                                                                                                                                                                                                              |
 | **`--vault-secret`** / **`--vault-key`** | Vault 口令。                                                                                                                                                                                                                                      |
 | **`--dev`**                              | 开发模式（如打印解密后的 RPC 摘要，**勿**用于生产）。                                                                                                                                                                                             |
@@ -647,8 +644,8 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 **编译后**启动示例（**`pnpm run start:server`** 会先 **`build:server`**；下面第一条假设 **`dist/`** 已存在）：
 
 ```bash
-node ./packages/server/dist/cli.js --port 9090 --token your-secret --storage ./data
-pnpm run start:server -- --port 9090 --token your-secret --storage ./data
+node ./packages/server/dist/cli.js --port 9090 --token your-secret
+pnpm run start:server -- --port 9090 --token your-secret
 ```
 
 在 monorepo 根使用：**`pnpm exec modeldb-server`**（根 **`package.json` → `bin`** → **`packages/server/dist/cli.js`**）；若全局安装了 **`@mode-db/server`**，可直接 **`modeldb-server`**。
@@ -1247,7 +1244,7 @@ pnpm run dev
 
 ### 工作区包 `@mode-db/server`
 
-- **路径**：[packages/server](packages/server)。**`commander`** CLI（**`--port` / `--host` / `--config` / `--storage` / `--token` / `--vault-secret` / `--dev`**），**`ws`** WebSocket 服务，**`WireRequestDispatcher`** 与 **`WriteSerializationGate`**（为后续治理端写 RPC 预留串行化）。
+- **路径**：[packages/server](packages/server)。**`commander`** CLI（**`--port` / `--host` / `--config` / `--token` / `--dev`** 及子命令 **`set` / `export-token`**），**`ws`** WebSocket 服务，**`WireRequestDispatcher`** 与 **`WriteSerializationGate`**（为后续治理端写 RPC 预留串行化）。
 - **依赖**：**`package.json`** 声明 **`@mode-db/core`**、**`@mode-db/common`**、**`@mode-db/shared`** 等（**`workspace:*`**）；编译 **`@mode-db/server`** 前须先 **`pnpm run build:core`**（别名 **`build:lib`**）生成 **`packages/core/dist/`**。
 - **构建**：**`pnpm run build:server`** 或根目录 **`pnpm run build`**（已含 **`build:core`**）。
 
