@@ -1,6 +1,6 @@
 {
   "name": "@mode-db/core",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "ModeDB storage engine, authoring/runtime model APIs, and single-file Vault orchestration.",
   "type": "module",
   "main": "./dist/index.js",
