@@ -10,3 +10,8 @@ export {
   type ConnectRemoteOptions,
   type WebSocketCtor,
 } from './remote-client.js';
+export type {
+  ManagementDatabaseInfo,
+  ManagementDatabasesResponse,
+  ManagementStatusResponse,
+} from '@mode-db/shared';

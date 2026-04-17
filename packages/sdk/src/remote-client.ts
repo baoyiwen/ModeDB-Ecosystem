@@ -3,6 +3,9 @@ import {
   deriveWireSessionKey,
   encodeWirePayload,
   WireQueryChain,
+  type ManagementDatabaseInfo,
+  type ManagementDatabasesResponse,
+  type ManagementStatusResponse,
   type QueryExecuteOptions,
   type QueryStartSpec,
   type RemoteExecuteSnapshot,
@@ -470,11 +473,61 @@ export class RemoteRuntimeModel {
   }
 }
 
+async function fetchManagementJson<T>(origin: string, token: string, path: string): Promise<T> {
+  const base = origin.replace(/\/$/, '');
+  const url = `${base}${path}`;
+  const res = await fetch(url, {
+    headers: { 'X-ModelDB-Connect-Token': token },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+  }
+  return (await res.json()) as T;
+}
+
 export class RemoteModelDBClient {
   private constructor(
     private readonly ws: WsEmitter | undefined,
     private readonly session: QuerySession,
   ) {}
+
+  /**
+   * Lists logical databases under the server workspace (**`GET /api/v1/management/databases`**).
+   * Uses **`X-ModelDB-Connect-Token`** (same as wire **`connectToken`**).
+   */
+  static async listDatabases(options: {
+    readonly host: string;
+    readonly port: number;
+    readonly token: string;
+  }): Promise<readonly ManagementDatabaseInfo[]> {
+    const origin = `http://${options.host}:${options.port}`;
+    const json = await fetchManagementJson<ManagementDatabasesResponse>(
+      origin,
+      options.token,
+      '/api/v1/management/databases',
+    );
+    if (!json || !Array.isArray(json.databases)) {
+      throw new Error('listDatabases: invalid response shape.');
+    }
+    return json.databases;
+  }
+
+  /**
+   * Engine / listen / workspace summary (**`GET /api/v1/management/status`**).
+   */
+  static async getManagementStatus(options: {
+    readonly host: string;
+    readonly port: number;
+    readonly token: string;
+  }): Promise<ManagementStatusResponse> {
+    const origin = `http://${options.host}:${options.port}`;
+    return fetchManagementJson<ManagementStatusResponse>(
+      origin,
+      options.token,
+      '/api/v1/management/status',
+    );
+  }
 
   /**
    * Connect by host/port (HTTP origin + WebSocket stream); same wire protocol as {@link connectRemote}.

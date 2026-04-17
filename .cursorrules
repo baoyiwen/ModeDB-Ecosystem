@@ -7,6 +7,14 @@
 4. 显式绑定：索引构建不再全自动黑盒，支持 GLOBAL（全量）、PROTOCOL（自动匹配）、CONDITIONAL（条件过滤）、MANUAL（精准拉线）四种策略，通过 Engine.bind() 显式触发。
 5. 物理隔离：单文件 Vault（**`atlas.mld`**）内 **`m:*`** 模型块与 **`r:*`** 关系索引分键存放；治理端 **`flushAll()`** 一致落盘。
 
+## SDK / CLI / 管理 API（ModeDB 开发准则）
+
+- **连接模式**：严禁在 **`@mode-db/sdk`** 中用 **`dbPath`** 等物理路径连接；须使用逻辑库名（workspace 子目录名）与 **`connectToken`**。
+- **实例化规范**：业务侧数据库访问通过 **`RemoteModelDBClient.connect` / `connectNetwork`** 等得到实例后再调用；避免散落的全局「未绑定连接」API（管理类只读操作可用 **`RemoteModelDBClient.listDatabases` / `getManagementStatus`** 等静态方法）。
+- **数据模型**：不在公共 API 中引入 TypeScript **`enum`** 表达状态或分类；状态与分类用 **`type`/`interface`** 或 Model 描述。
+- **异步守卫**：SDK 连接路径须在 **`new` / `connect` 完成后再暴露可调用会话，避免「未握手即可执行」的竞态。
+- **错误管理**：网络与编解码错误应通过统一、可诊断的错误类型或消息抛出（含 HTTP 状态与响应体摘要）；避免吞掉 **`fetch`** / 解析异常。
+
 ## Project Overview
 
 **ModeDB-Ecosystem** is a **pnpm monorepo** around a **hyper-relational data engine** (**`@mode-db/core`**, under **`packages/core`**) for data governance and building a data asset graph.

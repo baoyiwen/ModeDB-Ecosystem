@@ -6,6 +6,7 @@ import { loadModelDBServerConfig } from './config-loader.js';
 import { startModelDBWebSocketServer } from './modeldb-server.js';
 import { getModelDbCliSettingsDir, setPersistedModelDbHomePath } from './modeldb-persisted-home.js';
 import { runCreateDb } from './cli-create-db.js';
+import { runInfo, runLs } from './cli-mgmt.js';
 
 function parseExportTokenArgv(argv: string[]): { config?: string } {
   const out: { config?: string } = {};
@@ -63,6 +64,28 @@ if (argv[0] === 'export-token') {
   process.exit(0);
 }
 
+if (argv[0] === 'info' || argv[0] === 'status') {
+  try {
+    await runInfo(argv.slice(1));
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[ModelDB] info 失败：${msg}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
+if (argv[0] === 'ls' || argv[0] === 'list') {
+  try {
+    await runLs(argv.slice(1));
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[ModelDB] ls 失败：${msg}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
 if (argv[0] === 'create-db') {
   const dbName = argv[1]?.trim();
   if (!dbName) {
@@ -94,7 +117,7 @@ if (argv[0] === 'create-db') {
 const program = new Command()
   .name('modeldb-server')
   .description(
-    'ModelDB 2.0 daemon. Subcommands: start (default), set <dir>, export-token, create-db <name>. Without -c, data root is MODELDB_HOME, ~/.modeldb/home (from "set"), or OS default; auto-creates layout on start.',
+    'ModelDB 2.0 daemon. Subcommands: start (default), info|status, ls|list, set <dir>, export-token, create-db <name>. Without -c, data root is MODELDB_HOME, ~/.modeldb/home (from "set"), or OS default; auto-creates layout on start.',
   )
   .option(
     '-c, --config <path>',

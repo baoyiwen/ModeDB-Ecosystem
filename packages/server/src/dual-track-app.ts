@@ -15,12 +15,19 @@ import {
 import { configureModelDBStorageRoot, EngineLogger } from '@mode-db/common';
 import { ModelDBClient } from '@mode-db/core';
 import { BinaryInterceptor, TransportAuthError } from './binary-interceptor.js';
+import type { ManagementDatabasesResponse, ManagementStatusResponse } from '@mode-db/shared';
 import type { ResolvedModelDBServerConfig } from './config-loader.js';
 import { AuthoringBridge } from './authoring-bridge.js';
 import { WriteSerializationGate } from './write-serialization-gate.js';
 import { WireRequestDispatcher, decodeExecuteBody } from './request-dispatcher.js';
 import { atlasCatalogSignature } from './atlas-catalog-signature.js';
 import { assertLogicalDatabaseExists } from './logical-database-guard.js';
+import { scanWorkspaceDatabases } from './management-api.js';
+import {
+  getConnectedWebSocketClients,
+  getProcessUptimeSeconds,
+  recordWebSocketConnection,
+} from './server-runtime-stats.js';
 
 const MAX_BULK_ITEMS = 50_000;
 const BULK_CONCURRENCY = 4;
@@ -41,6 +48,18 @@ function resolveLogicalDbFromHttpHeaders(headers: IncomingMessage['headers']): s
   const dn = String(headers['x-modeldb-db-name'] ?? '').trim();
   const at = String(headers['x-modeldb-atlas'] ?? '').trim();
   return dn || at;
+}
+
+function readConnectTokenFromHttpRequest(request: FastifyRequest): string {
+  const x = request.headers['x-modeldb-connect-token'];
+  if (typeof x === 'string' && x.trim()) {
+    return x.trim();
+  }
+  const auth = request.headers['authorization'];
+  if (typeof auth === 'string' && auth.toLowerCase().startsWith('bearer ')) {
+    return auth.slice(7).trim();
+  }
+  return '';
 }
 
 type SocketState =
@@ -70,6 +89,7 @@ function attachWireSocket(
 ): void {
   const interceptor = new BinaryInterceptor(cfg.connectToken);
   const remote = req.socket.remoteAddress ?? 'unknown';
+  const releaseWs = recordWebSocketConnection();
   EngineLogger.instance.info('WebSocket client connected', { remote }, 'ModelDBServer');
   // eslint-disable-next-line no-console
   console.log(`[modeldb-server] connect ${remote}`);
@@ -83,6 +103,7 @@ function attachWireSocket(
   let state: SocketState = { phase: 'guest' };
 
   ws.on('close', (code, reason) => {
+    releaseWs();
     clearInterval(heartbeat);
     EngineLogger.instance.info(
       'WebSocket client disconnected',
@@ -310,6 +331,51 @@ export async function buildDualTrackFastify(
   );
 
   app.get('/health', async () => ({ ok: true as const, v: 2 }));
+
+  app.get('/api/v1/management/databases', async (request: FastifyRequest, reply: FastifyReply) => {
+    const interceptor = new BinaryInterceptor(cfg.connectToken);
+    try {
+      const token = readConnectTokenFromHttpRequest(request);
+      interceptor.validateConnectToken(token);
+      const databases = scanWorkspaceDatabases(dataRoot);
+      const body: ManagementDatabasesResponse = { databases };
+      return reply.send(body);
+    } catch (e) {
+      if (e instanceof TransportAuthError) {
+        return reply.code(401).send({ error: e.message });
+      }
+      const message = e instanceof Error ? e.message : String(e);
+      return reply.code(500).send({ error: message });
+    }
+  });
+
+  app.get('/api/v1/management/status', async (request: FastifyRequest, reply: FastifyReply) => {
+    const interceptor = new BinaryInterceptor(cfg.connectToken);
+    try {
+      const token = readConnectTokenFromHttpRequest(request);
+      interceptor.validateConnectToken(token);
+      const databases = scanWorkspaceDatabases(dataRoot);
+      const port = getServerListeningPort(app);
+      const body: ManagementStatusResponse = {
+        engine: 'ModelDB',
+        state: 'RUNNING',
+        uptimeSeconds: getProcessUptimeSeconds(),
+        listen: { host: cfg.host, port },
+        storageFormat: 'atlas.mld',
+        storageVersion: '2.0',
+        workspaceRoot: dataRoot,
+        databases,
+        connectedClients: getConnectedWebSocketClients(),
+      };
+      return reply.send(body);
+    } catch (e) {
+      if (e instanceof TransportAuthError) {
+        return reply.code(401).send({ error: e.message });
+      }
+      const message = e instanceof Error ? e.message : String(e);
+      return reply.code(500).send({ error: message });
+    }
+  });
 
   app.post('/v2/action', async (request: FastifyRequest, reply: FastifyReply) => {
     const interceptor = new BinaryInterceptor(cfg.connectToken);

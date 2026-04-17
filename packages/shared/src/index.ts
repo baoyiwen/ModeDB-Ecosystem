@@ -10,6 +10,11 @@ export {
 } from './binary-transport.js';
 export { deriveWireSessionKey, encodeWirePayload, decodeWirePayload } from './wire-codec.js';
 export type {
+  ManagementDatabaseInfo,
+  ManagementDatabasesResponse,
+  ManagementStatusResponse,
+} from './management-types.js';
+export type {
   WireClientMessage,
   WireHandshakeRequest,
   WireRpcEnvelope,
