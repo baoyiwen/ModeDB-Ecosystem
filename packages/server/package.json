@@ -1,6 +1,6 @@
 {
   "name": "@mode-db/server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "ModelDB WebSocket server: CLI, config loading, wire transport, and query dispatch. Depends on @mode-db/core for runtime, authoring, and wire serialization APIs.",
   "keywords": [
     "modeldb",
