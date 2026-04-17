@@ -1,6 +1,6 @@
 # 引擎 Meta-CRUD、单文件 Vault 与线协议
 
-本文说明治理端 **`AuthoringEngine`** 上的**元数据变更**（不改变行级数据的语义，但改变图谱拓扑或模型 schema），以及 **`@mode-db/server`** 上对应的 **Wire RPC** 与 **`@mode-db/sdk`** 的调用方式。阅读前建议已了解根目录 [README.md](../README.md) 中的单文件 Vault、`connectToken` 与存储根。
+本文说明治理端 **`AuthoringEngine`** 上的**元数据变更**（不改变行级数据的语义，但改变图谱拓扑或模型 schema），以及 **`@mode-db/server`** 上对应的 **Wire RPC** 与 **`@mode-db/sdk`** 的调用方式。阅读前建议已了解根目录 [README.md](../README.md) 中的单文件 Vault、`connectToken` 与存储根；**全量 API 索引**见 [developer-handbook.md](./developer-handbook.md)。
 
 ## 1. 单文件 Vault 与 `connectToken`
 

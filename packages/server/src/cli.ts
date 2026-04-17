@@ -5,6 +5,7 @@ import { Command } from 'commander/esm.mjs';
 import { loadModelDBServerConfig } from './config-loader.js';
 import { startModelDBWebSocketServer } from './modeldb-server.js';
 import { getModelDbCliSettingsDir, setPersistedModelDbHomePath } from './modeldb-persisted-home.js';
+import { runCreateDb } from './cli-create-db.js';
 
 function parseExportTokenArgv(argv: string[]): { config?: string } {
   const out: { config?: string } = {};
@@ -62,10 +63,38 @@ if (argv[0] === 'export-token') {
   process.exit(0);
 }
 
+if (argv[0] === 'create-db') {
+  const dbName = argv[1]?.trim();
+  if (!dbName) {
+    console.error(
+      'Usage: modeldb-server create-db <db-name> [-c <session-root|modeldb.config.json>] [-t <connectToken>]',
+    );
+    console.error('');
+    console.error(
+      '在默认「会话根」下的 workspace（通常为 vault/）中创建逻辑库 <db-name>/atlas.mld。',
+    );
+    console.error(
+      '无需填写绝对路径：未传 -c 时使用 MODELDB_HOME / modeldb-server set / 系统默认 modeldb 目录。',
+    );
+    console.error(
+      '认证令牌与 modeldb.config.json 中 connectToken 一致；可用 modeldb-server export-token 导出 MODEL_DB_CONNECT_TOKEN。',
+    );
+    process.exit(1);
+  }
+  try {
+    await runCreateDb(dbName, argv.slice(2));
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[ModelDB] create-db 失败：${msg}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
 const program = new Command()
   .name('modeldb-server')
   .description(
-    'ModelDB 2.0 daemon. Subcommands: start (default), set <dir>, export-token. Without -c, data root is MODELDB_HOME, ~/.modeldb/home (from "set"), or OS default; auto-creates layout on start.',
+    'ModelDB 2.0 daemon. Subcommands: start (default), set <dir>, export-token, create-db <name>. Without -c, data root is MODELDB_HOME, ~/.modeldb/home (from "set"), or OS default; auto-creates layout on start.',
   )
   .option(
     '-c, --config <path>',

@@ -1,6 +1,6 @@
 # ModeDB-Ecosystem 操作手册
 
-本文面向 **运维、后端与前端**，说明从 **部署 → 启动 → 新工程接入 → 业务/前端调用** 的推荐路径。实现细节与 API 边界以仓库根目录 **[README.md](../README.md)** 为准；引擎源码在 **`packages/core`**（**`@mode-db/core`**），仓库根 **`package.json`** 为 **pnpm 薄壳**（编排构建与测试）。Meta-DDL 与线协议见 **[engine-meta-crud-and-wire.md](./engine-meta-crud-and-wire.md)**。
+本文面向 **运维、后端与前端**，说明从 **部署 → 启动 → 新工程接入 → 业务/前端调用** 的推荐路径。实现细节与 API 边界以仓库根目录 **[README.md](../README.md)** 为准；**类与方法级 API** 见 **[developer-handbook.md](./developer-handbook.md)**。引擎源码在 **`packages/core`**（**`@mode-db/core`**），仓库根 **`package.json`** 为 **pnpm 薄壳**（编排构建与测试）。Meta-DDL 与线协议见 **[engine-meta-crud-and-wire.md](./engine-meta-crud-and-wire.md)**。
 
 ---
 
@@ -76,12 +76,15 @@ modeldb-server start --help
 
 （具体包名与版本以 registry 为准。）
 
-### 3.1b 子命令：`set` / `export-token`
+### 3.1b 子命令：`set` / `export-token` / `create-db`
 
-| 命令                                 | 作用                                                                                                                                                                                                  |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`modeldb-server set <directory>`** | 将默认数据根写入 **`~/.modeldb/home`**（单行绝对路径）。之后不带 **`-c`** 的 **`start`** 优先使用该目录（仍低于环境变量 **`MODELDB_HOME`**）。目录若尚不存在，**首次 `start` 时会自动创建**完整布局。 |
-| **`modeldb-server export-token`**    | 读取当前默认主目录（或 **`export-token -c <会话根>`**）下的配置，在 stdout 打印 **`export MODEL_DB_CONNECT_TOKEN=…`**（及 Windows CMD/PowerShell 写法），stderr 提示妥善保存。                        |
+| 命令                                  | 作用                                                                                                                                                                                                                                                                                    |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`modeldb-server set <directory>`**  | 将默认数据根写入 **`~/.modeldb/home`**（单行绝对路径）。之后不带 **`-c`** 的 **`start`** 优先使用该目录（仍低于环境变量 **`MODELDB_HOME`**）。目录若尚不存在，**首次 `start` 时会自动创建**完整布局。                                                                                   |
+| **`modeldb-server export-token`**     | 读取当前默认主目录（或 **`export-token -c <会话根>`**）下的配置，在 stdout 打印 **`export MODEL_DB_CONNECT_TOKEN=…`**（及 Windows CMD/PowerShell 写法），stderr 提示妥善保存。                                                                                                          |
+| **`modeldb-server create-db <name>`** | 在会话根下 **`workspace`**（默认 **`vault/`**）中创建 **`<name>/atlas.mld`**；**不必填写绝对路径**。成功后 stderr 打印**认证与连接指引**（**`connectToken`**、**`export-token`**、SDK **`dbName`**）。可加 **`-c`**、**`-t`**。详见 **[user-handbook.md](./user-handbook.md)** §5.1.1。 |
+
+**认证提醒**：**`connectToken`** 同时用于 **Wire 握手**与 **Vault 密钥派生**；治理端、**`ModelDBClient.connect`**、**`create-db`** 必须使用**同一令牌**（见 **[README.md](../README.md)**「运行与配置」）。
 
 ### 3.2 系统默认数据根（`MODELDB_HOME`）与惰性创建
 

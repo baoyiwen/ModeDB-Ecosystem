@@ -10,7 +10,7 @@
 - **Runtime（客户端）**：按图谱名只读打开 **`atlas.mld`**，经 **`VaultModelFileReader` / `VaultRelationIndexReader`** 与包内 **`__manifest__`** 工作（密钥与治理端一致，常见为 **`MODEL_DB_VAULT_SECRET`** 或与 **`connectToken`** 派生的集成配置）。不依赖写入路径，适合独立交付。
 - **Network（可选）**：**`ModelDB WebSocket Server`** 在指定存储根上托管只读查询；**`@mode-db/sdk`** 通过 **`connectRemote`** 提供与本地 **`model.query()…execute()`** 相同的链式 API，查询体经 **ConnectToken 握手** 与 **会话密钥混淆** 传输（详见下文 **「网络服务与远程客户端 SDK」**）。
 
-**运维入口**：**`modeldb.config.json`**、**`pnpm run start:server`**、**`pnpm run ignition`** 与全部参数说明见下文 **「运行与配置（工作区、启动命令、参数与环境）」**。从零到跑通服务的步骤摘要见 **[docs/user-handbook.md](docs/user-handbook.md)**；引擎与 SDK 的 API 入口见 **[docs/developer-handbook.md](docs/developer-handbook.md)**。
+**运维入口**：**`modeldb.config.json`**、**`pnpm run start:server`**、**`pnpm run ignition`** 与全部参数说明见下文 **「运行与配置（工作区、启动命令、参数与环境）」**。从零到跑通服务见 **[docs/user-handbook.md](docs/user-handbook.md)**；**类与方法级 API 索引**（Authoring / Runtime / QueryChain / SDK）见 **[docs/developer-handbook.md](docs/developer-handbook.md)**。
 
 > 本项目处于早期设计与实现阶段。
 
@@ -1242,7 +1242,7 @@ pnpm run dev
 
 ### 工作区包 `@mode-db/server`
 
-- **路径**：[packages/server](packages/server)。**`commander`** CLI（**`--port` / `--host` / `--config` / `--token` / `--dev`** 及子命令 **`set` / `export-token`**），**`ws`** WebSocket 服务，**`WireRequestDispatcher`** 与 **`WriteSerializationGate`**（为后续治理端写 RPC 预留串行化）。
+- **路径**：[packages/server](packages/server)。**`commander`** CLI（**`--port` / `--host` / `--config` / `--token` / `--dev`** 及子命令 **`set` / `export-token` / `create-db`**），**`ws`** WebSocket 服务，**`WireRequestDispatcher`** 与 **`WriteSerializationGate`**（为后续治理端写 RPC 预留串行化）。**`create-db`**：在默认 **`vault/`** 工作区下新建逻辑库并输出认证指引，见 **[docs/user-handbook.md](docs/user-handbook.md)**。
 - **依赖**：**`package.json`** 声明 **`@mode-db/core`**、**`@mode-db/common`**、**`@mode-db/shared`** 等（**`workspace:*`**）；编译 **`@mode-db/server`** 前须先 **`pnpm run build:core`**（别名 **`build:lib`**）生成 **`packages/core/dist/`**。
 - **构建**：**`pnpm run build:server`** 或根目录 **`pnpm run build`**（已含 **`build:core`**）。
 

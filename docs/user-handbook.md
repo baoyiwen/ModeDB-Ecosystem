@@ -6,15 +6,15 @@
 
 ## 1. 文档地图
 
-| 文档                                                     | 适合谁               | 内容侧重                                                                                   |
-| -------------------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------ |
-| **本文**                                                 | 新人、日常联调       | 安装 → 构建 → 启动 → 排障                                                                  |
-| **[README.md](../README.md)**                            | 引擎使用者、架构评审 | 理念、存储、治理/DX、运行参数全集、SDK                                                     |
-| **[operations-manual.md](./operations-manual.md)**       | 运维、后端、前端     | 部署、密钥、**`connectRemote`**、检查清单                                                  |
-| **[modeldb-config-guide.md](./modeldb-config-guide.md)** | 运维                 | **`modeldb.config.json`** 放哪、相对路径、各 OS                                            |
-| **[test/README.md](../test/README.md)**                  | 贡献者、CI           | 集成脚本说明与命令表                                                                       |
-| **[developer-handbook.md](./developer-handbook.md)**     | 应用开发者           | **`@mode-db/core`** / **SDK** API 入口与典型调用                                           |
-| **`@mode-db/common`**（`packages/common/src`）           | 引擎 / Server 贡献者 | 共享类型、**`PathResolver`**、**`EngineLogger`**、**`DiskAdapter`**、manifest 与存储根约定 |
+| 文档                                                     | 适合谁               | 内容侧重                                                                                                                            |
+| -------------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **本文**                                                 | 新人、日常联调       | 安装 → 构建 → 启动 → 排障                                                                                                           |
+| **[README.md](../README.md)**                            | 引擎使用者、架构评审 | 理念、存储、治理/DX、运行参数全集、SDK                                                                                              |
+| **[operations-manual.md](./operations-manual.md)**       | 运维、后端、前端     | 部署、密钥、**`connectRemote`**、检查清单                                                                                           |
+| **[modeldb-config-guide.md](./modeldb-config-guide.md)** | 运维                 | **`modeldb.config.json`** 放哪、相对路径、各 OS                                                                                     |
+| **[test/README.md](../test/README.md)**                  | 贡献者、CI           | 集成脚本说明与命令表                                                                                                                |
+| **[developer-handbook.md](./developer-handbook.md)**     | 应用开发者           | **`@mode-db/core`** / **SDK**：包职责、**AuthoringEngine** / **ModelDBClient** / **QueryChain** / **HydratedEntity** 等类与方法索引 |
+| **`@mode-db/common`**（`packages/common/src`）           | 引擎 / Server 贡献者 | 共享类型、**`PathResolver`**、**`EngineLogger`**、**`DiskAdapter`**、manifest 与存储根约定                                          |
 
 ---
 
@@ -86,6 +86,24 @@ pnpm run start:server -- -c modeldb.config.json
 
 - **`modeldb-server set <目录>`**：持久化默认数据根到 **`~/.modeldb/home`**。
 - **`modeldb-server export-token`**：根据当前（或 **`export-token -c <会话根>`**）配置打印 **`MODEL_DB_CONNECT_TOKEN`** 的 shell 写法并提示保存。
+- **`modeldb-server create-db <逻辑库名>`**：在**默认会话根**下的 **`workspace`**（默认 **`vault/`**）中创建 **`<逻辑库名>/atlas.mld`**，无需手写绝对路径；详见下节。
+
+### 5.1.1 建库：`create-db`
+
+安装 **`modeldb-server`** 并保证已有默认数据根（首次 **`modeldb-server start`** 或 **`modeldb-server export-token`** 会自动在 **MODELDB_HOME** / **`set`** / 系统默认 **modeldb** 目录下生成 **`modeldb.config.json`** 与 **`vault/`**）。
+
+```bash
+modeldb-server create-db my_project
+# 自定义会话根（与 start -c 一致）：
+modeldb-server create-db my_project -c "D:\Data\modeldb-session"
+```
+
+- **路径**：不写磁盘地址时，逻辑库落在 **`<会话根>/<workspace 相对路径>/<逻辑库名>/`**，默认即 **`<modeldb 数据根>/vault/<逻辑库名>/atlas.mld`**（**`workspace`** 在 **`modeldb.config.json`** 中，模板为 **`vault`**）。
+- **已存在**：若 **`atlas.mld`** 已存在则跳过创建，并仍打印认证指引。
+- **认证步骤（命令行会重复提示）**：
+  1. **`connectToken`** 必须与 **`modeldb.config.json`** 中一致，并与 **`MODEL_DB_CONNECT_TOKEN`**、客户端/SDK 握手使用**同一字符串**（由此派生 Vault 密钥）。
+  2. 将令牌导出到环境变量： **`modeldb-server export-token`**（可加 **`-c`**）。
+  3. 可选：建库时用 **`-t` / `--token`** 指定令牌（合并顺序与 **`start`** 一致：**`--token` → 配置文件 → `MODEL_DB_CONNECT_TOKEN`**）。
 
 ### 5.2 等价入口（需已有 `dist/`）
 
