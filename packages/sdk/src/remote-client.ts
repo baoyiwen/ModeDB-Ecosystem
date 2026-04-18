@@ -460,7 +460,7 @@ export class RemoteQueryChain<
   Mode extends 'rows' | 'analysis' = 'rows',
 > extends WireQueryChain<M, Mode> {
   constructor(
-    private readonly session: QuerySession,
+    private readonly getSession: () => Promise<QuerySession>,
     modelName: string,
     start: QueryStartSpec,
   ) {
@@ -468,15 +468,16 @@ export class RemoteQueryChain<
   }
 
   override async execute(options?: QueryExecuteOptions): Promise<unknown> {
+    const session = await this.getSession();
     const snapshot = this.getRemoteExecuteSnapshot(options);
-    return this.session.executeSnapshot(snapshot);
+    return session.executeSnapshot(snapshot);
   }
 }
 
 /** Remote model handle: `query()` returns a {@link RemoteQueryChain}; `insertMany` uses the write RPC. */
 export class RemoteRuntimeModel {
   constructor(
-    private readonly session: QuerySession,
+    private readonly getSession: () => Promise<QuerySession>,
     readonly name: string,
   ) {}
 
@@ -484,9 +485,9 @@ export class RemoteRuntimeModel {
     ids?: readonly string[],
   ): RemoteQueryChain<M, 'rows'> {
     if (ids === undefined) {
-      return new RemoteQueryChain(this.session, this.name, { kind: 'all' });
+      return new RemoteQueryChain(this.getSession, this.name, { kind: 'all' });
     }
-    return new RemoteQueryChain(this.session, this.name, { kind: 'ids', ids: [...ids] });
+    return new RemoteQueryChain(this.getSession, this.name, { kind: 'ids', ids: [...ids] });
   }
 
   /**
@@ -497,7 +498,8 @@ export class RemoteRuntimeModel {
     rows: readonly Record<string, unknown>[],
     opts?: { sync?: boolean },
   ): Promise<{ successCount: number; failureCount: number }> {
-    const out = await this.session.executeWireBody({
+    const session = await this.getSession();
+    const out = await session.executeWireBody({
       op: 'insertMany',
       model: this.name,
       rows: [...rows],
@@ -529,10 +531,52 @@ async function fetchManagementJson<T>(origin: string, token: string, path: strin
 }
 
 export class RemoteModelDBClient {
-  private constructor(
-    private readonly ws: WsEmitter | undefined,
-    private readonly session: QuerySession,
-  ) {}
+  private _ws: WsEmitter | undefined;
+  private _session: QuerySession | undefined;
+  private _connectOnce: Promise<QuerySession> | null = null;
+
+  constructor(private readonly options: ConnectRemoteOptions) {}
+
+  private async doConnect(): Promise<QuerySession> {
+    const logical = resolveConnectLogicalDb(this.options);
+    const connectToken = resolveConnectToken(this.options);
+    const mode = this.options.mode ?? 'stream';
+    if (mode === 'short') {
+      const origin = toHttpOrigin(this.options.url);
+      const session = new ShortRemoteSession(origin, connectToken, logical);
+      await session.connectHandshake();
+      return session;
+    }
+    const wsUrl = toWsStreamUrl(this.options.url);
+    const ws = await openWebSocket(wsUrl, this.options.webSocketCtor);
+    this._ws = ws;
+    const session = new RemoteSession(ws, connectToken, logical);
+    await session.connectHandshake();
+    return session;
+  }
+
+  private async ensureSession(): Promise<QuerySession> {
+    if (this._session) {
+      return this._session;
+    }
+    if (!this._connectOnce) {
+      this._connectOnce = this.doConnect()
+        .then((s) => {
+          this._session = s;
+          return s;
+        })
+        .catch((e) => {
+          this._connectOnce = null;
+          throw e;
+        });
+    }
+    return this._connectOnce;
+  }
+
+  /** Eager connect (idempotent); first query/meta call also connects lazily. */
+  async connect(): Promise<void> {
+    await this.ensureSession();
+  }
 
   /**
    * Lists logical databases under the server workspace (**`GET /api/v1/management/databases`**).
@@ -593,29 +637,19 @@ export class RemoteModelDBClient {
   }
 
   static async connect(options: ConnectRemoteOptions): Promise<RemoteModelDBClient> {
-    const logical = resolveConnectLogicalDb(options);
-    const connectToken = resolveConnectToken(options);
-    const mode = options.mode ?? 'stream';
-    if (mode === 'short') {
-      const origin = toHttpOrigin(options.url);
-      const session = new ShortRemoteSession(origin, connectToken, logical);
-      await session.connectHandshake();
-      return new RemoteModelDBClient(undefined, session);
-    }
-    const wsUrl = toWsStreamUrl(options.url);
-    const ws = await openWebSocket(wsUrl, options.webSocketCtor);
-    const session = new RemoteSession(ws, connectToken, logical);
-    await session.connectHandshake();
-    return new RemoteModelDBClient(ws, session);
+    const c = new RemoteModelDBClient(options);
+    await c.connect();
+    return c;
   }
 
   model(name: string): RemoteRuntimeModel {
-    return new RemoteRuntimeModel(this.session, name);
+    return new RemoteRuntimeModel(() => this.ensureSession(), name);
   }
 
   /** Meta: drop model schema and vault payload (server-side {@link AuthoringEngine.dropModel}). */
   async dropModel(model: string): Promise<void> {
-    const out = await this.session.executeWireBody({ op: 'dropModel', model });
+    const session = await this.ensureSession();
+    const out = await session.executeWireBody({ op: 'dropModel', model });
     if (!isRecord(out) || out.op !== 'dropModel' || out.ok !== true) {
       throw new Error('dropModel: unexpected remote response.');
     }
@@ -623,7 +657,8 @@ export class RemoteModelDBClient {
 
   /** Meta: drop relation index and registry entry (server-side {@link AuthoringEngine.dropRelation}). */
   async dropRelation(relation: string): Promise<void> {
-    const out = await this.session.executeWireBody({ op: 'dropRelation', relation });
+    const session = await this.ensureSession();
+    const out = await session.executeWireBody({ op: 'dropRelation', relation });
     if (!isRecord(out) || out.op !== 'dropRelation' || out.ok !== true) {
       throw new Error('dropRelation: unexpected remote response.');
     }
@@ -638,18 +673,22 @@ export class RemoteModelDBClient {
     schema: Readonly<Record<string, unknown>>,
     opts?: { readonly patch?: boolean },
   ): Promise<void> {
+    const session = await this.ensureSession();
     const body: WireExecuteBody =
       opts?.patch === true
         ? { op: 'alterModel', model, schema, patch: true }
         : { op: 'alterModel', model, schema };
-    const out = await this.session.executeWireBody(body);
+    const out = await session.executeWireBody(body);
     if (!isRecord(out) || out.op !== 'alterModel' || out.ok !== true) {
       throw new Error('alterModel: unexpected remote response.');
     }
   }
 
   close(): void {
-    this.ws?.close();
+    this._ws?.close();
+    this._ws = undefined;
+    this._session = undefined;
+    this._connectOnce = null;
   }
 }
 

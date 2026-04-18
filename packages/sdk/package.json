@@ -11,7 +11,9 @@
       "import": "./dist/index.js"
     }
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/index.js"
+  ],
   "files": [
     "dist",
     "README.md"
@@ -21,7 +23,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@mode-db/shared": "workspace:*"
+    "@mode-db/shared": "workspace:*",
+    "buffer": "^6.0.3"
   },
   "optionalDependencies": {
     "ws": "^8.18.0"

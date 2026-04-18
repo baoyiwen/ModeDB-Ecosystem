@@ -1,3 +1,12 @@
+import { Buffer as BufferPolyfill } from 'buffer';
+
+if (typeof globalThis !== 'undefined') {
+  const g = globalThis as typeof globalThis & { Buffer?: typeof BufferPolyfill };
+  if (!g.Buffer) {
+    g.Buffer = BufferPolyfill;
+  }
+}
+
 export {
   connectRemote,
   ModelDBClient,
@@ -10,6 +19,7 @@ export {
   type ConnectRemoteOptions,
   type WebSocketCtor,
 } from './remote-client.js';
+export { ModelDB, type ModelDBConfig } from './model-db.js';
 export type {
   ManagementDatabaseInfo,
   ManagementDatabasesResponse,
