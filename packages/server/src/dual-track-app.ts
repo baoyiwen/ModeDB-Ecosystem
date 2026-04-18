@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
+import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import WS, { type WebSocket, type RawData } from 'ws';
 import {
@@ -311,6 +312,18 @@ export async function buildDualTrackFastify(
   });
 
   const app = Fastify({ logger: false, bodyLimit: 128 * 1024 * 1024 });
+
+  await app.register(cors, {
+    origin: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-ModelDB-Connect-Token',
+      'X-ModelDB-Db-Name',
+      'X-ModelDB-Atlas',
+    ],
+  });
 
   app.addHook('onResponse', async (request, reply) => {
     if (EngineLogger.instance.isAccessLogEnabled()) {

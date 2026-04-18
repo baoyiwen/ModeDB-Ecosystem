@@ -4,6 +4,18 @@
  */
 import { createHash } from 'node:crypto';
 
+/** RFC 4648 base64url without relying on `Buffer` `'base64url'` (browser polyfills often lack it). */
+function bytesToBase64Url(buf: Buffer): string {
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function base64UrlToBytes(encoded: string): Buffer {
+  const b64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = b64.length % 4;
+  const padded = pad ? b64 + '='.repeat(4 - pad) : b64;
+  return Buffer.from(padded, 'base64');
+}
+
 function mixBytesWithKey(buf: Buffer, keyMaterial: string): Buffer {
   const key = createHash('sha256').update(keyMaterial, 'utf-8').digest();
   const out = Buffer.alloc(buf.length);
@@ -22,10 +34,10 @@ export function deriveWireSessionKey(connectToken: string, logicalDb: string): s
 
 export function encodeWirePayload(plainUtf8: string, sessionKey: string): string {
   const mixed = mixBytesWithKey(Buffer.from(plainUtf8, 'utf-8'), sessionKey);
-  return mixed.toString('base64url');
+  return bytesToBase64Url(mixed);
 }
 
 export function decodeWirePayload(encoded: string, sessionKey: string): string {
-  const mixed = Buffer.from(encoded, 'base64url');
+  const mixed = base64UrlToBytes(encoded);
   return mixBytesWithKey(mixed, sessionKey).toString('utf-8');
 }

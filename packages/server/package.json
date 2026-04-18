@@ -1,6 +1,6 @@
 {
   "name": "@mode-db/server",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "ModelDB WebSocket server: CLI, config loading, wire transport, and query dispatch. Depends on @mode-db/core for runtime, authoring, and wire serialization APIs.",
   "keywords": [
     "modeldb",
@@ -49,6 +49,7 @@
     "postuninstall": "node ./scripts/clear-modeldb-cache.mjs"
   },
   "dependencies": {
+    "@fastify/cors": "^10.0.2",
     "@fastify/websocket": "^11.2.0",
     "@mode-db/common": "workspace:*",
     "@mode-db/core": "workspace:*",
