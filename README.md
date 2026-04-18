@@ -576,7 +576,7 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 #### 握手与线协议里令牌具体干什么（概念）
 
 1. **WebSocket 首条业务消息**为 **`{ type: 'handshake', connectToken, atlas }`**（明文 JSON，见 **`packages/server/src/dual-track-app.ts`**）。服务端 **`BinaryInterceptor.validateConnectToken`** 将客户端发来的 **`connectToken`** 与配置中的期望值做 **`trim` 后字符串全等比较**；不一致则 **`TransportAuthError`**，连接被拒绝。
-2. **握手通过后**，双方用 **`deriveWireSessionKey(connectToken, atlas)`**（**`common/wire-codec.ts`**：`sha256(\`${connectToken}:${atlas}:mode-db-wire-v2\`)` 的 **hex**）作为后续 **RPC 载荷** XOR 混淆的会话密钥材料（**不是** TLS；公网仍需 **WSS / 反向代理**）。
+2. **握手通过后**，双方用 **`deriveWireSessionKey(connectToken, atlas)`**（**`@mode-db/shared`** **`wire-codec.ts`**：`sha256(\`${connectToken}:${atlas}:mode-db-wire-v2\`)` 的 **hex**）作为后续 **RPC 载荷** XOR 混淆的会话密钥材料（**不是** TLS；公网仍需 **WSS / 反向代理**）。
 3. **外层二进制帧**（若走 **`MDBX` 魔数** 路径）的 XOR 材料还与 **`connectToken`** 相关（**`@mode-db/shared`** **`mdb2-outer:${connectToken}:v1`**），与服务端 **`decodeInboundTransportBuffer`** 一致。
 
 #### 与 **`vaultSecret` / `MODEL_DB_VAULT_SECRET`** 不要混淆
@@ -613,12 +613,12 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 
 ### 能力与安全边界
 
-| 能力             | 说明                                                                                                                                                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **传输**         | 基于 **`ws`** 的 **WebSocket**；握手后 RPC 的 JSON 经 **`deriveWireSessionKey(connectToken, atlas)`** 与 **`encodeWirePayload` / `decodeWirePayload`**（`common/wire-codec.ts`）做 **XOR 混淆**，载荷非明文 JSON。  |
-| **ConnectToken** | 首条消息 **`{ type: 'handshake', connectToken, atlas }`** 与服务器配置的令牌比对；失败则 **`{ type: 'error' }`** 并断开。                                                                                           |
-| **查询回放**     | 客户端 **`getRemoteExecuteSnapshot()`** 生成 **`RemoteExecuteSnapshot`**（含 **`QueryPlanASTv2`** 与分析分页元数据）；服务端 **`QueryChain.fromWirePlan`** + **`applyRemoteAnalysisSnapshot`** 后 **`execute()`**。 |
-| **Vault**        | 服务端 **`modeldb.config.json`** 可提供 **`vaultSecret`**，或依赖 **`MODEL_DB_VAULT_SECRET`**，与本地 **`ModelDBClient.connect`** 一致。                                                                            |
+| 能力             | 说明                                                                                                                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **传输**         | 基于 **`ws`** 的 **WebSocket**；握手后 RPC 的 JSON 经 **`deriveWireSessionKey(connectToken, atlas)`** 与 **`encodeWirePayload` / `decodeWirePayload`**（**`@mode-db/shared`** **`wire-codec.ts`**）做 **XOR 混淆**，载荷非明文 JSON。 |
+| **ConnectToken** | 首条消息 **`{ type: 'handshake', connectToken, atlas }`** 与服务器配置的令牌比对；失败则 **`{ type: 'error' }`** 并断开。                                                                                                             |
+| **查询回放**     | 客户端 **`getRemoteExecuteSnapshot()`** 生成 **`RemoteExecuteSnapshot`**（含 **`QueryPlanASTv2`** 与分析分页元数据）；服务端 **`QueryChain.fromWirePlan`** + **`applyRemoteAnalysisSnapshot`** 后 **`execute()`**。                   |
+| **Vault**        | 服务端 **`modeldb.config.json`** 可提供 **`vaultSecret`**，或依赖 **`MODEL_DB_VAULT_SECRET`**，与本地 **`ModelDBClient.connect`** 一致。                                                                                              |
 
 **重要**：线协议混淆 **不是** TLS，也 **不能** 替代 HTTPS/WSS。公网部署请务必置于 **TLS 终结**（反向代理终止 **`wss://`**）之后；令牌与密钥仍须按运维规范轮换。
 
@@ -663,6 +663,8 @@ db.close();
 ```
 
 在 **浏览器** 中可传入 **`webSocketCtor: globalThis.WebSocket`**（类型为 SDK 导出的 **`WebSocketCtor`**）。在 **Node.js** 中，SDK **默认使用 `import('ws')`**，而不会使用 Node 20+ 可能提供的全局 **`WebSocket`**（与 **`ws` 服务器** 组合时曾出现握手挂起）；若需自定义实现，仍可传入 **`webSocketCtor`**。
+
+**二进制与浏览器**：线编解码与外层 **`MDBX`** 帧在 **`@mode-db/shared`** 中实现为 **`Uint8Array` + `DataView` + `TextEncoder`/`TextDecoder` + `@noble/hashes`**，**不**依赖 Node **`Buffer`** 或 **`buffer`** npm 包；详见 **[packages/sdk/README.md](packages/sdk/README.md)**。
 
 ---
 

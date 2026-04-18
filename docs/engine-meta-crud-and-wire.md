@@ -48,6 +48,8 @@
 
 RPC 明文 JSON 在发送前经 **`encodeWirePayload`**（**`@mode-db/shared`**：基于会话密钥的 XOR + **base64url**），对客户端表现为**混淆二进制**载荷（`WireRpcEnvelope.cipher`）；服务端 **`decodeWirePayload`** 还原后交给 **`WireRequestDispatcher`** 执行 **`AuthoringEngine`**。DDL 成功路径额外写入 **`EngineLogger`** 的 **`[REMOTE][META]`** 行（模块 **`Server`**），与治理端 **`[META]`** 区分。
 
+**实现说明（运行时）**：**`packages/shared/src/wire-codec.ts`** 与 **`binary-transport.ts`** 使用 **`Uint8Array`**、**`TextEncoder` / `TextDecoder`**、**`DataView`**（帧头长度等大端 **`uint32`**）与 **`@noble/hashes/sha256`**，与 Node 版 **`crypto.createHash`** / **`Buffer`** 解耦，便于浏览器与 **WebGL/WebGPU** 侧零拷贝对接；与服务端二进制语义一致。
+
 请求体（**`WireExecuteBody`**）在 **`@mode-db/shared`** 中定义；服务端 **`request-dispatcher`** 在已解析逻辑库并构造 **`AuthoringEngine`** 后执行：
 
 | `op`               | 载荷字段                                               | 服务端调用                                                                 |

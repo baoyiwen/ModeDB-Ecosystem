@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
-import { ModelDB, type RemoteModelDBClient } from '@mode-db/sdk';
+import {
+  ModelDB,
+  type ManagementCatalogModelInfo,
+  type ManagementCatalogRelationInfo,
+  type ManagementCatalogResponse,
+  type RemoteModelDBClient,
+} from '@mode-db/sdk';
+import { LOCALE_LABEL, type LocaleId } from './i18n/messages';
+import { useI18n } from './i18n/I18nContext';
 
 const LS = {
   host: 'modedb.playground.host',
   port: 'modedb.playground.port',
   token: 'modedb.playground.token',
-  database: 'modedb.playground.database',
-  model: 'modedb.playground.model',
 } as const;
 
 function load(key: string, fallback: string): string {
@@ -46,7 +52,27 @@ function serializeRows(rows: unknown): unknown {
   });
 }
 
+const DEFAULT_INSERT = '[\n  { "_id": "row-1", "name": "Example" }\n]';
+const DEFAULT_ALTER_PATCH = '{\n  "note": { "type": "String", "required": false }\n}';
+
 export function App(): ReactElement {
+  const { t, locale, setLocale } = useI18n();
+
+  const webGpuLabel = (raw: string): string => {
+    switch (raw) {
+      case 'unavailable':
+        return t('webgpu.unavailable');
+      case 'adapter ok':
+        return t('webgpu.adapterOk');
+      case 'no adapter':
+        return t('webgpu.noAdapter');
+      case '…':
+        return t('webgpu.ellipsis');
+      default:
+        return raw;
+    }
+  };
+
   const [host, setHost] = useState(() =>
     load(LS.host, import.meta.env.VITE_DEFAULT_HOST ?? '127.0.0.1'),
   );
@@ -56,18 +82,23 @@ export function App(): ReactElement {
   const [token, setToken] = useState(() =>
     load(LS.token, import.meta.env.VITE_DEFAULT_TOKEN ?? ''),
   );
-  const [database, setDatabase] = useState(() =>
-    load(LS.database, import.meta.env.VITE_DEFAULT_DATABASE ?? 'pipe'),
-  );
-  const [modelName, setModelName] = useState(() =>
-    load(LS.model, import.meta.env.VITE_DEFAULT_MODEL ?? 'Pump'),
-  );
 
   const [webGpu, setWebGpu] = useState<string>('…');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<unknown>(null);
-  const [databases, setDatabases] = useState<string[] | null>(null);
+
+  const [modelDb, setModelDb] = useState<ModelDB | null>(null);
+  const [catalogs, setCatalogs] = useState<Record<string, ManagementCatalogResponse>>({});
+  const [selectedDb, setSelectedDb] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [wire, setWire] = useState<RemoteModelDBClient | null>(null);
+
+  const [newDbName, setNewDbName] = useState('');
+  const [insertJson, setInsertJson] = useState(DEFAULT_INSERT);
+  const [alterPatchJson, setAlterPatchJson] = useState(DEFAULT_ALTER_PATCH);
+  const [relateForward, setRelateForward] = useState('');
+  const [dropRelationForward, setDropRelationForward] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -94,114 +125,468 @@ export function App(): ReactElement {
   useEffect(() => {
     save(LS.token, token);
   }, [token]);
-  useEffect(() => {
-    save(LS.database, database);
-  }, [database]);
-  useEffect(() => {
-    save(LS.model, modelName);
-  }, [modelName]);
 
   const endpoint = useMemo(() => `${host}:${port}`, [host, port]);
 
-  const runQuery = useCallback(async (): Promise<void> => {
+  const loadTrees = useCallback(async (db: ModelDB): Promise<void> => {
+    const names = await db.listDatabases();
+    const next: Record<string, ManagementCatalogResponse> = {};
+    await Promise.all(
+      names.map(async (n: string) => {
+        try {
+          next[n] = await db.getDatabaseCatalog(n);
+        } catch {
+          next[n] = { database: n, models: [], relations: [] };
+        }
+      }),
+    );
+    setCatalogs(next);
+  }, []);
+
+  const connect = useCallback(async (): Promise<void> => {
     setError(null);
     setResult(null);
     const p = Number(port);
-    if (!token.trim() || !database.trim() || !modelName.trim() || !Number.isFinite(p)) {
-      setError('Host, port, token, database, and model are required.');
+    if (!token.trim() || !Number.isFinite(p)) {
+      setError(t('connect.needCredentials'));
       return;
     }
     setBusy(true);
-    let client: RemoteModelDBClient | undefined;
     try {
       const db = new ModelDB({ host: host.trim(), port: p, token: token.trim() });
-      client = await db.use(database.trim());
-      const rows = await client.model(modelName.trim()).query().execute();
+      await loadTrees(db);
+      setModelDb(db);
+      setSelectedDb(null);
+      setSelectedModel(null);
+      setWire(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setModelDb(null);
+      setCatalogs({});
+    } finally {
+      setBusy(false);
+    }
+  }, [host, loadTrees, port, t, token]);
+
+  useEffect(() => {
+    if (!modelDb || !selectedDb) {
+      setWire(null);
+      return;
+    }
+    let cancelled = false;
+    void modelDb.use(selectedDb).then((c: RemoteModelDBClient) => {
+      if (!cancelled) {
+        setWire(c);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [modelDb, selectedDb]);
+
+  const disconnect = useCallback((): void => {
+    setModelDb(null);
+    setCatalogs({});
+    setSelectedDb(null);
+    setSelectedModel(null);
+    setWire(null);
+    setResult(null);
+    setError(null);
+  }, []);
+
+  const createDb = useCallback(async (): Promise<void> => {
+    if (!modelDb) {
+      return;
+    }
+    const name = newDbName.trim();
+    if (!name) {
+      setError(t('db.needName'));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await modelDb.createDatabase(name);
+      setNewDbName('');
+      await loadTrees(modelDb);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [loadTrees, modelDb, newDbName, t]);
+
+  const removeDb = useCallback(async (): Promise<void> => {
+    if (!modelDb || !selectedDb) {
+      return;
+    }
+    if (!globalThis.confirm(t('db.confirmDelete', { name: selectedDb }))) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await modelDb.deleteDatabase(selectedDb);
+      modelDb.releaseClient(selectedDb);
+      setSelectedDb(null);
+      setSelectedModel(null);
+      setWire(null);
+      await loadTrees(modelDb);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [loadTrees, modelDb, selectedDb, t]);
+
+  const runQuery = useCallback(async (): Promise<void> => {
+    if (!wire || !selectedModel) {
+      setError(t('error.selectDbModel'));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      const rel = relateForward.trim();
+      const chain = wire.model(selectedModel).query() as {
+        relate: (n: string) => { execute: (o?: { includeRelates?: boolean }) => Promise<unknown> };
+        execute: (o?: { includeRelates?: boolean }) => Promise<unknown>;
+      };
+      const rows = rel
+        ? await chain.relate(rel).execute({ includeRelates: true })
+        : await chain.execute();
       setResult(serializeRows(rows));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      client?.close();
       setBusy(false);
     }
-  }, [database, host, modelName, port, token]);
+  }, [relateForward, selectedModel, t, wire]);
 
-  const listDatabases = useCallback(async (): Promise<void> => {
-    setError(null);
-    setDatabases(null);
-    const p = Number(port);
-    if (!token.trim() || !Number.isFinite(p)) {
-      setError('Host, port, and token are required.');
+  const runInsert = useCallback(async (): Promise<void> => {
+    if (!wire || !selectedModel) {
+      setError(t('error.selectDbModel'));
       return;
     }
     setBusy(true);
+    setError(null);
+    setResult(null);
     try {
-      const db = new ModelDB({ host: host.trim(), port: p, token: token.trim() });
-      setDatabases(await db.listDatabases());
+      const parsed = JSON.parse(insertJson) as unknown;
+      if (!Array.isArray(parsed)) {
+        throw new Error(t('insert.mustArray'));
+      }
+      const out = await wire.model(selectedModel).insertMany(parsed as Record<string, unknown>[]);
+      setResult(out);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
-  }, [host, port, token]);
+  }, [insertJson, selectedModel, t, wire]);
+
+  const runAlterPatch = useCallback(async (): Promise<void> => {
+    if (!wire || !selectedModel) {
+      setError(t('error.selectDbModel'));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      const patch = JSON.parse(alterPatchJson) as Record<string, unknown>;
+      await wire.alterModel(selectedModel, patch, { patch: true });
+      setResult({ ok: true, op: 'alterModelPatch', model: selectedModel });
+      if (modelDb && selectedDb) {
+        await loadTrees(modelDb);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [alterPatchJson, loadTrees, modelDb, selectedDb, selectedModel, t, wire]);
+
+  const runDropModel = useCallback(async (): Promise<void> => {
+    if (!wire || !selectedModel) {
+      return;
+    }
+    if (!globalThis.confirm(t('schema.confirmDrop', { name: selectedModel }))) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      const dropped = selectedModel;
+      await wire.dropModel(dropped);
+      setSelectedModel(null);
+      setResult({ ok: true, op: 'dropModel', model: dropped });
+      if (modelDb && selectedDb) {
+        await loadTrees(modelDb);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [loadTrees, modelDb, selectedDb, selectedModel, t, wire]);
+
+  const runDropRelation = useCallback(async (): Promise<void> => {
+    if (!wire) {
+      return;
+    }
+    const rel = dropRelationForward.trim();
+    if (!rel) {
+      setError(t('rel.needForward'));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      await wire.dropRelation(rel);
+      setResult({ ok: true, op: 'dropRelation', relation: rel });
+      if (modelDb && selectedDb) {
+        await loadTrees(modelDb);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [dropRelationForward, loadTrees, modelDb, selectedDb, t, wire]);
+
+  const dbNames = useMemo(() => Object.keys(catalogs).sort(), [catalogs]);
 
   return (
-    <div className="layout">
-      <aside className="panel">
-        <h1>ModeDB query playground</h1>
-        <p className="meta">
-          Engine: {endpoint} · WebGPU: {webGpu}
-        </p>
-        <label htmlFor="host">Host</label>
-        <input
-          id="host"
-          value={host}
-          onChange={(e) => setHost(e.target.value)}
-          autoComplete="off"
-        />
-        <label htmlFor="port">Port</label>
-        <input
-          id="port"
-          value={port}
-          onChange={(e) => setPort(e.target.value)}
-          autoComplete="off"
-        />
-        <label htmlFor="token">Connect token</label>
-        <input
-          id="token"
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-          autoComplete="off"
-          type="password"
-        />
-        <label htmlFor="database">Logical database</label>
-        <input id="database" value={database} onChange={(e) => setDatabase(e.target.value)} />
-        <label htmlFor="model">Model name</label>
-        <input id="model" value={modelName} onChange={(e) => setModelName(e.target.value)} />
-        <div className="actions">
-          <button type="button" disabled={busy} onClick={() => void listDatabases()}>
-            List databases
-          </button>
-          <button type="button" disabled={busy} onClick={() => void runQuery()}>
-            Run query
-          </button>
+    <div className="app-grid">
+      <aside className="panel sidebar">
+        <h1>{t('app.title')}</h1>
+        <div className="lang-switch">
+          <label htmlFor="locale">{t('app.lang')}</label>
+          <select
+            id="locale"
+            value={locale}
+            onChange={(e) => setLocale(e.target.value as LocaleId)}
+            aria-label={t('app.lang')}
+          >
+            {(Object.keys(LOCALE_LABEL) as LocaleId[]).map((id) => (
+              <option key={id} value={id}>
+                {LOCALE_LABEL[id]}
+              </option>
+            ))}
+          </select>
         </div>
-        {databases && databases.length >= 0 && (
-          <p className="meta" style={{ marginTop: '0.75rem' }}>
-            Databases: {databases.join(', ') || '(none)'}
-          </p>
+        <p className="meta">{t('meta.endpoint', { endpoint, webGpu: webGpuLabel(webGpu) })}</p>
+        {!modelDb ? (
+          <>
+            <label htmlFor="host">{t('connect.host')}</label>
+            <input
+              id="host"
+              value={host}
+              onChange={(e) => setHost(e.target.value)}
+              autoComplete="off"
+            />
+            <label htmlFor="port">{t('connect.port')}</label>
+            <input
+              id="port"
+              value={port}
+              onChange={(e) => setPort(e.target.value)}
+              autoComplete="off"
+            />
+            <label htmlFor="token">{t('connect.token')}</label>
+            <input
+              id="token"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              autoComplete="off"
+              type="password"
+            />
+            <div className="actions">
+              <button type="button" disabled={busy} onClick={() => void connect()}>
+                {t('connect.button')}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="meta">{t('session.connected')}</p>
+            <div className="actions">
+              <button type="button" disabled={busy} onClick={() => void loadTrees(modelDb)}>
+                {t('session.refreshTree')}
+              </button>
+              <button type="button" disabled={busy} onClick={disconnect}>
+                {t('session.disconnect')}
+              </button>
+            </div>
+            <div className="tree">
+              {dbNames.length === 0 && <p className="meta">{t('session.noDatabases')}</p>}
+              {dbNames.map((db) => {
+                const cat = catalogs[db];
+                return (
+                  <div key={db} className="tree-db">
+                    <button
+                      type="button"
+                      className="tree-db-head"
+                      onClick={() => {
+                        setSelectedDb(db);
+                        setSelectedModel(null);
+                      }}
+                    >
+                      <strong>{db}</strong>
+                    </button>
+                    <ul className="model-list">
+                      <li className="meta">{t('tree.models')}</li>
+                      {(cat?.models ?? []).map((m: ManagementCatalogModelInfo) => (
+                        <li key={m.name}>
+                          <button
+                            type="button"
+                            className={selectedModel === m.name && selectedDb === db ? 'sel' : ''}
+                            onClick={() => {
+                              setSelectedDb(db);
+                              setSelectedModel(m.name);
+                            }}
+                          >
+                            {m.name}
+                            {m.parentId ? (
+                              <span className="meta">
+                                {t('tree.extends')}
+                                {m.parentId}
+                              </span>
+                            ) : null}
+                          </button>
+                        </li>
+                      ))}
+                      <li className="meta">{t('tree.relations')}</li>
+                      {(cat?.relations ?? []).map((r: ManagementCatalogRelationInfo) => (
+                        <li key={`${r.forward}-${r.source}-${r.target}`}>
+                          <code>
+                            {r.forward}: {r.source} → {r.target}
+                          </code>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+            <label htmlFor="newdb">{t('db.newName')}</label>
+            <input
+              id="newdb"
+              value={newDbName}
+              onChange={(e) => setNewDbName(e.target.value)}
+              placeholder="my-db"
+            />
+            <div className="actions">
+              <button type="button" disabled={busy} onClick={() => void createDb()}>
+                {t('db.create')}
+              </button>
+              <button type="button" disabled={busy || !selectedDb} onClick={() => void removeDb()}>
+                {t('db.deleteSelected')}
+              </button>
+            </div>
+          </>
         )}
       </aside>
-      <main className="result">
-        <h2>Result</h2>
-        {error && <pre style={{ borderColor: '#5c3d3d', color: '#f5b5b5' }}>{error}</pre>}
-        {!error && result !== null && <pre>{JSON.stringify(result, null, 2)}</pre>}
-        {!error && result === null && !busy && (
-          <p className="meta">
-            Run a query or list databases. Rows use SDK hydration when applicable.
-          </p>
+
+      <section className="panel center">
+        <h2>{t('ops.title')}</h2>
+        {!modelDb && <p className="meta">{t('ops.connectFirst')}</p>}
+        {modelDb && (
+          <>
+            <p className="meta">
+              {selectedDb
+                ? selectedModel
+                  ? t('ops.selectionDbModel', { db: selectedDb, model: selectedModel })
+                  : t('ops.selectionDb', { db: selectedDb })
+                : t('ops.selectDb')}
+            </p>
+            <p className="hint">{t('ops.hint')}</p>
+
+            <h3>{t('query.title')}</h3>
+            <label htmlFor="relate">{t('query.relateLabel')}</label>
+            <input
+              id="relate"
+              value={relateForward}
+              onChange={(e) => setRelateForward(e.target.value)}
+              placeholder={t('query.relatePlaceholder')}
+            />
+            <div className="actions">
+              <button
+                type="button"
+                disabled={busy || !wire || !selectedModel}
+                onClick={() => void runQuery()}
+              >
+                {t('query.run')}
+              </button>
+            </div>
+
+            <h3>{t('insert.title')}</h3>
+            <textarea
+              className="code"
+              value={insertJson}
+              onChange={(e) => setInsertJson(e.target.value)}
+              rows={6}
+              spellCheck={false}
+            />
+            <div className="actions">
+              <button
+                type="button"
+                disabled={busy || !wire || !selectedModel}
+                onClick={() => void runInsert()}
+              >
+                {t('insert.button')}
+              </button>
+            </div>
+
+            <h3>{t('schema.title')}</h3>
+            <textarea
+              className="code"
+              value={alterPatchJson}
+              onChange={(e) => setAlterPatchJson(e.target.value)}
+              rows={5}
+              spellCheck={false}
+            />
+            <div className="actions">
+              <button
+                type="button"
+                disabled={busy || !wire || !selectedModel}
+                onClick={() => void runAlterPatch()}
+              >
+                {t('schema.applyPatch')}
+              </button>
+              <button
+                type="button"
+                disabled={busy || !wire || !selectedModel}
+                onClick={() => void runDropModel()}
+              >
+                {t('schema.dropModel')}
+              </button>
+            </div>
+
+            <h3>{t('rel.title')}</h3>
+            <input
+              value={dropRelationForward}
+              onChange={(e) => setDropRelationForward(e.target.value)}
+              placeholder={t('rel.placeholder')}
+            />
+            <div className="actions">
+              <button type="button" disabled={busy || !wire} onClick={() => void runDropRelation()}>
+                {t('rel.drop')}
+              </button>
+            </div>
+          </>
         )}
-        {busy && <p className="meta">Loading…</p>}
+      </section>
+
+      <main className="result">
+        <h2>{t('result.title')}</h2>
+        {error && <pre className="err">{error}</pre>}
+        {!error && result !== null && <pre>{JSON.stringify(result, null, 2)}</pre>}
+        {!error && result === null && !busy && <p className="meta">{t('result.empty')}</p>}
+        {busy && <p className="meta">{t('result.loading')}</p>}
       </main>
     </div>
   );

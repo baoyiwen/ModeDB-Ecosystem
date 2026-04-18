@@ -27,3 +27,23 @@ export interface ManagementStatusResponse {
 export interface ManagementDatabasesResponse {
   readonly databases: readonly ManagementDatabaseInfo[];
 }
+
+/** Per-model row in **`GET /api/v1/management/databases/:name/catalog`**. */
+export interface ManagementCatalogModelInfo {
+  readonly name: string;
+  readonly parentId: string | null;
+  readonly fields: readonly string[];
+}
+
+export interface ManagementCatalogRelationInfo {
+  readonly forward: string;
+  readonly reverse: string;
+  readonly source: string;
+  readonly target: string;
+}
+
+export interface ManagementCatalogResponse {
+  readonly database: string;
+  readonly models: readonly ManagementCatalogModelInfo[];
+  readonly relations: readonly ManagementCatalogRelationInfo[];
+}

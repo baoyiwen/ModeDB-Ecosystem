@@ -1,4 +1,5 @@
 import { RemoteModelDBClient, type WebSocketCtor } from './remote-client.js';
+import type { ManagementCatalogResponse } from '@mode-db/shared';
 
 /**
  * Primary SDK entry: host/port/token only (no raw URL). Use {@link ModelDB.use} for per-database
@@ -42,6 +43,36 @@ export class ModelDB {
     return infos.map((d) => d.name);
   }
 
+  /** Models + relations for **`database`** (HTTP catalog). */
+  async getDatabaseCatalog(database: string): Promise<ManagementCatalogResponse> {
+    return RemoteModelDBClient.getDatabaseCatalog({
+      host: this.host,
+      port: this.port,
+      token: this.token,
+      database,
+    });
+  }
+
+  /** Create a new logical database directory + empty vault. */
+  async createDatabase(name: string): Promise<void> {
+    return RemoteModelDBClient.createDatabase({
+      host: this.host,
+      port: this.port,
+      token: this.token,
+      name,
+    });
+  }
+
+  /** Delete logical DB files under workspace (destructive). */
+  async deleteDatabase(name: string): Promise<void> {
+    return RemoteModelDBClient.deleteDatabase({
+      host: this.host,
+      port: this.port,
+      token: this.token,
+      name,
+    });
+  }
+
   /**
    * Returns a {@link RemoteModelDBClient} for the given logical database name. Multiple calls for
    * the same name while a connection is in progress await the same promise.
@@ -72,5 +103,17 @@ export class ModelDB {
       this.pending.set(name, inflight);
     }
     return inflight;
+  }
+
+  /**
+   * Close and drop cached wire client for **`database`** (e.g. after server-side delete, or to reset WS).
+   */
+  releaseClient(database: string): void {
+    const name = database.trim();
+    const c = this.clients.get(name);
+    if (c) {
+      c.close();
+      this.clients.delete(name);
+    }
   }
 }

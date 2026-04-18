@@ -20,7 +20,9 @@ import { minify } from 'terser';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const PACKAGES = ['shared', 'common', 'core', 'server', 'sdk'];
+// Do not obfuscate `sdk`: browsers / Vite apps import `@mode-db/sdk` and call public API by name
+// (e.g. `new ModelDB(...).createDatabase()`). Per-file mangle renames class methods and breaks that.
+const PACKAGES = ['shared', 'common', 'core', 'server'];
 
 /** @param {string} dir */
 function* walkJsFiles(dir) {

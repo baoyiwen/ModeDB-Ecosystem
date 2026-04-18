@@ -54,4 +54,4 @@ pnpm install
 pnpm run build
 ```
 
-Each publishable package emits only under its **`dist/`** via **`tsc`**：**`@mode-db/core`** 使用 **`packages/core/tsconfig.build.json`**；**`@mode-db/shared`** / **`@mode-db/sdk`** 使用各自的 **`tsconfig.build.json`**；**`@mode-db/common`** 与 **`@mode-db/server`** 使用包内 **`tsconfig.json`**。
+Each publishable package emits **`dist/`** via **`tsc`**：**`@mode-db/core`** 使用 **`packages/core/tsconfig.build.json`**；**`@mode-db/shared`** / **`@mode-db/sdk`** 使用各自的 **`tsconfig.build.json`**；**`@mode-db/common`** 与 **`@mode-db/server`** 使用包内 **`tsconfig.json`**。部分包的 **`package.json` → `files`** 另含 **`src/`**（供 **`exports.types` → `./src/index.ts`** 的 TypeScript 解析）；registry 消费者仍以 **`dist/`** 为运行时代码入口。

@@ -302,7 +302,7 @@ import {
 
 - **`serializeExecuteResultForWire`**、**`WireExecuteResultJson`**（**`execute-result-wire.ts`**）
 - **`WireClientMessage`**、**`WireExecuteBody`** 等类型（**`wire-protocol.ts`**）
-- **`deriveWireSessionKey` / `encodeWirePayload` / `decodeWirePayload`**（再导出自 **common**，供工具与测试）
+- **`deriveWireSessionKey` / `encodeWirePayload` / `decodeWirePayload`**（**`@mode-db/shared`** **`wire-codec.ts`**；SHA-256 与 Node **`crypto`** 字节级一致）
 
 ---
 
@@ -331,6 +331,8 @@ import { ModelDB, connectRemote, RemoteModelDBClient } from '@mode-db/sdk';
 | **Meta RPC**                                                                   | **`dropModel` / `dropRelation` / `alterModel`** 等经服务端 **`AuthoringEngine`** 执行（见 **[engine-meta-crud-and-wire.md](./engine-meta-crud-and-wire.md)**） |
 
 SDK **不得**依赖 **`@mode-db/core`** 的磁盘实现；仓库 **`pnpm run check:sources`** 会约束来源。
+
+**浏览器与二进制**：SDK 不依赖 **`buffer`** polyfill；线协议实现在 **`@mode-db/shared`** 中使用 **`Uint8Array`**、**`TextEncoder` / `TextDecoder`**、**`DataView`** 与 **`@noble/hashes`**。导出类型 **`WireBinaryBytes`**（**`Uint8Array` 别名**）便于与渲染管线对齐。详见 **[packages/sdk/README.md](../packages/sdk/README.md)** §「浏览器与二进制」。
 
 ---
 

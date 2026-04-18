@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
@@ -8,15 +8,17 @@ import websocket from '@fastify/websocket';
 import WS, { type WebSocket, type RawData } from 'ws';
 import {
   deriveWireSessionKey,
+  type ManagementCatalogResponse,
+  type ManagementDatabasesResponse,
+  type ManagementStatusResponse,
   type WireClientMessage,
   type WireHandshakeRequest,
   type WireRpcEnvelope,
   type WireServerMessage,
 } from '@mode-db/shared';
-import { configureModelDBStorageRoot, EngineLogger } from '@mode-db/common';
+import { assertFlatGraphSegment, configureModelDBStorageRoot, EngineLogger } from '@mode-db/common';
 import { ModelDBClient } from '@mode-db/core';
 import { BinaryInterceptor, TransportAuthError } from './binary-interceptor.js';
-import type { ManagementDatabasesResponse, ManagementStatusResponse } from '@mode-db/shared';
 import type { ResolvedModelDBServerConfig } from './config-loader.js';
 import { AuthoringBridge } from './authoring-bridge.js';
 import { WriteSerializationGate } from './write-serialization-gate.js';
@@ -71,10 +73,18 @@ function sendJsonWs(ws: WebSocket, msg: WireServerMessage): void {
   ws.send(JSON.stringify(msg));
 }
 
+const wsTextEncoder = new TextEncoder();
+
 function parseWsText(interceptor: BinaryInterceptor, data: RawData): string {
-  const buf =
-    typeof data === 'string' ? Buffer.from(data, 'utf8') : Buffer.from(data as ArrayBufferLike);
-  return interceptor.unwrapTransportPayload(buf);
+  if (typeof data === 'string') {
+    return interceptor.unwrapTransportPayload(wsTextEncoder.encode(data));
+  }
+  if (Buffer.isBuffer(data)) {
+    return interceptor.unwrapTransportPayload(
+      new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
+    );
+  }
+  return interceptor.unwrapTransportPayload(new Uint8Array(data as ArrayBufferLike));
 }
 
 function storageRootFingerprint(absoluteRoot: string): string {
@@ -225,7 +235,9 @@ function readActionEnvelope(
   body: unknown,
 ): { cipher: string; id: string } {
   if (Buffer.isBuffer(body)) {
-    const text = interceptor.unwrapTransportPayload(body);
+    const text = interceptor.unwrapTransportPayload(
+      new Uint8Array(body.buffer, body.byteOffset, body.byteLength),
+    );
     const envelope = JSON.parse(text) as { cipher?: string; id?: string };
     const cipher = envelope.cipher;
     const id =
@@ -389,6 +401,108 @@ export async function buildDualTrackFastify(
       return reply.code(500).send({ error: message });
     }
   });
+
+  app.get(
+    '/api/v1/management/databases/:dbName/catalog',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const interceptor = new BinaryInterceptor(cfg.connectToken);
+      try {
+        const token = readConnectTokenFromHttpRequest(request);
+        interceptor.validateConnectToken(token);
+        const params = request.params as { dbName?: string };
+        const dbName = decodeURIComponent(String(params.dbName ?? '').trim());
+        if (!dbName) {
+          return reply.code(400).send({ error: 'Missing database name.' });
+        }
+        assertLogicalDatabaseExists(dataRoot, dbName);
+        const engine = await authoring.getEngine(dbName);
+        const defs = engine.registry.getModelDefinitions();
+        const rels = engine.registry.getRelations();
+        const body: ManagementCatalogResponse = {
+          database: dbName,
+          models: defs.map((d) => ({
+            name: d.name,
+            parentId: d.parentId,
+            fields: [...d.fields],
+          })),
+          relations: rels.map((r) => ({
+            forward: r.forward,
+            reverse: r.reverse,
+            source: r.source,
+            target: r.target,
+          })),
+        };
+        return reply.send(body);
+      } catch (e) {
+        if (e instanceof TransportAuthError) {
+          return reply.code(401).send({ error: e.message });
+        }
+        const message = e instanceof Error ? e.message : String(e);
+        return reply.code(500).send({ error: message });
+      }
+    },
+  );
+
+  app.post('/api/v1/management/databases', async (request: FastifyRequest, reply: FastifyReply) => {
+    const interceptor = new BinaryInterceptor(cfg.connectToken);
+    try {
+      const token = readConnectTokenFromHttpRequest(request);
+      interceptor.validateConnectToken(token);
+      const raw = request.body as { name?: string };
+      const name = String(raw?.name ?? '').trim();
+      assertFlatGraphSegment(name, 'database name');
+      const nestedVault = join(dataRoot, name, 'atlas.mld');
+      const flatVault = join(dataRoot, `${name}.mld`);
+      if (existsSync(nestedVault) || existsSync(flatVault)) {
+        return reply.code(409).send({ error: `Database "${name}" already exists.` });
+      }
+      mkdirSync(join(dataRoot, name), { recursive: true });
+      await authoring.getEngine(name);
+      return reply.code(201).send({ ok: true as const, name });
+    } catch (e) {
+      if (e instanceof TransportAuthError) {
+        return reply.code(401).send({ error: e.message });
+      }
+      const message = e instanceof Error ? e.message : String(e);
+      return reply.code(400).send({ error: message });
+    }
+  });
+
+  app.delete(
+    '/api/v1/management/databases/:dbName',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const interceptor = new BinaryInterceptor(cfg.connectToken);
+      try {
+        const token = readConnectTokenFromHttpRequest(request);
+        interceptor.validateConnectToken(token);
+        const delParams = request.params as { dbName?: string };
+        const dbName = decodeURIComponent(String(delParams.dbName ?? '').trim());
+        assertFlatGraphSegment(dbName, 'database name');
+        const nestedDir = join(dataRoot, dbName);
+        const flatVault = join(dataRoot, `${dbName}.mld`);
+        let removed = false;
+        if (existsSync(nestedDir)) {
+          rmSync(nestedDir, { recursive: true, force: true });
+          removed = true;
+        } else if (existsSync(flatVault)) {
+          rmSync(flatVault);
+          removed = true;
+        }
+        if (!removed) {
+          return reply.code(404).send({ error: `Database "${dbName}" not found.` });
+        }
+        authoring.evict(dbName);
+        atlasClients.delete(dbName);
+        return reply.send({ ok: true as const, name: dbName });
+      } catch (e) {
+        if (e instanceof TransportAuthError) {
+          return reply.code(401).send({ error: e.message });
+        }
+        const message = e instanceof Error ? e.message : String(e);
+        return reply.code(500).send({ error: message });
+      }
+    },
+  );
 
   app.post('/v2/action', async (request: FastifyRequest, reply: FastifyReply) => {
     const interceptor = new BinaryInterceptor(cfg.connectToken);

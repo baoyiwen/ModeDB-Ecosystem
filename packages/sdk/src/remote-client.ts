@@ -3,6 +3,7 @@ import {
   deriveWireSessionKey,
   encodeWirePayload,
   WireQueryChain,
+  type ManagementCatalogResponse,
   type ManagementDatabaseInfo,
   type ManagementDatabasesResponse,
   type ManagementStatusResponse,
@@ -195,18 +196,20 @@ function bindSocketClose(ws: WsEmitter, onClose: () => void): void {
   throw new Error('WebSocket has neither on() nor addEventListener() for close.');
 }
 
+const utf8Decoder = new TextDecoder('utf-8');
+
 function messageText(raw: unknown): string {
   if (typeof raw === 'string') {
     return raw;
   }
   if (raw instanceof ArrayBuffer) {
-    return new TextDecoder().decode(raw);
+    return utf8Decoder.decode(raw);
   }
   if (ArrayBuffer.isView(raw)) {
-    return new TextDecoder().decode(raw as Uint8Array);
-  }
-  if (raw && typeof (raw as Buffer).toString === 'function') {
-    return (raw as Buffer).toString('utf-8');
+    const v = raw as ArrayBufferView;
+    return utf8Decoder.decode(
+      v instanceof Uint8Array ? v : new Uint8Array(v.buffer, v.byteOffset, v.byteLength),
+    );
   }
   return String(raw);
 }
@@ -530,6 +533,42 @@ async function fetchManagementJson<T>(origin: string, token: string, path: strin
   return (await res.json()) as T;
 }
 
+async function fetchManagementPostJson<T>(
+  origin: string,
+  token: string,
+  path: string,
+  body: unknown,
+): Promise<T> {
+  const base = origin.replace(/\/$/, '');
+  const url = `${base}${path}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-ModelDB-Connect-Token': token,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+  }
+  return (await res.json()) as T;
+}
+
+async function fetchManagementDelete(origin: string, token: string, path: string): Promise<void> {
+  const base = origin.replace(/\/$/, '');
+  const url = `${base}${path}`;
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: { 'X-ModelDB-Connect-Token': token },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+  }
+}
+
 export class RemoteModelDBClient {
   private _ws: WsEmitter | undefined;
   private _session: QuerySession | undefined;
@@ -613,6 +652,52 @@ export class RemoteModelDBClient {
       options.token,
       '/api/v1/management/status',
     );
+  }
+
+  /**
+   * Model + relation catalog for one logical DB (**`GET …/databases/:name/catalog`**).
+   */
+  static async getDatabaseCatalog(options: {
+    readonly host: string;
+    readonly port: number;
+    readonly token: string;
+    readonly database: string;
+  }): Promise<ManagementCatalogResponse> {
+    const origin = `http://${options.host}:${options.port}`;
+    const enc = encodeURIComponent(options.database.trim());
+    return fetchManagementJson<ManagementCatalogResponse>(
+      origin,
+      options.token,
+      `/api/v1/management/databases/${enc}/catalog`,
+    );
+  }
+
+  /** Create nested workspace directory and empty vault (`POST /api/v1/management/databases`). */
+  static async createDatabase(options: {
+    readonly host: string;
+    readonly port: number;
+    readonly token: string;
+    readonly name: string;
+  }): Promise<void> {
+    const origin = `http://${options.host}:${options.port}`;
+    await fetchManagementPostJson<{ ok?: boolean }>(
+      origin,
+      options.token,
+      '/api/v1/management/databases',
+      { name: options.name.trim() },
+    );
+  }
+
+  /** Remove logical DB directory or flat **`*.mld`** from workspace (**`DELETE …/databases/:name`**). */
+  static async deleteDatabase(options: {
+    readonly host: string;
+    readonly port: number;
+    readonly token: string;
+    readonly name: string;
+  }): Promise<void> {
+    const origin = `http://${options.host}:${options.port}`;
+    const enc = encodeURIComponent(options.name.trim());
+    await fetchManagementDelete(origin, options.token, `/api/v1/management/databases/${enc}`);
   }
 
   /**

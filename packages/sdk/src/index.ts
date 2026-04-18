@@ -1,12 +1,3 @@
-import { Buffer as BufferPolyfill } from 'buffer';
-
-if (typeof globalThis !== 'undefined') {
-  const g = globalThis as typeof globalThis & { Buffer?: typeof BufferPolyfill };
-  if (!g.Buffer) {
-    g.Buffer = BufferPolyfill;
-  }
-}
-
 export {
   connectRemote,
   ModelDBClient,
@@ -21,7 +12,13 @@ export {
 } from './remote-client.js';
 export { ModelDB, type ModelDBConfig } from './model-db.js';
 export type {
+  ManagementCatalogModelInfo,
+  ManagementCatalogRelationInfo,
+  ManagementCatalogResponse,
   ManagementDatabaseInfo,
   ManagementDatabasesResponse,
   ManagementStatusResponse,
 } from '@mode-db/shared';
+
+/** Alias for binary payloads: **Uint8Array** everywhere (no Node `Buffer`). */
+export type WireBinaryBytes = Uint8Array;

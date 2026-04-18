@@ -1,6 +1,6 @@
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { DiagnosticCenter, ErrorCodes } from '@mode-db/common';
+import { DiagnosticCenter, ErrorCodes, PathResolver } from '@mode-db/common';
 import { AuthoringEngine, fileLooksLikeAtlasSingleVault } from '@mode-db/core';
 import { atlasCatalogSignature } from './atlas-catalog-signature.js';
 
@@ -31,30 +31,61 @@ export class AuthoringBridge {
     return p;
   }
 
+  /** Drop cached engine for a logical DB (e.g. after **`rm` workspace directory**). */
+  evict(atlas: string): void {
+    this.cache.delete(atlas);
+  }
+
   private async createEngine(atlas: string): Promise<AuthoringEngine> {
     const flushOpt =
       this.bufferFlushRowThreshold !== undefined
         ? { bufferFlushRowThreshold: this.bufferFlushRowThreshold }
         : {};
-    const nestedVaultPath = join(this.storageRoot, atlas, 'atlas.mld');
+    const nestedDir = join(this.storageRoot, atlas);
+    const nestedVaultPath = join(nestedDir, 'atlas.mld');
+    const flatVaultPath = PathResolver.workspaceFlatVaultPath(this.storageRoot, atlas);
     const ct = this.connectToken.trim();
     if (!ct) {
       throw new Error('AuthoringBridge: connectToken must be non-empty.');
     }
 
-    if (existsSync(nestedVaultPath) && (await fileLooksLikeAtlasSingleVault(nestedVaultPath))) {
+    const baseEngineOpts = {
+      atlas,
+      storageRoot: this.storageRoot,
+      connectToken: ct,
+      engineLogger: true as const,
+      ...flushOpt,
+    };
+
+    if (existsSync(nestedVaultPath)) {
+      if (!(await fileLooksLikeAtlasSingleVault(nestedVaultPath))) {
+        throw new Error(
+          `AuthoringBridge: "${nestedVaultPath}" exists but is not a valid atlas single-file vault.`,
+        );
+      }
+      return new AuthoringEngine(baseEngineOpts);
+    }
+
+    if (existsSync(flatVaultPath)) {
+      if (!(await fileLooksLikeAtlasSingleVault(flatVaultPath))) {
+        throw new Error(
+          `AuthoringBridge: "${flatVaultPath}" exists but is not a valid atlas single-file vault.`,
+        );
+      }
       return new AuthoringEngine({
-        atlas,
-        storageRoot: this.storageRoot,
-        connectToken: ct,
-        engineLogger: true,
-        ...flushOpt,
+        ...baseEngineOpts,
+        paths: new PathResolver(this.storageRoot, atlas, { workspaceFlatVault: true }),
       });
+    }
+
+    // Management API creates `<workspace>/<atlas>/` first; `atlas.mld` is created by {@link AuthoringEngine}.
+    if (existsSync(nestedDir) && statSync(nestedDir).isDirectory()) {
+      return new AuthoringEngine(baseEngineOpts);
     }
 
     DiagnosticCenter.report(
       ErrorCodes.DATABASE_NOT_FOUND,
-      { dbName: atlas, path: nestedVaultPath },
+      { dbName: atlas, path: flatVaultPath },
       'throw',
     );
     throw new Error('AuthoringBridge.createEngine: unreachable after DATABASE_NOT_FOUND');

@@ -4,15 +4,21 @@
   "description": "ModeDB storage engine, authoring/runtime model APIs, and single-file Vault orchestration.",
   "type": "module",
   "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "types": "./index.ts",
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "index.ts",
+    "authoring",
+    "facade",
+    "src",
+    "templates"
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./index.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "repository": {
