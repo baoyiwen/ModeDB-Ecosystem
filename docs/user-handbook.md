@@ -12,7 +12,7 @@
 | **[README.md](../README.md)**                            | 引擎使用者、架构评审 | 理念、存储、治理/DX、运行参数全集、SDK                                                                                              |
 | **[operations-manual.md](./operations-manual.md)**       | 运维、后端、前端     | 部署、密钥、**`connectRemote`**、检查清单                                                                                           |
 | **[modeldb-config-guide.md](./modeldb-config-guide.md)** | 运维                 | **`modeldb.config.json`** 放哪、相对路径、各 OS                                                                                     |
-| **[test/README.md](../test/README.md)**                  | 贡献者、CI           | 集成脚本说明与命令表                                                                                                                |
+| **[test/README.md](../test/README.md)**                  | 贡献者、CI           | **`pnpm test`**、**`test/integration/e2e-engine-workflow.ts`** 说明                                                                 |
 | **[developer-handbook.md](./developer-handbook.md)**     | 应用开发者           | **`@mode-db/core`** / **SDK**：包职责、**AuthoringEngine** / **ModelDBClient** / **QueryChain** / **HydratedEntity** 等类与方法索引 |
 | **`@mode-db/common`**（`packages/common/src`）           | 引擎 / Server 贡献者 | 共享类型、**`PathResolver`**、**`EngineLogger`**、**`DiskAdapter`**、manifest 与存储根约定                                          |
 
@@ -122,9 +122,9 @@ pnpm exec modeldb-server -- -c modeldb.config.json
 2. 至少填写 **`connectToken`**；若磁盘 **`atlas.mld`** 使用独立 Vault 口令，配置 **`vaultSecret`** 或环境变量 **`MODEL_DB_VAULT_SECRET`**（与 README「运行与配置」一致）。
 3. 模板中 **`logDir`/`workspace`** 已为 **`logs`** / **`vault`**（与数据根下目录一致），一般无需再改。
 
-### 5.4 双轨压测 `ignition`
+### 5.4 浏览器查询 playground
 
-需 **另一终端** 已长期运行 **`modeldb-server`**，且环境变量 **`MODEL_DB_URL`**、**`MODEL_DB_CONNECT_TOKEN`**、**`MODEL_DB_ATLAS`** 与配置一致。详见根 README **「双轨压测点火」** 与 **[test/README.md](../test/README.md)**。
+需 **另一终端** 已运行 **`modeldb-server`**，再执行 **`pnpm run dev:web`**（**`apps/web`**）。在页面中填写 **host / port / connect token / 逻辑库 / 模型**，与 **`modeldb.config.json`** 一致。详见 **[apps/web/README.md](../apps/web/README.md)** 与 **[test/README.md](../test/README.md)**。
 
 ---
 
@@ -132,10 +132,10 @@ pnpm exec modeldb-server -- -c modeldb.config.json
 
 ```bash
 pnpm run check    # check:sources + typecheck + lint + format:check
-pnpm test         # 等价 pnpm run test:integration（会先 build shared/common/core/server）
+pnpm test         # test:unit + test:integration（会先 build shared/common/core/server/sdk）
 ```
 
-**`verify.ts`** 会清空默认 **`data/`**；跑前请确认无未备份的本地图谱数据。
+集成脚本使用独立目录 **`data/e2e_engine_workspace`**（见 **`e2e-engine-workflow.ts`**），不清空整个 **`data/`**。
 
 ---
 

@@ -36,13 +36,16 @@
   },
   "files": [
     "dist",
-    "scripts/clear-modeldb-cache.mjs"
+    "scripts/clear-modeldb-cache.mjs",
+    "scripts/install-modeldb-workspace.mjs",
+    "templates/modeldb/AGENTS.md"
   ],
   "scripts": {
     "prebuild": "pnpm -C ../.. run build:shared && pnpm -C ../.. run build:common && pnpm -C ../.. run build:core",
     "pretypecheck": "pnpm -C ../.. run build:shared && pnpm -C ../.. run build:common && pnpm -C ../.. run build:core",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "postinstall": "node ./scripts/install-modeldb-workspace.mjs",
     "postuninstall": "node ./scripts/clear-modeldb-cache.mjs"
   },
   "dependencies": {

@@ -72,13 +72,12 @@ RPC 明文 JSON 在发送前经 **`encodeWirePayload`**（**`@mode-db/shared`**�
 
 ## 8. 集成测试与回归
 
-- **`test/meta_crud_audit.ts`**：进程内 **`alterModel` → `dropRelation` → `dropModel`**（断言 **`dropModel` 后 `m:*` 仍在且非空**、**`orphan:m:*` 键未被创建**，以及 Vault **`r:*`** 在 **`dropRelation`** 后清空）；再起 **`startModelDBWebSocketServer`**，用 **`RemoteModelDBClient.connectNetwork`** 跑 RPC（含 **`alterModel(..., { patch: true })`**）。
-- 默认串联在 **`npm run test:integration`** 末步（在 **`wire_server_audit`** 之后）；单跑：**`npm run meta-crud-audit`**。
+- 集成回归见仓库 **`pnpm test`** 与 **`test/integration/e2e-engine-workflow.ts`**（含进程内 **`AuthoringEngine`** 与线 **`alterModel` / `insertMany` / `query`**）。
 
 ## 9. 运维与后续工作
 
 - **Compact**：未来可扫描 manifest 外的 **`m:*`** / 分文件 **`.mld`** 做空间回收；**`dropModel`** 当前不创建 **`orphan:m:*`** 键。
-- 修改线协议或 dispatcher 时，应同步更新 **`@mode-db/shared`** 类型、**`@mode-db/sdk`** 的 **`executeWireBody`** 分支与 **`meta_crud_audit`**。
+- 修改线协议或 dispatcher 时，应同步更新 **`@mode-db/shared`** 类型、**`@mode-db/sdk`** 的 **`executeWireBody`** 分支，并跑通 **`pnpm test`**。
 
 ## 10. 物理层演进路线（与当前实现的差异）
 

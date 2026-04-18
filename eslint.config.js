@@ -8,6 +8,7 @@ export default [
   {
     ignores: [
       'test/**',
+      'apps/**',
       'templates/**',
       'node_modules/**',
       'dist/**',

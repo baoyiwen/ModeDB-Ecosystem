@@ -22,7 +22,7 @@ function shellArg(f) {
 }
 
 export default {
-  '*.{js,ts,mjs,mts}': (files) => {
+  '*.{js,ts,tsx,mjs,mts}': (files) => {
     const kept = files.filter(keepForLintFormat);
     if (!kept.length) {
       return [];

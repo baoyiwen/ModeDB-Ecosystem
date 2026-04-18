@@ -10,7 +10,7 @@
 ## SDK / CLI / 管理 API（ModeDB 开发准则）
 
 - **连接模式**：严禁在 **`@mode-db/sdk`** 中用 **`dbPath`** 等物理路径连接；须使用逻辑库名（workspace 子目录名）与 **`connectToken`**。
-- **实例化规范**：业务侧数据库访问通过 **`RemoteModelDBClient.connect` / `connectNetwork`** 等得到实例后再调用；避免散落的全局「未绑定连接」API（管理类只读操作可用 **`RemoteModelDBClient.listDatabases` / `getManagementStatus`** 等静态方法）。
+- **实例化规范**：业务侧优先 **`ModelDB`**（**`host`/`port`/`token`**）或 **`RemoteModelDBClient.connect` / `connectNetwork`**；避免散落的全局「未绑定连接」API（管理类只读操作可用 **`RemoteModelDBClient.listDatabases` / `getManagementStatus`** 等静态方法）。
 - **数据模型**：不在公共 API 中引入 TypeScript **`enum`** 表达状态或分类；状态与分类用 **`type`/`interface`** 或 Model 描述。
 - **异步守卫**：SDK 连接路径须在 **`new` / `connect` 完成后再暴露可调用会话，避免「未握手即可执行」的竞态。
 - **错误管理**：网络与编解码错误应通过统一、可诊断的错误类型或消息抛出（含 HTTP 状态与响应体摘要）；避免吞掉 **`fetch`** / 解析异常。

@@ -76,3 +76,6 @@ Thumbs.db
 # Environment
 .env
 .env.*
+
+# Local copy from @mode-db/server postinstall (AI/workspace rules)
+/modeldb/

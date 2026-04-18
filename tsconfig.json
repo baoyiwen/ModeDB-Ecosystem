@@ -4,7 +4,8 @@
       "@mode-db/core": ["./packages/core/index.ts"],
       "@mode-db/common": ["./packages/common/src/index.ts"],
       "@mode-db/shared": ["./packages/shared/src/index.ts"],
-      "@mode-db/sdk": ["./packages/sdk/src/index.ts"]
+      "@mode-db/sdk": ["./packages/sdk/src/index.ts"],
+      "@mode-db/server": ["./packages/server/src/index.ts"]
     },
     "target": "ES2022",
     "module": "Node16",

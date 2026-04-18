@@ -32,7 +32,7 @@
 
 2. **Vault 密钥（读写 `atlas.mld` 必填）**
    - 治理端：`AuthoringEngine` 的 **`connectToken`**（派生盘密钥）或 **`vaultSecret` / `MODEL_DB_VAULT_SECRET`**。
-   - 运行时：**`ModelDBClient.connect`** 读 Vault 时需 **`MODEL_DB_VAULT_SECRET`** 或与集成场景一致的 **`MODEL_DB_CONNECT_TOKEN`**（与 README、**`test/integration-vault.ts`** 对齐）。
+   - 运行时：**`ModelDBClient.connect`** 读 Vault 时需 **`MODEL_DB_VAULT_SECRET`** 或与集成场景一致的 **`MODEL_DB_CONNECT_TOKEN`**（与 README、**`test/integration/vault-env.ts`** 对齐）。
 
 生产环境通常 **两者都配置**：网络准入 + 磁盘解密。
 

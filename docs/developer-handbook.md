@@ -2,16 +2,16 @@
 
 面向在应用、脚本或服务中**集成图谱存储、治理写入与只读查询**的开发者：汇总 **pnpm 工作区各包职责**、**`@mode-db/core`** 的公开 API（类、方法、典型用途），以及 **`@mode-db/sdk`** 的网络入口。实现细节与语义边界以源码与根目录 **[README.md](../README.md)** 为准。
 
-| 需求                                              | 文档                                                                               |
-| ------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| 安装、构建、启动 **`modeldb-server`**、跑集成测试 | **[user-handbook.md](./user-handbook.md)**                                         |
-| 部署、密钥、**`connectRemote`**、接入清单         | **[operations-manual.md](./operations-manual.md)**                                 |
-| **`modeldb.config.json`** 路径与 **`workspace`**  | **[modeldb-config-guide.md](./modeldb-config-guide.md)**                           |
-| **`alterModel` / `dropModel` / Wire RPC**         | **[engine-meta-crud-and-wire.md](./engine-meta-crud-and-wire.md)**                 |
-| 逻辑库目录与 **`atlas.mld`** 寻址                 | **[logical-workspace-and-single-file.md](./logical-workspace-and-single-file.md)** |
-| 架构、DX、链式查询深度说明                        | **[README.md](../README.md)**                                                      |
-| 发布顺序与命令                                    | **[PUBLISH.md](./PUBLISH.md)**                                                     |
-| 集成脚本命令                                      | **[test/README.md](../test/README.md)**                                            |
+| 需求                                                  | 文档                                                                                      |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 安装、构建、启动 **`modeldb-server`**、跑集成测试     | **[user-handbook.md](./user-handbook.md)**                                                |
+| 部署、密钥、**`ModelDB` / `connectRemote`**、接入清单 | **[operations-manual.md](./operations-manual.md)**                                        |
+| **`modeldb.config.json`** 路径与 **`workspace`**      | **[modeldb-config-guide.md](./modeldb-config-guide.md)**                                  |
+| **`alterModel` / `dropModel` / Wire RPC**             | **[engine-meta-crud-and-wire.md](./engine-meta-crud-and-wire.md)**                        |
+| 逻辑库目录与 **`atlas.mld`** 寻址                     | **[logical-workspace-and-single-file.md](./logical-workspace-and-single-file.md)**        |
+| 架构、DX、链式查询深度说明                            | **[README.md](../README.md)**                                                             |
+| 发布顺序与命令                                        | **[PUBLISH.md](./PUBLISH.md)**                                                            |
+| 集成脚本命令                                          | **[test/README.md](../test/README.md)**（**`pnpm test`** / **`e2e-engine-workflow.ts`**） |
 
 ---
 
@@ -23,7 +23,7 @@
 | **`@mode-db/common`** | `packages/common` | **PathResolver**、存储根、**manifest**、错误类、**DataType** / **ValueObject**、**DiagnosticCenter**、**EngineLogger**、**DiskAdapter**、**deriveAtlasVaultSecretFromConnectToken** 等 |
 | **`@mode-db/shared`** | `packages/shared` | Wire 编解码、**WireQueryChain**、握手与 RPC 载荷类型（**不**依赖 core）                                                                                                                |
 | **`@mode-db/server`** | `packages/server` | **modeldb-server** CLI、配置加载、WebSocket 查询与 Meta RPC 分发                                                                                                                       |
-| **`@mode-db/sdk`**    | `packages/sdk`    | **connectRemote**、**RemoteModelDBClient**；仅依赖 **shared**                                                                                                                          |
+| **`@mode-db/sdk`**    | `packages/sdk`    | **ModelDB**、**connectRemote**、**RemoteModelDBClient**；仅依赖 **shared**                                                                                                             |
 
 - **同进程**本地 Vault 读写：依赖 **`@mode-db/core`**（会拉取 **common** 等）。
 - **仅远程**查询或 Meta：可只装 **`@mode-db/sdk`**（**不必**装 core）。
@@ -317,11 +317,12 @@ import {
 **入口**：`packages/sdk/src/index.ts`。
 
 ```ts
-import { connectRemote, RemoteModelDBClient } from '@mode-db/sdk';
+import { ModelDB, connectRemote, RemoteModelDBClient } from '@mode-db/sdk';
 ```
 
 | API                                                                            | 说明                                                                                                                                                           |
 | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`ModelDB`**                                                                  | **`constructor({ host, port, token, … })`**：**`listDatabases()`**、**`use(logicalDb)`** → **`RemoteModelDBClient`**                                           |
 | **`connectRemote(options)`**                                                   | **`ConnectRemoteOptions`**：**`url`**、**`connectToken`**、**`atlas` 或 `dbName`**（逻辑库名）等；返回 **`RemoteModelDBClient`**                               |
 | **`RemoteModelDBClient.connect(options)`**                                     | 同上                                                                                                                                                           |
 | **`RemoteModelDBClient.connectNetwork({ host, port, token, database, ... })`** | **HTTP 源 + WebSocket stream** 的便捷封装（与 **`connectRemote`** 同协议）                                                                                     |

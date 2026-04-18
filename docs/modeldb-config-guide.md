@@ -127,7 +127,7 @@ JSON 中 **`/`** 在 Node 下可用；也可用 **`D:\\\\Data\\\\modeldb_workspa
 | **`connectToken`**           | **必填**（文件、环境变量 **`MODEL_DB_CONNECT_TOKEN`** 或 CLI **`--token`** 三选一合并后非空）；否则服务启动失败。 |
 | **`dev`**                    | 开发标志；可被 **`MODEL_DB_DEV`** 或 CLI **`--dev`** 覆盖。                                                       |
 
-**Vault 磁盘密钥**：当前 **`ModelDBServerFileConfig`** 类型以 **`connectToken`** 与运行时环境为主；若 README 中仍提到 **`vaultSecret`**，请以你使用的 **`@mode-db/server` / 引擎版本** 的 **`config-loader`** 与 README 为准。读 **`atlas.mld`** 的进程通常还需与灌库时一致的 **`MODEL_DB_VAULT_SECRET`** 或 **`MODEL_DB_CONNECT_TOKEN`**（与集成测试 **`test/integration-vault.ts`** 一致）。
+**Vault 磁盘密钥**：当前 **`ModelDBServerFileConfig`** 类型以 **`connectToken`** 与运行时环境为主；若 README 中仍提到 **`vaultSecret`**，请以你使用的 **`@mode-db/server` / 引擎版本** 的 **`config-loader`** 与 README 为准。读 **`atlas.mld`** 的进程通常还需与灌库时一致的 **`MODEL_DB_VAULT_SECRET`** 或 **`MODEL_DB_CONNECT_TOKEN`**（与集成测试 **`test/integration/vault-env.ts`** 一致）。
 
 **配置优先级**（同一键）：**CLI → `modeldb.config.json` → 环境变量 → 默认值**。
 
