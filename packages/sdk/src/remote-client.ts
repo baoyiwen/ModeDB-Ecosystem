@@ -83,10 +83,11 @@ function reviveWireResult(json: WireExecuteResultJson): unknown {
 type WsEmitter = {
   send(data: string): void;
   close(): void;
-  on(event: string, fn: (...args: unknown[]) => void): void;
-  once(event: 'open' | 'error', fn: (...args: unknown[]) => void): void;
+  /** Node **`ws`** style; browser **`WebSocket`** uses **`addEventListener`** only. */
+  on?(event: string, fn: (...args: unknown[]) => void): void;
+  once?(event: 'open' | 'error', fn: (...args: unknown[]) => void): void;
   addEventListener?(
-    type: 'open' | 'error' | 'message',
+    type: 'open' | 'error' | 'message' | 'close',
     fn: (ev: Event | MessageEvent) => void,
     opts?: { once?: boolean },
   ): void;
@@ -168,6 +169,32 @@ async function openWebSocket(url: string, WebSocketCtor?: WebSocketCtor): Promis
   return ws;
 }
 
+function bindSocketMessage(ws: WsEmitter, onMessage: (raw: unknown) => void): void {
+  if (typeof ws.on === 'function') {
+    ws.on('message', onMessage);
+    return;
+  }
+  if (typeof ws.addEventListener === 'function') {
+    ws.addEventListener('message', (ev) => {
+      onMessage((ev as MessageEvent).data);
+    });
+    return;
+  }
+  throw new Error('WebSocket has neither on() nor addEventListener() for message.');
+}
+
+function bindSocketClose(ws: WsEmitter, onClose: () => void): void {
+  if (typeof ws.on === 'function') {
+    ws.on('close', onClose);
+    return;
+  }
+  if (typeof ws.addEventListener === 'function') {
+    ws.addEventListener('close', onClose);
+    return;
+  }
+  throw new Error('WebSocket has neither on() nor addEventListener() for close.');
+}
+
 function messageText(raw: unknown): string {
   if (typeof raw === 'string') {
     return raw;
@@ -186,7 +213,12 @@ function messageText(raw: unknown): string {
 
 export interface ConnectRemoteOptions {
   readonly url: string;
-  readonly connectToken: string;
+  /**
+   * Same secret as server **`connectToken`** / **`MODEL_DB_CONNECT_TOKEN`**.
+   * **`token`** is an accepted alias (e.g. same name as **`connectNetwork`**).
+   */
+  readonly connectToken?: string;
+  readonly token?: string;
   /**
    * Logical library **`dbName`** → server resolves **`<workspace>/<dbName>/`** (vault **`atlas.mld`** recommended).
    * Preferred over **`atlas`** for new integrations.
@@ -200,6 +232,16 @@ export interface ConnectRemoteOptions {
    */
   readonly mode?: 'short' | 'stream';
   readonly webSocketCtor?: WebSocketCtor;
+}
+
+function resolveConnectToken(options: ConnectRemoteOptions): string {
+  const t = options.connectToken ?? options.token;
+  if (typeof t !== 'string' || !t.trim()) {
+    throw new Error(
+      'connectRemote: provide connectToken or token (same as server connectToken / MODEL_DB_CONNECT_TOKEN).',
+    );
+  }
+  return t.trim();
 }
 
 /** Logical library directory name under the server **`workspace`** (`dbName` preferred; **`atlas`** is a synonym). */
@@ -297,10 +339,10 @@ class RemoteSession implements QuerySession {
     private readonly connectToken: string,
     readonly atlas: string,
   ) {
-    this.ws.on('message', (raw) => {
+    bindSocketMessage(this.ws, (raw) => {
       this.onSocketMessage(raw);
     });
-    this.ws.on('close', () => {
+    bindSocketClose(this.ws, () => {
       if (!this.handshakeDone) {
         const w = this.handshakeWait;
         if (w) {
@@ -552,16 +594,17 @@ export class RemoteModelDBClient {
 
   static async connect(options: ConnectRemoteOptions): Promise<RemoteModelDBClient> {
     const logical = resolveConnectLogicalDb(options);
+    const connectToken = resolveConnectToken(options);
     const mode = options.mode ?? 'stream';
     if (mode === 'short') {
       const origin = toHttpOrigin(options.url);
-      const session = new ShortRemoteSession(origin, options.connectToken, logical);
+      const session = new ShortRemoteSession(origin, connectToken, logical);
       await session.connectHandshake();
       return new RemoteModelDBClient(undefined, session);
     }
     const wsUrl = toWsStreamUrl(options.url);
     const ws = await openWebSocket(wsUrl, options.webSocketCtor);
-    const session = new RemoteSession(ws, options.connectToken, logical);
+    const session = new RemoteSession(ws, connectToken, logical);
     await session.connectHandshake();
     return new RemoteModelDBClient(ws, session);
   }
