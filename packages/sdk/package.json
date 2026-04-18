@@ -1,6 +1,6 @@
 {
   "name": "@mode-db/sdk",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Remote WebSocket/HTTP client for ModelDB: wire session codec (@mode-db/shared) + query façade only. Does not bundle or start @mode-db/server.",
   "type": "module",
   "main": "./dist/index.js",
