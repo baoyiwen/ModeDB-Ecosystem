@@ -1,6 +1,6 @@
 {
   "name": "@mode-db/shared",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Wire codec, transport framing, remote query plan types, and protocol surfaces for ModelDB clients and server (no sibling workspace packages in dependencies).",
   "type": "module",
   "main": "./dist/index.js",
