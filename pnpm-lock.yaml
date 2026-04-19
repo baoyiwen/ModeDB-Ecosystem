@@ -60,8 +60,8 @@ importers:
   apps/web:
     dependencies:
       '@mode-db/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
+        specifier: '*'
+        version: 0.1.5
       react:
         specifier: ^19.0.0
         version: 19.2.5
@@ -678,6 +678,12 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@mode-db/sdk@0.1.5':
+    resolution: {integrity: sha512-nRYJlNJSBLs/B+Bapfn1u+HGh9OX7RcU4aoNKp0Xzn8JwxKdkiGPFi2bLBMeLReIV1Np6LQJ2JwDyhF4f68agQ==}
+
+  '@mode-db/shared@0.1.6':
+    resolution: {integrity: sha512-tzjYedmHgp/48gT9pKylRy2yEaCZB26YnYcLTjHdaxDuBhcqbaXkXdva0xqh5PQkuNQS8o3KbStDbbdeSkDQlg==}
 
   '@noble/hashes@1.8.0':
     resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
@@ -2669,6 +2675,19 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@mode-db/sdk@0.1.5':
+    dependencies:
+      '@mode-db/shared': 0.1.6
+    optionalDependencies:
+      ws: 8.20.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  '@mode-db/shared@0.1.6':
+    dependencies:
+      '@noble/hashes': 1.8.0
 
   '@noble/hashes@1.8.0': {}
 

@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@mode-db/sdk": "workspace:*",
+    "@mode-db/sdk": "*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
