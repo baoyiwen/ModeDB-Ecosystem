@@ -2,19 +2,30 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { RemoteModelDBClient } from '@mode-db/sdk';
 import { DesignerComponent } from './base/designer-component.js';
 import { ensureDesignerCatalog } from '../bootstrap/designer-storage-init.js';
-import { openWorkspaceSession } from '../engine/workspace-session.js';
+import { seedDefaultWorkspaceRecords } from '../bootstrap/seed-workspace-rows.js';
+import {
+  getStoredHost,
+  getStoredPort,
+  getStoredWorkspace,
+  persistConnectionFields,
+} from '../config/connection-prefs.js';
 import { FIXED_MODEL_DESIGNER_DATABASE } from '../config/fixed-database.js';
+import { withTimeout } from '../engine/async-timeout.js';
+import { openWorkspaceSession } from '../engine/workspace-session.js';
 import type { LocaleCode } from '../managers/i18n-manager.js';
 
 export interface WorkspaceGateProps {
   onSessionOpened: () => void;
 }
 
+const CONNECT_TIMEOUT_MS = 45_000;
+const BOOTSTRAP_TIMEOUT_MS = 90_000;
+
 interface WorkspaceGateState {
   host: string;
   port: number;
+  workspace: string;
   token: string;
-  locale: LocaleCode;
   busy: boolean;
   bootstrapProgress: { current: number; total: number; detail: string } | null;
 }
@@ -28,10 +39,10 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
   constructor(props: WorkspaceGateProps) {
     super(props);
     this.state = {
-      host: import.meta.env.VITE_MODE_DB_HOST ?? '127.0.0.1',
-      port: Number(import.meta.env.VITE_MODE_DB_PORT ?? 9090) || 9090,
+      host: getStoredHost(import.meta.env.VITE_MODE_DB_HOST ?? '127.0.0.1'),
+      port: getStoredPort(Number(import.meta.env.VITE_MODE_DB_PORT ?? 9090) || 9090),
+      workspace: getStoredWorkspace(FIXED_MODEL_DESIGNER_DATABASE),
       token: import.meta.env.VITE_MODE_DB_TOKEN ?? '',
-      locale: 'en',
       busy: false,
       bootstrapProgress: null,
     };
@@ -39,7 +50,6 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
 
   override componentDidMount(): void {
     const { i18n } = this.managers;
-    this.setState({ locale: i18n.locale });
     this.i18nUnsub = i18n.subscribe(() => this.forceUpdate());
   }
 
@@ -68,36 +78,57 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
 
   private connect = async (): Promise<void> => {
     const { i18n, config } = this.managers;
-    const { host, port, token } = this.state;
+    const { host, port, workspace, token } = this.state;
+    const ws = workspace.trim();
     if (!token.trim()) {
       window.alert(i18n.t('errors', 'tokenRequired'));
       return;
     }
+    if (!ws) {
+      window.alert(i18n.t('errors', 'workspaceRequired'));
+      return;
+    }
     this.setState({ busy: true, bootstrapProgress: null });
     let client: RemoteModelDBClient | undefined;
+    let connectOk = false;
     try {
-      client = await openWorkspaceSession({
-        host,
-        port,
-        token: token.trim(),
-        workspace: FIXED_MODEL_DESIGNER_DATABASE,
-      });
-      await ensureDesignerCatalog(client, (p) => {
-        this.setState({
-          bootstrapProgress: { current: p.stepIndex, total: p.stepTotal, detail: p.detail },
-        });
-      });
+      client = await withTimeout(
+        openWorkspaceSession({
+          host,
+          port,
+          token: token.trim(),
+          workspace: ws,
+        }),
+        CONNECT_TIMEOUT_MS,
+        i18n.t('errors', 'connectTimeout'),
+      );
+      connectOk = true;
+      await withTimeout(
+        (async () => {
+          await ensureDesignerCatalog(client, (p) => {
+            this.setState({
+              bootstrapProgress: { current: p.stepIndex, total: p.stepTotal, detail: p.detail },
+            });
+          });
+          await seedDefaultWorkspaceRecords(client, ws);
+        })(),
+        BOOTSTRAP_TIMEOUT_MS,
+        i18n.t('errors', 'bootstrapTimeout'),
+      );
+      persistConnectionFields(host, port, ws);
       config.setRemoteClient(client, true);
       this.props.onSessionOpened();
-    } catch {
+    } catch (e) {
       try {
         client?.close();
       } catch {
         /* ignore */
       }
-      window.alert(
-        client ? i18n.t('errors', 'bootstrapFailed') : i18n.t('errors', 'connectFailed'),
-      );
+      const detail = e instanceof Error ? e.message : String(e);
+      const title = connectOk
+        ? i18n.t('errors', 'bootstrapFailed')
+        : i18n.t('errors', 'connectFailed');
+      window.alert(`${title}\n\n${i18n.t('errors', 'errorDetails')}\n${detail}`);
     } finally {
       this.setState({ busy: false, bootstrapProgress: null });
     }
@@ -105,7 +136,7 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
 
   override render(): ReactNode {
     const { i18n } = this.managers;
-    const { host, port, token, locale, busy, bootstrapProgress } = this.state;
+    const { host, port, workspace, token, busy, bootstrapProgress } = this.state;
 
     return (
       <div style={this.shellStyle}>
@@ -113,17 +144,6 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
         <p style={{ fontSize: 13, color: '#94a3b8', maxWidth: 480, textAlign: 'center' }}>
           {i18n.t('ui', 'gateHint')}
         </p>
-        <div
-          style={{
-            fontSize: 12,
-            color: '#64748b',
-            width: 'min(400px, 100%)',
-            textAlign: 'center',
-          }}
-        >
-          {i18n.t('ui', 'gateFixedDatabase')}:{' '}
-          <strong style={{ color: '#94a3b8' }}>{FIXED_MODEL_DESIGNER_DATABASE}</strong>
-        </div>
         <label
           style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 'min(400px, 100%)' }}
         >
@@ -148,6 +168,21 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
         <label
           style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 'min(400px, 100%)' }}
         >
+          <span>{i18n.t('ui', 'gateWorkspace')}</span>
+          <input
+            value={workspace}
+            onChange={(e) => this.setState({ workspace: e.target.value })}
+            style={this.inputStyle}
+            placeholder={FIXED_MODEL_DESIGNER_DATABASE}
+            autoComplete="off"
+          />
+          <span style={{ fontSize: 11, color: '#64748b' }}>
+            {i18n.t('ui', 'gateWorkspaceHint')}
+          </span>
+        </label>
+        <label
+          style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 'min(400px, 100%)' }}
+        >
           <span>{i18n.t('ui', 'connectToken')}</span>
           <input
             value={token}
@@ -158,11 +193,9 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, width: 'min(400px, 100%)' }}>
           <span>{i18n.t('ui', 'locale')}</span>
           <select
-            value={locale}
+            value={i18n.locale}
             onChange={(e) => {
-              const next = e.target.value as LocaleCode;
-              this.setState({ locale: next });
-              i18n.setLocale(next);
+              i18n.setLocale(e.target.value as LocaleCode);
             }}
             style={{ ...this.inputStyle, flex: 1 }}
           >

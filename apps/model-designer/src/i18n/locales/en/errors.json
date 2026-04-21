@@ -1,8 +1,13 @@
 {
   "invalidMldg": "Invalid designer graph payload",
   "connectFailed": "Could not connect or workspace validation failed",
+  "connectTimeout": "Connection timed out. Check host, port, token, and network.",
+  "bootstrapTimeout": "Catalog installation timed out. Try again or verify the server version.",
+  "workspaceRequired": "Logical database (workspace) name is required",
+  "errorDetails": "Details:",
   "tokenRequired": "Connect token is required",
   "pushFailed": "Could not push graph to the engine",
   "pullFailed": "Could not pull graph from the engine",
-  "bootstrapFailed": "Connected but designer catalog bootstrap failed"
+  "bootstrapFailed": "Connected but designer catalog bootstrap failed",
+  "invalidJson": "Invalid JSON in metadata"
 }

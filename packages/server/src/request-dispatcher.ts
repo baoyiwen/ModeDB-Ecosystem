@@ -20,6 +20,7 @@ import type { WriteSerializationGate } from './write-serialization-gate.js';
 import type { FieldDefsRecord } from '@mode-db/common';
 
 const MAX_INSERT_MANY_ROWS = 20_000;
+const MAX_BATCH_UPDATE_OPS = 20_000;
 
 function sendJson(ws: WebSocket, msg: WireServerMessage): void {
   ws.send(JSON.stringify(msg));
@@ -121,6 +122,39 @@ export class WireRequestDispatcher {
             record: null,
             successCount: report.successCount,
             failureCount: report.failureCount,
+          };
+          return encodeWirePayload(JSON.stringify(wireJson), sessionKey);
+        });
+        return { type: 'rpc.ok', id, cipher };
+      }
+      if (body.op === 'batchUpdate') {
+        if (body.updates.length > MAX_BATCH_UPDATE_OPS) {
+          throw new Error(`batchUpdate: at most ${MAX_BATCH_UPDATE_OPS} updates per RPC.`);
+        }
+        const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
+          const engine = await this.opts.getEngine(atlas);
+          let successCount = 0;
+          let failureCount = 0;
+          for (const u of body.updates) {
+            try {
+              const rec = await engine.update(u.model, u.id, u.partial, { sync: false });
+              if (rec) {
+                successCount++;
+              } else {
+                failureCount++;
+              }
+            } catch {
+              failureCount++;
+            }
+          }
+          await engine.flushAll();
+          const wireJson: WireExecuteResultJson = {
+            kind: 'mutation',
+            op: 'batchUpdate',
+            model: '',
+            record: null,
+            successCount,
+            failureCount,
           };
           return encodeWirePayload(JSON.stringify(wireJson), sessionKey);
         });

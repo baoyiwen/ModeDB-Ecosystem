@@ -5,11 +5,14 @@ import { EventManager } from '../managers/event-manager.js';
 import { GraphLinker } from '../managers/graph-linker.js';
 import { I18nManager } from '../managers/i18n-manager.js';
 import { LayerManager } from '../managers/layer-manager.js';
+import { ModeManager } from '../managers/mode-manager.js';
 import { PropVaultController } from '../managers/prop-vault-controller.js';
+import { GraphSyncManager } from '../managers/graph-sync-manager.js';
 import { StateManager } from '../managers/state-manager.js';
 
 export interface DesignerManagers {
   state: StateManager;
+  modes: ModeManager;
   events: EventManager;
   config: ConfigManager;
   data: DataManager;
@@ -17,6 +20,7 @@ export interface DesignerManagers {
   layers: LayerManager;
   graphLink: GraphLinker;
   propVault: PropVaultController;
+  graphSync: GraphSyncManager;
 }
 
 /** Class 组件可通过 `static contextType = DesignerContext` 订阅。 */
@@ -28,6 +32,7 @@ export function DesignerProvider({ children }: { children: ReactNode }): React.R
     const data = new DataManager();
     managers.current = {
       state: new StateManager(),
+      modes: new ModeManager(),
       events: new EventManager(),
       config: new ConfigManager(),
       data,
@@ -35,6 +40,7 @@ export function DesignerProvider({ children }: { children: ReactNode }): React.R
       layers: new LayerManager(data),
       graphLink: new GraphLinker(data),
       propVault: new PropVaultController(),
+      graphSync: new GraphSyncManager(),
     };
   }
   const value = useMemo(() => managers.current as DesignerManagers, []);

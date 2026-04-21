@@ -1,9 +1,11 @@
 import type { RemoteModelDBClient } from '@mode-db/sdk';
 import type { DesignerLayerRow, DesignerModelLayout } from '../types/designer-layout.js';
+import type { LayerTreeNode } from '../types/layer-tree.js';
 import type { EngineModelNode, EngineRelationEdge } from '../types/engine-schema.js';
 import type { MldgDocument } from '../types/mldg-document.js';
 import { createEmptyMldgDocument } from '../types/mldg-document.js';
 import type { PropObject } from '../types/prop-object.js';
+import { GRAPH_INHERIT_KIND } from '../config/graph-edge-kinds.js';
 import { extractEngineModelRelationPayload } from '../sync/engine-model-relation.js';
 import {
   parseMldgDocumentFromUint8Array,
@@ -17,6 +19,33 @@ function newId(): string {
   return crypto.randomUUID();
 }
 
+const DEFAULT_PAGE_ID = 'page-main';
+const DEFAULT_GROUP_ID = 'group-root';
+
+function createDefaultLayerTree(): LayerTreeNode[] {
+  return [
+    {
+      id: DEFAULT_GROUP_ID,
+      kind: 'group',
+      label: 'Root',
+      isVisible: true,
+      sort: 0,
+      memberModelIds: [],
+      children: [
+        {
+          id: DEFAULT_PAGE_ID,
+          kind: 'page',
+          label: 'Main',
+          isVisible: true,
+          sort: 0,
+          children: [],
+          memberModelIds: [],
+        },
+      ],
+    },
+  ];
+}
+
 /**
  * 内存模型与关系；可与 SDK 同步（此处留扩展点）。
  */
@@ -27,7 +56,150 @@ export class DataManager {
   private _layers: DesignerLayerRow[] = [];
   /** node → layer ids（未出现在映射中的节点视为未归属图层，始终参与绘制）。 */
   private readonly _nodeToLayers = new Map<string, Set<string>>();
+  private _layerTreeRoots: LayerTreeNode[] = createDefaultLayerTree();
   private readonly _listeners = new Set<DataListener>();
+
+  constructor() {
+    this.resyncLayersFromTree();
+  }
+
+  /** 切换逻辑库后清空画布与层级树（新会话）。 */
+  resetToNewLibrary(): void {
+    this._models = [];
+    this._relations = [];
+    this._layoutByModelId.clear();
+    this._nodeToLayers.clear();
+    this._layerTreeRoots = createDefaultLayerTree();
+    this.resyncLayersFromTree();
+    this.emit();
+  }
+
+  get layerTreeRoots(): readonly LayerTreeNode[] {
+    return this._layerTreeRoots;
+  }
+
+  get defaultPageLayerId(): string {
+    return DEFAULT_PAGE_ID;
+  }
+
+  private cloneTree(nodes: readonly LayerTreeNode[]): LayerTreeNode[] {
+    return nodes.map((n) => ({
+      ...n,
+      children: n.kind === 'group' ? this.cloneTree(n.children) : [],
+      memberModelIds: n.kind === 'page' ? [...n.memberModelIds] : [],
+    }));
+  }
+
+  /** 将分组/页的可见性同步为 flat `designerLayers`（仅页参与模型显隐）。 */
+  private resyncLayersFromTree(): void {
+    const next: DesignerLayerRow[] = [];
+    const walk = (nodes: readonly LayerTreeNode[], groupHidden: boolean): void => {
+      for (const n of nodes) {
+        if (n.kind === 'group') {
+          const gh = groupHidden || !n.isVisible;
+          walk(n.children, gh);
+        } else {
+          next.push({
+            id: n.id,
+            label: n.label,
+            order: n.sort,
+            isVisible: n.isVisible && !groupHidden,
+          });
+        }
+      }
+    };
+    walk(this._layerTreeRoots, false);
+    next.sort((a, b) => a.order - b.order);
+    this._layers = next;
+  }
+
+  setLayerTree(roots: LayerTreeNode[]): void {
+    this._layerTreeRoots = this.cloneTree(roots);
+    this.resyncLayersFromTree();
+    this.emit();
+  }
+
+  addLayerGroup(parentId: string | null, label: string): string {
+    const id = newId();
+    const node: LayerTreeNode = {
+      id,
+      kind: 'group',
+      label,
+      isVisible: true,
+      sort: this._layerTreeRoots.length,
+      memberModelIds: [],
+      children: [],
+    };
+    if (parentId === null) {
+      this._layerTreeRoots.push(node);
+    } else {
+      const parent = this.findTreeNode(parentId);
+      if (!parent || parent.kind !== 'group') {
+        return id;
+      }
+      parent.children.push(node);
+    }
+    this.resyncLayersFromTree();
+    this.emit();
+    return id;
+  }
+
+  addLayerPage(parentGroupId: string, label: string): string {
+    const id = newId();
+    const parent = this.findTreeNode(parentGroupId);
+    if (!parent || parent.kind !== 'group') {
+      return id;
+    }
+    const page: LayerTreeNode = {
+      id,
+      kind: 'page',
+      label,
+      isVisible: true,
+      sort: parent.children.filter((c) => c.kind === 'page').length,
+      children: [],
+      memberModelIds: [],
+    };
+    parent.children.push(page);
+    this.resyncLayersFromTree();
+    this.emit();
+    return id;
+  }
+
+  toggleLayerTreeNode(id: string): void {
+    const n = this.findTreeNode(id);
+    if (!n) {
+      return;
+    }
+    n.isVisible = !n.isVisible;
+    this.resyncLayersFromTree();
+    this.emit();
+  }
+
+  assignModelToPage(modelId: string, pageId: string): void {
+    this.assignNodeToLayers(modelId, [pageId]);
+  }
+
+  private walkTree(fn: (n: LayerTreeNode) => void): void {
+    const go = (nodes: readonly LayerTreeNode[]): void => {
+      for (const n of nodes) {
+        fn(n);
+        if (n.kind === 'group') {
+          go(n.children);
+        }
+      }
+    };
+    go(this._layerTreeRoots);
+  }
+
+  private findTreeNode(id: string): LayerTreeNode | undefined {
+    let found: LayerTreeNode | undefined;
+    this.walkTree((n) => {
+      if (n.id === id) {
+        found = n;
+      }
+    });
+    return found;
+  }
 
   subscribe(fn: DataListener): () => void {
     this._listeners.add(fn);
@@ -99,7 +271,24 @@ export class DataManager {
 
   assignNodeToLayers(nodeId: string, layerIds: string[]): void {
     this.syncNodeLayerIndex(nodeId, layerIds);
+    this.syncTreeMembersForNode(nodeId, layerIds);
     this.emit();
+  }
+
+  private syncTreeMembersForNode(nodeId: string, layerIds: readonly string[]): void {
+    const set = new Set(layerIds);
+    this.walkTree((node) => {
+      if (node.kind !== 'page') {
+        return;
+      }
+      const idx = node.memberModelIds.indexOf(nodeId);
+      const want = set.has(node.id);
+      if (idx >= 0 && !want) {
+        node.memberModelIds.splice(idx, 1);
+      } else if (want && idx < 0) {
+        node.memberModelIds.push(nodeId);
+      }
+    });
   }
 
   getLayersForNode(nodeId: string): readonly string[] {
@@ -176,6 +365,25 @@ export class DataManager {
     this.emit();
   }
 
+  /** 合并 `sys_model` 对齐的可选字段（name_i18n / description_i18n / color_value 等） */
+  updateModelPatch(id: string, patch: Partial<EngineModelNode>): void {
+    const m = this._models.find((x) => x.id === id);
+    if (!m) {
+      return;
+    }
+    Object.assign(m, patch);
+    this.emit();
+  }
+
+  /** 合并表现域布局（对齐 posX/posY、canvas_meta 序列化来源） */
+  patchLayout(modelId: string, patch: Partial<DesignerModelLayout>): void {
+    const cur = this.getLayout(modelId);
+    if (!cur) {
+      return;
+    }
+    this.setLayout({ ...cur, ...patch, uuid: modelId });
+  }
+
   updateProps(id: string, props: PropObject[]): void {
     const m = this._models.find((x) => x.id === id);
     if (!m) {
@@ -192,11 +400,33 @@ export class DataManager {
     );
     this._layoutByModelId.delete(id);
     this._nodeToLayers.delete(id);
+    this.walkTree((node) => {
+      if (node.kind === 'page') {
+        const i = node.memberModelIds.indexOf(id);
+        if (i >= 0) {
+          node.memberModelIds.splice(i, 1);
+        }
+      }
+    });
     this.emit();
   }
 
   addRelation(edge: EngineRelationEdge): void {
     this._relations.push(edge);
+    this.emit();
+  }
+
+  removeRelation(id: string): void {
+    this._relations = this._relations.filter((r) => r.id !== id);
+    this.emit();
+  }
+
+  updateRelation(edgeId: string, patch: Partial<EngineRelationEdge>): void {
+    const r = this._relations.find((x) => x.id === edgeId);
+    if (!r) {
+      return;
+    }
+    Object.assign(r, patch);
     this.emit();
   }
 
@@ -229,12 +459,16 @@ export class DataManager {
     return nid;
   }
 
-  createChildModel(parentId: string, at: { x: number; y: number }): string | undefined {
+  createChildModel(
+    parentId: string,
+    at: { x: number; y: number },
+  ): { modelId: string; inheritEdgeId: string } | undefined {
     const parent = this._models.find((m) => m.id === parentId);
     if (!parent) {
       return undefined;
     }
     const nid = newId();
+    const edgeId = newId();
     const child: EngineModelNode = {
       id: nid,
       model_name: `${parent.model_name}_child`,
@@ -251,7 +485,13 @@ export class DataManager {
     if (parentLayers.length > 0) {
       this.assignNodeToLayers(nid, [...parentLayers]);
     }
-    return nid;
+    this.addRelation({
+      id: edgeId,
+      source_model_id: parentId,
+      target_model_id: nid,
+      kind: GRAPH_INHERIT_KIND,
+    });
+    return { modelId: nid, inheritEdgeId: edgeId };
   }
 
   toMldgDocument(): MldgDocument {
@@ -271,6 +511,7 @@ export class DataManager {
     if (Object.keys(model_layers).length > 0) {
       doc.designer_layout.model_layers = model_layers;
     }
+    doc.designer_layout.layer_tree = this.cloneTree(this._layerTreeRoots);
     return doc;
   }
 
@@ -283,6 +524,10 @@ export class DataManager {
       this._layoutByModelId.set(m.uuid, { ...m });
     }
     this._layers = (doc.designer_layout.layers ?? []).map((l) => ({ ...l }));
+    if (doc.designer_layout.layer_tree && doc.designer_layout.layer_tree.length > 0) {
+      this._layerTreeRoots = this.cloneTree(doc.designer_layout.layer_tree);
+      this.resyncLayersFromTree();
+    }
     const ml = doc.designer_layout.model_layers ?? {};
     for (const [nid, lids] of Object.entries(ml)) {
       this.syncNodeLayerIndex(nid, lids);

@@ -64,6 +64,13 @@ function reviveWireResult(json: WireExecuteResultJson): unknown {
         failureCount: json.failureCount ?? 0,
       };
     }
+    if (json.op === 'batchUpdate') {
+      return {
+        op: 'batchUpdate' as const,
+        successCount: json.successCount ?? 0,
+        failureCount: json.failureCount ?? 0,
+      };
+    }
     if (
       json.op === 'dropModel' ||
       json.op === 'dropRelation' ||
@@ -804,6 +811,31 @@ export class RemoteModelDBClient {
     if (!isRecord(out) || out.op !== 'registerRelation' || out.ok !== true) {
       throw new Error('registerRelation: unexpected remote response.');
     }
+  }
+
+  /**
+   * 单次 RPC 内对多行执行 `update`（服务端在同一 write gate 内顺序执行并 `flushAll`）。
+   * 与多次单独 `update` 相比减少往返与刷盘次数。
+   */
+  async batchUpdate(
+    updates: readonly { model: string; id: string; partial: Record<string, unknown> }[],
+    _opts?: { sync?: boolean },
+  ): Promise<{ successCount: number; failureCount: number }> {
+    const session = await this.ensureSession();
+    const out = await session.executeWireBody({
+      op: 'batchUpdate',
+      updates: [...updates],
+      sync: _opts?.sync,
+    });
+    if (
+      !isRecord(out) ||
+      out.op !== 'batchUpdate' ||
+      typeof out.successCount !== 'number' ||
+      typeof out.failureCount !== 'number'
+    ) {
+      throw new Error('batchUpdate: unexpected remote response shape.');
+    }
+    return { successCount: out.successCount, failureCount: out.failureCount };
   }
 
   close(): void {

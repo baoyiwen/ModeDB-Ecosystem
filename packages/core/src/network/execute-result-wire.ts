@@ -25,7 +25,7 @@ export type WireExecuteResultJson =
     }
   | {
       readonly kind: 'mutation';
-      readonly op: 'insert' | 'update' | 'insertMany';
+      readonly op: 'insert' | 'update' | 'insertMany' | 'batchUpdate';
       readonly model: string;
       readonly record: Record<string, unknown> | null;
       readonly successCount?: number;

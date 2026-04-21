@@ -1,4 +1,6 @@
-/** 与引擎 `sys_layer` 对齐的画图层（画布侧缓存）。 */
+import type { LayerTreeNode } from './layer-tree.js';
+
+/** 与引擎 `sys_layers` 对齐的画图层（画布侧缓存）。 */
 export interface DesignerLayerRow {
   id: string;
   label: string;
@@ -28,4 +30,6 @@ export interface DesignerLayout {
   layers?: DesignerLayerRow[];
   /** 模型节点 id → 所属 layer id 列表（多对多，与 `layerHasNodes` 语义一致）。 */
   model_layers?: Record<string, string[]>;
+  /** 分组 / 页 层级树（与 flat `layers` 同步维护）。 */
+  layer_tree?: LayerTreeNode[];
 }

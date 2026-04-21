@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { DesignerComponent } from './base/designer-component.js';
-import type { PropObject } from '../types/prop-object.js';
 import {
   IconCheckSquare,
   IconDocument,
@@ -31,21 +30,24 @@ export class DesignerToolbar extends DesignerComponent<
   Record<string, never>
 > {
   private i18nUnsub: (() => void) | undefined;
+  private modesUnsub: (() => void) | undefined;
 
   override componentDidMount(): void {
     this.i18nUnsub = this.managers.i18n.subscribe(() => this.forceUpdate());
+    this.modesUnsub = this.managers.modes.subscribe(() => this.forceUpdate());
   }
 
   override componentWillUnmount(): void {
     this.i18nUnsub?.();
+    this.modesUnsub?.();
   }
 
   override render(): ReactNode {
-    const { state, i18n, data, config } = this.managers;
+    const { state, i18n, data, config, modes, graphSync } = this.managers;
     const st = state.state;
     const client = config.remoteClient;
-    const { selectedId } = this.props;
-    const themes = config.getThemes();
+    const mode = modes.mode;
+    const libName = config.activeLibraryName;
 
     const disconnect = (): void => {
       client?.close();
@@ -53,44 +55,12 @@ export class DesignerToolbar extends DesignerComponent<
       this.props.onDisconnected();
     };
 
-    const newModel = (): void => {
-      const id = crypto.randomUUID();
-      const themeId = themes[Math.floor(Math.random() * themes.length)]!.id;
-      const { layers } = this.managers;
-      const prop: PropObject = {
-        id: crypto.randomUUID(),
-        name: 'field_1',
-        type: 'string',
-        is_primary: true,
-        encrypt_level: 0,
-        metadata: {},
-      };
-      data.upsertModel(
-        {
-          id,
-          model_name: 'NewModel',
-          parent_id: null,
-          props_objects_array: [prop],
-        },
-        { position: { x: 160, y: 160 }, color_theme: themeId, z_index: 1 },
-      );
-      layers.assignNodeToActiveLayer(id);
-      this.props.onSelect(id);
-    };
-
-    const deleteSelected = (): void => {
-      if (!selectedId) {
-        return;
-      }
-      data.removeModel(selectedId);
-      this.props.onSelect(undefined);
-    };
-
     return (
       <div className="designer-float-layer" aria-hidden={false}>
         <div className="designer-float-top">
           <button type="button" className="designer-mode-pill designer-mode-pill--active" disabled>
             {i18n.t('ui', 'modeModelDesigner')}
+            {libName ? <span className="designer-library-tag"> · {libName}</span> : null}
           </button>
           <button
             type="button"
@@ -106,20 +76,23 @@ export class DesignerToolbar extends DesignerComponent<
           <button
             type="button"
             className="designer-fab"
-            data-active={st === 'SELECT'}
+            data-active={mode === 'select' ? 'true' : 'false'}
             title={i18n.t('ui', 'toolSelect')}
-            onClick={() => state.transition('SELECT')}
+            onClick={() => {
+              modes.setMode('select');
+              state.transition('SELECT');
+            }}
           >
             <IconHand />
           </button>
           <button
             type="button"
             className="designer-fab"
-            data-active={st === 'ADD_NODE'}
+            data-active={mode === 'add' ? 'true' : 'false'}
             title={i18n.t('ui', 'toolCreate')}
             onClick={() => {
+              modes.setMode('add');
               state.transition('ADD_NODE');
-              newModel();
             }}
           >
             <IconPlus />
@@ -130,9 +103,12 @@ export class DesignerToolbar extends DesignerComponent<
           <button
             type="button"
             className="designer-fab"
+            data-active={mode === 'delete' ? 'true' : 'false'}
             title={i18n.t('ui', 'toolDelete')}
-            onClick={deleteSelected}
-            disabled={!selectedId}
+            onClick={() => {
+              modes.setMode('delete');
+              state.transition('SELECT');
+            }}
           >
             <IconTrash />
           </button>
@@ -142,8 +118,12 @@ export class DesignerToolbar extends DesignerComponent<
           <button
             type="button"
             className="designer-fab"
+            data-active={mode === 'link' ? 'true' : 'false'}
             title={i18n.t('ui', 'toolLinkHint')}
-            onClick={() => state.transition('SELECT')}
+            onClick={() => {
+              modes.setMode('link');
+              state.transition('SELECT');
+            }}
           >
             <IconLink />
           </button>
@@ -192,6 +172,9 @@ export class DesignerToolbar extends DesignerComponent<
                 return;
               }
               try {
+                if (graphSync.hasDirty) {
+                  await graphSync.push(client, data);
+                }
                 await data.pushGraphToEngine(client);
               } catch {
                 window.alert(i18n.t('errors', 'pushFailed'));

@@ -7,9 +7,32 @@
 4. 显式绑定：索引构建不再全自动黑盒，支持 GLOBAL（全量）、PROTOCOL（自动匹配）、CONDITIONAL（条件过滤）、MANUAL（精准拉线）四种策略，通过 Engine.bind() 显式触发。
 5. 物理隔离：单文件 Vault（**`atlas.mld`**）内 **`m:*`** 模型块与 **`r:*`** 关系索引分键存放；治理端 **`flushAll()`** 一致落盘。
 
+## Engine schema & model-designer（Relation-First）
+
+### 1. 引擎连接规范
+
+- **连接模式**：引擎作为独立预启动服务运行。SDK 必须通过 **`workspaceName`** 连接到 **`sys_data_asset_map`** 所映射的逻辑空间，**禁止**用物理路径或 **`dbPath`** 绑定引擎数据；配合 **`connectToken`**（或等价握手）建立会话。
+- **类型安全**：所有 **`sys_props`** 的 **`data_type`** 必须能映射到引擎原生位宽类型（如 **`INT32`**、**`FLOAT64`**、**`STRING`** 等）；禁止在公共 API 用 TypeScript **`enum`** 表达业务分类（见下「架构原则」）。
+
+### 2. 全关系驱动（Relation-First）
+
+- **严禁硬编码 ID**：实体间的 Parent/Child、Include、Layer 归属必须通过 **`session.createRelation`**（或等价 API）建立，不得写死目标 ID。
+- **多对多层级**：处理 **`sys_layers`** 时须维护 N:N 关系，使同一模型或属性可同时属于「组（Group）」与「页（Page）」等层级。
+
+### 3. 逻辑与表现解耦
+
+- **Canvas 数据**：坐标、连线拐点、视口等表现层属性应序列化为 JSON 字符串（或统一对象）存放在模型的 **`canvas_meta`** 字段（**`sys_relation`** 若需画布表现，使用同一命名空间字段，便于前端 Canvas 一键序列化）。
+- **i18n**：带 **【i18n】** 或等价标记的字段建议存为 **`{ "zh": "...", "en": "..." }`** 形式。
+
+### 4. 架构原则
+
+- **枚举处理**：严禁依赖引擎内置「枚举类型」。枚举一律建模为 **`sys_model`** 实体，通过关系关联到引用方。
+- **关系拓扑补全**：**`sys_relation`** 除描述基数/语义外，为建立可遍历拓扑，应显式存在 **`rel_relation_source`**（**`sys_relation` → 源 `sys_model`**）与 **`rel_relation_target`**（**`sys_relation` → 目标 `sys_model`**），使每条关系行成为带自有属性的「连线实体」。
+- **属性引用类型**：**`sys_props`** 的 **`data_type`** 应支持 **`MODEL_REF`**（或等价名）：当业务上为「枚举即模型」时，通过关系指向目标 **`sys_model`**，而非引擎内建枚举。
+
 ## SDK / CLI / 管理 API（ModeDB 开发准则）
 
-- **连接模式**：严禁在 **`@mode-db/sdk`** 中用 **`dbPath`** 等物理路径连接；须使用逻辑库名（workspace 子目录名）与 **`connectToken`**。
+- **连接模式**：严禁在 **`@mode-db/sdk`** 中用 **`dbPath`** 等物理路径连接；须使用逻辑 **`workspaceName`**（与 **`sys_data_asset_map`** 对应的空间）与 **`connectToken`**。
 - **实例化规范**：业务侧优先 **`ModelDB`**（**`host`/`port`/`token`**）或 **`RemoteModelDBClient.connect` / `connectNetwork`**；避免散落的全局「未绑定连接」API（管理类只读操作可用 **`RemoteModelDBClient.listDatabases` / `getManagementStatus`** 等静态方法）。
 - **数据模型**：不在公共 API 中引入 TypeScript **`enum`** 表达状态或分类；状态与分类用 **`type`/`interface`** 或 Model 描述。
 - **异步守卫**：SDK 连接路径须在 **`new` / `connect` 完成后再暴露可调用会话，避免「未握手即可执行」的竞态。

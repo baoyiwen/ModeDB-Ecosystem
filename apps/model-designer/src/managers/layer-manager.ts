@@ -3,7 +3,7 @@ import type { DataManager } from './data-manager.js';
 export type LayerManagerListener = () => void;
 
 /**
- * 管理 `sys_layer` 在画布侧的激活态与显隐；显隐由 {@link DataManager} 中图层行的 `isVisible` + 节点归属共同决定。
+ * 管理引擎 `sys_layers` 在画布侧的激活态与显隐；显隐由 {@link DataManager} 中图层行的 `isVisible` + 节点归属共同决定。
  */
 export class LayerManager {
   private _activeLayerId: string | null = null;

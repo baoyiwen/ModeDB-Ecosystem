@@ -2,5 +2,7 @@
   "propTypeString": "string",
   "propTypeNumber": "number",
   "propTypeBoolean": "boolean",
-  "relationDefault": "association"
+  "relationDefault": "association",
+  "relationKind_modelLinksOut": "Forward link",
+  "relationKind_modelInherits": "Inheritance"
 }

@@ -34,11 +34,39 @@ const bundles: Record<LocaleCode, Bundle> = {
 
 export type I18nListener = () => void;
 
+const LOCALE_STORAGE_KEY = 'model-designer:locale';
+
+function readStoredLocale(): LocaleCode {
+  if (typeof localStorage === 'undefined') {
+    return 'en';
+  }
+  try {
+    const v = localStorage.getItem(LOCALE_STORAGE_KEY);
+    if (v === 'en' || v === 'zh' || v === 'ja') {
+      return v;
+    }
+  } catch {
+    /* ignore */
+  }
+  return 'en';
+}
+
+function writeStoredLocale(code: LocaleCode): void {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+  try {
+    localStorage.setItem(LOCALE_STORAGE_KEY, code);
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * 命名空间：ui / engine / errors；字符串由此集中出口。
  */
 export class I18nManager {
-  private _locale: LocaleCode = 'en';
+  private _locale: LocaleCode = readStoredLocale();
   private readonly _listeners = new Set<I18nListener>();
 
   get locale(): LocaleCode {
@@ -47,6 +75,7 @@ export class I18nManager {
 
   setLocale(code: LocaleCode): void {
     this._locale = code;
+    writeStoredLocale(code);
     for (const fn of this._listeners) {
       fn();
     }

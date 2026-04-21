@@ -47,6 +47,15 @@ export type WireExecuteBody =
       readonly sync?: boolean;
     }
   | {
+      readonly op: 'batchUpdate';
+      readonly updates: readonly {
+        readonly model: string;
+        readonly id: string;
+        readonly partial: Record<string, unknown>;
+      }[];
+      readonly sync?: boolean;
+    }
+  | {
       readonly op: 'dropModel';
       readonly model: string;
     }
@@ -122,6 +131,7 @@ export type WireExecuteResultJson =
         | 'insert'
         | 'update'
         | 'insertMany'
+        | 'batchUpdate'
         | 'dropModel'
         | 'dropRelation'
         | 'alterModel'

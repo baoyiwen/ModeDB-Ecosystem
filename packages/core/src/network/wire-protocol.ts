@@ -44,6 +44,15 @@ export type WireExecuteBody =
       readonly model: string;
       readonly rows: readonly Record<string, unknown>[];
       readonly sync?: boolean;
+    }
+  | {
+      readonly op: 'batchUpdate';
+      readonly updates: readonly {
+        readonly model: string;
+        readonly id: string;
+        readonly partial: Record<string, unknown>;
+      }[];
+      readonly sync?: boolean;
     };
 
 export type WireServerMessage = WireHandshakeOk | WireRpcResponse | WireErrorMessage;

@@ -1,8 +1,13 @@
 {
   "invalidMldg": "デザイナーグラフのペイロードが無効です",
   "connectFailed": "接続またはワークスペース検証に失敗しました",
+  "connectTimeout": "接続がタイムアウトしました。ホスト・ポート・トークンとネットワークを確認してください。",
+  "bootstrapTimeout": "カタログのインストールがタイムアウトしました。再試行するかサーバー版を確認してください。",
+  "workspaceRequired": "論理データベース（ワークスペース）名を入力してください",
+  "errorDetails": "詳細：",
   "tokenRequired": "接続トークンが必要です",
   "pushFailed": "エンジンへグラフをプッシュできませんでした",
   "pullFailed": "エンジンからグラフをプルできませんでした",
-  "bootstrapFailed": "接続済みですがデザイナーカタログの初期化に失敗しました"
+  "bootstrapFailed": "接続済みですがデザイナーカタログの初期化に失敗しました",
+  "invalidJson": "metadata の JSON が無効です"
 }

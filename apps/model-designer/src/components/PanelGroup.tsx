@@ -8,16 +8,11 @@ import type { LocaleCode } from '../managers/i18n-manager.js';
 
 export function PanelGroup(props: { selectedId: string | undefined }): ReactElement {
   const { i18n } = useDesigner();
-  const [locale, setLocale] = useState<LocaleCode>(i18n.locale);
   const [, bump] = useState(0);
 
   useEffect(() => {
     return i18n.subscribe(() => bump((n) => n + 1));
   }, [i18n]);
-
-  useEffect(() => {
-    i18n.setLocale(locale);
-  }, [i18n, locale]);
 
   const section = (title: string, child: ReactNode): ReactElement => (
     <section style={{ marginBottom: 16 }}>
@@ -36,8 +31,8 @@ export function PanelGroup(props: { selectedId: string | undefined }): ReactElem
           </span>
           <select
             className="designer-select"
-            value={locale}
-            onChange={(e) => setLocale(e.target.value as LocaleCode)}
+            value={i18n.locale}
+            onChange={(e) => i18n.setLocale(e.target.value as LocaleCode)}
           >
             <option value="en">English</option>
             <option value="zh">中文</option>

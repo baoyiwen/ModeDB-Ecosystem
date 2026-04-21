@@ -21,7 +21,15 @@ export function RelationPanel(props: { modelId: string | undefined }): ReactElem
             color: '#334155',
           }}
         >
-          {r.source_model_id} → {r.target_model_id} ({r.kind})
+          <div style={{ fontWeight: 600 }}>{r.kind}</div>
+          {r.self_cardinality ? (
+            <div style={{ fontSize: 11, color: '#64748b' }}>
+              selfCardinality: {r.self_cardinality}
+            </div>
+          ) : null}
+          <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>
+            {r.source_model_id} → {r.target_model_id}
+          </div>
         </div>
       ))}
       {rels.length === 0 && <div style={{ color: '#64748b' }}>—</div>}

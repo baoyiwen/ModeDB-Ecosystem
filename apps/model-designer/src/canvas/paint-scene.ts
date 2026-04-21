@@ -1,14 +1,15 @@
-import { drawEdge } from './draw-edge.js';
+import { GRAPH_INHERIT_KIND } from '../config/graph-edge-kinds.js';
+import { drawDirectedRelation } from './draw-edge.js';
 import { drawNodeCircle } from './draw-node.js';
 import type { ConfigManager } from '../managers/config-manager.js';
 import type { DataManager } from '../managers/data-manager.js';
 import type { EngineRelationEdge } from '../types/engine-schema.js';
+import { buildPlacedNodes, type PlacedNode } from './hit-test.js';
 import {
-  anchorLeftCenter,
-  anchorRightCenter,
-  buildPlacedNodes,
-  type PlacedNode,
-} from './hit-test.js';
+  directedShortestSegment,
+  edgePerpOffsetById,
+  type DirectedSegment,
+} from './relation-geometry.js';
 import { computeNodeHeight } from './node-geometry.js';
 
 export interface PaintSceneParams {
@@ -17,33 +18,72 @@ export interface PaintSceneParams {
   height: number;
   data: DataManager;
   config: ConfigManager;
-  selectedId: string | undefined;
-  /** 因图层隐藏而不绘制的节点 id；其作为端点的关系一并跳过。 */
+  selectedModelId: string | undefined;
+  selectedRelationId: string | undefined;
   hiddenNodeIds?: ReadonlySet<string>;
-  linkPreview: { x1: number; y1: number; x2: number; y2: number } | null;
-  inheritPreview: { x1: number; y1: number; x2: number; y2: number } | null;
+  linkPreview: DirectedSegment | null;
+  inheritPreview: DirectedSegment | null;
+  /** 关系 kind → 当前语言下的名称 */
+  getRelationKindLabel: (kind: string) => string;
 }
 
-/** 浅色点阵背景（与参考图一致）。 */
-export function paintDotGrid(
+/**
+ * 在当前视口对应的世界坐标矩形内铺点阵（与 translate(pan)+scale(zoom) 后的可见区域一致）。
+ * `gridStepWorld` 为世界单位步长；点半径随 zoom 调整以保持约 1px 屏上大小。
+ */
+export function paintVisibleWorldDotGrid(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
-  step: number,
+  panX: number,
+  panY: number,
+  zoom: number,
+  gridStepWorld: number,
   enabled: boolean,
 ): void {
-  if (!enabled) {
+  if (!enabled || gridStepWorld <= 0) {
     return;
   }
+  const wx0 = -panX / zoom;
+  const wx1 = (width - panX) / zoom;
+  const wy0 = -panY / zoom;
+  const wy1 = (height - panY) / zoom;
+  const xMin = Math.min(wx0, wx1) - gridStepWorld;
+  const xMax = Math.max(wx0, wx1) + gridStepWorld;
+  const yMin = Math.min(wy0, wy1) - gridStepWorld;
+  const yMax = Math.max(wy0, wy1) + gridStepWorld;
+  const step = gridStepWorld;
+  const dotR = Math.max(0.75 / zoom, 0.4);
   ctx.save();
   ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
-  for (let x = step; x < width; x += step) {
-    for (let y = step; y < height; y += step) {
+  for (let x = Math.floor(xMin / step) * step; x <= xMax + 1e-6; x += step) {
+    for (let y = Math.floor(yMin / step) * step; y <= yMax + 1e-6; y += step) {
       ctx.beginPath();
-      ctx.arc(x, y, 1.1, 0, Math.PI * 2);
+      ctx.arc(x, y, dotR, 0, Math.PI * 2);
       ctx.fill();
     }
   }
+  ctx.restore();
+}
+
+function drawRelationLabel(
+  ctx: CanvasRenderingContext2D,
+  seg: DirectedSegment,
+  label: string,
+  zoom: number,
+): void {
+  const px = -seg.uy;
+  const py = seg.ux;
+  const ox = px * 18;
+  const oy = py * 18;
+  ctx.save();
+  ctx.translate(seg.midX + ox, seg.midY + oy);
+  ctx.scale(1 / zoom, 1 / zoom);
+  ctx.font = '600 11px system-ui, "Segoe UI", sans-serif';
+  ctx.fillStyle = '#334155';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, 0, 0);
   ctx.restore();
 }
 
@@ -54,10 +94,12 @@ export function paintScene(params: PaintSceneParams): void {
     height,
     data,
     config,
-    selectedId,
+    selectedModelId,
+    selectedRelationId,
     hiddenNodeIds,
     linkPreview,
     inheritPreview,
+    getRelationKindLabel,
   } = params;
   const hide = hiddenNodeIds;
   ctx.clearRect(0, 0, width, height);
@@ -65,7 +107,14 @@ export function paintScene(params: PaintSceneParams): void {
   ctx.fillRect(0, 0, width, height);
 
   const snap = config.snapshot();
-  paintDotGrid(ctx, width, height, snap.gridSize, snap.gridEnabled);
+  const panX = config.viewportPanX;
+  const panY = config.viewportPanY;
+  const zoom = config.viewportZoom;
+  ctx.save();
+  ctx.translate(panX, panY);
+  ctx.scale(zoom, zoom);
+
+  paintVisibleWorldDotGrid(ctx, width, height, panX, panY, zoom, snap.gridSize, snap.gridEnabled);
 
   const placed = buildPlacedNodes(data.models, (id) => data.getLayout(id)?.position);
   const byId = new Map<string, PlacedNode>();
@@ -73,38 +122,43 @@ export function paintScene(params: PaintSceneParams): void {
     byId.set(p.model.id, p);
   }
 
-  const drawRelation = (r: EngineRelationEdge): void => {
+  const offMap = edgePerpOffsetById(data.relations);
+
+  const drawEdgeStroke = (r: EngineRelationEdge, emphasize: boolean): DirectedSegment | null => {
     if (hide?.has(r.source_model_id) || hide?.has(r.target_model_id)) {
-      return;
+      return null;
     }
     const a = byId.get(r.source_model_id);
     const b = byId.get(r.target_model_id);
     if (!a || !b) {
-      return;
+      return null;
     }
-    const p1 = anchorRightCenter(a);
-    const p2 = anchorLeftCenter(b);
-    drawEdge(ctx, p1.x, p1.y, p2.x, p2.y, '#94a3b8');
+    const off = offMap.get(r.id) ?? 0;
+    const seg = directedShortestSegment(a, b, off);
+    const color = r.kind === GRAPH_INHERIT_KIND ? '#64748b' : '#94a3b8';
+    const lw = emphasize ? 4 : 2;
+    drawDirectedRelation(ctx, seg, color, lw, r.kind === GRAPH_INHERIT_KIND);
+    return seg;
   };
 
+  const selRel = selectedRelationId;
+  const labelEntries: { seg: DirectedSegment; kind: string }[] = [];
+
   for (const r of data.relations) {
-    drawRelation(r);
+    if (r.id === selRel) {
+      continue;
+    }
+    const seg = drawEdgeStroke(r, false);
+    if (seg) {
+      labelEntries.push({ seg, kind: r.kind });
+    }
   }
 
   if (linkPreview) {
-    drawEdge(ctx, linkPreview.x1, linkPreview.y1, linkPreview.x2, linkPreview.y2, '#2563eb');
+    drawDirectedRelation(ctx, linkPreview, '#2563eb', 2, false);
   }
   if (inheritPreview) {
-    ctx.setLineDash([6, 6]);
-    drawEdge(
-      ctx,
-      inheritPreview.x1,
-      inheritPreview.y1,
-      inheritPreview.x2,
-      inheritPreview.y2,
-      '#7c3aed',
-    );
-    ctx.setLineDash([]);
+    drawDirectedRelation(ctx, inheritPreview, '#7c3aed', 2, true);
   }
 
   const sorted = [...placed].sort(
@@ -126,7 +180,23 @@ export function paintScene(params: PaintSceneParams): void {
       y: p.y,
       title: p.model.model_name,
       theme,
-      selected: p.model.id === selectedId,
+      selected: p.model.id === selectedModelId,
     });
   }
+
+  if (selRel) {
+    const r = data.relations.find((x) => x.id === selRel);
+    if (r && !hide?.has(r.source_model_id) && !hide?.has(r.target_model_id)) {
+      const seg = drawEdgeStroke(r, true);
+      if (seg) {
+        labelEntries.push({ seg, kind: r.kind });
+      }
+    }
+  }
+
+  for (const { seg, kind } of labelEntries) {
+    drawRelationLabel(ctx, seg, getRelationKindLabel(kind), zoom);
+  }
+
+  ctx.restore();
 }

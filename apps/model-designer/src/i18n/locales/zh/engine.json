@@ -2,5 +2,7 @@
   "propTypeString": "字符串",
   "propTypeNumber": "数字",
   "propTypeBoolean": "布尔",
-  "relationDefault": "关联"
+  "relationDefault": "关联",
+  "relationKind_modelLinksOut": "正向查询",
+  "relationKind_modelInherits": "继承"
 }

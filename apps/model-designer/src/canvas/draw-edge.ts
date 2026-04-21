@@ -1,6 +1,87 @@
+import type { DirectedSegment } from './relation-geometry.js';
+
+const ARROW_WORLD = 12;
+
 /**
- * 原子绘制：关系边（贝塞尔）。
+ * 有向边：线段 + 终点箭头（查询方向指向 target）。
  */
+export function drawDirectedRelation(
+  ctx: CanvasRenderingContext2D,
+  seg: DirectedSegment,
+  color: string,
+  lineWidth: number,
+  dashed: boolean,
+): void {
+  const { x1, y1, x2, y2, ux, uy } = seg;
+  const shorten = ARROW_WORLD * 1.05;
+  const lx = x2 - ux * shorten;
+  const ly = y2 - uy * shorten;
+  if (dashed) {
+    drawStraightLineDashed(ctx, x1, y1, lx, ly, color, lineWidth);
+  } else {
+    drawStraightLine(ctx, x1, y1, lx, ly, color, lineWidth);
+  }
+  const px = -uy;
+  const py = ux;
+  const hw = ARROW_WORLD * 0.48;
+  const bx = x2 - ux * ARROW_WORLD;
+  const by = y2 - uy * ARROW_WORLD;
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(bx + px * hw, by + py * hw);
+  ctx.lineTo(bx - px * hw, by - py * hw);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+/**
+ * 画布关系边：一律使用**直线**（起点到终点）。
+ */
+export function drawStraightLine(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color: string,
+  lineWidth = 2,
+): void {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+export function drawStraightLineDashed(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color: string,
+  lineWidth = 2,
+  dash: number[] = [6, 6],
+): void {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.setLineDash(dash);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** @deprecated 贝塞尔，仅保留兼容；关系绘制请用 {@link drawStraightLine} */
 export function drawEdge(
   ctx: CanvasRenderingContext2D,
   x1: number,
@@ -8,19 +89,9 @@ export function drawEdge(
   x2: number,
   y2: number,
   color: string,
+  lineWidth = 2,
 ): void {
-  const cx1 = x1 + (x2 - x1) * 0.45;
-  const cy1 = y1;
-  const cx2 = x1 + (x2 - x1) * 0.55;
-  const cy2 = y2;
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.bezierCurveTo(cx1, cy1, cx2, cy2, x2, y2);
-  ctx.stroke();
-  ctx.restore();
+  drawStraightLine(ctx, x1, y1, x2, y2, color, lineWidth);
 }
 
 export function drawEdgeDashed(
@@ -31,8 +102,5 @@ export function drawEdgeDashed(
   y2: number,
   color: string,
 ): void {
-  ctx.save();
-  ctx.setLineDash([6, 6]);
-  drawEdge(ctx, x1, y1, x2, y2, color);
-  ctx.restore();
+  drawStraightLineDashed(ctx, x1, y1, x2, y2, color, 2);
 }
