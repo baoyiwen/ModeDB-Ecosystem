@@ -1,0 +1,8 @@
+{
+  "invalidMldg": "无效的设计器图谱数据",
+  "connectFailed": "无法连接或工作区校验失败",
+  "tokenRequired": "请填写连接令牌",
+  "pushFailed": "无法将图谱推送到引擎",
+  "pullFailed": "无法从引擎拉取图谱",
+  "bootstrapFailed": "已连接但设计器元数据自举失败"
+}

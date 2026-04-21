@@ -16,8 +16,8 @@ This file is installed under **`./modeldb/AGENTS.md`** when **`@mode-db/server`*
 
 - **Queries**: `model('Name').query()...execute()`.
 - **Writes**: `insertMany`, and (on the server RPC layer) **`insert`** / **`update`** — check current SDK surface before assuming a helper exists.
-- **Meta over wire**: **`alterModel`**, **`dropModel`**, **`dropRelation`** ( **`alterModel`** requires the model to **already exist** in the registry).
-- **Not on the wire**: **`registerModel`**, **`registerRelation`**, **`bind`**. Those are **AuthoringEngine** / tooling (CLI, bootstrap scripts, or in-process tests).
+- **Meta over wire**: **`alterModel`**, **`dropModel`**, **`dropRelation`**, **`registerModel`**, **`registerRelation`** ( **`alterModel`** requires the model to **already exist** in the registry; **`registerModel`/`registerRelation`** are idempotent skips when already present).
+- **Not on the wire**: **`bind`**. Manual registry operations that are not these RPCs remain **AuthoringEngine** / tooling (CLI, bootstrap scripts, or in-process tests).
 
 ## Authoring (engine) vs remote (SDK)
 

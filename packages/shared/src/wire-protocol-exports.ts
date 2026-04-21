@@ -60,6 +60,19 @@ export type WireExecuteBody =
       readonly schema: Readonly<Record<string, unknown>>;
       /** When true, **`schema`** is merged onto the current model (see {@link AuthoringEngine.alterModelPatch}). */
       readonly patch?: boolean;
+    }
+  | {
+      readonly op: 'registerModel';
+      readonly model: string;
+      readonly schema: Readonly<Record<string, unknown>>;
+    }
+  | {
+      readonly op: 'registerRelation';
+      readonly source: string;
+      readonly target: string;
+      readonly forward: string;
+      readonly reverse: string;
+      readonly logic: 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many';
     };
 
 export type WireServerMessage = WireHandshakeOk | WireRpcResponse | WireErrorMessage;
@@ -105,7 +118,15 @@ export type WireExecuteResultJson =
     }
   | {
       readonly kind: 'mutation';
-      readonly op: 'insert' | 'update' | 'insertMany' | 'dropModel' | 'dropRelation' | 'alterModel';
+      readonly op:
+        | 'insert'
+        | 'update'
+        | 'insertMany'
+        | 'dropModel'
+        | 'dropRelation'
+        | 'alterModel'
+        | 'registerModel'
+        | 'registerRelation';
       readonly model: string;
       readonly record: Record<string, unknown> | null;
       readonly successCount?: number;

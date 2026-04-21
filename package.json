@@ -25,6 +25,8 @@
     "start:server": "pnpm run build:server && node ./packages/server/dist/cli.js",
     "dev": "pnpm --filter @mode-db/core run dev",
     "dev:web": "pnpm --filter modedb-web-playground dev",
+    "dev:model-designer": "pnpm --filter model-designer dev",
+    "build:model-designer": "pnpm --filter model-designer build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{js,ts,tsx,mjs,json,md}\"",

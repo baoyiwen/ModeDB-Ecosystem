@@ -64,7 +64,13 @@ function reviveWireResult(json: WireExecuteResultJson): unknown {
         failureCount: json.failureCount ?? 0,
       };
     }
-    if (json.op === 'dropModel' || json.op === 'dropRelation' || json.op === 'alterModel') {
+    if (
+      json.op === 'dropModel' ||
+      json.op === 'dropRelation' ||
+      json.op === 'alterModel' ||
+      json.op === 'registerModel' ||
+      json.op === 'registerRelation'
+    ) {
       return {
         op: json.op,
         model: json.model,
@@ -766,6 +772,37 @@ export class RemoteModelDBClient {
     const out = await session.executeWireBody(body);
     if (!isRecord(out) || out.op !== 'alterModel' || out.ok !== true) {
       throw new Error('alterModel: unexpected remote response.');
+    }
+  }
+
+  /** Meta: idempotent model registration when absent (server-side authoring registry). */
+  async registerModel(model: string, schema: Readonly<Record<string, unknown>>): Promise<void> {
+    const session = await this.ensureSession();
+    const out = await session.executeWireBody({ op: 'registerModel', model, schema });
+    if (!isRecord(out) || out.op !== 'registerModel' || out.ok !== true) {
+      throw new Error('registerModel: unexpected remote response.');
+    }
+  }
+
+  /** Meta: idempotent relation registration when absent (server-side authoring registry). */
+  async registerRelation(
+    source: string,
+    target: string,
+    forward: string,
+    reverse: string,
+    logic: 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many',
+  ): Promise<void> {
+    const session = await this.ensureSession();
+    const out = await session.executeWireBody({
+      op: 'registerRelation',
+      source,
+      target,
+      forward,
+      reverse,
+      logic,
+    });
+    if (!isRecord(out) || out.op !== 'registerRelation' || out.ok !== true) {
+      throw new Error('registerRelation: unexpected remote response.');
     }
   }
 

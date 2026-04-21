@@ -1,0 +1,6 @@
+{
+  "propTypeString": "string",
+  "propTypeNumber": "number",
+  "propTypeBoolean": "boolean",
+  "relationDefault": "association"
+}

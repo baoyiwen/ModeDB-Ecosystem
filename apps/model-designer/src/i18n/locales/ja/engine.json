@@ -1,0 +1,6 @@
+{
+  "propTypeString": "文字列",
+  "propTypeNumber": "数値",
+  "propTypeBoolean": "真偽",
+  "relationDefault": "関連"
+}

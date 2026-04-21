@@ -1,0 +1,45 @@
+# ModelDB Designer 核心约束 V2.0
+
+本文件为 **Model Designer**（`apps/model-designer`）专用约束；在此目录及子路径下开发须以本节为准。与 SDK、MLDG 双域传输、`sys_designer_graph` 等**工程落地细节**见同目录 **`AGENTS.md`**（若与 V2.0 本节冲突，**以本节为逻辑与数据建模准绳**）。
+
+---
+
+## 1. 存储架构：全关系驱动
+
+- **严禁**在 Prop 实体中定义 `owner_id`、`parent_id` 等用于表达归属、包含的硬编码字段。
+- 所有「属于」「包含」「指向」等业务语义必须通过**独立的 Relation**（及引擎注册的关系拓扑）表达；不得在 Prop / Node 上私藏隐式外键。
+- **多对多**：Prop 与 Node、Node 与 Layer 等关联通过关系边与索引维护；**一个 Prop 可关联多个 Node，一个 Node 可出现在多个 Layer**，不得用单值字段模拟多对多。
+
+---
+
+## 2. 数据类型规范
+
+- **必须**使用 ModelDB 引擎约定的**原生类型**（与 `engine` 命名空间、注册元数据一致），例如：
+  - **数值**：`INT32`, `INT64`, `FLOAT32`, `FLOAT64`
+  - **文本**：`STRING`, `TEXT`
+  - **空间**：`POINT_3D`, `LINE_3D`, `POLYGON_3D`, `MESH`
+  - **安全**：`VAULT_ENCRYPTED_ADDR`
+- Prop 的 `type` 与校验须对齐上述枚举，**禁止**长期依赖与引擎无关的任意小写别名（如孤立使用 `string`）；迁移期可与映射表对照并在 `engine` i18n 中与类型枚举 **1:1** 描述。
+
+---
+
+## 3. Layer 逻辑约束
+
+- **Layer** 作为**顶级分组容器**，须能统一容纳 **Node、Prop、Relation** 的从属或引用关系（通过关系与注册表表达，而非 Layer 上冗余数组硬编码万物）。
+- **渲染**：组件须**先解析 Layer 可见/隐藏等状态**；处于**隐藏**的 Layer 时，其下挂接的 Node / 边等**不得发起对应 Canvas draw 调用**（即先 Layer，后几何）。
+
+---
+
+## 4. 全组件化与 i18n
+
+- **细粒度组件**（DOM / 逻辑边界）：`LayerItem`、`NodeHeader`、`PropLine`、`RelationLink` 等须可独立组合，避免巨石视图。
+- **翻译 key**：与**引擎错误码、FSM 状态、原生类型枚举**在命名与语义上保持 **1:1 映射**（同一状态/error/type 只有一个 canonical key）；UI 文案放在 `ui`，引擎与类型放在 `engine`，异常与 wire 错误放在 `errors`。
+
+---
+
+## 5. 工程底层（与 V2 不冲突则保留）
+
+- **核心渲染**：模型块几何由 **HTML5 Canvas** 完成（禁止用 DOM 冒充模型块本体）。
+- **二进制**：禁止 Node `Buffer`；统一 **`Uint8Array` / `DataView`**。
+- **状态机**：交互态切换须经 **StateManager**；手势与快捷键的业务响应不得只在组件内写死分支（实现上可与 EventManager / Canvas 协同）。
+- **持久化载体**：向引擎同步仍走 **`@mode-db/sdk` 约定**（见 AGENTS.md）；**逻辑内容**须逐步向 §1～§3 对齐，不以 AGENTS 中历史字段名为口径违背全关系与 Layer 语义。

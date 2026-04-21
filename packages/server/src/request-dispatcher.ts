@@ -192,6 +192,60 @@ export class WireRequestDispatcher {
         });
         return { type: 'rpc.ok', id, cipher };
       }
+      if (body.op === 'registerModel') {
+        const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
+          const engine = await this.opts.getEngine(atlas);
+          if (!engine.registry.getModel(body.model)) {
+            engine.registerModel(body.model, body.schema as FieldDefsRecord);
+          }
+          await engine.flushAll();
+          EngineLogger.instance.info(
+            `[REMOTE][META] registerModel atlas=${atlas} model=${body.model}`,
+            undefined,
+            'Server',
+          );
+          const wireJson: WireExecuteResultJson = {
+            kind: 'mutation',
+            op: 'registerModel',
+            model: body.model,
+            record: null,
+            ok: true,
+          };
+          return encodeWirePayload(JSON.stringify(wireJson), sessionKey);
+        });
+        return { type: 'rpc.ok', id, cipher };
+      }
+      if (body.op === 'registerRelation') {
+        const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
+          const engine = await this.opts.getEngine(atlas);
+          const exists = engine.registry.getRelations().some((r) => r.forward === body.forward);
+          if (!exists) {
+            engine.registerRelation(
+              body.source,
+              body.target,
+              body.forward,
+              body.reverse,
+              body.logic,
+            );
+          }
+          await engine.flushAll();
+          EngineLogger.instance.info(
+            `[REMOTE][META] registerRelation atlas=${atlas} forward=${body.forward}`,
+            undefined,
+            'Server',
+          );
+          const wireJson: WireExecuteResultJson = {
+            kind: 'mutation',
+            op: 'registerRelation',
+            model: body.forward,
+            record: null,
+            ok: true,
+            relation: body.forward,
+          };
+          return encodeWirePayload(JSON.stringify(wireJson), sessionKey);
+        });
+        return { type: 'rpc.ok', id, cipher };
+      }
       throw new Error(`Unknown RPC op: ${String((body as { op?: string }).op)}`);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);

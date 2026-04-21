@@ -1,0 +1,17 @@
+---
+description: Model Designer (React + Canvas) — core constraints, dual-schema MLDG, FSM, managers
+globs: apps/model-designer/**/*
+alwaysApply: false
+---
+
+# Model Designer
+
+Follow **`apps/model-designer/AGENTS.md`** as the source of truth for:
+
+- HTML5 Canvas rendering (no DOM-based model blocks); atomic draw helpers under `src/canvas/`.
+- No `Buffer`; use `Uint8Array` and `DataView` (`src/persistence/mldg-binary.ts`).
+- Logic in **Managers** (`StateManager`, `EventManager`, `ConfigManager`, `DataManager`, `I18nManager`); interaction state changes only via `StateManager`.
+- Dual-schema graph JSON: `engine_schema` + `designer_layout`; persistence only via `@mode-db/sdk` (no local files / localStorage).
+- i18n: all user-visible strings in `src/i18n/locales/<locale>/{ui,engine,errors}.json`.
+
+When editing this app, read `AGENTS.md` before large changes.
