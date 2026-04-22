@@ -5,6 +5,7 @@ import { segmentFromNodeTowardPoint } from '../canvas/relation-geometry.js';
 import { paintScene } from '../canvas/paint-scene.js';
 import type { GestureKind } from '../managers/event-manager.js';
 import type { InteractionState } from '../managers/state-manager.js';
+import { DataType, dataTypeToEngineCode } from '../config/engine-prop-types.js';
 import type { PropObject } from '../types/prop-object.js';
 
 function clientToCanvas(
@@ -193,11 +194,12 @@ export function CanvasContainer(props: {
         const prop: PropObject = {
           id: crypto.randomUUID(),
           name: 'field_1',
-          type: 'string',
+          name_i18n: { zh: '字段1', en: 'Field 1', ja: 'フィールド1' },
+          type: DataType.String,
           is_primary: true,
           encrypt_level: 0,
           metadata: {},
-          engine_type: 0,
+          engine_type: dataTypeToEngineCode(DataType.String),
           sort: 0,
           is_required: false,
           description_i18n: {},
@@ -206,9 +208,10 @@ export function CanvasContainer(props: {
         data.upsertModel(
           {
             id: nid,
-            model_name: 'NewModel',
+            model_name: `model_${Date.now()}`,
             parent_id: null,
             props_objects_array: [prop],
+            name_i18n: { zh: '新模型', en: 'NewModel', ja: '新規モデル' },
           },
           { position: { x: w.x, y: w.y }, color_theme: themeId, z_index: 1 },
         );
@@ -282,8 +285,18 @@ export function CanvasContainer(props: {
       linkPreview,
       inheritPreview,
       getRelationKindLabel,
+      uiLocale: i18n.locale,
     });
-  }, [config, data, selectedModelId, selectedRelationId, placed, toWorld, getRelationKindLabel]);
+  }, [
+    config,
+    data,
+    selectedModelId,
+    selectedRelationId,
+    placed,
+    toWorld,
+    getRelationKindLabel,
+    i18n.locale,
+  ]);
 
   useEffect(() => {
     const loop = (): void => {

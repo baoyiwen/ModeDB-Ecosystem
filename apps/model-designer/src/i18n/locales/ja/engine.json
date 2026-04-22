@@ -1,4 +1,13 @@
 {
+  "propDT_String": "文字列",
+  "propDT_I18N": "I18N",
+  "propDT_Number": "数値",
+  "propDT_Int": "整数",
+  "propDT_Boolean": "真偽",
+  "propDT_DateTime": "日時",
+  "propDT_JSON": "JSON",
+  "propDT_Color": "色",
+  "propDT_Unit": "単位付き数値",
   "propTypeString": "文字列",
   "propTypeNumber": "数値",
   "propTypeBoolean": "真偽",

@@ -1,4 +1,5 @@
 import type { ThemePalette } from '../managers/config-manager.js';
+import { contrastTextOnHex } from '../utils/color-utils.js';
 import { NODE_RADIUS } from './node-geometry.js';
 
 export interface DrawNodeCircleParams {
@@ -9,17 +10,20 @@ export interface DrawNodeCircleParams {
   title: string;
   theme: ThemePalette;
   selected: boolean;
+  /** 若设置则覆盖 `theme.header` 作为节点填充（`sys_model.color`） */
+  nodeFillHex?: string;
 }
 
 /**
  * 原子绘制：圆形模型节点（仅 Canvas，无 DOM 块）。
  */
 export function drawNodeCircle(params: DrawNodeCircleParams): void {
-  const { ctx, x, y, title, theme, selected } = params;
+  const { ctx, x, y, title, theme, selected, nodeFillHex } = params;
   const r = NODE_RADIUS;
   const cx = x + r;
   const cy = y + r;
-  const fill = theme.header;
+  const fill = nodeFillHex ?? theme.header;
+  const labelColor = nodeFillHex ? contrastTextOnHex(nodeFillHex) : '#ffffff';
 
   ctx.save();
   ctx.shadowBlur = selected ? 18 : 14;
@@ -40,7 +44,7 @@ export function drawNodeCircle(params: DrawNodeCircleParams): void {
     ctx.stroke();
   }
 
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = labelColor;
   ctx.font = '600 13px system-ui, "Segoe UI", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

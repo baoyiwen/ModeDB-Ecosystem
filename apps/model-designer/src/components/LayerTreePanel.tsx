@@ -108,7 +108,7 @@ export function LayerTreePanel(props: { selectedId: string | undefined }): React
   useEffect(() => data.subscribe(() => bump((n) => n + 1)), [data]);
 
   return (
-    <div className="designer-layer-tree">
+    <div className="designer-layer-tree designer-scrollbar-hide">
       <div className="designer-tree-toolbar">
         <button
           type="button"

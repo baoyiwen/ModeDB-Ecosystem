@@ -148,7 +148,7 @@ export function EditorChrome(props: {
               ×
             </button>
           </header>
-          <div className="designer-panel-body">{body}</div>
+          <div className="designer-panel-body designer-scrollbar-hide">{body}</div>
         </aside>
       </div>
     </>

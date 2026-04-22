@@ -3,10 +3,11 @@ import type { PropObject } from './prop-object.js';
 /** 逻辑域：引擎可导入还原的结构图谱（`sys_model` / 画布边） */
 export interface EngineModelNode {
   id: string;
+  /** 注册到引擎的唯一标识（如 `model_173…`），与展示用 `name_i18n` 独立 */
   model_name: string;
   parent_id: string | null;
   props_objects_array: PropObject[];
-  /** `sys_model.name`（I18N）；未设时仅用 `model_name` 作默认文案 */
+  /** `sys_model.name`（I18N）；画布标题按当前界面语言从此解析 */
   name_i18n?: Record<string, string>;
   /** `sys_model.description`（I18N） */
   description_i18n?: Record<string, string>;

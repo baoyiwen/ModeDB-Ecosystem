@@ -25,17 +25,7 @@ export function LayerPanel(): ReactElement {
         <div style={{ fontSize: 12, color: '#64748b' }}>{i18n.t('ui', 'layersEmpty')}</div>
       )}
       {rows.map((layer) => (
-        <label
-          key={layer.id}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontSize: 12,
-            cursor: 'pointer',
-            color: '#334155',
-          }}
-        >
+        <label key={layer.id} className="designer-layer-row">
           <input
             type="radio"
             name="designer-active-layer"
@@ -45,9 +35,11 @@ export function LayerPanel(): ReactElement {
           <span style={{ flex: 1 }}>{layer.label}</span>
           <button
             type="button"
-            className="designer-input"
-            style={{ fontSize: 11, padding: '2px 8px' }}
-            onClick={() => layers.toggleLayer(layer.id)}
+            className="designer-tree-mini"
+            onClick={(e) => {
+              e.preventDefault();
+              layers.toggleLayer(layer.id);
+            }}
           >
             {layer.isVisible ? i18n.t('ui', 'layerHide') : i18n.t('ui', 'layerShow')}
           </button>

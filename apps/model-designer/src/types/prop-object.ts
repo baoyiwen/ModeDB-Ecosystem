@@ -3,7 +3,10 @@
  */
 export interface PropObject {
   id: string;
+  /** 注册到引擎的字段唯一名（属性名） */
   name: string;
+  /** 展示名（I18N） */
+  name_i18n?: Record<string, string>;
   type: string;
   is_primary: boolean;
   encrypt_level: number;

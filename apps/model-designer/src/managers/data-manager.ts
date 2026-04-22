@@ -12,6 +12,7 @@ import {
   serializeMldgDocumentToUint8Array,
 } from '../sync/mldg-wire-bytes.js';
 import { pullLatestDesignerSnapshot, pushDesignerSnapshot } from '../sync/sdk-designer-sync.js';
+import { mapI18nSuffix, pickCanonicalFromI18n } from '../utils/i18n-resolve.js';
 
 export type DataListener = () => void;
 
@@ -334,11 +335,12 @@ export class DataManager {
   }
 
   upsertModel(node: EngineModelNode, layout?: Partial<DesignerModelLayout>): void {
-    const idx = this._models.findIndex((m) => m.id === node.id);
+    const merged: EngineModelNode = { ...node };
+    const idx = this._models.findIndex((m) => m.id === merged.id);
     if (idx >= 0) {
-      this._models[idx] = node;
+      this._models[idx] = merged;
     } else {
-      this._models.push(node);
+      this._models.push(merged);
     }
     const existing = this._layoutByModelId.get(node.id);
     const base: DesignerModelLayout = existing ?? {
@@ -440,11 +442,18 @@ export class DataManager {
       ...p,
       id: newId(),
     }));
+    const nameI18n =
+      src.name_i18n && Object.keys(src.name_i18n).length > 0
+        ? mapI18nSuffix(src.name_i18n, '_copy')
+        : undefined;
     const clone: EngineModelNode = {
       id: nid,
-      model_name: `${src.model_name}_copy`,
+      model_name: `model_${Date.now()}`,
       parent_id: src.parent_id,
       props_objects_array: clonedProps,
+      ...(nameI18n ? { name_i18n: nameI18n } : {}),
+      description_i18n: src.description_i18n ? { ...src.description_i18n } : undefined,
+      color_value: src.color_value,
     };
     const srcLayout = this._layoutByModelId.get(sourceId);
     this.upsertModel(clone, {
@@ -469,11 +478,14 @@ export class DataManager {
     }
     const nid = newId();
     const edgeId = newId();
+    const pBase = pickCanonicalFromI18n(parent.name_i18n, parent.model_name);
+    const childI18n = { zh: `${pBase}子`, en: `${pBase}_child` };
     const child: EngineModelNode = {
       id: nid,
-      model_name: `${parent.model_name}_child`,
+      model_name: `model_${Date.now()}`,
       parent_id: parentId,
       props_objects_array: [],
+      name_i18n: childI18n,
     };
     const pLayout = this._layoutByModelId.get(parentId);
     this.upsertModel(child, {

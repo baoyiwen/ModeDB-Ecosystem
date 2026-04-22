@@ -174,129 +174,141 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
     }
   }, [host, port, token, newDbName, i18n]);
 
-  const inputStyle: React.CSSProperties = {
-    padding: 8,
-    background: '#0f172a',
-    border: '1px solid #334155',
-    color: '#e2e8f0',
-    width: '100%',
-  };
-
-  const shell: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    background: '#020617',
-    color: '#e2e8f0',
-    gap: 12,
-    padding: 24,
-  };
+  const fieldClass = 'designer-connection-field';
 
   return (
-    <div style={shell}>
-      <h1 style={{ fontSize: 20, margin: 0 }}>{i18n.t('ui', 'gateTitle')}</h1>
-      <p style={{ fontSize: 13, color: '#94a3b8', maxWidth: 520, textAlign: 'center' }}>
-        {i18n.t('ui', 'gateHintStorage')}
-      </p>
+    <div className="designer-connection-flow designer-scrollbar-hide">
+      <div className="designer-connection-card designer-glass-panel">
+        <h1>{i18n.t('ui', 'gateTitle')}</h1>
+        <p className="designer-connection-lead">{i18n.t('ui', 'gateHintStorage')}</p>
 
-      {step === 'credentials' && (
-        <>
-          <label
-            style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 'min(400px, 100%)' }}
-          >
-            <span>{i18n.t('ui', 'host')}</span>
-            <input value={host} onChange={(e) => setHost(e.target.value)} style={inputStyle} />
-          </label>
-          <label
-            style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 'min(400px, 100%)' }}
-          >
-            <span>{i18n.t('ui', 'port')}</span>
-            <input
-              type="number"
-              value={port}
-              onChange={(e) => setPort(Number(e.target.value))}
-              style={inputStyle}
-            />
-          </label>
-          <label
-            style={{ display: 'flex', flexDirection: 'column', gap: 4, width: 'min(400px, 100%)' }}
-          >
-            <span>{i18n.t('ui', 'connectToken')}</span>
-            <input
-              type="password"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              style={inputStyle}
-              autoComplete="off"
-            />
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-            <input
-              type="checkbox"
-              checked={rememberToken}
-              onChange={(e) => setRememberTokenState(e.target.checked)}
-            />
-            {i18n.t('ui', 'rememberToken')}
-          </label>
-          {err && <div style={{ color: '#f87171', fontSize: 12, maxWidth: 400 }}>{err}</div>}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void fetchDatabases()}
-            style={{ padding: '10px 20px', cursor: busy ? 'wait' : 'pointer' }}
-          >
-            {busy ? i18n.t('ui', 'connecting') : i18n.t('ui', 'btnListLibraries')}
-          </button>
-        </>
-      )}
+        {step === 'credentials' && (
+          <>
+            <label className={fieldClass}>
+              <span>{i18n.t('ui', 'host')}</span>
+              <input
+                className="designer-input"
+                value={host}
+                onChange={(e) => setHost(e.target.value)}
+              />
+            </label>
+            <label className={fieldClass}>
+              <span>{i18n.t('ui', 'port')}</span>
+              <input
+                className="designer-input"
+                type="number"
+                value={port}
+                onChange={(e) => setPort(Number(e.target.value))}
+              />
+            </label>
+            <label className={fieldClass}>
+              <span>{i18n.t('ui', 'connectToken')}</span>
+              <input
+                className="designer-input"
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                autoComplete="off"
+              />
+            </label>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 12,
+                color: '#475569',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={rememberToken}
+                onChange={(e) => setRememberTokenState(e.target.checked)}
+              />
+              {i18n.t('ui', 'rememberToken')}
+            </label>
+            {err && <div style={{ color: '#b91c1c', fontSize: 12 }}>{err}</div>}
+            <div className="designer-connection-actions">
+              <button
+                type="button"
+                className="designer-btn designer-btn-primary"
+                disabled={busy}
+                onClick={() => void fetchDatabases()}
+              >
+                {busy ? i18n.t('ui', 'connecting') : i18n.t('ui', 'btnListLibraries')}
+              </button>
+            </div>
+          </>
+        )}
 
-      {step === 'library' && (
-        <>
-          <p style={{ fontSize: 12, color: '#64748b' }}>{i18n.t('ui', 'pickLibraryHint')}</p>
-          <select
-            value={selectedDb}
-            onChange={(e) => setSelectedDb(e.target.value)}
-            style={{ ...inputStyle, maxWidth: 400 }}
-          >
-            {databases.map((d) => (
-              <option key={d.name} value={d.name}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-          <div style={{ display: 'flex', gap: 8, width: 'min(400px, 100%)' }}>
-            <input
-              placeholder={i18n.t('ui', 'newDatabasePlaceholder')}
-              value={newDbName}
-              onChange={(e) => setNewDbName(e.target.value)}
-              style={{ ...inputStyle, flex: 1 }}
-            />
-            <button type="button" disabled={busy} onClick={() => void createDatabase()}>
-              {i18n.t('ui', 'btnCreateDb')}
-            </button>
+        {step === 'library' && (
+          <>
+            <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 12px', textAlign: 'center' }}>
+              {i18n.t('ui', 'pickLibraryHint')}
+            </p>
+            <label className={fieldClass}>
+              <select
+                className="designer-select"
+                style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
+                value={selectedDb}
+                onChange={(e) => setSelectedDb(e.target.value)}
+              >
+                {databases.map((d) => (
+                  <option key={d.name} value={d.name}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+              <input
+                className="designer-input"
+                placeholder={i18n.t('ui', 'newDatabasePlaceholder')}
+                value={newDbName}
+                onChange={(e) => setNewDbName(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                className="designer-btn"
+                disabled={busy}
+                onClick={() => void createDatabase()}
+              >
+                {i18n.t('ui', 'btnCreateDb')}
+              </button>
+            </div>
+            <div className="designer-connection-actions">
+              <button
+                type="button"
+                className="designer-btn"
+                disabled={busy}
+                onClick={() => setStep('credentials')}
+              >
+                {i18n.t('ui', 'btnBack')}
+              </button>
+              <button
+                type="button"
+                className="designer-btn designer-btn-primary"
+                disabled={busy}
+                onClick={() => void openLibrary()}
+              >
+                {i18n.t('ui', 'btnOpenLibrary')}
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 'opening' && (
+          <div style={{ fontSize: 13, color: '#475569', textAlign: 'center' }}>
+            <div>{i18n.t('ui', 'bootstrapRunning')}</div>
+            {openingDetail && (
+              <code style={{ display: 'block', marginTop: 10, color: '#94a3b8', fontSize: 11 }}>
+                {openingDetail}
+              </code>
+            )}
           </div>
-          <button type="button" disabled={busy} onClick={() => setStep('credentials')}>
-            {i18n.t('ui', 'btnBack')}
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void openLibrary()}
-            style={{ padding: '10px 24px', marginTop: 8 }}
-          >
-            {i18n.t('ui', 'btnOpenLibrary')}
-          </button>
-        </>
-      )}
-
-      {step === 'opening' && (
-        <div style={{ fontSize: 12, color: '#94a3b8' }}>
-          <div>{i18n.t('ui', 'bootstrapRunning')}</div>
-          {openingDetail && <code style={{ color: '#cbd5e1' }}>{openingDetail}</code>}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

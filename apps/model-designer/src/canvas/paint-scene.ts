@@ -11,6 +11,8 @@ import {
   type DirectedSegment,
 } from './relation-geometry.js';
 import { computeNodeHeight } from './node-geometry.js';
+import { parseFillHex } from '../utils/color-utils.js';
+import { resolveModelDisplayName } from '../utils/i18n-resolve.js';
 
 export interface PaintSceneParams {
   ctx: CanvasRenderingContext2D;
@@ -25,6 +27,8 @@ export interface PaintSceneParams {
   inheritPreview: DirectedSegment | null;
   /** 关系 kind → 当前语言下的名称 */
   getRelationKindLabel: (kind: string) => string;
+  /** 界面语言（`en` | `zh` | `ja`），用于节点标题自 `name_i18n` 解析 */
+  uiLocale: string;
 }
 
 /**
@@ -55,7 +59,7 @@ export function paintVisibleWorldDotGrid(
   const step = gridStepWorld;
   const dotR = Math.max(0.75 / zoom, 0.4);
   ctx.save();
-  ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+  ctx.fillStyle = 'rgba(100, 116, 139, 0.35)';
   for (let x = Math.floor(xMin / step) * step; x <= xMax + 1e-6; x += step) {
     for (let y = Math.floor(yMin / step) * step; y <= yMax + 1e-6; y += step) {
       ctx.beginPath();
@@ -100,11 +104,10 @@ export function paintScene(params: PaintSceneParams): void {
     linkPreview,
     inheritPreview,
     getRelationKindLabel,
+    uiLocale,
   } = params;
   const hide = hiddenNodeIds;
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = '#f1f5f9';
-  ctx.fillRect(0, 0, width, height);
 
   const snap = config.snapshot();
   const panX = config.viewportPanX;
@@ -178,9 +181,10 @@ export function paintScene(params: PaintSceneParams): void {
       ctx,
       x: p.x,
       y: p.y,
-      title: p.model.model_name,
+      title: resolveModelDisplayName(p.model, uiLocale),
       theme,
       selected: p.model.id === selectedModelId,
+      nodeFillHex: parseFillHex(p.model.color_value),
     });
   }
 

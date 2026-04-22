@@ -1,40 +1,40 @@
+import { useEffect, useState, type ReactElement } from 'react';
 import { useDesigner } from '../context/designer-context.js';
-import type { ReactElement } from 'react';
+import { resolveI18nForLocale } from '../utils/i18n-resolve.js';
 
 export function RelationPanel(props: { modelId: string | undefined }): ReactElement {
   const { i18n, data } = useDesigner();
+  const [, bump] = useState(0);
+  useEffect(() => i18n.subscribe(() => bump((n) => n + 1)), [i18n]);
+  useEffect(() => data.subscribe(() => bump((n) => n + 1)), [data]);
+
   const mid = props.modelId;
   const rels = mid
     ? data.relations.filter((r) => r.source_model_id === mid || r.target_model_id === mid)
     : [];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12 }}>
-      {rels.map((r) => (
-        <div
-          key={r.id}
-          style={{
-            padding: 8,
-            background: '#f1f5f9',
-            borderRadius: 8,
-            border: '1px solid #e2e8f0',
-            color: '#334155',
-          }}
-        >
-          <div style={{ fontWeight: 600 }}>{r.kind}</div>
-          {r.self_cardinality ? (
-            <div style={{ fontSize: 11, color: '#64748b' }}>
-              selfCardinality: {r.self_cardinality}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 12 }}>
+      {rels.map((r) => {
+        const label = resolveI18nForLocale(r.name_i18n, i18n.locale, r.kind);
+        return (
+          <div key={r.id} className="designer-rel-card designer-glass-inset">
+            <div className="designer-prop-inherited-value" style={{ fontWeight: 650 }}>
+              {label}
             </div>
-          ) : null}
-          <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>
-            {r.source_model_id} → {r.target_model_id}
+            {r.self_cardinality ? (
+              <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                {i18n.t('ui', 'sysRelCardinality')}: {r.self_cardinality}
+              </div>
+            ) : null}
+            <div style={{ fontSize: 11, color: '#64748b', marginTop: 6 }}>{r.kind}</div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       {rels.length === 0 && <div style={{ color: '#64748b' }}>—</div>}
       <button
         type="button"
+        className="designer-btn designer-btn-primary"
         disabled={!mid}
         onClick={() => {
           if (!mid) {
@@ -50,15 +50,6 @@ export function RelationPanel(props: { modelId: string | undefined }): ReactElem
             target_model_id: other.id,
             kind: i18n.t('engine', 'relationDefault'),
           });
-        }}
-        style={{
-          padding: '8px 12px',
-          cursor: 'pointer',
-          borderRadius: 8,
-          border: 'none',
-          background: '#2563eb',
-          color: '#fff',
-          fontSize: 13,
         }}
       >
         {i18n.t('ui', 'addRelation')}

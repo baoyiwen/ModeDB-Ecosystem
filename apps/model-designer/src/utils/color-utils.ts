@@ -7,6 +7,15 @@ export function normalizeHex(hex: string | undefined, fallback: string): string 
   return fallback;
 }
 
+/** 仅当为合法 `#rrggbb` 时返回小写 hex，否则 `undefined`（不覆盖主题色） */
+export function parseFillHex(hex: string | undefined): string | undefined {
+  const t = (hex ?? '').trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(t)) {
+    return t.toLowerCase();
+  }
+  return undefined;
+}
+
 /** 相对背景取可读文字色（WCAG 感知亮度近似） */
 export function contrastTextOnHex(hex: string): string {
   const h = normalizeHex(hex, '#2563eb').slice(1);

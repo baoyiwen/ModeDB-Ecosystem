@@ -1,4 +1,4 @@
-import { Component, type ContextType, type CSSProperties, type ReactNode } from 'react';
+import { Component, type ContextType, type ReactNode } from 'react';
 import { DesignerContext, type DesignerManagers } from '../../context/designer-context.js';
 
 /**
@@ -21,22 +21,13 @@ export abstract class DesignerComponent<
 }
 
 /**
- * 主应用壳层（浅色画布区 + 浮动控件；连接门页仍单独使用深色）。
+ * 主应用壳层：渐变底 + 毛玻璃控件（连接页与编辑页共用 `.designer-app-root`）。
  */
 export abstract class DesignerChromePage<
   P = Record<string, unknown>,
   S = Record<string, unknown>,
 > extends DesignerComponent<P, S> {
-  protected readonly rootStyle: CSSProperties = {
-    position: 'relative',
-    height: '100vh',
-    width: '100%',
-    overflow: 'hidden',
-    background: '#f1f5f9',
-    color: '#0f172a',
-  };
-
   protected wrapRoot(children: ReactNode): ReactNode {
-    return <div style={this.rootStyle}>{children}</div>;
+    return <div className="designer-app-root">{children}</div>;
   }
 }
