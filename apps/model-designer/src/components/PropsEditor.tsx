@@ -199,16 +199,21 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
               <div
                 key={p.id}
                 className="designer-prop-card designer-prop-card--own"
-                draggable={!locked}
-                onDragStart={(e) => !locked && onDragStartOwn(e, index)}
                 onDragOver={onDragOverOwn}
                 onDrop={(e) => onDropOwn(e, index)}
-                onDragEnd={onDragEndOwn}
               >
                 {!locked && (
-                  <div className="designer-prop-drag-handle" aria-hidden>
+                  <button
+                    type="button"
+                    className="designer-prop-drag-handle"
+                    aria-label={i18n.t('ui', 'propDragHint')}
+                    draggable
+                    onDragStart={(e) => onDragStartOwn(e, index)}
+                    onDragEnd={onDragEndOwn}
+                    title={i18n.t('ui', 'propDragHint')}
+                  >
                     ⋮⋮
-                  </div>
+                  </button>
                 )}
                 {locked && (
                   <div style={{ fontSize: 11, color: 'var(--designer-text-muted, #94a3b8)' }}>
@@ -239,11 +244,10 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
                   <span className="designer-field-label">{i18n.t('ui', 'propFieldType')}</span>
                   <select
                     className="designer-select"
-                    style={{ width: '100%', padding: '9px 12px', fontSize: 13 }}
                     disabled={locked}
                     value={pTypeNorm}
                     onChange={(e) => {
-                      const t = e.target.value;
+                      const t = normalizeLegacyPropType(e.target.value);
                       patchProp(p.id, { type: t, engine_type: dataTypeToEngineCode(t) });
                     }}
                   >
@@ -316,7 +320,6 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
               <span className="designer-field-label">{i18n.t('ui', 'propFieldType')}</span>
               <select
                 className="designer-select"
-                style={{ width: '100%', padding: '9px 12px', fontSize: 13 }}
                 value={normalizeLegacyPropType(draft.type)}
                 onChange={(e) => setDraft((d) => ({ ...d, type: e.target.value }))}
               >

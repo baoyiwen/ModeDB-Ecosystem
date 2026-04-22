@@ -40,9 +40,9 @@ export function dataTypeToEngineCode(t: string): number {
   return i >= 0 ? i : 0;
 }
 
-/** 兼容旧数据（小写 string/number/boolean） */
-export function normalizeLegacyPropType(t: string | undefined): string {
-  if (!t) {
+/** 兼容旧数据（小写 string/number/boolean；以及历史上可能出现的非字符串类型）。 */
+export function normalizeLegacyPropType(t: unknown): string {
+  if (typeof t !== 'string' || !t) {
     return DataType.String;
   }
   if (ORDERED.includes(t)) {

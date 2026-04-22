@@ -5,8 +5,6 @@ import { segmentFromNodeTowardPoint } from '../canvas/relation-geometry.js';
 import { paintScene } from '../canvas/paint-scene.js';
 import type { GestureKind } from '../managers/event-manager.js';
 import type { InteractionState } from '../managers/state-manager.js';
-import { DataType, dataTypeToEngineCode } from '../config/engine-prop-types.js';
-import type { PropObject } from '../types/prop-object.js';
 
 function clientToCanvas(
   canvas: HTMLCanvasElement,
@@ -191,26 +189,13 @@ export function CanvasContainer(props: {
         const themes = config.getThemes();
         const themeId = themes[0]!.id;
         const nid = crypto.randomUUID();
-        const prop: PropObject = {
-          id: crypto.randomUUID(),
-          name: 'field_1',
-          name_i18n: { zh: '字段1', en: 'Field 1', ja: 'フィールド1' },
-          type: DataType.String,
-          is_primary: true,
-          encrypt_level: 0,
-          metadata: {},
-          engine_type: dataTypeToEngineCode(DataType.String),
-          sort: 0,
-          is_required: false,
-          description_i18n: {},
-          vault_key: '',
-        };
         data.upsertModel(
           {
             id: nid,
             model_name: `model_${Date.now()}`,
             parent_id: null,
-            props_objects_array: [prop],
+            // 新建模型：默认不带任何字段（由 Props 面板手动添加）。
+            props_objects_array: [],
             name_i18n: { zh: '新模型', en: 'NewModel', ja: '新規モデル' },
           },
           { position: { x: w.x, y: w.y }, color_theme: themeId, z_index: 1 },
