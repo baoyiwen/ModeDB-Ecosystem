@@ -66,57 +66,57 @@ importers:
         specifier: workspace:*
         version: link:../../packages/sdk
       react:
-        specifier: ^19.0.0
+        specifier: ^19.2.5
         version: 19.2.5
       react-dom:
-        specifier: ^19.0.0
+        specifier: ^19.2.5
         version: 19.2.5(react@19.2.5)
     devDependencies:
       '@types/react':
-        specifier: ^19.0.0
+        specifier: ^19.2.14
         version: 19.2.14
       '@types/react-dom':
-        specifier: ^19.0.0
+        specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.14)
       '@vitejs/plugin-react':
-        specifier: ^4.3.4
+        specifier: ^4.7.0
         version: 4.7.0(vite@6.4.2(@types/node@25.6.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       typescript:
-        specifier: ~5.9.0
+        specifier: ~5.9.3
         version: 5.9.3
       vite:
-        specifier: ^6.0.0
+        specifier: ^6.4.2
         version: 6.4.2(@types/node@25.6.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
 
   apps/web:
     dependencies:
       '@mode-db/sdk':
-        specifier: '*'
-        version: 0.1.5
+        specifier: ^0.1.7
+        version: 0.1.7
       react:
-        specifier: ^19.0.0
+        specifier: ^19.2.5
         version: 19.2.5
       react-dom:
-        specifier: ^19.0.0
+        specifier: ^19.2.5
         version: 19.2.5(react@19.2.5)
     devDependencies:
       '@types/react':
-        specifier: ^19.0.0
+        specifier: ^19.2.14
         version: 19.2.14
       '@types/react-dom':
-        specifier: ^19.0.0
+        specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.14)
       '@vitejs/plugin-react':
-        specifier: ^4.3.4
+        specifier: ^4.7.0
         version: 4.7.0(vite@6.4.2(@types/node@25.6.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
       '@webgpu/types':
-        specifier: ^0.1.64
+        specifier: ^0.1.69
         version: 0.1.69
       typescript:
-        specifier: ~5.9.0
+        specifier: ~5.9.3
         version: 5.9.3
       vite:
-        specifier: ^6.0.0
+        specifier: ^6.4.2
         version: 6.4.2(@types/node@25.6.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
       vite-plugin-node-polyfills:
         specifier: ^0.26.0
@@ -714,11 +714,11 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@mode-db/sdk@0.1.5':
-    resolution: {integrity: sha512-nRYJlNJSBLs/B+Bapfn1u+HGh9OX7RcU4aoNKp0Xzn8JwxKdkiGPFi2bLBMeLReIV1Np6LQJ2JwDyhF4f68agQ==}
+  '@mode-db/sdk@0.1.7':
+    resolution: {integrity: sha512-IhQWbjyiNccRGJN0GN0J9t/kppnRbPVRf+M+OJdUmgdjubrLz9tXFZSFir4JfZInIw1Tz3XlrdkqD2hUbxF06A==}
 
-  '@mode-db/shared@0.1.6':
-    resolution: {integrity: sha512-tzjYedmHgp/48gT9pKylRy2yEaCZB26YnYcLTjHdaxDuBhcqbaXkXdva0xqh5PQkuNQS8o3KbStDbbdeSkDQlg==}
+  '@mode-db/shared@0.1.8':
+    resolution: {integrity: sha512-ofwMTbKB+dIHLZUbBUSj5wiyBMOJ/em1lJWOSPSG5tGVCFn3DOlOEB8rJqdRhjqVUX01zwAo4IonfMpu+OfAYA==}
 
   '@noble/hashes@1.8.0':
     resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
@@ -2846,16 +2846,16 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@mode-db/sdk@0.1.5':
+  '@mode-db/sdk@0.1.7':
     dependencies:
-      '@mode-db/shared': 0.1.6
+      '@mode-db/shared': 0.1.8
     optionalDependencies:
       ws: 8.20.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@mode-db/shared@0.1.6':
+  '@mode-db/shared@0.1.8':
     dependencies:
       '@noble/hashes': 1.8.0
 

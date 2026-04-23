@@ -1,5 +1,5 @@
 import { createReadStream, existsSync, statSync } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, unlink } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { randomUUID } from 'node:crypto';
 import type {
@@ -187,6 +187,34 @@ export class ModelStorage implements DataReader {
   /** Remove in-memory schema (e.g. after {@link AuthoringEngine.dropModel}). */
   unregisterSchema(modelName: string): void {
     this.schemas.delete(modelName);
+  }
+
+  /**
+   * Physically delete the model's persisted payload.
+   *
+   * - **Vault mode**: removes the `m:<name>` entry from {@link AtlasSingleVault} and
+   *   `saveSync`s the vault so the atlas file on disk no longer contains the blob.
+   * - **Split-file mode**: `unlink`s `<STORAGE_ROOT>/<atlas>/models/<name>.mld`.
+   *
+   * A missing target file is treated as a no-op (idempotent). Any other I/O failure is
+   * wrapped in {@link FileIOError}. Call {@link unregisterSchema} separately to also
+   * clear the in-memory schema.
+   */
+  async deleteModelData(modelName: string): Promise<void> {
+    if (this.vault) {
+      this.vault.delete(this.modelVaultKey(modelName));
+      this.persistVaultSync();
+      return;
+    }
+    const filePath = this.paths.modelDataPath(modelName);
+    try {
+      await unlink(filePath);
+    } catch (err) {
+      if (isNodeError(err) && err.code === 'ENOENT') {
+        return;
+      }
+      throw new FileIOError(`Failed to delete "${modelName}" data file`, filePath, { cause: err });
+    }
   }
 
   /** Build a FieldMatchContext from the current locale (used by ModelEntity for query threading). */

@@ -553,14 +553,12 @@ export class AuthoringEngine {
   }
 
   /**
-   * **Meta-CRUD (logical drop)**: removes relations touching the model, then unregisters it from
-   * **`ModelRegistry` / `AtlasRegistry`** and in-memory handles (**`evictModelHandle`**), clears buffers
-   * and schema registration, and rewrites the manifest so **cold readers no longer see the model**.
-   *
-   * **Physical payloads are intentionally left in place**: Vault **`m:<name>`** JSONL and split-file
-   * **`models/<name>.mld`** are **not** renamed or relocated, deferring
-   * compaction / freelist work to a later storage release. Re-using the same model name before a
-   * dedicated compact tool runs can merge with stale on-disk rows — avoid in production.
+   * **Meta-CRUD (hard drop)**: removes relations touching the model, drops pending write-behind
+   * rows, unregisters the model from **`ModelRegistry` / `AtlasRegistry`** (plus **`evictModelHandle`**
+   * and in-memory schema), **physically deletes the model payload** — Vault **`m:<name>`** blob
+   * or split-file **`models/<name>.mld`** — and rewrites the manifest so cold readers no longer
+   * see the model. This is a data-warehouse-style drop: the name can be re-registered immediately
+   * without risk of merging with stale on-disk rows.
    */
   async dropModel(modelName: string): Promise<void> {
     if (!this.registry.getModel(modelName)) {
@@ -573,6 +571,7 @@ export class AuthoringEngine {
       this.registry.unregisterRelation(rel);
     }
     this.persistence.clearModelBuffer(modelName);
+    await this.storage.deleteModelData(modelName);
     this.storage.unregisterSchema(modelName);
     this.registry.unregisterModel(modelName);
     if (this.registry instanceof AtlasRegistry) {
@@ -581,7 +580,7 @@ export class AuthoringEngine {
     this.smartCacheRef?.invalidateModel(modelName);
     await this.flushAll();
     EngineLogger.instance.info(
-      `[META] Model '${modelName}' dropped (logical): relations cleared; registry + mapping retired; physical model payload retained on disk.`,
+      `[META] Model '${modelName}' dropped: relations cleared; registry + mapping retired; physical model payload deleted.`,
       undefined,
       'Authoring',
     );

@@ -1,4 +1,4 @@
-import { ModelDB, RemoteModelDBClient, connectRemote, ModelDBClient } from "@mode-db/sdk";
+import { ModelDB, RemoteModelDBClient } from "@mode-db/sdk";
 import type {
     BatchRegisterInput,
     BatchRegisterResult,
@@ -10,7 +10,6 @@ import type {
 import {
     DataType,
 } from '@mode-db/common';
-import { AuthoringEngine } from '@mode-db/core';
 
 
 export type ModelDBTestConfig = {
