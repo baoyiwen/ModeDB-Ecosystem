@@ -90,16 +90,16 @@ const client = await modelDB.use('test_db');
 // client.dropModel('administrative_division').then(res => {
 //     console.error('Res', res)
 // })
-// await client.quickLinkBatch([
-//   ['administrative_division', 'administrative_division', 'children', 'parent'],
-// ]);
-// await client.alterModel('administrative_division', {
-//   code: DataType.String,
-//   name: DataType.String,
-// });
+await client.quickLinkBatch([
+  ['administrative_division', 'administrative_division', 'children', 'parent'],
+]);
+await client.alterModel('administrative_division', {
+  code: DataType.String,
+  name: DataType.String,
+});
 
-const administrativeDivision = client.model('administrative_division');
-console.error(administrativeDivision);
+// const administrativeDivision = client.model('administrative_division');
+// console.error(administrativeDivision);
 // const [province, cities] = await readFiles([
 //   './datas/provinces.csv',
 //   './datas/cities.csv',
@@ -142,12 +142,12 @@ console.error(administrativeDivision);
 //     await client.bindRelation(pRow , cRow , 'children', 'parent');
 //   }
 // }
-// const res = await client
-//   .model('administrative_division')
-//   .query()
-//   .relate('children')
-//   .execute();
-// console.log('Res:', res);
+const res = await client
+  .model('administrative_division')
+  .query()
+  // .relate('children')
+  .execute();
+console.log('Res:', res);
 
 
 
