@@ -17,7 +17,13 @@ import {
   type ModelDBClient,
 } from '@mode-db/core';
 import type { WriteSerializationGate } from './write-serialization-gate.js';
-import type { FieldDefsRecord } from '@mode-db/common';
+import type {
+  FieldDefsRecord,
+  MatchPredicate,
+  ModelRecord,
+  RelationDefinition,
+  RelationLogic,
+} from '@mode-db/common';
 
 const MAX_INSERT_MANY_ROWS = 20_000;
 const MAX_BATCH_UPDATE_OPS = 20_000;
@@ -115,11 +121,19 @@ export class WireRequestDispatcher {
           const engine = await this.opts.getEngine(atlas);
           const report = await engine.model(body.model).insertMany(body.rows);
           await engine.flushAll();
+          const records =
+            body.returning === true
+              ? report.succeeded
+                  .map((r) => r.data)
+                  .filter((d): d is ModelRecord => d !== undefined)
+                  .map((d) => d as unknown as Record<string, unknown>)
+              : undefined;
           const wireJson: WireExecuteResultJson = {
             kind: 'mutation',
             op: 'insertMany',
             model: body.model,
             record: null,
+            ...(records ? { records } : {}),
             successCount: report.successCount,
             failureCount: report.failureCount,
           };
@@ -280,6 +294,265 @@ export class WireRequestDispatcher {
         });
         return { type: 'rpc.ok', id, cipher };
       }
+      if (body.op === 'batchRegister') {
+        const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
+          const engine = await this.opts.getEngine(atlas);
+          const createdModels: string[] = [];
+          const skippedModels: string[] = [];
+          const createdRelations: string[] = [];
+          const skippedRelations: string[] = [];
+          for (const m of body.models ?? []) {
+            if (engine.registry.getModel(m.name)) {
+              skippedModels.push(m.name);
+              continue;
+            }
+            engine.registerModel(
+              m.name,
+              m.schema as FieldDefsRecord | undefined,
+              m.parentId ?? null,
+            );
+            createdModels.push(m.name);
+          }
+          for (const r of body.relations ?? []) {
+            if (body.quickLink) {
+              if (!engine.registry.getModel(r.source)) {
+                engine.registerModel(r.source);
+                createdModels.push(r.source);
+              }
+              if (!engine.registry.getModel(r.target)) {
+                engine.registerModel(r.target);
+                createdModels.push(r.target);
+              }
+            }
+            const exists = engine.registry.getRelations().some((x) => x.forward === r.forward);
+            if (exists) {
+              skippedRelations.push(r.forward);
+              continue;
+            }
+            engine.registerRelation(
+              r.source,
+              r.target,
+              r.forward,
+              r.reverse,
+              r.logic ?? null,
+              r.matchOn ? (r.matchOn as MatchPredicate) : null,
+            );
+            createdRelations.push(r.forward);
+          }
+          await engine.flushAll();
+          EngineLogger.instance.info(
+            `[REMOTE][META] batchRegister atlas=${atlas} newModels=${createdModels.length} newRelations=${createdRelations.length}`,
+            undefined,
+            'Server',
+          );
+          const wireJson: WireExecuteResultJson = {
+            kind: 'mutation',
+            op: 'batchRegister',
+            model: '',
+            record: null,
+            ok: true,
+            created: { models: createdModels, relations: createdRelations },
+            skipped: { models: skippedModels, relations: skippedRelations },
+          };
+          return encodeWirePayload(JSON.stringify(wireJson), sessionKey);
+        });
+        return { type: 'rpc.ok', id, cipher };
+      }
+      if (body.op === 'bindPair') {
+        const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
+          const engine = await this.opts.getEngine(atlas);
+          const rel = findRelationByLabels(engine, body.forward, body.reverse);
+          assertRegistrationOrder(rel, body.source.model, body.target.model, 'bindPair');
+          await engine.bind(body.forward, 'MANUAL', {
+            pairs: [[body.source.id, body.target.id]],
+          });
+          await engine.flushAll();
+          const wireJson: WireExecuteResultJson = {
+            kind: 'mutation',
+            op: 'bindPair',
+            model: body.source.model,
+            relation: body.forward,
+            record: null,
+            ok: true,
+            pairsCount: 1,
+          };
+          return encodeWirePayload(JSON.stringify(wireJson), sessionKey);
+        });
+        return { type: 'rpc.ok', id, cipher };
+      }
+      if (body.op === 'unlinkPair') {
+        const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
+          const engine = await this.opts.getEngine(atlas);
+          const rel = findRelationByLabels(engine, body.forward, body.reverse);
+          assertRegistrationOrder(rel, body.source.model, body.target.model, 'unlinkPair');
+          await engine.unlink(body.forward, [[body.source.id, body.target.id]]);
+          await engine.flushAll();
+          const wireJson: WireExecuteResultJson = {
+            kind: 'mutation',
+            op: 'unlinkPair',
+            model: body.source.model,
+            relation: body.forward,
+            record: null,
+            ok: true,
+            pairsCount: 1,
+          };
+          return encodeWirePayload(JSON.stringify(wireJson), sessionKey);
+        });
+        return { type: 'rpc.ok', id, cipher };
+      }
+      if (body.op === 'bind') {
+        const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
+          const engine = await this.opts.getEngine(atlas);
+          const rel = findRelationByForward(engine, body.forward);
+          if (body.matchOn) {
+            engine.updateRelationLogic(
+              body.forward,
+              (rel.logic ?? 'one-to-many') as RelationLogic,
+              body.matchOn as MatchPredicate,
+            );
+          }
+          const before = await engine.indexer.getStats(rel);
+          const pairs =
+            body.strategy === 'MANUAL' && body.pairs
+              ? (body.pairs.map(([s, t]) => [s, t] as const) as readonly (readonly [
+                  string,
+                  string,
+                ])[])
+              : undefined;
+          await engine.bind(body.forward, body.strategy, pairs ? { pairs } : {});
+          await engine.flushAll();
+          const after = await engine.indexer.getStats(rel);
+          const pairsCount = Math.max(0, after.totalLinks - before.totalLinks);
+          const wireJson: WireExecuteResultJson = {
+            kind: 'mutation',
+            op: 'bind',
+            model: '',
+            relation: body.forward,
+            record: null,
+            ok: true,
+            pairsCount,
+            stats: {
+              forwardKeys: after.forwardKeys,
+              reverseKeys: after.reverseKeys,
+              totalLinks: after.totalLinks,
+            },
+          };
+          return encodeWirePayload(JSON.stringify(wireJson), sessionKey);
+        });
+        return { type: 'rpc.ok', id, cipher };
+      }
+      if (body.op === 'previewBind') {
+        const engine = await this.opts.getEngine(atlas);
+        const rel = findRelationByForward(engine, body.forward);
+        const cap = Math.max(0, body.sample ?? 20);
+        const effectiveMatch = (body.matchOn ?? rel.matchOn) as MatchPredicate | undefined | null;
+        if (body.strategy === 'PROTOCOL' && !effectiveMatch) {
+          throw new Error(`previewBind: PROTOCOL requires matchOn on relation "${body.forward}".`);
+        }
+        await engine.persistence.flushPendingToDisk();
+        const merged = engine.persistence.getMergedReader();
+        const srcModels = engine.registry.getDescendantsInclusive(rel.source);
+        const tgtModels = engine.registry.getDescendantsInclusive(rel.target);
+        const srcAll: ModelRecord[] = [];
+        for (const m of srcModels) {
+          srcAll.push(...(await merged.getAll(m)));
+        }
+        const tgtAll: ModelRecord[] = [];
+        for (const m of tgtModels) {
+          tgtAll.push(...(await merged.getAll(m)));
+        }
+        let pairsCount = 0;
+        const sample: [string, string][] = [];
+        const push = (s: string, t: string): void => {
+          pairsCount++;
+          if (sample.length < cap) {
+            sample.push([s, t]);
+          }
+        };
+        if (body.strategy === 'GLOBAL') {
+          pairsCount = srcAll.length * tgtAll.length;
+          outer: for (const s of srcAll) {
+            for (const t of tgtAll) {
+              if (sample.length >= cap) {
+                break outer;
+              }
+              sample.push([s._id, t._id]);
+            }
+          }
+        } else if (body.strategy === 'PROTOCOL') {
+          const pred = effectiveMatch as MatchPredicate;
+          for (const s of srcAll) {
+            const sv = (s as Record<string, unknown>)[pred.sourceField];
+            if (sv === undefined || sv === null) {
+              continue;
+            }
+            for (const t of tgtAll) {
+              const tv = (t as Record<string, unknown>)[pred.targetField];
+              if (sv === tv) {
+                push(s._id, t._id);
+              }
+            }
+          }
+        } else {
+          for (const [s, t] of body.pairs ?? []) {
+            push(s, t);
+          }
+        }
+        const wireJson: WireExecuteResultJson = {
+          kind: 'previewBind',
+          forward: body.forward,
+          pairsCount,
+          sample,
+        };
+        return {
+          type: 'rpc.ok',
+          id,
+          cipher: encodeWirePayload(JSON.stringify(wireJson), sessionKey),
+        };
+      }
+      if (body.op === 'relationStats') {
+        const engine = await this.opts.getEngine(atlas);
+        const rel = findRelationByForward(engine, body.forward);
+        const stats = await engine.indexer.getStats(rel);
+        const wireJson: WireExecuteResultJson = {
+          kind: 'relationStats',
+          forward: body.forward,
+          forwardKeys: stats.forwardKeys,
+          reverseKeys: stats.reverseKeys,
+          totalLinks: stats.totalLinks,
+        };
+        return {
+          type: 'rpc.ok',
+          id,
+          cipher: encodeWirePayload(JSON.stringify(wireJson), sessionKey),
+        };
+      }
+      if (body.op === 'updateRelationLogic') {
+        const cipher = await this.opts.writeGate.runExclusive(atlas, async () => {
+          const engine = await this.opts.getEngine(atlas);
+          engine.updateRelationLogic(
+            body.forward,
+            body.logic as RelationLogic,
+            body.matchOn ? (body.matchOn as MatchPredicate) : undefined,
+          );
+          await engine.flushAll();
+          EngineLogger.instance.info(
+            `[REMOTE][META] updateRelationLogic atlas=${atlas} forward=${body.forward} logic=${body.logic}`,
+            undefined,
+            'Server',
+          );
+          const wireJson: WireExecuteResultJson = {
+            kind: 'mutation',
+            op: 'updateRelationLogic',
+            model: '',
+            relation: body.forward,
+            record: null,
+            ok: true,
+          };
+          return encodeWirePayload(JSON.stringify(wireJson), sessionKey);
+        });
+        return { type: 'rpc.ok', id, cipher };
+      }
       throw new Error(`Unknown RPC op: ${String((body as { op?: string }).op)}`);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
@@ -335,4 +608,42 @@ export class WireRequestDispatcher {
 export function decodeExecuteBody(cipher: string, sessionKey: string): WireExecuteBody {
   const plain = decodeWirePayload(cipher, sessionKey);
   return JSON.parse(plain) as WireExecuteBody;
+}
+
+function findRelationByForward(engine: AuthoringEngine, forward: string): RelationDefinition {
+  const rel = engine.registry.getRelations().find((r) => r.forward === forward);
+  if (!rel) {
+    throw new Error(`Relation with forward label "${forward}" not found.`);
+  }
+  return rel;
+}
+
+function findRelationByLabels(
+  engine: AuthoringEngine,
+  forward: string,
+  reverse: string,
+): RelationDefinition {
+  const rel = engine.registry
+    .getRelations()
+    .find((r) => r.forward === forward && r.reverse === reverse);
+  if (!rel) {
+    throw new Error(
+      `Relation { forward: "${forward}", reverse: "${reverse}" } not found (labels must match registration).`,
+    );
+  }
+  return rel;
+}
+
+function assertRegistrationOrder(
+  rel: RelationDefinition,
+  srcModel: string,
+  tgtModel: string,
+  op: string,
+): void {
+  if (rel.source !== srcModel || rel.target !== tgtModel) {
+    throw new Error(
+      `${op}: argument order must match registration ${rel.source} → ${rel.target} ` +
+        `(got ${srcModel} → ${tgtModel}).`,
+    );
+  }
 }

@@ -2,35 +2,10 @@ import { HydratedEntity } from '../runtime/HydratedEntity.js';
 import { isAnalysisResult } from '../runtime/transform-engine.js';
 import { isPaginatedExecuteResult } from '../runtime/query.js';
 import { GroupInstance } from '../runtime/group-instance.js';
+import type { WireExecuteResultJson } from '@mode-db/shared';
 
-/** JSON-safe execute result for wire transport. */
-export type WireExecuteResultJson =
-  | {
-      readonly kind: 'rows';
-      readonly rows: readonly { readonly model: string; readonly data: Record<string, unknown> }[];
-    }
-  | {
-      readonly kind: 'analysis';
-      readonly dimensionKeys: readonly string[];
-      readonly shape: 'flat';
-      readonly rows: readonly Record<string, unknown>[];
-    }
-  | {
-      readonly kind: 'paginated';
-      readonly page: number;
-      readonly total: number;
-      readonly limit: number;
-      readonly pageCount: number;
-      readonly items: WireExecuteResultJson;
-    }
-  | {
-      readonly kind: 'mutation';
-      readonly op: 'insert' | 'update' | 'insertMany' | 'batchUpdate';
-      readonly model: string;
-      readonly record: Record<string, unknown> | null;
-      readonly successCount?: number;
-      readonly failureCount?: number;
-    };
+/** Re-exported for core consumers; authoritative definition lives in **@mode-db/shared**. */
+export type { WireExecuteResultJson };
 
 function serializeRows(rows: HydratedEntity[]): WireExecuteResultJson {
   return {

@@ -7,7 +7,13 @@ export {
   RemoteHydratedEntity,
   toWsStreamUrl,
   toHttpOrigin,
+  type BatchRegisterInput,
+  type BatchRegisterResult,
+  type BindResult,
   type ConnectRemoteOptions,
+  type InsertManyResult,
+  type QuickLinkTuple,
+  type RowRef,
   type WebSocketCtor,
 } from './remote-client.js';
 export { ModelDB, type ModelDBConfig } from './model-db.js';
@@ -18,6 +24,11 @@ export type {
   ManagementDatabaseInfo,
   ManagementDatabasesResponse,
   ManagementStatusResponse,
+  WireBindStrategy,
+  WireMatchPredicate,
+  WireRelationLogic,
+  WireRelationStats,
+  WireRowRef,
 } from '@mode-db/shared';
 
 /** Alias for binary payloads: **Uint8Array** everywhere (no Node `Buffer`). */

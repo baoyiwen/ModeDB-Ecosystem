@@ -27,6 +27,11 @@ export type {
   WireRpcResponse,
   WireErrorMessage,
   WireExecuteResultJson,
+  WireRelationLogic,
+  WireMatchPredicate,
+  WireRowRef,
+  WireBindStrategy,
+  WireRelationStats,
 } from './wire-protocol-exports.js';
 export {
   WireQueryChain,

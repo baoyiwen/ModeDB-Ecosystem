@@ -10,8 +10,13 @@ import {
   type QueryExecuteOptions,
   type QueryStartSpec,
   type RemoteExecuteSnapshot,
+  type WireBindStrategy,
   type WireExecuteBody,
   type WireExecuteResultJson,
+  type WireMatchPredicate,
+  type WireRelationLogic,
+  type WireRelationStats,
+  type WireRowRef,
 } from '@mode-db/shared';
 
 function isRecord(x: unknown): x is Record<string, unknown> {
@@ -26,11 +31,20 @@ function nextRpcId(): string {
   return `rpc-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+/**
+ * Minimal `{ model, id }` pair accepted by relation-binding APIs.
+ * Both {@link RemoteHydratedEntity} rows and plain literals satisfy this shape.
+ */
+export interface RowRef {
+  readonly model: string;
+  readonly id: string;
+}
+
 /** Row handle compatible with {@link HydratedEntity} for `getData` / `getModelName`. */
-export class RemoteHydratedEntity {
+export class RemoteHydratedEntity implements RowRef {
   constructor(
     private readonly row: Record<string, unknown>,
-    private readonly model: string,
+    readonly model: string,
   ) {}
 
   getData(_deep?: boolean): Record<string, unknown> {
@@ -40,7 +54,83 @@ export class RemoteHydratedEntity {
   getModelName(): string {
     return this.model;
   }
+
+  /** `_id` extracted from the row payload; throws if the backend did not include one. */
+  get id(): string {
+    const v = this.row._id;
+    if (typeof v !== 'string' || v.length === 0) {
+      throw new Error(
+        `RemoteHydratedEntity.id: row has no "_id" (model=${this.model}); ` +
+          `use { returning: true } or query() to obtain a row with _id.`,
+      );
+    }
+    return v;
+  }
 }
+
+/** Normalize `{ model, id }` / row instance / plain object into a {@link WireRowRef}. */
+function toWireRowRef(x: RowRef | RemoteHydratedEntity): WireRowRef {
+  if (x instanceof RemoteHydratedEntity) {
+    return { model: x.getModelName(), id: x.id };
+  }
+  if (!x || typeof x.model !== 'string' || typeof x.id !== 'string') {
+    throw new Error(
+      'bindRelation: expected { model: string; id: string } or RemoteHydratedEntity.',
+    );
+  }
+  return { model: x.model, id: x.id };
+}
+
+/** Result of {@link RemoteRuntimeModel.insertMany}; `records` is present only when `returning: true`. */
+export interface InsertManyResult {
+  readonly successCount: number;
+  readonly failureCount: number;
+  readonly records?: readonly RemoteHydratedEntity[];
+}
+
+/** Response shape for `bindPair` / `unlinkPair` / `bind`. */
+export interface BindResult {
+  readonly ok: boolean;
+  /** Net edges added (positive) or removed (negative) by this RPC. */
+  readonly pairsCount: number;
+  /** Latest `RelationIndexer.getStats()` when server returned it (currently: `bind`). */
+  readonly stats?: WireRelationStats;
+}
+
+export interface BatchRegisterInput {
+  readonly models?: readonly {
+    readonly name: string;
+    readonly schema?: Readonly<Record<string, unknown>>;
+    readonly parentId?: string | null;
+  }[];
+  readonly relations?: readonly {
+    readonly source: string;
+    readonly target: string;
+    readonly forward: string;
+    readonly reverse: string;
+    readonly logic?: WireRelationLogic;
+    readonly matchOn?: WireMatchPredicate;
+  }[];
+  /** Auto-create any source/target model referenced by `relations[*]` when absent (quickLink semantics). */
+  readonly quickLink?: boolean;
+}
+
+export interface BatchRegisterResult {
+  readonly ok: boolean;
+  readonly created: { readonly models: readonly string[]; readonly relations: readonly string[] };
+  readonly skipped: { readonly models: readonly string[]; readonly relations: readonly string[] };
+}
+
+/**
+ * Compact tuple used by {@link RemoteModelDBClient.quickLinkBatch}:
+ * `[sourceModel, targetModel, forwardLabel, reverseLabel]`.
+ */
+export type QuickLinkTuple = readonly [
+  source: string,
+  target: string,
+  forward: string,
+  reverse: string,
+];
 
 function reviveWireResult(json: WireExecuteResultJson): unknown {
   if (json.kind === 'paginated') {
@@ -55,13 +145,34 @@ function reviveWireResult(json: WireExecuteResultJson): unknown {
   if (json.kind === 'rows') {
     return json.rows.map((r) => new RemoteHydratedEntity(r.data, r.model));
   }
+  if (json.kind === 'previewBind') {
+    return {
+      kind: 'previewBind' as const,
+      forward: json.forward,
+      pairsCount: json.pairsCount,
+      sample: json.sample.map((p) => [p[0], p[1]] as const),
+    };
+  }
+  if (json.kind === 'relationStats') {
+    return {
+      kind: 'relationStats' as const,
+      forward: json.forward,
+      forwardKeys: json.forwardKeys,
+      reverseKeys: json.reverseKeys,
+      totalLinks: json.totalLinks,
+    };
+  }
   if (json.kind === 'mutation') {
     if (json.op === 'insertMany') {
+      const records = json.records
+        ? json.records.map((r) => new RemoteHydratedEntity(r, json.model))
+        : undefined;
       return {
         op: 'insertMany' as const,
         model: json.model,
         successCount: json.successCount ?? 0,
         failureCount: json.failureCount ?? 0,
+        ...(records ? { records } : {}),
       };
     }
     if (json.op === 'batchUpdate') {
@@ -76,13 +187,32 @@ function reviveWireResult(json: WireExecuteResultJson): unknown {
       json.op === 'dropRelation' ||
       json.op === 'alterModel' ||
       json.op === 'registerModel' ||
-      json.op === 'registerRelation'
+      json.op === 'registerRelation' ||
+      json.op === 'updateRelationLogic'
     ) {
       return {
         op: json.op,
         model: json.model,
         relation: json.relation,
         ok: json.ok === true,
+      };
+    }
+    if (json.op === 'bindPair' || json.op === 'unlinkPair' || json.op === 'bind') {
+      return {
+        op: json.op,
+        model: json.model,
+        relation: json.relation,
+        ok: json.ok === true,
+        pairsCount: json.pairsCount ?? 0,
+        ...(json.stats ? { stats: json.stats } : {}),
+      };
+    }
+    if (json.op === 'batchRegister') {
+      return {
+        op: 'batchRegister' as const,
+        ok: json.ok === true,
+        created: json.created ?? { models: [], relations: [] },
+        skipped: json.skipped ?? { models: [], relations: [] },
       };
     }
     return {
@@ -490,7 +620,7 @@ export class RemoteQueryChain<
   }
 }
 
-/** Remote model handle: `query()` returns a {@link RemoteQueryChain}; `insertMany` uses the write RPC. */
+/** Remote model handle: `query()` returns a {@link RemoteQueryChain}; writes use the RPC gate. */
 export class RemoteRuntimeModel {
   constructor(
     private readonly getSession: () => Promise<QuerySession>,
@@ -507,19 +637,50 @@ export class RemoteRuntimeModel {
   }
 
   /**
+   * Single-row insert over the wire (server runs {@link AuthoringEngine} **`insert`** inside the write gate).
+   * Returns the freshly-persisted row as a {@link RemoteHydratedEntity}; pass the result directly to
+   * {@link RemoteModelDBClient.bindRelation} / {@link RemoteModelDBClient.unlinkRelation} to build
+   * data-level links without having to remember `_id`.
+   */
+  async insertOne(
+    data: Record<string, unknown>,
+    opts?: { sync?: boolean },
+  ): Promise<RemoteHydratedEntity> {
+    const session = await this.getSession();
+    const out = await session.executeWireBody({
+      op: 'insert',
+      model: this.name,
+      data,
+      sync: opts?.sync,
+    });
+    if (!isRecord(out) || out.op !== 'insert') {
+      throw new Error('insertOne: unexpected remote response shape.');
+    }
+    const rec = out.record;
+    if (!(rec instanceof RemoteHydratedEntity)) {
+      throw new Error('insertOne: server did not return a row record.');
+    }
+    return rec;
+  }
+
+  /**
    * Batch insert over the wire (server runs {@link AuthoringEngine} **`insertMany`** inside the write gate).
    * At most **20_000** rows per call (server cap).
+   *
+   * Pass `{ returning: true }` to receive each successfully-staged row (with `_id`) as
+   * {@link RemoteHydratedEntity} via the `records` field.
    */
   async insertMany(
     rows: readonly Record<string, unknown>[],
-    opts?: { sync?: boolean },
-  ): Promise<{ successCount: number; failureCount: number }> {
+    opts?: { sync?: boolean; returning?: boolean },
+  ): Promise<InsertManyResult> {
     const session = await this.getSession();
     const out = await session.executeWireBody({
       op: 'insertMany',
       model: this.name,
       rows: [...rows],
       sync: opts?.sync,
+      returning: opts?.returning,
     });
     if (
       !isRecord(out) ||
@@ -529,7 +690,16 @@ export class RemoteRuntimeModel {
     ) {
       throw new Error('insertMany: unexpected remote response shape.');
     }
-    return { successCount: out.successCount, failureCount: out.failureCount };
+    const records = Array.isArray(out.records)
+      ? (out.records as unknown[]).filter(
+          (r): r is RemoteHydratedEntity => r instanceof RemoteHydratedEntity,
+        )
+      : undefined;
+    return {
+      successCount: out.successCount,
+      failureCount: out.failureCount,
+      ...(records ? { records } : {}),
+    };
   }
 }
 
@@ -836,6 +1006,240 @@ export class RemoteModelDBClient {
       throw new Error('batchUpdate: unexpected remote response shape.');
     }
     return { successCount: out.successCount, failureCount: out.failureCount };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Relation-authoring RPCs (data-level binding + bulk schema/topology DDL).
+  //
+  // Source-of-truth for topology lives in `AuthoringEngine`; this block is a
+  // thin wire wrapper. The server always enforces that `source.model` /
+  // `target.model` passed to `bindPair` / `unlinkPair` match the relation's
+  // registered order — we do **not** replicate that check on the client.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Link one source row to one target row on an **already-registered** relation.
+   * Argument order must follow registration (`source → target`); mismatches are rejected server-side.
+   */
+  async bindRelation(
+    source: RowRef | RemoteHydratedEntity,
+    target: RowRef | RemoteHydratedEntity,
+    forward: string,
+    reverse: string,
+  ): Promise<BindResult> {
+    const session = await this.ensureSession();
+    const out = await session.executeWireBody({
+      op: 'bindPair',
+      forward,
+      reverse,
+      source: toWireRowRef(source),
+      target: toWireRowRef(target),
+    });
+    if (!isRecord(out) || out.op !== 'bindPair' || out.ok !== true) {
+      throw new Error('bindRelation: unexpected remote response.');
+    }
+    return {
+      ok: true,
+      pairsCount: typeof out.pairsCount === 'number' ? out.pairsCount : 1,
+    };
+  }
+
+  /** Remove a single `source → target` edge from a relation (order must match registration). */
+  async unlinkRelation(
+    source: RowRef | RemoteHydratedEntity,
+    target: RowRef | RemoteHydratedEntity,
+    forward: string,
+    reverse: string,
+  ): Promise<BindResult> {
+    const session = await this.ensureSession();
+    const out = await session.executeWireBody({
+      op: 'unlinkPair',
+      forward,
+      reverse,
+      source: toWireRowRef(source),
+      target: toWireRowRef(target),
+    });
+    if (!isRecord(out) || out.op !== 'unlinkPair' || out.ok !== true) {
+      throw new Error('unlinkRelation: unexpected remote response.');
+    }
+    return {
+      ok: true,
+      pairsCount: typeof out.pairsCount === 'number' ? out.pairsCount : 1,
+    };
+  }
+
+  /**
+   * Strategy-driven bulk bind (maps to {@link AuthoringEngine.bind}).
+   *
+   * - `'PROTOCOL'`: requires `matchOn` (persisted onto the relation when provided) and scans both sides
+   *   for `src[sourceField] === tgt[targetField]`.
+   * - `'GLOBAL'`: cross-join bind (use with `many-to-many`).
+   * - `'MANUAL'`: explicit `pairs` (each `[srcId, targetId]` in registration order).
+   */
+  async bind(
+    forward: string,
+    strategy: WireBindStrategy,
+    opts?: {
+      readonly matchOn?: WireMatchPredicate;
+      readonly pairs?: ReadonlyArray<readonly [string, string]>;
+      readonly sync?: boolean;
+    },
+  ): Promise<BindResult> {
+    const session = await this.ensureSession();
+    const body: WireExecuteBody = {
+      op: 'bind',
+      forward,
+      strategy,
+      ...(opts?.matchOn ? { matchOn: opts.matchOn } : {}),
+      ...(opts?.pairs ? { pairs: opts.pairs.map(([s, t]) => [s, t] as const) } : {}),
+      ...(opts?.sync !== undefined ? { sync: opts.sync } : {}),
+    };
+    const out = await session.executeWireBody(body);
+    if (!isRecord(out) || out.op !== 'bind' || out.ok !== true) {
+      throw new Error('bind: unexpected remote response.');
+    }
+    return {
+      ok: true,
+      pairsCount: typeof out.pairsCount === 'number' ? out.pairsCount : 0,
+      ...(isRecord(out.stats) ? { stats: out.stats as unknown as WireRelationStats } : {}),
+    };
+  }
+
+  /**
+   * Read-only dry-run for {@link bind}: returns the full pair count plus a bounded `sample`
+   * (default 20) without writing the index. Intended for Designer "preview before bind" UX.
+   */
+  async previewBind(
+    forward: string,
+    strategy: WireBindStrategy,
+    opts?: {
+      readonly matchOn?: WireMatchPredicate;
+      readonly pairs?: ReadonlyArray<readonly [string, string]>;
+      readonly sample?: number;
+    },
+  ): Promise<{
+    readonly forward: string;
+    readonly pairsCount: number;
+    readonly sample: readonly (readonly [string, string])[];
+  }> {
+    const session = await this.ensureSession();
+    const body: WireExecuteBody = {
+      op: 'previewBind',
+      forward,
+      strategy,
+      ...(opts?.matchOn ? { matchOn: opts.matchOn } : {}),
+      ...(opts?.pairs ? { pairs: opts.pairs.map(([s, t]) => [s, t] as const) } : {}),
+      ...(opts?.sample !== undefined ? { sample: opts.sample } : {}),
+    };
+    const out = await session.executeWireBody(body);
+    if (
+      !isRecord(out) ||
+      out.kind !== 'previewBind' ||
+      typeof out.pairsCount !== 'number' ||
+      !Array.isArray(out.sample)
+    ) {
+      throw new Error('previewBind: unexpected remote response.');
+    }
+    return {
+      forward: String(out.forward ?? forward),
+      pairsCount: out.pairsCount,
+      sample: (out.sample as unknown[]).map((p) => {
+        const tuple = p as readonly [string, string];
+        return [tuple[0], tuple[1]] as const;
+      }),
+    };
+  }
+
+  /** Live counters for a relation index (drives Designer edge annotations). */
+  async relationStats(forward: string): Promise<WireRelationStats & { readonly forward: string }> {
+    const session = await this.ensureSession();
+    const out = await session.executeWireBody({ op: 'relationStats', forward });
+    if (
+      !isRecord(out) ||
+      out.kind !== 'relationStats' ||
+      typeof out.forwardKeys !== 'number' ||
+      typeof out.reverseKeys !== 'number' ||
+      typeof out.totalLinks !== 'number'
+    ) {
+      throw new Error('relationStats: unexpected remote response.');
+    }
+    return {
+      forward: String(out.forward ?? forward),
+      forwardKeys: out.forwardKeys,
+      reverseKeys: out.reverseKeys,
+      totalLinks: out.totalLinks,
+    };
+  }
+
+  /**
+   * Update a relation's cardinality logic / `matchOn` without rebinding existing edges.
+   * Typical use: Designer user picks match fields on an already-registered relation before
+   * calling {@link bind} with `'PROTOCOL'`.
+   */
+  async updateRelationLogic(
+    forward: string,
+    logic: WireRelationLogic,
+    matchOn?: WireMatchPredicate,
+  ): Promise<void> {
+    const session = await this.ensureSession();
+    const body: WireExecuteBody = {
+      op: 'updateRelationLogic',
+      forward,
+      logic,
+      ...(matchOn ? { matchOn } : {}),
+    };
+    const out = await session.executeWireBody(body);
+    if (!isRecord(out) || out.op !== 'updateRelationLogic' || out.ok !== true) {
+      throw new Error('updateRelationLogic: unexpected remote response.');
+    }
+  }
+
+  /**
+   * Idempotent bulk DDL: register any missing **models** and **relations** inside a single
+   * server-side write gate (see `AuthoringEngine.registerModel` / `registerRelation`). Use
+   * `{ quickLink: true }` to let the server auto-create source/target models referenced by
+   * any relation that hasn't been registered yet.
+   */
+  async batchRegister(input: BatchRegisterInput): Promise<BatchRegisterResult> {
+    const session = await this.ensureSession();
+    const body: WireExecuteBody = {
+      op: 'batchRegister',
+      ...(input.models ? { models: input.models.map((m) => ({ ...m })) } : {}),
+      ...(input.relations ? { relations: input.relations.map((r) => ({ ...r })) } : {}),
+      ...(input.quickLink !== undefined ? { quickLink: input.quickLink } : {}),
+    };
+    const out = await session.executeWireBody(body);
+    if (!isRecord(out) || out.op !== 'batchRegister' || out.ok !== true) {
+      throw new Error('batchRegister: unexpected remote response.');
+    }
+    return {
+      ok: true,
+      created: (out.created as BatchRegisterResult['created']) ?? { models: [], relations: [] },
+      skipped: (out.skipped as BatchRegisterResult['skipped']) ?? { models: [], relations: [] },
+    };
+  }
+
+  /**
+   * Sugar for {@link batchRegister} using compact `[source, target, forward, reverse]` tuples
+   * — equivalent to calling {@link AuthoringEngine.quickLink} for each tuple on the server.
+   */
+  async quickLinkBatch(tuples: readonly QuickLinkTuple[]): Promise<BatchRegisterResult> {
+    if (tuples.length === 0) {
+      return {
+        ok: true,
+        created: { models: [], relations: [] },
+        skipped: { models: [], relations: [] },
+      };
+    }
+    return this.batchRegister({
+      relations: tuples.map(([source, target, forward, reverse]) => ({
+        source,
+        target,
+        forward,
+        reverse,
+      })),
+      quickLink: true,
+    });
   }
 
   close(): void {

@@ -213,6 +213,11 @@ export type {
   WireRpcEnvelope,
   WireExecuteBody,
   WireServerMessage,
+  WireRelationLogic,
+  WireMatchPredicate,
+  WireRowRef,
+  WireBindStrategy,
+  WireRelationStats,
 } from './src/network/wire-protocol.js';
 export type { WireExecuteResultJson } from './src/network/execute-result-wire.js';
 export { serializeExecuteResultForWire } from './src/network/execute-result-wire.js';
