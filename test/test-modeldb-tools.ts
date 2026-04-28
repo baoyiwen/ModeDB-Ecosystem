@@ -1,5 +1,5 @@
-import { ModelDB, RemoteHydratedEntity } from '@mode-db/sdk';
-import { DataType} from '@mode-db/common';
+import { ModelDB } from '@mode-db/sdk';
+// import { DataType} from '@mode-db/common';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
@@ -90,40 +90,41 @@ const client = await modelDB.use('test_db');
 // client.dropModel('administrative_division').then(res => {
 //     console.error('Res', res)
 // })
-await client.quickLinkBatch([
-  ['administrative_division', 'administrative_division', 'children', 'parent'],
-]);
-await client.alterModel('administrative_division', {
-  code: DataType.String,
-  name: DataType.String,
-});
-
-// const administrativeDivision = client.model('administrative_division');
-// console.error(administrativeDivision);
-// const [province, cities] = await readFiles([
-//   './datas/provinces.csv',
-//   './datas/cities.csv',
+// await client.quickLinkBatch([
+//   ['administrative_division', 'administrative_division', 'children', 'parent'],
 // ]);
-// const provinceData = province.data as Record<string, string>[];
-// const citiesData   = cities.data   as Record<string, string>[];
+// await client.alterModel('administrative_division', {
+//   code: DataType.String,
+//   name: DataType.String,
+// });
 
-// console.error(citiesData);
-// console.error(provinceData);
-// provinceData.forEach(async p => {
-//     const pRow = await client.model('administrative_division').insertOne({
-//         code: p.code,
-//         name: p.name,
-//     });
-//     citiesData.forEach(async c => {
-//         if (c.provinceCode === p.code) {
-//             const cRow = await client.model('administrative_division').insertOne({
-//                 code: c.code,
-//                 name: c.name,
-//             });
-//             await client.bindRelation(pRow, cRow, 'children', 'parent');
-//         }
-//     })
-// })
+const administrativeDivision = client.model('administrative_division');
+console.error(administrativeDivision);
+const [province, cities] = await readFiles([
+  './datas/provinces.csv',
+  './datas/cities.csv',
+]);
+const provinceData = province.data as Record<string, string>[];
+const citiesData   = cities.data   as Record<string, string>[];
+
+console.error(citiesData);
+console.error(provinceData);
+provinceData.forEach(async p => {
+    // const pRow = await client.model('administrative_division').insertOne({
+    //     code: p.code,
+    //     name: p.name,
+    // });
+    citiesData.forEach(async c => {
+        if (c.provinceCode === p.code) {
+            // const cRow = await client.model('administrative_division').insertOne({
+            //     code: c.code,
+            //     name: c.name,
+            // });
+            // await client.bindRelation(pRow, cRow, 'children', 'parent');
+            // console.error(p, c)
+        }
+    })
+})
 // const provinceByCode = new Map<string, unknown>();
 // for (const p of provinceData) {
 //   const row = await client.model('administrative_division').insertOne({
@@ -145,7 +146,7 @@ await client.alterModel('administrative_division', {
 const res = await client
   .model('administrative_division')
   .query()
-  // .relate('children')
+  .relate('children', r => r.is('code', '2310'))
   .execute();
 console.log('Res:', res);
 
