@@ -1,12 +1,12 @@
-import enEngine from '../i18n/locales/en/engine.json' with { type: 'json' };
-import enErrors from '../i18n/locales/en/errors.json' with { type: 'json' };
-import enUi from '../i18n/locales/en/ui.json' with { type: 'json' };
-import jaEngine from '../i18n/locales/ja/engine.json' with { type: 'json' };
-import jaErrors from '../i18n/locales/ja/errors.json' with { type: 'json' };
-import jaUi from '../i18n/locales/ja/ui.json' with { type: 'json' };
-import zhEngine from '../i18n/locales/zh/engine.json' with { type: 'json' };
-import zhErrors from '../i18n/locales/zh/errors.json' with { type: 'json' };
-import zhUi from '../i18n/locales/zh/ui.json' with { type: 'json' };
+import enEngine from '../i18n/locales/en/engine.json';
+import enErrors from '../i18n/locales/en/errors.json';
+import enUi from '../i18n/locales/en/ui.json';
+import jaEngine from '../i18n/locales/ja/engine.json';
+import jaErrors from '../i18n/locales/ja/errors.json';
+import jaUi from '../i18n/locales/ja/ui.json';
+import zhEngine from '../i18n/locales/zh/engine.json';
+import zhErrors from '../i18n/locales/zh/errors.json';
+import zhUi from '../i18n/locales/zh/ui.json';
 
 export type LocaleCode = 'en' | 'zh' | 'ja';
 
