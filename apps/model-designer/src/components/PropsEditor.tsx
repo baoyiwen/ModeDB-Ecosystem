@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type DragEvent,
-  type ReactElement,
-} from 'react';
+import { useCallback, useEffect, useState, type DragEvent, type ReactElement } from 'react';
 import { useDesigner } from '../context/designer-context.js';
 import { I18nLocaleRows } from './i18n-locale-rows.js';
 import type { PropObject } from '../types/prop-object.js';
@@ -17,6 +10,7 @@ import {
   propDataTypeLabelKey,
 } from '../config/engine-prop-types.js';
 import { resolveI18nForLocale } from '../utils/i18n-resolve.js';
+import { filterUniqueNameInput, isValidUniqueName } from '../utils/name-validation.js';
 
 function sortPropsBySort(props: readonly PropObject[]): PropObject[] {
   return [...props].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
@@ -35,16 +29,27 @@ function reorderProps(list: PropObject[], from: number, to: number): PropObject[
 type DraftProp = {
   name: string;
   type: string;
+  is_required: boolean;
   name_i18n: Record<string, string>;
   description_i18n: Record<string, string>;
 };
 
 function emptyDraft(): DraftProp {
-  return { name: '', type: DataType.String, name_i18n: {}, description_i18n: {} };
+  return {
+    name: '',
+    type: DataType.String,
+    is_required: false,
+    name_i18n: {},
+    description_i18n: {},
+  };
 }
 
-export function PropsEditor(props: { modelId: string | undefined }): ReactElement {
+export function PropsEditor(props: {
+  modelId: string | undefined;
+  readOnly?: boolean;
+}): ReactElement {
   const { data, i18n, propVault } = useDesigner();
+  const readOnly = props.readOnly ?? false;
   const [, bump] = useState(0);
   useEffect(() => data.subscribe(() => bump((n) => n + 1)), [data]);
   const model = props.modelId ? data.models.find((m) => m.id === props.modelId) : undefined;
@@ -61,15 +66,8 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
     setDragFrom(null);
   }, [model?.id]);
 
-  const inheritedProps = useMemo(
-    () => (parentModel ? sortPropsBySort(parentModel.props_objects_array) : []),
-    [parentModel],
-  );
-
-  const sortedOwn = useMemo(
-    () => (model ? sortPropsBySort(model.props_objects_array) : []),
-    [model],
-  );
+  const inheritedProps = parentModel ? sortPropsBySort(parentModel.props_objects_array) : [];
+  const sortedOwn = model ? sortPropsBySort(model.props_objects_array) : [];
 
   const patchProp = useCallback(
     (pid: string, patch: Partial<PropObject>): void => {
@@ -110,7 +108,7 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
       is_primary: ordered.length === 0,
       encrypt_level: 0,
       metadata: {},
-      is_required: false,
+      is_required: draft.is_required,
       vault_key: '',
       sort: ordered.length,
     };
@@ -141,6 +139,17 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
 
   const onDragEndOwn = (): void => {
     setDragFrom(null);
+  };
+
+  const isPropDragBlocked = (target: EventTarget | null): boolean => {
+    if (!(target instanceof HTMLElement)) {
+      return true;
+    }
+    return Boolean(
+      target.closest(
+        'input, textarea, select, button, summary, .designer-switch, .designer-i18n-details',
+      ),
+    );
   };
 
   if (!model) {
@@ -176,6 +185,12 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
                   <span className="designer-prop-inherited-value">
                     {resolveI18nForLocale(p.description_i18n, locale, '—')}
                   </span>
+                  <span className="designer-field-label">{i18n.t('ui', 'propFieldRequired')}</span>
+                  <span className="designer-prop-inherited-value">
+                    {p.is_required
+                      ? i18n.t('ui', 'propRequiredYes')
+                      : i18n.t('ui', 'propRequiredNo')}
+                  </span>
                 </div>
               </div>
             ))}
@@ -191,6 +206,7 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {sortedOwn.map((p, index) => {
             const locked = propVault.isVaultField(p) && !unlocked[p.id];
+            const canDragCard = !readOnly && !locked;
             const pTypeNorm = normalizeLegacyPropType(p.type);
             const typeUnknown = !(DESIGNER_PROP_DATA_TYPES as readonly string[]).includes(
               pTypeNorm,
@@ -199,22 +215,19 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
               <div
                 key={p.id}
                 className="designer-prop-card designer-prop-card--own"
+                draggable={canDragCard}
+                data-dragging={dragFrom === index ? 'true' : undefined}
+                onDragStart={(e) => {
+                  if (!canDragCard || isPropDragBlocked(e.target)) {
+                    e.preventDefault();
+                    return;
+                  }
+                  onDragStartOwn(e, index);
+                }}
+                onDragEnd={onDragEndOwn}
                 onDragOver={onDragOverOwn}
                 onDrop={(e) => onDropOwn(e, index)}
               >
-                {!locked && (
-                  <button
-                    type="button"
-                    className="designer-prop-drag-handle"
-                    aria-label={i18n.t('ui', 'propDragHint')}
-                    draggable
-                    onDragStart={(e) => onDragStartOwn(e, index)}
-                    onDragEnd={onDragEndOwn}
-                    title={i18n.t('ui', 'propDragHint')}
-                  >
-                    ⋮⋮
-                  </button>
-                )}
                 {locked && (
                   <div style={{ fontSize: 11, color: 'var(--designer-text-muted, #94a3b8)' }}>
                     {i18n.t('ui', 'vaultLocked')} ({propVault.displayHandle(p)})
@@ -226,13 +239,20 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
                   <input
                     className="designer-input"
                     value={p.name}
-                    disabled={locked}
-                    onChange={(e) => patchProp(p.id, { name: e.target.value })}
+                    disabled={locked || readOnly}
+                    onChange={(e) =>
+                      patchProp(p.id, { name: filterUniqueNameInput(e.target.value) })
+                    }
                   />
+                  {p.name && !isValidUniqueName(p.name) ? (
+                    <span style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>
+                      {i18n.t('ui', 'nameInvalidFormat')}
+                    </span>
+                  ) : null}
                 </label>
 
                 <I18nLocaleRows
-                  disabled={locked}
+                  disabled={locked || readOnly}
                   summary={i18n.t('ui', 'propDisplayNameI18n')}
                   value={(p.name_i18n as Record<string, string> | undefined) ?? {}}
                   onCommit={(next) => patchProp(p.id, { name_i18n: next })}
@@ -244,7 +264,7 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
                   <span className="designer-field-label">{i18n.t('ui', 'propFieldType')}</span>
                   <select
                     className="designer-select"
-                    disabled={locked}
+                    disabled={locked || readOnly}
                     value={pTypeNorm}
                     onChange={(e) => {
                       const t = normalizeLegacyPropType(e.target.value);
@@ -261,7 +281,7 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
                 </label>
 
                 <I18nLocaleRows
-                  disabled={locked}
+                  disabled={locked || readOnly}
                   multiline
                   summary={i18n.t('ui', 'propFieldDescription')}
                   value={(p.description_i18n as Record<string, string> | undefined) ?? {}}
@@ -270,7 +290,18 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
                   addRowHint={i18n.t('ui', 'i18nAddLocaleFill')}
                 />
 
-                {propVault.isVaultField(p) && (
+                <label className="designer-switch-row">
+                  <span className="designer-field-label">{i18n.t('ui', 'propFieldRequired')}</span>
+                  <input
+                    type="checkbox"
+                    className="designer-switch"
+                    disabled={locked || readOnly}
+                    checked={!!p.is_required}
+                    onChange={(e) => patchProp(p.id, { is_required: e.target.checked })}
+                  />
+                </label>
+
+                {propVault.isVaultField(p) && !readOnly && (
                   <button
                     type="button"
                     className="designer-btn"
@@ -289,66 +320,80 @@ export function PropsEditor(props: { modelId: string | undefined }): ReactElemen
             );
           })}
 
-          <div className="designer-prop-card designer-prop-card--draft">
-            <span className="designer-prop-draft-badge">{i18n.t('ui', 'propNewField')}</span>
-            <label className="designer-field">
-              <span className="designer-field-label">{i18n.t('ui', 'propRegistryName')}</span>
-              <input
-                className="designer-input"
-                placeholder={i18n.t('ui', 'propRegistryNameHint')}
-                value={draft.name}
-                onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    commitDraft();
+          {!readOnly && (
+            <div className="designer-prop-card designer-prop-card--draft">
+              <span className="designer-prop-draft-badge">{i18n.t('ui', 'propNewField')}</span>
+              <label className="designer-field">
+                <span className="designer-field-label">{i18n.t('ui', 'propRegistryName')}</span>
+                <input
+                  className="designer-input"
+                  placeholder={i18n.t('ui', 'propRegistryNameHint')}
+                  value={draft.name}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, name: filterUniqueNameInput(e.target.value) }))
                   }
-                }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      commitDraft();
+                    }
+                  }}
+                />
+              </label>
+
+              <I18nLocaleRows
+                disabled={false}
+                summary={i18n.t('ui', 'propDisplayNameI18n')}
+                value={draft.name_i18n}
+                onCommit={(next) => setDraft((d) => ({ ...d, name_i18n: next }))}
+                pickLocaleLabel={i18n.t('ui', 'i18nPickLocale')}
+                addRowHint={i18n.t('ui', 'i18nAddLocaleFill')}
               />
-            </label>
 
-            <I18nLocaleRows
-              disabled={false}
-              summary={i18n.t('ui', 'propDisplayNameI18n')}
-              value={draft.name_i18n}
-              onCommit={(next) => setDraft((d) => ({ ...d, name_i18n: next }))}
-              pickLocaleLabel={i18n.t('ui', 'i18nPickLocale')}
-              addRowHint={i18n.t('ui', 'i18nAddLocaleFill')}
-            />
+              <label className="designer-field">
+                <span className="designer-field-label">{i18n.t('ui', 'propFieldType')}</span>
+                <select
+                  className="designer-select"
+                  value={normalizeLegacyPropType(draft.type)}
+                  onChange={(e) => setDraft((d) => ({ ...d, type: e.target.value }))}
+                >
+                  {DESIGNER_PROP_DATA_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {i18n.t('engine', propDataTypeLabelKey(t))}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-            <label className="designer-field">
-              <span className="designer-field-label">{i18n.t('ui', 'propFieldType')}</span>
-              <select
-                className="designer-select"
-                value={normalizeLegacyPropType(draft.type)}
-                onChange={(e) => setDraft((d) => ({ ...d, type: e.target.value }))}
+              <I18nLocaleRows
+                disabled={false}
+                multiline
+                summary={i18n.t('ui', 'propFieldDescription')}
+                value={draft.description_i18n}
+                onCommit={(next) => setDraft((d) => ({ ...d, description_i18n: next }))}
+                pickLocaleLabel={i18n.t('ui', 'i18nPickLocale')}
+                addRowHint={i18n.t('ui', 'i18nAddLocaleFill')}
+              />
+
+              <label className="designer-switch-row">
+                <span className="designer-field-label">{i18n.t('ui', 'propFieldRequired')}</span>
+                <input
+                  type="checkbox"
+                  className="designer-switch"
+                  checked={draft.is_required}
+                  onChange={(e) => setDraft((d) => ({ ...d, is_required: e.target.checked }))}
+                />
+              </label>
+
+              <button
+                type="button"
+                className="designer-btn designer-btn-primary"
+                onClick={() => commitDraft()}
               >
-                {DESIGNER_PROP_DATA_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {i18n.t('engine', propDataTypeLabelKey(t))}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <I18nLocaleRows
-              disabled={false}
-              multiline
-              summary={i18n.t('ui', 'propFieldDescription')}
-              value={draft.description_i18n}
-              onCommit={(next) => setDraft((d) => ({ ...d, description_i18n: next }))}
-              pickLocaleLabel={i18n.t('ui', 'i18nPickLocale')}
-              addRowHint={i18n.t('ui', 'i18nAddLocaleFill')}
-            />
-
-            <button
-              type="button"
-              className="designer-btn designer-btn-primary"
-              onClick={() => commitDraft()}
-            >
-              {i18n.t('ui', 'propAddField')}
-            </button>
-          </div>
+                {i18n.t('ui', 'propAddField')}
+              </button>
+            </div>
+          )}
         </div>
       </section>
     </div>

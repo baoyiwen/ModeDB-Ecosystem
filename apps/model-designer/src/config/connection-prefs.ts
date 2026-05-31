@@ -83,3 +83,53 @@ export function getStoredLastLibrary(fallback: string): string {
 export function persistLastLibrary(name: string): void {
   safeSet('lastLibrary', name.trim());
 }
+
+/**
+ * 标签页生命周期内的 token 缓存：用于 F5 后无感重连，但**关闭标签页即消失**。
+ * 与 {@link persistToken}（localStorage、跨会话）独立，二者读取时优先 session。
+ */
+function safeSessionGet(key: string): string | null {
+  if (typeof sessionStorage === 'undefined') {
+    return null;
+  }
+  try {
+    return sessionStorage.getItem(PREFIX + key);
+  } catch {
+    return null;
+  }
+}
+
+function safeSessionSet(key: string, value: string): void {
+  if (typeof sessionStorage === 'undefined') {
+    return;
+  }
+  try {
+    sessionStorage.setItem(PREFIX + key, value);
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function safeSessionRemove(key: string): void {
+  if (typeof sessionStorage === 'undefined') {
+    return;
+  }
+  try {
+    sessionStorage.removeItem(PREFIX + key);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function getSessionToken(): string | null {
+  const v = safeSessionGet('token');
+  return v != null && v !== '' ? v : null;
+}
+
+export function persistSessionToken(token: string): void {
+  safeSessionSet('token', token);
+}
+
+export function clearSessionToken(): void {
+  safeSessionRemove('token');
+}

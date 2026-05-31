@@ -1,26 +1,36 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { useDesigner } from '../context/designer-context.js';
 import { buildPlacedNodes, hitTestNode, hitTestRelation } from '../canvas/hit-test.js';
+import { NODE_RADIUS } from '../canvas/node-geometry.js';
 import { segmentFromNodeTowardPoint } from '../canvas/relation-geometry.js';
 import { paintScene } from '../canvas/paint-scene.js';
+import { CANVAS_VISUAL } from '../config/canvas-visual.js';
+import { isInheritRelation } from '../config/graph-edge-kinds.js';
 import type { GestureKind } from '../managers/event-manager.js';
 import type { InteractionState } from '../managers/state-manager.js';
 
+/**
+ * 把鼠标 `clientX/clientY`（视口 CSS 像素）转换为画布**局部 CSS 像素**坐标。
+ *
+ * 绘制端通过 `ctx.setTransform(dpr, 0, 0, dpr, 0, 0)` 把 user-space 锁定为 CSS px，
+ * 因此 `panX/panY/zoom` 与 `pointer.x/y` **都必须**统一在 CSS-px 量纲下，否则在
+ * `devicePixelRatio ≠ 1` 的环境（Win 125%/150%、HiDPI、浏览器 Ctrl-滚轮缩放）下，
+ * 命中测试、连线、新建节点的坐标会偏移 `dpr×`。**不要**再把 `canvas.width/rect.width`
+ * （= dpr）乘进去 —— 那是 backing-pixel 量纲。
+ */
 function clientToCanvas(
   canvas: HTMLCanvasElement,
   clientX: number,
   clientY: number,
 ): { x: number; y: number } {
   const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
   return {
-    x: (clientX - rect.left) * scaleX,
-    y: (clientY - rect.top) * scaleY,
+    x: clientX - rect.left,
+    y: clientY - rect.top,
   };
 }
 
-const REL_HIT_THRESHOLD = 16;
+const REL_HIT_THRESHOLD = CANVAS_VISUAL.hit.relationThresholdPx;
 /** 画布像素：超过则视为拖动节点，不触发「点选」 */
 const DRAG_THRESHOLD_CANVAS = 14;
 
@@ -33,14 +43,16 @@ export function CanvasContainer(props: {
   const { state, events, config, data, graphLink, modes, i18n, graphSync } = useDesigner();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number | null>(null);
+  /** 画布当前 CSS 像素尺寸；由 resize 写入，paint 读取 —— 与绘制 ctx 的 `setTransform(dpr,…)` 配套。 */
+  const cssSizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
   const [, bump] = useState(0);
+  const [hoveredModelId, setHoveredModelId] = useState<string | undefined>(undefined);
+  const [hoveredRelationId, setHoveredRelationId] = useState<string | undefined>(undefined);
   const { selectedModelId, selectedRelationId, onSelectModel, onSelectRelation } = props;
 
   const interactionRef = useRef<InteractionState>('SELECT');
   const linkSourceRef = useRef<string | undefined>(undefined);
   const pointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const inheritParentRef = useRef<string | undefined>(undefined);
-  const ctrlDragRef = useRef(false);
   const panDragRef = useRef<{
     lastX: number;
     lastY: number;
@@ -104,7 +116,14 @@ export function CanvasContainer(props: {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const editable =
+        e.target instanceof HTMLElement &&
+        (e.target.isContentEditable ||
+          e.target.closest('input, textarea, select, [contenteditable="true"]'));
       if (e.code === 'Space') {
+        if (editable) {
+          return;
+        }
         const down = e.type === 'keydown';
         spaceDownRef.current = down;
         setSpacePan(down);
@@ -115,8 +134,6 @@ export function CanvasContainer(props: {
         modes.setMode('select');
         state.transition('SELECT');
         linkSourceRef.current = undefined;
-        inheritParentRef.current = undefined;
-        ctrlDragRef.current = false;
         linkClickRef.current = undefined;
         onSelectModel(undefined);
       }
@@ -154,15 +171,6 @@ export function CanvasContainer(props: {
     [data, placed, hiddenIds, config.viewportZoom, toWorld],
   );
 
-  const getRelationKindLabel = useCallback(
-    (kind: string) => {
-      const key = `relationKind_${kind}`;
-      const v = i18n.t('engine', key);
-      return v === key ? kind : v;
-    },
-    [i18n],
-  );
-
   const applyCanvasPick = useCallback(
     (sx: number, sy: number): void => {
       const st = interactionRef.current;
@@ -170,7 +178,7 @@ export function CanvasContainer(props: {
       const w = toWorld(sx, sy);
       const nodeId = hitAt(sx, sy);
       const relId = nodeId ? undefined : hitRelationAt(sx, sy);
-      if (st === 'LINKING' || st === 'INHERITING') {
+      if (st === 'LINKING') {
         return;
       }
       if (mode === 'delete') {
@@ -189,6 +197,7 @@ export function CanvasContainer(props: {
         const themes = config.getThemes();
         const themeId = themes[0]!.id;
         const nid = crypto.randomUUID();
+        // 用户期望「点击位置 = 节点中心」；存储约定 `position` 为外接正方形左上角，故减去半径。
         data.upsertModel(
           {
             id: nid,
@@ -198,7 +207,11 @@ export function CanvasContainer(props: {
             props_objects_array: [],
             name_i18n: { zh: '新模型', en: 'NewModel', ja: '新規モデル' },
           },
-          { position: { x: w.x, y: w.y }, color_theme: themeId, z_index: 1 },
+          {
+            position: { x: w.x - NODE_RADIUS, y: w.y - NODE_RADIUS },
+            color_theme: themeId,
+            z_index: 1,
+          },
         );
         data.assignNodeToLayers(nid, [data.defaultPageLayerId]);
         onSelectModel(nid);
@@ -210,7 +223,8 @@ export function CanvasContainer(props: {
           if (!first) {
             linkClickRef.current = nodeId;
             onSelectModel(nodeId);
-          } else if (first !== nodeId) {
+          } else {
+            // 允许 first === nodeId（自关联）：自关联在视觉上是节点旁边的贝塞尔环。
             const edgeId = graphLink.linkNodes(first, nodeId);
             linkClickRef.current = undefined;
             if (edgeId) {
@@ -225,12 +239,41 @@ export function CanvasContainer(props: {
       if (nodeId) {
         onSelectModel(nodeId);
       } else if (relId) {
-        onSelectRelation(relId);
+        const rel = data.relations.find((r) => r.id === relId);
+        if (rel && isInheritRelation(rel.kind)) {
+          // 继承线：选中子模型，不打开关系编辑面板。
+          onSelectModel(rel.target_model_id);
+        } else {
+          onSelectRelation(relId);
+        }
       } else {
         onSelectModel(undefined);
+        onSelectRelation(undefined);
       }
     },
     [hitAt, hitRelationAt, toWorld, data, config, graphLink, onSelectModel, onSelectRelation],
+  );
+
+  const updateHoverAt = useCallback(
+    (screenX: number, screenY: number): void => {
+      const st = interactionRef.current;
+      if (st === 'LINKING' || panDragRef.current || nodeDragRef.current) {
+        setHoveredModelId(undefined);
+        setHoveredRelationId(undefined);
+        return;
+      }
+      const nodeId = hitAt(screenX, screenY);
+      let relId = nodeId ? undefined : hitRelationAt(screenX, screenY);
+      if (relId) {
+        const rel = data.relations.find((r) => r.id === relId);
+        if (rel && isInheritRelation(rel.kind)) {
+          relId = undefined;
+        }
+      }
+      setHoveredModelId(nodeId);
+      setHoveredRelationId(relId);
+    },
+    [hitAt, hitRelationAt],
   );
 
   const paint = useCallback(() => {
@@ -245,31 +288,24 @@ export function CanvasContainer(props: {
     const st = interactionRef.current;
     const pW = toWorld(pointerRef.current.x, pointerRef.current.y);
     let linkPreview: ReturnType<typeof segmentFromNodeTowardPoint> | null = null;
-    let inheritPreview: ReturnType<typeof segmentFromNodeTowardPoint> | null = null;
     if (st === 'LINKING' && linkSourceRef.current) {
       const src = placed().find((p) => p.model.id === linkSourceRef.current);
       if (src) {
         linkPreview = segmentFromNodeTowardPoint(src, pW.x, pW.y);
       }
     }
-    if (st === 'INHERITING' && inheritParentRef.current) {
-      const src = placed().find((p) => p.model.id === inheritParentRef.current);
-      if (src) {
-        inheritPreview = segmentFromNodeTowardPoint(src, pW.x, pW.y);
-      }
-    }
     paintScene({
       ctx,
-      width: canvas.width,
-      height: canvas.height,
+      width: cssSizeRef.current.width,
+      height: cssSizeRef.current.height,
       data,
       config,
       selectedModelId,
       selectedRelationId,
+      hoveredModelId,
+      hoveredRelationId,
       hiddenNodeIds: data.getHiddenNodeIdsForLayerVisibility(),
       linkPreview,
-      inheritPreview,
-      getRelationKindLabel,
       uiLocale: i18n.locale,
     });
   }, [
@@ -277,9 +313,10 @@ export function CanvasContainer(props: {
     data,
     selectedModelId,
     selectedRelationId,
+    hoveredModelId,
+    hoveredRelationId,
     placed,
     toWorld,
-    getRelationKindLabel,
     i18n.locale,
   ]);
 
@@ -303,7 +340,7 @@ export function CanvasContainer(props: {
       const sy = g.y;
       const w = toWorld(sx, sy);
       // 仅选择模式：长按进入连线（新建模式用 Ctrl+单击拖线）
-      if (g.type === 'long_press' && mode !== 'link' && mode === 'select') {
+      if (g.type === 'long_press' && mode === 'link') {
         const id = hitAt(sx, sy);
         if (!id || (interactionRef.current !== 'SELECT' && interactionRef.current !== 'ADD_NODE')) {
           return;
@@ -317,8 +354,8 @@ export function CanvasContainer(props: {
         applyCanvasPick(sx, sy);
         return;
       }
-      if (g.type === 'double_click') {
-        if (interactionRef.current !== 'ADD_NODE' || mode !== 'select') {
+      if (g.type === 'double_click' && mode === 'add') {
+        if (interactionRef.current !== 'ADD_NODE' && interactionRef.current !== 'SELECT') {
           return;
         }
         const under = hitAt(sx, sy);
@@ -326,7 +363,8 @@ export function CanvasContainer(props: {
         if (!target) {
           return;
         }
-        const nid = data.cloneModel(target, { x: w.x, y: w.y });
+        // 鼠标点 = 克隆体中心，故减去半径转回左上角存储。
+        const nid = data.cloneModel(target, { x: w.x - NODE_RADIUS, y: w.y - NODE_RADIUS });
         if (nid) {
           onSelectModel(nid);
         }
@@ -368,7 +406,7 @@ export function CanvasContainer(props: {
         return;
       }
 
-      // 新建模式 + Ctrl+单击：立即进入拖线（释放在目标上建正向边，在空白上建子模型）
+      // 新建模式 + Ctrl+单击：进入拖线（释放在目标上建正向边，在空白上建子模型）
       if (
         tool === 'add' &&
         (ev.ctrlKey || ev.metaKey) &&
@@ -385,7 +423,7 @@ export function CanvasContainer(props: {
       }
 
       const canDragNode =
-        (tool === 'select' || tool === 'add') &&
+        tool === 'add' &&
         !!hit &&
         ev.button === 0 &&
         !ev.ctrlKey &&
@@ -406,15 +444,7 @@ export function CanvasContainer(props: {
         return;
       }
 
-      // 选择/删除/链接等非「新建」模式下 Ctrl+拖拽：继承落子
-      if ((ev.ctrlKey || ev.metaKey) && hit && tool !== 'add') {
-        ctrlDragRef.current = true;
-        inheritParentRef.current = hit;
-        state.transition('INHERITING');
-        canvas.setPointerCapture(ev.pointerId);
-        return;
-      }
-      if (st === 'LINKING' || st === 'INHERITING') {
+      if (st === 'LINKING') {
         return;
       }
 
@@ -477,9 +507,10 @@ export function CanvasContainer(props: {
       }
 
       const ist = interactionRef.current;
-      if (ist === 'LINKING' || ist === 'INHERITING') {
+      if (ist === 'LINKING') {
         return;
       }
+      updateHoverAt(x, y);
       events.handlePointerMove({ x, y, time: performance.now() });
     };
 
@@ -520,50 +551,35 @@ export function CanvasContainer(props: {
 
       const st = interactionRef.current;
 
-      if (ctrlDragRef.current || st === 'INHERITING') {
-        const parent = inheritParentRef.current;
-        ctrlDragRef.current = false;
-        inheritParentRef.current = undefined;
-        if (parent && st === 'INHERITING') {
-          const targetHit = hitAt(x, y);
-          if (!targetHit) {
-            const wu = toWorld(x, y);
-            const out = data.createChildModel(parent, { x: wu.x, y: wu.y });
-            if (out) {
-              onSelectRelation(out.inheritEdgeId);
-            }
-          }
-        }
-        state.transition('SELECT');
-        try {
-          canvas.releasePointerCapture(ev.pointerId);
-        } catch {
-          /* ignore */
-        }
-        return;
-      }
-
       if (st === 'LINKING') {
         const src = linkSourceRef.current;
         linkSourceRef.current = undefined;
         const tgt = hitAt(x, y);
         if (linkingFromAddCtrlRef.current) {
           linkingFromAddCtrlRef.current = false;
-          if (src && tgt && tgt !== src) {
-            const edgeId = graphLink.linkNodes(src, tgt);
-            if (edgeId) {
-              onSelectRelation(edgeId);
-            } else {
-              onSelectModel(tgt);
-            }
-          } else if (src && !tgt) {
-            const wu = toWorld(x, y);
-            const out = data.createChildModel(src, { x: wu.x, y: wu.y });
-            if (out) {
-              onSelectRelation(out.inheritEdgeId);
+          if (modesRef.current === 'add') {
+            if (src && tgt) {
+              // 允许 src === tgt（自关联）。
+              const edgeId = graphLink.linkNodes(src, tgt);
+              if (edgeId) {
+                onSelectRelation(edgeId);
+              } else {
+                onSelectModel(tgt);
+              }
+            } else if (src && !tgt) {
+              const wu = toWorld(x, y);
+              // 鼠标释放点 = 子节点中心。
+              const out = data.createChildModel(src, {
+                x: wu.x - NODE_RADIUS,
+                y: wu.y - NODE_RADIUS,
+              });
+              if (out) {
+                onSelectModel(out.modelId);
+              }
             }
           }
-        } else if (src && tgt && src !== tgt) {
+        } else if (src && tgt) {
+          // 允许 src === tgt（自关联）。
           const edgeId = graphLink.linkNodes(src, tgt);
           if (edgeId) {
             onSelectRelation(edgeId);
@@ -593,12 +609,18 @@ export function CanvasContainer(props: {
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerUp);
     canvas.addEventListener('wheel', onWheel, { passive: false });
+    const onPointerLeave = (): void => {
+      setHoveredModelId(undefined);
+      setHoveredRelationId(undefined);
+    };
+    canvas.addEventListener('pointerleave', onPointerLeave);
     return () => {
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('pointercancel', onPointerUp);
       canvas.removeEventListener('wheel', onWheel);
+      canvas.removeEventListener('pointerleave', onPointerLeave);
     };
   }, [
     data,
@@ -612,6 +634,7 @@ export function CanvasContainer(props: {
     onSelectModel,
     onSelectRelation,
     graphSync,
+    updateHoverAt,
   ]);
 
   useEffect(() => {
@@ -619,6 +642,12 @@ export function CanvasContainer(props: {
     if (!canvas) {
       return;
     }
+    /**
+     * 单一权威 resize 入口：
+     * - backing buffer = CSS px × dpr（避免高 DPI 上模糊）；
+     * - `ctx.setTransform(dpr, …)` 让 user-space ≡ CSS px，便于业务代码沿用屏幕像素心智模型；
+     * - 将 CSS 尺寸写入 `cssSizeRef`，供 paint() 读取（不再读 `canvas.width`，那是 backing px）。
+     */
     const resize = (): void => {
       const parent = canvas.parentElement;
       if (!parent) {
@@ -627,10 +656,17 @@ export function CanvasContainer(props: {
       const dpr = window.devicePixelRatio || 1;
       const w = parent.clientWidth;
       const h = parent.clientHeight;
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
+      const targetW = Math.max(1, Math.floor(w * dpr));
+      const targetH = Math.max(1, Math.floor(h * dpr));
+      if (canvas.width !== targetW) {
+        canvas.width = targetW;
+      }
+      if (canvas.height !== targetH) {
+        canvas.height = targetH;
+      }
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
+      cssSizeRef.current = { width: w, height: h };
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -639,7 +675,29 @@ export function CanvasContainer(props: {
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(canvas.parentElement!);
-    return () => ro.disconnect();
+
+    // DPR 变化（浏览器缩放、跨显示器拖动到不同 scaling 的屏）不一定改变 CSS 尺寸，
+    // 因此 ResizeObserver 可能不触发。这里订阅 `matchMedia('(resolution: <dpr>dppx)')`：
+    // DPR 一旦不再匹配，change 事件触发，重新 resize 并以**新**的 dpr 重新订阅。
+    let mql: MediaQueryList | null = null;
+    const onDprChange = (): void => {
+      resize();
+      subscribeDpr();
+    };
+    const subscribeDpr = (): void => {
+      mql?.removeEventListener('change', onDprChange);
+      mql = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+      mql.addEventListener('change', onDprChange);
+    };
+    subscribeDpr();
+    // 兜底：某些浏览器在 DPR 改变时也会触发 window resize；统一走 resize。
+    window.addEventListener('resize', resize);
+
+    return () => {
+      ro.disconnect();
+      mql?.removeEventListener('change', onDprChange);
+      window.removeEventListener('resize', resize);
+    };
   }, []);
 
   return (

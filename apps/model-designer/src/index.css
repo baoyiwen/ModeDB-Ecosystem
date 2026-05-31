@@ -29,8 +29,8 @@ body {
   font-feature-settings: 'ss01', 'cv11';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #e8edf4;
-  background: #0a0e18;
+  color: #1f2937;
+  background: #f1f5f9;
 }
 
 button {

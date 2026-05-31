@@ -4,6 +4,11 @@
  */
 export type DesignerToolMode = 'select' | 'add' | 'delete' | 'link' | 'inherit';
 
+/** 选择模式：仅查看与选中，禁止增删改（画布与侧栏表单均为只读）。 */
+export function isReadOnlyToolMode(mode: DesignerToolMode): boolean {
+  return mode === 'select';
+}
+
 export type ModeManagerListener = () => void;
 
 export class ModeManager {

@@ -6,7 +6,10 @@ export type LayerTreeKind = 'group' | 'page';
 export interface LayerTreeNode {
   readonly id: string;
   kind: LayerTreeKind;
+  /** 树节点主名称（持久化；展示优先走 name_i18n）。 */
   label: string;
+  name_i18n?: Record<string, string>;
+  description_i18n?: Record<string, string>;
   /** 是否参与画布可见性（页可与旧 flat layer 对齐） */
   isVisible: boolean;
   sort: number;

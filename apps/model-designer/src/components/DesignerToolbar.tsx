@@ -166,16 +166,16 @@ export class DesignerToolbar extends DesignerComponent<
             type="button"
             className="designer-fab"
             title={i18n.t('ui', 'toolSave')}
-            disabled={!client}
+            disabled={!client || !libName}
             onClick={async () => {
-              if (!client) {
+              if (!client || !libName) {
                 return;
               }
               try {
                 if (graphSync.hasDirty) {
                   await graphSync.push(client, data);
                 }
-                await data.pushGraphToEngine(client);
+                await data.pushGraphToEngine(client, libName);
               } catch {
                 window.alert(i18n.t('errors', 'pushFailed'));
               }
@@ -187,13 +187,13 @@ export class DesignerToolbar extends DesignerComponent<
             type="button"
             className="designer-fab"
             title={i18n.t('ui', 'toolExport')}
-            disabled={!client}
+            disabled={!client || !libName}
             onClick={async () => {
-              if (!client) {
+              if (!client || !libName) {
                 return;
               }
               try {
-                await data.pullGraphFromEngine(client);
+                await data.pullGraphFromEngine(client, libName);
               } catch {
                 window.alert(i18n.t('errors', 'pullFailed'));
               }

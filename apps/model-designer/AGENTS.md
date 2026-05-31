@@ -15,17 +15,35 @@
 
 **持久化决策（强制）**：
 
-- **禁止** 使用 File System Access API、`<input type="file">`、或 **`localStorage` 持久化设计器图谱**；允许仅用 `localStorage` 缓存**连接参数（host/port/逻辑库名）**与 **UI 语言**（见 `src/config/connection-prefs.ts`、**`I18nManager`**）。
+- **禁止** 使用 File System Access API、`<input type="file">`、或 **`localStorage` 持久化设计器图谱**；允许仅用 `localStorage` 缓存**连接参数（host/port）**、**UI 语言**与**最近打开的业务库逻辑标签**（见 `src/config/connection-prefs.ts`、**`I18nManager`**）。
 - 所有读写经 **`@mode-db/sdk`**：`RemoteModelDBClient` WebSocket 会话（`encodeWirePayload` 对称加密）及管理 API 校验工作区。
 - **二进制流**：`DataManager` 在发送前将文档序列化为 **`Uint8Array`**（UTF-8 JSON），再经 **`bytesToBase64Url`** 嵌入写行字段，通过 **`insertMany`** 进入加密通道（见 `src/sync/mldg-wire-bytes.ts`、`src/sync/sdk-designer-sync.ts`）。
-- **服务端前提**：连接成功后由 **`ensureDesignerCatalog`**（`src/bootstrap/designer-storage-init.ts`）注册 **`sys_model`、`sys_relation`、`sys_layers`、`sys_layer_type`、`sys_props`、`sys_data_asset_map`、`sys_designer_graph`** 等及关系；随后 **`seedDefaultWorkspaceRecords`**（`src/bootstrap/seed-workspace-rows.ts`）写入当前逻辑库对应的 **`sys_data_asset_map`** 行与默认 **`sys_layer_type`**（`group`/`page`）。需 **modeldb-server** 支持 `registerModel` / `registerRelation` RPC。快照行模型字段至少含 **`graph_b64`**（String）、**`updated_at`**（String）。
+- **服务端前提**：连接成功后由 **`ensureDesignerCatalog`**（`src/bootstrap/designer-storage-init.ts`）注册 **`sys_model`、`sys_relation`、`sys_layers`、`sys_layer_type`、`sys_props`、`sys_data_asset_map`、`sys_designer_graph`** 等及关系；随后 **`seedDefaultWorkspaceRecords`**（`src/bootstrap/seed-workspace-rows.ts`）写入当前业务库对应的 **`sys_data_asset_map`** 行与默认 **`sys_layer_type`**（`group`/`page`）。需 **modeldb-server** 支持 `registerModel` / `registerRelation` RPC。快照行模型字段至少含 **`graph_b64`**（String）、**`updated_at`**（String）、**`library_code`**（String）。
 
-## 2.1 工作区绑定与事务性同步
+## 2.1 工作区分离与事务性同步
 
-- **逻辑库名**：构建默认值由 **`VITE_MODE_DB_WORKSPACE`** / **`fixed-database.ts`** 提供；连接门页提供**可编辑**逻辑库名，成功连接后写入 **`localStorage`**（`connection-prefs`），以便与服务器实际目录名对齐。
-- **连接**：`openWorkspaceSession` 仅调用 **`RemoteModelDBClient.connectNetwork`**；**不**在连接阶段用管理 API 预校验「逻辑库是否在列表中」或「catalog 是否含快照模型」——由 WebSocket 握手与后续 push/pull 报错体现。
-- **拉取**（`pullGraphFromEngine`）：失败时用 **`structuredClone` 快照** 恢复画布，保证不出现半拉取状态。
-- **推送**（`pushGraphToEngine`）：`insertMany(..., { sync: true })` 单次 RPC 落盘；发送前 **`extractEngineModelRelationPayload`** 校验结构域。逻辑库内需已注册 **`sys_designer_graph`**（见 §2），否则写入失败。
+- **设计器专属逻辑库**（`FIXED_MODEL_DESIGNER_DATABASE`，缺省 `model_designer_workspace`）：所有 **`sys_*`** catalog、布局行（`sys_model.canvas_meta` 等）与图谱快照（`sys_designer_graph`）**只**落在此库；**绝不污染用户业务库**。运行时不可在 UI 中修改；构建时由 `VITE_MODE_DB_WORKSPACE` 覆盖。
+- **业务库逻辑标签**（`ConfigManager.activeLibraryName` = `sys_data_asset_map.code`）：用户在连接门页选择的业务库名仅作为**字符串标签**注入设计器库 —— 用作命名空间隔离同一设计器库中的多业务库设计。
+- **连接**：`ensureDesignerWorkspaceSession` 先 `listDatabases`，缺设计器库则 `createDatabase` 自动创建，然后 `connectNetwork` 到设计器库；**不**预校验业务库是否注册或可用。
+- **拉取**（`pullGraphFromEngine(client, libraryCode)`）：按 `library_code` 过滤 `sys_designer_graph` 行后取 `updated_at` 最大；失败时用 **`structuredClone` 快照** 恢复画布。
+- **推送**（`pushGraphToEngine(client, libraryCode)`）：`insertMany(..., { sync: true })` 单次 RPC 落盘；发送前 **`extractEngineModelRelationPayload`** 校验结构域。设计器库内需已注册 **`sys_designer_graph`**（见 §2），否则写入失败。
+
+## 2.2 存储职责切分：Engine 持有 schema，Designer 持有 layout / layer
+
+- **Source of truth**
+  - **业务库 (Model Engine 层)**：Model / Relation / Props 的真实定义；通过 `registerModel` / `registerRelation` / `alterModel` 注册。
+  - **设计器库**：每个业务库对应的 layout / 图层 / 多对多归属。即"哪个业务库存在哪些模型与关系、它们在画布上的位置 / 颜色 / 折点 / 视口、它们隶属哪些 Layer（M:N）"。
+- **关键字段**：`sys_model` / `sys_relation` / `sys_props` 行用 **`(library_code, engine_name)`** 这对组合主键定位业务库内的某个引擎实体；`library_code` 对齐 `sys_data_asset_map.code`，`engine_name` 对齐 `ManagementCatalogModelInfo.name` 或 `ManagementCatalogRelationInfo.forward`。
+- **业务库 → 设计器库反向导入**（`src/sync/engine-catalog-import.ts`）：
+  - 入口：每次成功打开业务库（首次连接 + F5 静默重连）都会执行，幂等。
+  - 数据源：`RemoteModelDBClient.getDatabaseCatalog(businessDb)`（管理 REST，免会话），返回 `{ models: [{ name, parentId, fields[] }], relations: [{ forward, reverse, source, target }] }`。
+  - 行匹配：`(library_code = 当前业务库, engine_name = catalog 标识)`；已存在的行**跳过**且**不更新**字段，避免覆盖用户在画布上做过的调整。
+  - 拓扑绑定：新插入的模型/关系一并通过 `bindRelation` 挂到 `sys_data_asset_map` 行（`assetMapIncludes{Models,RelationDefs}`），含 `parentId` 的模型再建一条 `parentModelHasChildren`。绑定失败一律吞掉（多为重复绑定）。
+  - 安全网：业务库内出现的 `sys_*` 前缀实体一律跳过；catalog 读取失败时静默重连不阻塞编辑器加载（首次连接则向用户报错）。
+- **当前阶段限制（已知 TODO）**：
+  1. `pullGraphFromEngine` / `pushGraphToEngine` 仍走 `sys_designer_graph` blob 路径；行存储读写、增量保存待后续迭代切换。
+  2. `model_layers`（图层 M:N）仍存于 mldg 文档内的 `Record<string,string[]>`，未写入 `layerHasModels` / `layerHasRelationDefs` 关系行 —— 下一轮迁移目标。
+  3. catalog REST 只暴露字段**名**，**没有字段类型 / Prop 详细元数据**；要把 `sys_props` 真正同步过来需要先在 server 扩展该端点。
 
 ## 3. 状态机 (Interaction States)
 

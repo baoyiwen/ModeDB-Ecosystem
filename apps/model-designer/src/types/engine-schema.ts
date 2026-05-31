@@ -15,14 +15,36 @@ export interface EngineModelNode {
   color_value?: string;
 }
 
-/** 画布连线；`kind` 为实例语义；其余对齐 `sys_relation` 关系定义行 */
+/**
+ * 画布连线 / 关系边。关系**永远是成对**的：`forward_name`（source → target）和
+ * `reverse_name`（target → source）。两者均为唯一名（参见 `utils/name-validation.ts` 的正则），
+ * 在画布上各画一条带箭头的线表示对应方向。展示名走 `*_name_i18n`，缺省回落到唯一名。
+ */
 export interface EngineRelationEdge {
   id: string;
   source_model_id: string;
   target_model_id: string;
+  /**
+   * 正向（source → target）唯一名；自关联默认 `children`，非自关联默认 `<source>-<target>`。
+   * **新建关系一定写入**；标记 optional 仅为兼容旧 mldg 序列化（缺省时回退到 `kind`）。
+   */
+  forward_name?: string;
+  /**
+   * 逆向（target → source）唯一名；自关联默认 `parent`，非自关联默认 `<target>-<source>`。
+   * **新建关系一定写入**；标记 optional 仅为兼容旧 mldg 序列化（缺省时回退到 `kind`）。
+   */
+  reverse_name?: string;
+  /** 正向展示名（I18N），优先于 `forward_name` 显示。 */
+  forward_name_i18n?: Record<string, string>;
+  /** 逆向展示名（I18N），优先于 `reverse_name` 显示。 */
+  reverse_name_i18n?: Record<string, string>;
+  /**
+   * 画布语义分类（连线 / 继承等）。继承边由 `createChildModel` 写为 `GRAPH_INHERIT_KIND`，
+   * 普通连线为 `GRAPH_NODE_LINK_KIND`。运行时仍用于决定虚实线 / 颜色。
+   */
   kind: string;
   metadata?: Record<string, unknown>;
-  /** `sys_relation.name`（I18N） */
+  /** @deprecated 旧版本的"关系整体名"。新代码请用 `forward_name_i18n` / `reverse_name_i18n`。 */
   name_i18n?: Record<string, string>;
   /** `sys_relation.description`（I18N） */
   description_i18n?: Record<string, string>;

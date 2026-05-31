@@ -2,8 +2,13 @@ import type { EngineModelNode, EngineRelationEdge } from '../types/engine-schema
 import {
   directedShortestSegment,
   distancePointToSegment,
+  distancePointToSelfLoopArc,
   edgePerpOffsetById,
+  edgeSelfLoopSlotById,
+  RELATION_INTRA_PAIR_GAP,
+  selfLoopGeometry,
 } from './relation-geometry.js';
+import { isInheritRelation } from '../config/graph-edge-kinds.js';
 import { computeNodeHeight, NODE_RADIUS } from './node-geometry.js';
 
 export interface PlacedNode {
@@ -79,6 +84,7 @@ export function hitTestRelation(
     byId.set(p.model.id, p);
   }
   const offMap = edgePerpOffsetById(relations);
+  const loopSlotMap = edgeSelfLoopSlotById(relations);
   let bestId: string | undefined;
   let bestD = Infinity;
   for (const r of relations) {
@@ -90,9 +96,27 @@ export function hitTestRelation(
     if (!a || !b) {
       continue;
     }
-    const off = offMap.get(r.id) ?? 0;
-    const seg = directedShortestSegment(a, b, off);
-    const d = distancePointToSegment(px, py, seg.x1, seg.y1, seg.x2, seg.y2);
+    // 自关联：内外两圈同心圆弧，命中取两圈较近距离。
+    let d: number;
+    if (r.source_model_id === r.target_model_id) {
+      const slot = loopSlotMap.get(r.id) ?? 0;
+      const loop = selfLoopGeometry(a, slot);
+      d = Math.min(
+        distancePointToSelfLoopArc(px, py, loop.forward),
+        distancePointToSelfLoopArc(px, py, loop.reverse),
+      );
+    } else if (isInheritRelation(r.kind)) {
+      const slotOff = offMap.get(r.id) ?? 0;
+      const seg = directedShortestSegment(a, b, slotOff);
+      d = distancePointToSegment(px, py, seg.x1, seg.y1, seg.x2, seg.y2);
+    } else {
+      const slotOff = offMap.get(r.id) ?? 0;
+      const fwd = directedShortestSegment(a, b, slotOff + RELATION_INTRA_PAIR_GAP);
+      const rev = directedShortestSegment(b, a, -(slotOff - RELATION_INTRA_PAIR_GAP));
+      const dFwd = distancePointToSegment(px, py, fwd.x1, fwd.y1, fwd.x2, fwd.y2);
+      const dRev = distancePointToSegment(px, py, rev.x1, rev.y1, rev.x2, rev.y2);
+      d = Math.min(dFwd, dRev);
+    }
     if (d <= threshold && d < bestD) {
       bestD = d;
       bestId = r.id;

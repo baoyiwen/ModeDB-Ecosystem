@@ -8,17 +8,21 @@ import {
   getStoredHost,
   getStoredLastLibrary,
   getStoredPort,
-  getStoredWorkspace,
   getStoredToken,
   persistConnectionFields,
   persistLastLibrary,
+  persistSessionToken,
   persistToken,
   setRememberToken,
 } from '../config/connection-prefs.js';
 import { FIXED_MODEL_DESIGNER_DATABASE } from '../config/fixed-database.js';
 import { withTimeout } from '../engine/async-timeout.js';
-import { openWorkspaceSession } from '../engine/workspace-session.js';
+import { ensureDesignerWorkspaceSession } from '../engine/workspace-session.js';
 import { useDesigner } from '../context/designer-context.js';
+import {
+  importEngineCatalogIntoDesignerDb,
+  readBusinessCatalog,
+} from '../sync/engine-catalog-import.js';
 
 const CONNECT_MS = 45_000;
 const OPEN_MS = 90_000;
@@ -64,12 +68,14 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
         CONNECT_MS,
         i18n.t('errors', 'connectTimeout'),
       );
-      setDatabases(list);
-      if (list.length > 0 && !list.some((d) => d.name === selectedDb)) {
-        setSelectedDb(list[0].name);
+      // 设计器专属库属于内部存储，不在「目标业务库」选项里展示。
+      const visible = list.filter((d) => d.name !== FIXED_MODEL_DESIGNER_DATABASE);
+      setDatabases(visible);
+      if (visible.length > 0 && !visible.some((d) => d.name === selectedDb)) {
+        setSelectedDb(visible[0].name);
       }
       setStep('library');
-      persistConnectionFields(host.trim(), port, getStoredWorkspace(FIXED_MODEL_DESIGNER_DATABASE));
+      persistConnectionFields(host.trim(), port, FIXED_MODEL_DESIGNER_DATABASE);
       if (rememberToken) {
         persistToken(token.trim());
       } else {
@@ -95,12 +101,13 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
     let client: RemoteModelDBClient | undefined;
     let connectOk = false;
     try {
+      // 不连接用户业务库，避免污染；统一连到设计器专属库（必要时自动创建）。
       client = await withTimeout(
-        openWorkspaceSession({
+        ensureDesignerWorkspaceSession({
           host: host.trim(),
           port,
           token: token.trim(),
-          workspace: name,
+          designerWorkspace: FIXED_MODEL_DESIGNER_DATABASE,
         }),
         CONNECT_MS,
         i18n.t('errors', 'connectTimeout'),
@@ -112,16 +119,36 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
             setOpeningDetail(`${p.stepIndex}/${p.stepTotal} ${p.detail}`);
           });
           await seedDefaultWorkspaceRecords(client!, name);
+          // 从业务库（Model Engine 层）反向导入 schema：把已注册的引擎模型/关系
+          // 在设计器库内"编号入库"，建立 assetMap / 继承拓扑，为后续保存位置与图层归属做好基础。
+          setOpeningDetail(`importing engine catalog of "${name}"`);
+          const catalog = await readBusinessCatalog({
+            host: host.trim(),
+            port,
+            token: token.trim(),
+            businessDb: name,
+          });
+          const report = await importEngineCatalogIntoDesignerDb(client!, name, catalog);
+          if (report.insertedModels > 0 || report.insertedRelations > 0) {
+            setOpeningDetail(
+              `imported ${report.insertedModels} models / ${report.insertedRelations} relations`,
+            );
+          }
         })(),
         OPEN_MS,
         i18n.t('errors', 'bootstrapTimeout'),
       );
-      persistConnectionFields(host.trim(), port, name);
+      persistConnectionFields(host.trim(), port, FIXED_MODEL_DESIGNER_DATABASE);
       persistLastLibrary(name);
+      // 无论是否勾选「记住 Token」，都在 sessionStorage 里短期缓存，使 F5 后能无感重连；
+      // 关闭标签页/浏览器即清空，安全性与一次性登录等价。
+      persistSessionToken(token.trim());
       if (rememberToken) {
         persistToken(token.trim());
       }
       setRememberToken(rememberToken);
+      // `name` 是用户业务库的逻辑标签（=`sys_data_asset_map.code`），用作设计器内的命名空间；
+      // 实际 WebSocket 会话连接的是 FIXED_MODEL_DESIGNER_DATABASE。
       props.onEditorReady(client, name);
     } catch (e) {
       try {
@@ -164,7 +191,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
         port,
         token: token.trim(),
       });
-      setDatabases(list);
+      setDatabases(list.filter((d) => d.name !== FIXED_MODEL_DESIGNER_DATABASE));
       setSelectedDb(name);
       setNewDbName('');
     } catch (e) {

@@ -1,5 +1,14 @@
-import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type CSSProperties,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { useDesigner } from '../context/designer-context.js';
+import { isInheritRelation } from '../config/graph-edge-kinds.js';
+import { isReadOnlyToolMode } from '../managers/mode-manager.js';
 import { InfoPanel } from './InfoPanel.js';
 import { PropsEditor } from './PropsEditor.js';
 import { LayerTreePanel } from './LayerTreePanel.js';
@@ -16,9 +25,23 @@ export function EditorChrome(props: {
   onRequestClearCanvasSelection: () => void;
   children: ReactNode;
 }): ReactElement {
-  const { i18n } = useDesigner();
+  const { i18n, appearance, modes, data } = useDesigner();
   const [, bump] = useState(0);
   useEffect(() => i18n.subscribe(() => bump((n) => n + 1)), [i18n]);
+  useEffect(() => appearance.subscribe(() => bump((n) => n + 1)), [appearance]);
+  useEffect(() => modes.subscribe(() => bump((n) => n + 1)), [modes]);
+  useEffect(() => data.subscribe(() => bump((n) => n + 1)), [data]);
+
+  const readOnly = isReadOnlyToolMode(modes.mode);
+  const selectedRel = props.selectedRelationId
+    ? data.relations.find((r) => r.id === props.selectedRelationId)
+    : undefined;
+  const inheritAsModelId =
+    selectedRel && isInheritRelation(selectedRel.kind) ? selectedRel.target_model_id : undefined;
+  const effectiveModelId = props.selectedModelId ?? inheritAsModelId;
+  const showRelationDetail = Boolean(
+    props.selectedRelationId && selectedRel && !isInheritRelation(selectedRel.kind),
+  );
 
   const [manualPanel, setManualPanel] = useState<ManualPanelKind | null>(null);
 
@@ -26,7 +49,7 @@ export function EditorChrome(props: {
     setManualPanel(null);
   }, [props.selectedModelId, props.selectedRelationId]);
 
-  const passiveOpen = Boolean(props.selectedModelId || props.selectedRelationId);
+  const passiveOpen = Boolean(effectiveModelId || showRelationDetail);
   const manualOpen = manualPanel !== null;
   const shellOpen = passiveOpen || manualOpen;
 
@@ -51,10 +74,10 @@ export function EditorChrome(props: {
     if (manualPanel === 'settings') {
       return i18n.t('ui', 'settings');
     }
-    if (props.selectedRelationId) {
+    if (showRelationDetail) {
       return i18n.t('ui', 'relations');
     }
-    if (props.selectedModelId) {
+    if (effectiveModelId) {
       return i18n.t('ui', 'panelModelDetails');
     }
     return '';
@@ -62,41 +85,80 @@ export function EditorChrome(props: {
 
   const renderBody = (): ReactElement | null => {
     if (manualPanel === 'hierarchy') {
-      return <LayerTreePanel selectedId={props.selectedModelId} />;
+      return <LayerTreePanel selectedId={effectiveModelId} readOnly={readOnly} />;
     }
     if (manualPanel === 'settings') {
+      const currentAccent = appearance.accent.toLowerCase();
       return (
-        <label className="designer-settings-row">
-          <span className="designer-panel-section-title" style={{ margin: 0 }}>
-            {i18n.t('ui', 'locale')}
-          </span>
-          <select
-            className="designer-select"
-            value={i18n.locale}
-            onChange={(e) => i18n.setLocale(e.target.value as LocaleCode)}
-          >
-            <option value="en">English</option>
-            <option value="zh">中文</option>
-            <option value="ja">日本語</option>
-          </select>
-        </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <label className="designer-settings-row">
+            <span className="designer-panel-section-title" style={{ margin: 0 }}>
+              {i18n.t('ui', 'locale')}
+            </span>
+            <select
+              className="designer-select"
+              value={i18n.locale}
+              onChange={(e) => i18n.setLocale(e.target.value as LocaleCode)}
+            >
+              <option value="en">English</option>
+              <option value="zh">中文</option>
+              <option value="ja">日本語</option>
+            </select>
+          </label>
+
+          <div className="designer-settings-row">
+            <span className="designer-panel-section-title" style={{ margin: 0 }}>
+              {i18n.t('ui', 'themeColor')}
+            </span>
+            <div className="designer-accent-row">
+              {appearance.presets.map((preset) => {
+                const swatchStyle = { '--swatch-color': preset.color } as CSSProperties;
+                const selected = preset.color.toLowerCase() === currentAccent;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    className="designer-accent-swatch"
+                    aria-pressed={selected}
+                    aria-label={preset.id}
+                    title={preset.color}
+                    style={swatchStyle}
+                    onClick={() => appearance.setAccent(preset.color)}
+                  />
+                );
+              })}
+              <input
+                className="designer-accent-picker"
+                type="color"
+                aria-label={i18n.t('ui', 'themeColorCustom')}
+                title={i18n.t('ui', 'themeColorCustom')}
+                value={currentAccent}
+                onChange={(e) => appearance.setAccent(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
       );
     }
-    if (props.selectedRelationId) {
+    if (showRelationDetail && props.selectedRelationId) {
       return (
-        <RelationDetailPanel key={props.selectedRelationId} relationId={props.selectedRelationId} />
+        <RelationDetailPanel
+          key={props.selectedRelationId}
+          relationId={props.selectedRelationId}
+          readOnly={readOnly}
+        />
       );
     }
-    if (props.selectedModelId) {
+    if (effectiveModelId) {
       return (
         <div className="designer-passive-panels">
           <section className="designer-passive-section">
             <h3 className="designer-panel-section-title">{i18n.t('ui', 'info')}</h3>
-            <InfoPanel key={props.selectedModelId} modelId={props.selectedModelId} />
+            <InfoPanel key={effectiveModelId} modelId={effectiveModelId} readOnly={readOnly} />
           </section>
           <section className="designer-passive-section">
             <h3 className="designer-panel-section-title">{i18n.t('ui', 'props')}</h3>
-            <PropsEditor key={props.selectedModelId} modelId={props.selectedModelId} />
+            <PropsEditor key={effectiveModelId} modelId={effectiveModelId} readOnly={readOnly} />
           </section>
         </div>
       );

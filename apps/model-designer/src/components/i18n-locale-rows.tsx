@@ -27,17 +27,14 @@ function buildCommit(
   zh: string,
   en: string,
   extra: Record<string, string>,
-  multiline: boolean,
 ): Record<string, string> {
   const next: Record<string, string> = {};
   const put = (key: string, raw: string): void => {
-    if (multiline) {
-      if (raw.trim().length > 0) {
-        next[key] = raw;
-      }
-    } else if (raw.trim()) {
-      next[key] = raw.trim();
+    if (raw.length === 0) {
+      return;
     }
+    // 展示名 / 描述：保留空格与特殊符号，仅跳过空字符串。
+    next[key] = raw;
   };
   put('zh', zh);
   put('en', en);
@@ -97,12 +94,9 @@ export function I18nLocaleRows(props: I18nLocaleRowsProps): ReactElement {
     setAddVal('');
   }, [valueKey]);
 
-  const commit = useCallback(
-    (d: Draft): void => {
-      pendingCommit.current = buildCommit(d.zh, d.en, d.extra, multiline);
-    },
-    [multiline],
-  );
+  const commit = useCallback((d: Draft): void => {
+    pendingCommit.current = buildCommit(d.zh, d.en, d.extra);
+  }, []);
 
   const rowStyle: CSSProperties = {
     display: 'grid',
@@ -244,7 +238,7 @@ export function I18nLocaleRows(props: I18nLocaleRowsProps): ReactElement {
               style={{ resize: 'vertical', minHeight: 56 }}
               onChange={(e) => setAddVal(e.target.value)}
               onBlur={() => {
-                if (!pick || !addVal.trim()) {
+                if (!pick || addVal.length === 0) {
                   return;
                 }
                 const key = pick;
@@ -267,11 +261,11 @@ export function I18nLocaleRows(props: I18nLocaleRowsProps): ReactElement {
               value={addVal}
               onChange={(e) => setAddVal(e.target.value)}
               onBlur={() => {
-                if (!pick || !addVal.trim()) {
+                if (!pick || addVal.length === 0) {
                   return;
                 }
                 const key = pick;
-                const val = addVal.trim();
+                const val = addVal;
                 setPick('');
                 setAddVal('');
                 setDraft((d) => {

@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useRef, type ReactNode } from 'react';
+import { AppearanceManager } from '../managers/appearance-manager.js';
 import { ConfigManager } from '../managers/config-manager.js';
 import { DataManager } from '../managers/data-manager.js';
 import { EventManager } from '../managers/event-manager.js';
@@ -17,6 +18,7 @@ export interface DesignerManagers {
   config: ConfigManager;
   data: DataManager;
   i18n: I18nManager;
+  appearance: AppearanceManager;
   layers: LayerManager;
   graphLink: GraphLinker;
   propVault: PropVaultController;
@@ -37,6 +39,7 @@ export function DesignerProvider({ children }: { children: ReactNode }): React.R
       config: new ConfigManager(),
       data,
       i18n: new I18nManager(),
+      appearance: new AppearanceManager(),
       layers: new LayerManager(data),
       graphLink: new GraphLinker(data),
       propVault: new PropVaultController(),

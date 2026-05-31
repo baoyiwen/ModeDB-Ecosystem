@@ -5,7 +5,11 @@ import type { EngineModelNode, EngineRelationEdge } from '../types/engine-schema
 import type { MldgDocument } from '../types/mldg-document.js';
 import { createEmptyMldgDocument } from '../types/mldg-document.js';
 import type { PropObject } from '../types/prop-object.js';
-import { GRAPH_INHERIT_KIND } from '../config/graph-edge-kinds.js';
+import {
+  GRAPH_INHERIT_KIND,
+  INHERIT_RELATION_DEFAULT_NAME,
+  INHERIT_RELATION_LABEL_I18N,
+} from '../config/graph-edge-kinds.js';
 import { extractEngineModelRelationPayload } from '../sync/engine-model-relation.js';
 import {
   parseMldgDocumentFromUint8Array,
@@ -13,6 +17,7 @@ import {
 } from '../sync/mldg-wire-bytes.js';
 import { pullLatestDesignerSnapshot, pushDesignerSnapshot } from '../sync/sdk-designer-sync.js';
 import { mapI18nSuffix, pickCanonicalFromI18n } from '../utils/i18n-resolve.js';
+import { makeUniqueName } from '../utils/name-validation.js';
 
 export type DataListener = () => void;
 
@@ -20,23 +25,37 @@ function newId(): string {
   return crypto.randomUUID();
 }
 
-const DEFAULT_PAGE_ID = 'page-main';
-const DEFAULT_GROUP_ID = 'group-root';
+import {
+  defaultLayerGroupLabel,
+  defaultLayerPageLabel,
+  isLayerRootGroupId,
+  LAYER_DEFAULT_PAGE_ID,
+  LAYER_ROOT_GROUP_ID,
+} from '../config/layer-tree-defaults.js';
+import {
+  applyLayerTreeDrop,
+  collectPageIdsInSubtree,
+  normalizeLayerTreeRoots,
+  removeLayerNodeFromTree,
+  type LayerDropZone,
+} from '../utils/layer-tree-ops.js';
 
 function createDefaultLayerTree(): LayerTreeNode[] {
   return [
     {
-      id: DEFAULT_GROUP_ID,
+      id: LAYER_ROOT_GROUP_ID,
       kind: 'group',
       label: 'Root',
+      name_i18n: { zh: '根分组', en: 'Root', ja: 'ルート' },
       isVisible: true,
       sort: 0,
       memberModelIds: [],
       children: [
         {
-          id: DEFAULT_PAGE_ID,
+          id: LAYER_DEFAULT_PAGE_ID,
           kind: 'page',
           label: 'Main',
+          name_i18n: { zh: '主页面', en: 'Main', ja: 'メイン' },
           isVisible: true,
           sort: 0,
           children: [],
@@ -80,12 +99,18 @@ export class DataManager {
   }
 
   get defaultPageLayerId(): string {
-    return DEFAULT_PAGE_ID;
+    return LAYER_DEFAULT_PAGE_ID;
+  }
+
+  isLayerRootGroup(id: string): boolean {
+    return isLayerRootGroupId(id);
   }
 
   private cloneTree(nodes: readonly LayerTreeNode[]): LayerTreeNode[] {
     return nodes.map((n) => ({
       ...n,
+      name_i18n: n.name_i18n ? { ...n.name_i18n } : undefined,
+      description_i18n: n.description_i18n ? { ...n.description_i18n } : undefined,
       children: n.kind === 'group' ? this.cloneTree(n.children) : [],
       memberModelIds: n.kind === 'page' ? [...n.memberModelIds] : [],
     }));
@@ -115,37 +140,33 @@ export class DataManager {
   }
 
   setLayerTree(roots: LayerTreeNode[]): void {
-    this._layerTreeRoots = this.cloneTree(roots);
+    this._layerTreeRoots = normalizeLayerTreeRoots(roots);
     this.resyncLayersFromTree();
     this.emit();
   }
 
-  addLayerGroup(parentId: string | null, label: string): string {
+  addLayerGroup(parentGroupId: string, label: string = defaultLayerGroupLabel()): string {
     const id = newId();
+    const parent = this.findTreeNode(parentGroupId);
+    if (!parent || parent.kind !== 'group') {
+      return id;
+    }
     const node: LayerTreeNode = {
       id,
       kind: 'group',
       label,
       isVisible: true,
-      sort: this._layerTreeRoots.length,
+      sort: parent.children.length,
       memberModelIds: [],
       children: [],
     };
-    if (parentId === null) {
-      this._layerTreeRoots.push(node);
-    } else {
-      const parent = this.findTreeNode(parentId);
-      if (!parent || parent.kind !== 'group') {
-        return id;
-      }
-      parent.children.push(node);
-    }
+    parent.children.push(node);
     this.resyncLayersFromTree();
     this.emit();
     return id;
   }
 
-  addLayerPage(parentGroupId: string, label: string): string {
+  addLayerPage(parentGroupId: string, label: string = defaultLayerPageLabel()): string {
     const id = newId();
     const parent = this.findTreeNode(parentGroupId);
     if (!parent || parent.kind !== 'group') {
@@ -174,6 +195,66 @@ export class DataManager {
     n.isVisible = !n.isVisible;
     this.resyncLayersFromTree();
     this.emit();
+  }
+
+  updateLayerNode(
+    id: string,
+    patch: Partial<Pick<LayerTreeNode, 'label' | 'name_i18n' | 'description_i18n'>>,
+  ): void {
+    const n = this.findTreeNode(id);
+    if (!n) {
+      return;
+    }
+    if (patch.label !== undefined) {
+      n.label = patch.label;
+    }
+    if (patch.name_i18n !== undefined) {
+      n.name_i18n = patch.name_i18n;
+    }
+    if (patch.description_i18n !== undefined) {
+      n.description_i18n = patch.description_i18n;
+    }
+    this.resyncLayersFromTree();
+    this.emit();
+  }
+
+  moveLayerNode(dragId: string, targetId: string, zone: LayerDropZone): boolean {
+    const next = this.cloneTree(this._layerTreeRoots);
+    if (!applyLayerTreeDrop(next, dragId, targetId, zone)) {
+      return false;
+    }
+    this._layerTreeRoots = next;
+    this.resyncLayersFromTree();
+    this.emit();
+    return true;
+  }
+
+  /** 删除组/页（含子树）；根分组不可删。 */
+  removeLayerNode(id: string): boolean {
+    if (isLayerRootGroupId(id)) {
+      return false;
+    }
+    const node = this.findTreeNode(id);
+    if (!node) {
+      return false;
+    }
+    const removedPageIds = new Set(collectPageIdsInSubtree(node));
+    for (const [modelId, layerSet] of this._nodeToLayers) {
+      for (const pageId of removedPageIds) {
+        layerSet.delete(pageId);
+      }
+      if (layerSet.size === 0) {
+        this._nodeToLayers.delete(modelId);
+      }
+    }
+    const next = this.cloneTree(this._layerTreeRoots);
+    if (!removeLayerNodeFromTree(next, id)) {
+      return false;
+    }
+    this._layerTreeRoots = next;
+    this.resyncLayersFromTree();
+    this.emit();
+    return true;
   }
 
   assignModelToPage(modelId: string, pageId: string): void {
@@ -497,10 +578,19 @@ export class DataManager {
     if (parentLayers.length > 0) {
       this.assignNodeToLayers(nid, [...parentLayers]);
     }
+    // 继承边为单向虚线：唯一名默认 `inherits`（与成对关系线命名规则不同），不设 reverse_name。
+    const usedNames = new Set<string>();
+    for (const rel of this._relations) {
+      if (rel.forward_name) usedNames.add(rel.forward_name);
+      if (rel.reverse_name) usedNames.add(rel.reverse_name);
+    }
+    const inheritName = makeUniqueName(INHERIT_RELATION_DEFAULT_NAME, usedNames);
     this.addRelation({
       id: edgeId,
       source_model_id: parentId,
       target_model_id: nid,
+      forward_name: inheritName,
+      forward_name_i18n: { ...INHERIT_RELATION_LABEL_I18N },
       kind: GRAPH_INHERIT_KIND,
     });
     return { modelId: nid, inheritEdgeId: edgeId };
@@ -537,7 +627,7 @@ export class DataManager {
     }
     this._layers = (doc.designer_layout.layers ?? []).map((l) => ({ ...l }));
     if (doc.designer_layout.layer_tree && doc.designer_layout.layer_tree.length > 0) {
-      this._layerTreeRoots = this.cloneTree(doc.designer_layout.layer_tree);
+      this._layerTreeRoots = normalizeLayerTreeRoots(doc.designer_layout.layer_tree);
       this.resyncLayersFromTree();
     }
     const ml = doc.designer_layout.model_layers ?? {};
@@ -554,21 +644,23 @@ export class DataManager {
 
   /**
    * 发送前将图谱转为引擎可识别的模型-关系结构，再 UTF-8 流化，经 SDK 加密通道写入元数据行。
+   * `libraryCode` 是业务库逻辑标签（= `sys_data_asset_map.code`），用于在设计器专属库内
+   * 隔离多业务库快照。
    */
-  async pushGraphToEngine(client: RemoteModelDBClient): Promise<void> {
+  async pushGraphToEngine(client: RemoteModelDBClient, libraryCode: string): Promise<void> {
     const doc = this.toMldgDocument();
     extractEngineModelRelationPayload(doc);
     const bytes = serializeMldgDocumentToUint8Array(doc);
-    await pushDesignerSnapshot(client, bytes);
+    await pushDesignerSnapshot(client, bytes, libraryCode);
   }
 
   /**
-   * 从引擎拉取最新快照；失败时恢复至拉取前内存状态，保证画布与引擎一致或显式报错。
+   * 从引擎拉取指定业务库的最新快照；失败时恢复至拉取前内存状态，保证画布与引擎一致或显式报错。
    */
-  async pullGraphFromEngine(client: RemoteModelDBClient): Promise<void> {
+  async pullGraphFromEngine(client: RemoteModelDBClient, libraryCode: string): Promise<void> {
     const before = this.snapshotForTransaction();
     try {
-      const bytes = await pullLatestDesignerSnapshot(client);
+      const bytes = await pullLatestDesignerSnapshot(client, libraryCode);
       const doc = parseMldgDocumentFromUint8Array(bytes);
       this.loadMldgDocument(doc);
     } catch (e) {

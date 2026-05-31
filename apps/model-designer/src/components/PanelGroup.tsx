@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { useDesigner } from '../context/designer-context.js';
+import { isReadOnlyToolMode } from '../managers/mode-manager.js';
 import { LayerPanel } from './LayerPanel.js';
 import { InfoPanel } from './InfoPanel.js';
 import { PropsEditor } from './PropsEditor.js';
@@ -7,12 +8,14 @@ import { RelationPanel } from './RelationPanel.js';
 import type { LocaleCode } from '../managers/i18n-manager.js';
 
 export function PanelGroup(props: { selectedId: string | undefined }): ReactElement {
-  const { i18n } = useDesigner();
+  const { i18n, modes } = useDesigner();
+  const readOnly = isReadOnlyToolMode(modes.mode);
   const [, bump] = useState(0);
 
   useEffect(() => {
     return i18n.subscribe(() => bump((n) => n + 1));
   }, [i18n]);
+  useEffect(() => modes.subscribe(() => bump((n) => n + 1)), [modes]);
 
   const section = (title: string, child: ReactNode): ReactElement => (
     <section style={{ marginBottom: 16 }}>
@@ -42,9 +45,18 @@ export function PanelGroup(props: { selectedId: string | undefined }): ReactElem
       </div>
       <div className="designer-panel-body">
         {section(i18n.t('ui', 'layers'), <LayerPanel />)}
-        {section(i18n.t('ui', 'info'), <InfoPanel modelId={props.selectedId} />)}
-        {section(i18n.t('ui', 'relations'), <RelationPanel modelId={props.selectedId} />)}
-        {section(i18n.t('ui', 'props'), <PropsEditor modelId={props.selectedId} />)}
+        {section(
+          i18n.t('ui', 'info'),
+          <InfoPanel modelId={props.selectedId} readOnly={readOnly} />,
+        )}
+        {section(
+          i18n.t('ui', 'relations'),
+          <RelationPanel modelId={props.selectedId} readOnly={readOnly} />,
+        )}
+        {section(
+          i18n.t('ui', 'props'),
+          <PropsEditor modelId={props.selectedId} readOnly={readOnly} />,
+        )}
       </div>
     </>
   );

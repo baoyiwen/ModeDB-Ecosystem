@@ -11,7 +11,7 @@ import {
 } from '../config/connection-prefs.js';
 import { FIXED_MODEL_DESIGNER_DATABASE } from '../config/fixed-database.js';
 import { withTimeout } from '../engine/async-timeout.js';
-import { openWorkspaceSession } from '../engine/workspace-session.js';
+import { ensureDesignerWorkspaceSession } from '../engine/workspace-session.js';
 import type { LocaleCode } from '../managers/i18n-manager.js';
 
 export interface WorkspaceGateProps {
@@ -63,17 +63,22 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '100vh',
-    background: '#020617',
-    color: '#e2e8f0',
+    background:
+      'radial-gradient(880px 560px at 14% 0%, var(--designer-accent-soft) 0%, transparent 58%),' +
+      'radial-gradient(720px 480px at 96% 92%, rgba(148, 163, 184, 0.18) 0%, transparent 52%),' +
+      'linear-gradient(158deg, #f8fafc 0%, #eef2f6 40%, #f1f5f9 100%)',
+    color: '#1e293b',
     gap: 12,
     padding: 24,
   };
 
   private readonly inputStyle: CSSProperties = {
-    padding: 8,
-    background: '#0f172a',
-    border: '1px solid #334155',
-    color: '#e2e8f0',
+    padding: 9,
+    borderRadius: 8,
+    background: 'rgba(255, 255, 255, 0.78)',
+    border: '1px solid rgba(15, 23, 42, 0.08)',
+    color: '#1e293b',
+    boxShadow: 'inset 0 1px 2px rgba(15, 23, 42, 0.05)',
   };
 
   private connect = async (): Promise<void> => {
@@ -92,12 +97,13 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
     let client: RemoteModelDBClient | undefined;
     let connectOk = false;
     try {
+      // 用户输入的 `ws` 仅作为业务库逻辑标签；实际 WebSocket 连到设计器专属库。
       client = await withTimeout(
-        openWorkspaceSession({
+        ensureDesignerWorkspaceSession({
           host,
           port,
           token: token.trim(),
-          workspace: ws,
+          designerWorkspace: FIXED_MODEL_DESIGNER_DATABASE,
         }),
         CONNECT_TIMEOUT_MS,
         i18n.t('errors', 'connectTimeout'),
@@ -141,7 +147,7 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
     return (
       <div style={this.shellStyle}>
         <h1 style={{ fontSize: 20, margin: 0 }}>{i18n.t('ui', 'gateTitle')}</h1>
-        <p style={{ fontSize: 13, color: '#94a3b8', maxWidth: 480, textAlign: 'center' }}>
+        <p style={{ fontSize: 13, color: '#64748b', maxWidth: 480, textAlign: 'center' }}>
           {i18n.t('ui', 'gateHint')}
         </p>
         <label
@@ -206,9 +212,10 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
         </label>
         <button
           type="button"
+          className="designer-btn designer-btn-primary"
           disabled={busy}
           onClick={() => void this.connect()}
-          style={{ padding: '10px 20px', marginTop: 8, cursor: busy ? 'wait' : 'pointer' }}
+          style={{ marginTop: 8, cursor: busy ? 'wait' : 'pointer' }}
         >
           {busy
             ? bootstrapProgress
@@ -220,14 +227,14 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
           <div
             style={{
               fontSize: 12,
-              color: '#94a3b8',
+              color: '#64748b',
               maxWidth: 400,
               textAlign: 'center',
               lineHeight: 1.5,
             }}
           >
             {bootstrapProgress.current}/{bootstrapProgress.total} —{' '}
-            <code style={{ color: '#cbd5e1' }}>{bootstrapProgress.detail}</code>
+            <code style={{ color: '#334155' }}>{bootstrapProgress.detail}</code>
           </div>
         )}
       </div>

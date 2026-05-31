@@ -74,6 +74,10 @@ export async function ensureDesignerCatalog(
         posY: 'Number',
         /** 画布表现域 JSON（坐标、折点、折叠等），与 posX/posY 可并存 */
         canvas_meta: 'String',
+        /** 业务库内引擎模型的真实标识（`ManagementCatalogModelInfo.name`）。 */
+        engine_name: 'String',
+        /** 隶属业务库逻辑标签（= `sys_data_asset_map.code`），与 engine_name 形成组合主键。 */
+        library_code: 'String',
       },
     },
     {
@@ -86,6 +90,9 @@ export async function ensureDesignerCatalog(
         isRequired: 'Boolean',
         isPrimary: 'Boolean',
         vaultKey: 'String',
+        /** 业务库模型上的字段名（与 sys_model.engine_name 共同定位）。 */
+        engine_name: 'String',
+        library_code: 'String',
       },
     },
     {
@@ -98,6 +105,9 @@ export async function ensureDesignerCatalog(
         posX: 'Number',
         posY: 'Number',
         canvas_meta: 'String',
+        /** 业务库关系正向 label（`ManagementCatalogRelationInfo.forward`），作为业务库内唯一标识。 */
+        engine_name: 'String',
+        library_code: 'String',
       },
     },
     {
@@ -105,6 +115,8 @@ export async function ensureDesignerCatalog(
       schema: {
         graph_b64: 'String',
         updated_at: 'String',
+        /** 用户业务库的逻辑标签（= `sys_data_asset_map.code`），用于在共享元数据库内做多库隔离。 */
+        library_code: 'String',
       },
     },
   ];
@@ -233,14 +245,23 @@ export async function ensureDesignerCatalog(
     await client.registerRelation(r.source, r.target, r.forward, r.reverse, r.logic);
   }
 
-  try {
-    await client.alterModel(SYS_MODEL, { canvas_meta: 'String' }, { patch: true });
-  } catch {
-    /* 已存在或非 patch 场景可忽略 */
-  }
-  try {
-    await client.alterModel(SYS_RELATION_DEF, { canvas_meta: 'String' }, { patch: true });
-  } catch {
-    /* 同上 */
+  // 旧库升级路径（patch: true 时缺则补，已存在则一律忽略）。
+  const patches: Array<{ model: string; fields: Record<string, string> }> = [
+    { model: SYS_MODEL, fields: { canvas_meta: 'String' } },
+    { model: SYS_MODEL, fields: { engine_name: 'String' } },
+    { model: SYS_MODEL, fields: { library_code: 'String' } },
+    { model: SYS_RELATION_DEF, fields: { canvas_meta: 'String' } },
+    { model: SYS_RELATION_DEF, fields: { engine_name: 'String' } },
+    { model: SYS_RELATION_DEF, fields: { library_code: 'String' } },
+    { model: SYS_PROPS, fields: { engine_name: 'String' } },
+    { model: SYS_PROPS, fields: { library_code: 'String' } },
+    { model: SYS_DESIGNER_GRAPH, fields: { library_code: 'String' } },
+  ];
+  for (const p of patches) {
+    try {
+      await client.alterModel(p.model, p.fields, { patch: true });
+    } catch {
+      /* 已存在或非 patch 场景可忽略 */
+    }
   }
 }

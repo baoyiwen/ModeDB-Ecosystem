@@ -1,5 +1,6 @@
-import { GRAPH_INHERIT_KIND } from '../config/graph-edge-kinds.js';
-import { drawDirectedRelation } from './draw-edge.js';
+import { isInheritRelation } from '../config/graph-edge-kinds.js';
+import { CANVAS_VISUAL } from '../config/canvas-visual.js';
+import { drawDirectedRelation, drawSelfLoop } from './draw-edge.js';
 import { drawNodeCircle } from './draw-node.js';
 import type { ConfigManager } from '../managers/config-manager.js';
 import type { DataManager } from '../managers/data-manager.js';
@@ -8,11 +9,19 @@ import { buildPlacedNodes, type PlacedNode } from './hit-test.js';
 import {
   directedShortestSegment,
   edgePerpOffsetById,
+  edgeSelfLoopSlotById,
+  RELATION_INTRA_PAIR_GAP,
+  selfLoopGeometry,
   type DirectedSegment,
 } from './relation-geometry.js';
 import { computeNodeHeight } from './node-geometry.js';
 import { parseFillHex } from '../utils/color-utils.js';
-import { resolveModelDisplayName } from '../utils/i18n-resolve.js';
+import {
+  resolveModelDisplayName,
+  resolveRelationForwardLabel,
+  resolveRelationReverseLabel,
+  resolveInheritRelationLabel,
+} from '../utils/i18n-resolve.js';
 
 export interface PaintSceneParams {
   ctx: CanvasRenderingContext2D;
@@ -22,12 +31,12 @@ export interface PaintSceneParams {
   config: ConfigManager;
   selectedModelId: string | undefined;
   selectedRelationId: string | undefined;
+  hoveredModelId?: string | undefined;
+  hoveredRelationId?: string | undefined;
   hiddenNodeIds?: ReadonlySet<string>;
   linkPreview: DirectedSegment | null;
-  inheritPreview: DirectedSegment | null;
-  /** 关系 kind → 当前语言下的名称 */
-  getRelationKindLabel: (kind: string) => string;
-  /** 界面语言（`en` | `zh` | `ja`），用于节点标题自 `name_i18n` 解析 */
+  inheritPreview?: DirectedSegment | null;
+  /** 界面语言（`en` | `zh` | `ja`），用于节点标题与正/逆向关系标签按 i18n 解析 */
   uiLocale: string;
 }
 
@@ -59,7 +68,7 @@ export function paintVisibleWorldDotGrid(
   const step = gridStepWorld;
   const dotR = Math.max(0.75 / zoom, 0.4);
   ctx.save();
-  ctx.fillStyle = 'rgba(100, 116, 139, 0.35)';
+  ctx.fillStyle = CANVAS_VISUAL.grid.dotColor;
   for (let x = Math.floor(xMin / step) * step; x <= xMax + 1e-6; x += step) {
     for (let y = Math.floor(yMin / step) * step; y <= yMax + 1e-6; y += step) {
       ctx.beginPath();
@@ -70,25 +79,28 @@ export function paintVisibleWorldDotGrid(
   ctx.restore();
 }
 
+/** 在世界坐标 (worldX, worldY) 处绘制关系标签；标签自身按屏幕像素恒定渲染（`1 / zoom`）。 */
 function drawRelationLabel(
   ctx: CanvasRenderingContext2D,
-  seg: DirectedSegment,
+  worldX: number,
+  worldY: number,
   label: string,
   zoom: number,
 ): void {
-  const px = -seg.uy;
-  const py = seg.ux;
-  const ox = px * 18;
-  const oy = py * 18;
   ctx.save();
-  ctx.translate(seg.midX + ox, seg.midY + oy);
+  ctx.translate(worldX, worldY);
   ctx.scale(1 / zoom, 1 / zoom);
   ctx.font = '600 11px system-ui, "Segoe UI", sans-serif';
-  ctx.fillStyle = '#334155';
+  ctx.fillStyle = CANVAS_VISUAL.label.color;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(label, 0, 0);
   ctx.restore();
+}
+
+/** 由有向线段计算"沿垂直方向 18 世界单位"的标签锚点；与原有标签摆放语义一致。 */
+function segmentLabelAnchor(seg: DirectedSegment): { x: number; y: number } {
+  return { x: seg.midX + -seg.uy * 18, y: seg.midY + seg.ux * 18 };
 }
 
 export function paintScene(params: PaintSceneParams): void {
@@ -100,10 +112,11 @@ export function paintScene(params: PaintSceneParams): void {
     config,
     selectedModelId,
     selectedRelationId,
+    hoveredModelId,
+    hoveredRelationId,
     hiddenNodeIds,
     linkPreview,
     inheritPreview,
-    getRelationKindLabel,
     uiLocale,
   } = params;
   const hide = hiddenNodeIds;
@@ -126,8 +139,46 @@ export function paintScene(params: PaintSceneParams): void {
   }
 
   const offMap = edgePerpOffsetById(data.relations);
+  const loopSlotMap = edgeSelfLoopSlotById(data.relations);
 
-  const drawEdgeStroke = (r: EngineRelationEdge, emphasize: boolean): DirectedSegment | null => {
+  const vis = CANVAS_VISUAL.relation;
+  const baseLw = vis.strokePx / zoom;
+  const hoverLw = vis.strokeHoverPx / zoom;
+  const empLw = vis.strokeSelectedPx / zoom;
+  const arrow = vis.arrowPx / zoom;
+
+  type EdgeDrawKind = 'normal' | 'hover' | 'selected';
+  const relationColor = (r: EngineRelationEdge, kind: EdgeDrawKind): string => {
+    const inherit = isInheritRelation(r.kind);
+    if (kind === 'selected') {
+      return inherit ? vis.inheritSelectedColor : vis.selectedColor;
+    }
+    if (kind === 'hover') {
+      return inherit ? vis.inheritHoverColor : vis.hoverColor;
+    }
+    return inherit ? vis.inheritColor : vis.normalColor;
+  };
+  const relationWidth = (kind: EdgeDrawKind): number => {
+    if (kind === 'selected') return empLw;
+    if (kind === 'hover') return hoverLw;
+    return baseLw;
+  };
+
+  /**
+   * 每条关系绘制策略：
+   *
+   * - **继承**（`modelInherits`）：单条虚线，parent → child，仅一个标签。
+   * - **普通关系**：两条平行直线（正/逆）。
+   * - **自关联**：「帽子」两圈弧（内檐 reverse + 外顶 forward）扣在节点 slot 方向。
+   */
+  type EdgeLabelAnchors = {
+    forward: { x: number; y: number };
+    reverse?: { x: number; y: number };
+  };
+  const drawEdgeStroke = (
+    r: EngineRelationEdge,
+    drawKind: EdgeDrawKind,
+  ): EdgeLabelAnchors | null => {
     if (hide?.has(r.source_model_id) || hide?.has(r.target_model_id)) {
       return null;
     }
@@ -136,32 +187,83 @@ export function paintScene(params: PaintSceneParams): void {
     if (!a || !b) {
       return null;
     }
-    const off = offMap.get(r.id) ?? 0;
-    const seg = directedShortestSegment(a, b, off);
-    const color = r.kind === GRAPH_INHERIT_KIND ? '#64748b' : '#94a3b8';
-    const lw = emphasize ? 4 : 2;
-    drawDirectedRelation(ctx, seg, color, lw, r.kind === GRAPH_INHERIT_KIND);
-    return seg;
+    const color = relationColor(r, drawKind);
+    const lw = relationWidth(drawKind);
+    const isInherit = isInheritRelation(r.kind);
+    if (r.source_model_id === r.target_model_id) {
+      const slot = loopSlotMap.get(r.id) ?? 0;
+      const loop = selfLoopGeometry(a, slot);
+      drawSelfLoop(ctx, loop, color, lw, arrow, isInherit);
+      return {
+        forward: { x: loop.forward.labelX, y: loop.forward.labelY },
+        reverse: { x: loop.reverse.labelX, y: loop.reverse.labelY },
+      };
+    }
+    const slotOff = offMap.get(r.id) ?? 0;
+    if (isInherit) {
+      const seg = directedShortestSegment(a, b, slotOff);
+      drawDirectedRelation(ctx, seg, color, lw, arrow, true);
+      return { forward: segmentLabelAnchor(seg) };
+    }
+    const forward = directedShortestSegment(a, b, slotOff + RELATION_INTRA_PAIR_GAP);
+    const reverse = directedShortestSegment(b, a, -(slotOff - RELATION_INTRA_PAIR_GAP));
+    drawDirectedRelation(ctx, forward, color, lw, arrow, false);
+    drawDirectedRelation(ctx, reverse, color, lw, arrow, false);
+    return {
+      forward: segmentLabelAnchor(forward),
+      reverse: segmentLabelAnchor(reverse),
+    };
   };
 
   const selRel = selectedRelationId;
-  const labelEntries: { seg: DirectedSegment; kind: string }[] = [];
+  const hovRel = hoveredRelationId;
+  const labelEntries: { x: number; y: number; text: string }[] = [];
+
+  const pushLabels = (r: EngineRelationEdge, anchors: EdgeLabelAnchors): void => {
+    if (isInheritRelation(r.kind)) {
+      labelEntries.push({
+        x: anchors.forward.x,
+        y: anchors.forward.y,
+        text: resolveInheritRelationLabel(r, uiLocale),
+      });
+      return;
+    }
+    const fwdText = resolveRelationForwardLabel(r, uiLocale);
+    const revText = resolveRelationReverseLabel(r, uiLocale);
+    labelEntries.push({ x: anchors.forward.x, y: anchors.forward.y, text: fwdText });
+    if (anchors.reverse) {
+      labelEntries.push({ x: anchors.reverse.x, y: anchors.reverse.y, text: revText });
+    }
+  };
+
+  const edgeDrawKind = (relId: string): EdgeDrawKind => {
+    if (relId === selRel) return 'selected';
+    if (relId === hovRel) return 'hover';
+    return 'normal';
+  };
 
   for (const r of data.relations) {
     if (r.id === selRel) {
       continue;
     }
-    const seg = drawEdgeStroke(r, false);
-    if (seg) {
-      labelEntries.push({ seg, kind: r.kind });
+    const anchors = drawEdgeStroke(r, edgeDrawKind(r.id));
+    if (anchors) {
+      pushLabels(r, anchors);
     }
   }
 
   if (linkPreview) {
-    drawDirectedRelation(ctx, linkPreview, '#2563eb', 2, false);
+    drawDirectedRelation(ctx, linkPreview, CANVAS_VISUAL.preview.linkColor, baseLw, arrow, false);
   }
   if (inheritPreview) {
-    drawDirectedRelation(ctx, inheritPreview, '#7c3aed', 2, true);
+    drawDirectedRelation(
+      ctx,
+      inheritPreview,
+      CANVAS_VISUAL.preview.inheritColor,
+      baseLw,
+      arrow,
+      true,
+    );
   }
 
   const sorted = [...placed].sort(
@@ -184,6 +286,7 @@ export function paintScene(params: PaintSceneParams): void {
       title: resolveModelDisplayName(p.model, uiLocale),
       theme,
       selected: p.model.id === selectedModelId,
+      hovered: p.model.id === hoveredModelId && p.model.id !== selectedModelId,
       nodeFillHex: parseFillHex(p.model.color_value),
     });
   }
@@ -191,15 +294,15 @@ export function paintScene(params: PaintSceneParams): void {
   if (selRel) {
     const r = data.relations.find((x) => x.id === selRel);
     if (r && !hide?.has(r.source_model_id) && !hide?.has(r.target_model_id)) {
-      const seg = drawEdgeStroke(r, true);
-      if (seg) {
-        labelEntries.push({ seg, kind: r.kind });
+      const anchors = drawEdgeStroke(r, 'selected');
+      if (anchors) {
+        pushLabels(r, anchors);
       }
     }
   }
 
-  for (const { seg, kind } of labelEntries) {
-    drawRelationLabel(ctx, seg, getRelationKindLabel(kind), zoom);
+  for (const { x, y, text } of labelEntries) {
+    drawRelationLabel(ctx, x, y, text, zoom);
   }
 
   ctx.restore();

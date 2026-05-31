@@ -1,4 +1,5 @@
 import type { ThemePalette } from '../managers/config-manager.js';
+import { CANVAS_VISUAL } from '../config/canvas-visual.js';
 import { contrastTextOnHex } from '../utils/color-utils.js';
 import { NODE_RADIUS } from './node-geometry.js';
 
@@ -10,6 +11,7 @@ export interface DrawNodeCircleParams {
   title: string;
   theme: ThemePalette;
   selected: boolean;
+  hovered?: boolean;
   /** 若设置则覆盖 `theme.header` 作为节点填充（`sys_model.color`） */
   nodeFillHex?: string;
 }
@@ -18,18 +20,23 @@ export interface DrawNodeCircleParams {
  * 原子绘制：圆形模型节点（仅 Canvas，无 DOM 块）。
  */
 export function drawNodeCircle(params: DrawNodeCircleParams): void {
-  const { ctx, x, y, title, theme, selected, nodeFillHex } = params;
+  const { ctx, x, y, title, theme, selected, hovered = false, nodeFillHex } = params;
   const r = NODE_RADIUS;
   const cx = x + r;
   const cy = y + r;
   const fill = nodeFillHex ?? theme.header;
   const labelColor = nodeFillHex ? contrastTextOnHex(nodeFillHex) : '#ffffff';
+  const vis = CANVAS_VISUAL.node;
 
   ctx.save();
-  ctx.shadowBlur = selected ? 18 : 14;
+  ctx.shadowBlur = selected
+    ? vis.shadowBlurSelected
+    : hovered
+      ? vis.shadowBlurHover
+      : vis.shadowBlur;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 4;
-  ctx.shadowColor = 'rgba(15, 23, 42, 0.18)';
+  ctx.shadowColor = vis.shadowColor;
   ctx.beginPath();
   ctx.arc(cx, cy, r - 1.5, 0, Math.PI * 2);
   ctx.fillStyle = fill;
@@ -37,10 +44,16 @@ export function drawNodeCircle(params: DrawNodeCircleParams): void {
   ctx.shadowBlur = 0;
 
   if (selected) {
-    ctx.strokeStyle = '#7c3aed';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = vis.selectedRingColor;
+    ctx.lineWidth = vis.selectedRingWidth;
     ctx.beginPath();
     ctx.arc(cx, cy, r + 2, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (hovered) {
+    ctx.strokeStyle = vis.hoverRingColor;
+    ctx.lineWidth = vis.hoverRingWidth;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 1.5, 0, Math.PI * 2);
     ctx.stroke();
   }
 

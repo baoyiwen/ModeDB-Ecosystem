@@ -4,9 +4,14 @@ import { I18nLocaleRows } from './i18n-locale-rows.js';
 import { contrastTextOnHex, normalizeHex } from '../utils/color-utils.js';
 import { collectLayerPages } from '../utils/layer-tree-pages.js';
 import { resolveModelDisplayName } from '../utils/i18n-resolve.js';
+import { isValidUniqueName, filterUniqueNameInput } from '../utils/name-validation.js';
 
-export function InfoPanel(props: { modelId: string | undefined }): ReactElement {
+export function InfoPanel(props: {
+  modelId: string | undefined;
+  readOnly?: boolean;
+}): ReactElement {
   const { i18n, data } = useDesigner();
+  const readOnly = props.readOnly ?? false;
   const [, bump] = useState(0);
   useEffect(() => data.subscribe(() => bump((n) => n + 1)), [data]);
 
@@ -49,9 +54,10 @@ export function InfoPanel(props: { modelId: string | undefined }): ReactElement 
   const textOnColor = contrastTextOnHex(hex);
 
   const applyColor = (value: string): void => {
-    if (model) {
-      data.updateModelPatch(model.id, { color_value: value });
+    if (readOnly || !model) {
+      return;
     }
+    data.updateModelPatch(model.id, { color_value: value });
   };
 
   const locale = i18n.locale;
@@ -68,14 +74,19 @@ export function InfoPanel(props: { modelId: string | undefined }): ReactElement 
         <span className="designer-field-label">{i18n.t('ui', 'sysModelRegistryName')}</span>
         <input
           className="designer-input"
-          disabled={!model}
+          disabled={!model || readOnly}
           value={model?.model_name ?? ''}
           onChange={(e) => {
             if (model) {
-              data.updateModelName(model.id, e.target.value);
+              data.updateModelName(model.id, filterUniqueNameInput(e.target.value));
             }
           }}
         />
+        {model && model.model_name && !isValidUniqueName(model.model_name) ? (
+          <span style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>
+            {i18n.t('ui', 'nameInvalidFormat')}
+          </span>
+        ) : null}
       </label>
 
       <div className="designer-field">
@@ -84,7 +95,7 @@ export function InfoPanel(props: { modelId: string | undefined }): ReactElement 
       </div>
 
       <I18nLocaleRows
-        disabled={!model}
+        disabled={!model || readOnly}
         summary={i18n.t('ui', 'sysModelDisplayNameI18n')}
         value={(model?.name_i18n as Record<string, string> | undefined) ?? {}}
         onCommit={(next) => {
@@ -97,7 +108,7 @@ export function InfoPanel(props: { modelId: string | undefined }): ReactElement 
       />
 
       <I18nLocaleRows
-        disabled={!model}
+        disabled={!model || readOnly}
         multiline
         summary={i18n.t('ui', 'sysModelDescription')}
         value={(model?.description_i18n as Record<string, string> | undefined) ?? {}}
@@ -114,7 +125,7 @@ export function InfoPanel(props: { modelId: string | undefined }): ReactElement 
         <span className="designer-field-label">{i18n.t('ui', 'sysModelLayerPage')}</span>
         <input
           className="designer-input"
-          disabled={!model}
+          disabled={!model || readOnly}
           placeholder={i18n.t('ui', 'layerPageFilter')}
           value={pageFilter}
           onChange={(e) => setPageFilter(e.target.value)}
@@ -122,7 +133,7 @@ export function InfoPanel(props: { modelId: string | undefined }): ReactElement 
         <select
           className="designer-select"
           style={{ width: '100%', marginTop: 6, padding: '9px 12px', fontSize: 13 }}
-          disabled={!model}
+          disabled={!model || readOnly}
           value={primaryPageId}
           onChange={(e) => {
             if (!model) {
@@ -169,9 +180,13 @@ export function InfoPanel(props: { modelId: string | undefined }): ReactElement 
         <input
           className="designer-input designer-color-swatch"
           readOnly
-          disabled={!model}
+          disabled={!model || readOnly}
           value={hex}
-          onClick={() => colorInputRef.current?.click()}
+          onClick={() => {
+            if (!readOnly) {
+              colorInputRef.current?.click();
+            }
+          }}
           title={i18n.t('ui', 'sysModelColorPickHint')}
           style={{
             backgroundColor: hex,
