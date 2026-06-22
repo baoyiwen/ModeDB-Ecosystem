@@ -128,6 +128,10 @@ function run(cmd, argv) {
 
 function publishArgs(pkg) {
   const out = ['--filter', pkg, 'publish', '--access', 'public'];
+  // 真发布必须指向 npmjs.org；全局 registry 若为 npmmirror 仅用于安装，不能用于 publish。
+  if (live) {
+    out.push('--registry', 'https://registry.npmjs.org');
+  }
   if (!live) {
     out.push('--dry-run');
     // dry-run 仅打 tarball 预览，允许工作区未提交，避免误报 ERR_PNPM_GIT_UNCLEAN

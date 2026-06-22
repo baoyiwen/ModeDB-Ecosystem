@@ -25,7 +25,9 @@ Publish (or dry-run) in this order so dependents exist on the registry:
 
 兼容旧名：`publish:workspaces` / `publish:workspaces:live`（等价于带 `--yes` 的真发布）。
 
-发布前请 **`npm login`**（pnpm **`pnpm login`** / **`npm login`** 均可，registry 以 **`.npmrc`** 为准）。
+发布前请 **`npm login --registry=https://registry.npmjs.org`**（或 **`pnpm login --registry=https://registry.npmjs.org`**）。验证：**`npm whoami --registry=https://registry.npmjs.org`**。
+
+**国内镜像（npmmirror）**：若全局 **`registry=https://registry.npmmirror.com`**（仅加速安装），**不要**对它 `npm login` 来发布。本仓库 **`scripts/publish-workspaces.mjs`** 在 **`--live`** 时会显式 **`--registry=https://registry.npmjs.org`**；根目录 **`.npmrc`** 也设置了 **`publish-registry`** / **`@mode-db:registry`**。你已在 npmjs 登录即可真发。
 
 ### 版本号（为什么「跑完了」但 npm 上没有新包？）
 
