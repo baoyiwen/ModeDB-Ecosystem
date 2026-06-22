@@ -149,7 +149,7 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
     libraryName: string,
     catalog?: ManagementCatalogResponse,
   ): Promise<void> {
-    const { config, data, layers, modes, state } = this.managers;
+    const { config, data, layers, modes, state, i18n, notifications } = this.managers;
     const reconnecting = this.state.reconnecting;
     config.setRemoteClient(client, true);
     config.setActiveLibraryName(libraryName);
@@ -158,9 +158,15 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
     }
     try {
       await data.loadLibraryCanvas(client, libraryName, catalog);
+      notifications.success(i18n.t('ui', 'notifyLibraryReady', { name: libraryName }), {
+        toast: false,
+      });
     } catch (e) {
       // eslint-disable-next-line no-console
       console.warn('[Designer] loadLibraryCanvas failed', e);
+      notifications.warning(i18n.t('ui', 'notifyLoadCanvasFailed'), {
+        message: e instanceof Error ? e.message : String(e),
+      });
     }
     config.resetViewport();
     modes.setMode('select');

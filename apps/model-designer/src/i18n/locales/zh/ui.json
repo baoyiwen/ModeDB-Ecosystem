@@ -168,5 +168,20 @@
   "layersEmpty": "暂无图层",
   "layerHide": "隐藏",
   "layerShow": "显示",
-  "vaultLocked": "已加密（保险库）"
+  "vaultLocked": "已加密（保险库）",
+  "notifyCenterTitle": "消息中心",
+  "fabNotifications": "消息通知",
+  "notifyEmpty": "暂无消息。",
+  "notifyMarkAllRead": "全部标为已读",
+  "notifyClearAll": "清空消息",
+  "notifyDismiss": "关闭",
+  "notifyUnreadCount": "{count} 条未读",
+  "notifyLevelInfo": "信息",
+  "notifyLevelSuccess": "成功",
+  "notifyLevelWarning": "警告",
+  "notifyLevelError": "错误",
+  "notifySaveSuccess": "已保存到引擎",
+  "notifyPullSuccess": "已从引擎拉取",
+  "notifyLibraryReady": "逻辑库「{name}」已就绪",
+  "notifyLoadCanvasFailed": "画布加载失败"
 }

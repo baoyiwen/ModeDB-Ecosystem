@@ -23,6 +23,7 @@ import {
 import { pullLatestDesignerSnapshot, pushDesignerSnapshot } from '../sync/sdk-designer-sync.js';
 import { loadLibraryCanvas as loadLibraryCanvasFromRows } from '../sync/designer-row-hydrate.js';
 import { mapI18nSuffix, pickCanonicalFromI18n } from '../utils/i18n-resolve.js';
+import { pickNewModelColor } from '../utils/model-color-pick.js';
 import { makeUniqueName } from '../utils/name-validation.js';
 
 export type DataListener = () => void;
@@ -596,6 +597,7 @@ export class DataManager {
       parent_id: parentId,
       props_objects_array: [],
       name_i18n: childI18n,
+      color_value: pickNewModelColor(this._models, (id) => this._layoutByModelId.get(id)),
     };
     const pLayout = this._layoutByModelId.get(parentId);
     this.upsertModel(child, {

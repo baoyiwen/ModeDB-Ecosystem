@@ -6,6 +6,7 @@ import {
   SYS_RELATION_DEF,
 } from '../bootstrap/designer-storage-init.js';
 import { DataType, dataTypeToEngineCode } from '../config/engine-prop-types.js';
+import { pickNewModelColorFromUsed } from '../utils/model-color-pick.js';
 
 /**
  * 业务库 → 设计器库的**反向导入**：
@@ -135,6 +136,13 @@ export async function importEngineCatalogIntoDesignerDb(
   }
 
   // 3. 缺失的 sys_model 行批量插入；同步登记到 modelIdByEngineName。
+  const usedModelColors: string[] = [];
+  for (const r of Array.isArray(existingModelRows) ? existingModelRows : []) {
+    const d = hydrate(r);
+    if (d.library_code === code && typeof d.color === 'string') {
+      usedModelColors.push(d.color);
+    }
+  }
   const newModelRows: Array<Record<string, unknown>> = [];
   const newModelEngineNames: string[] = [];
   for (const m of userModels) {
@@ -142,13 +150,15 @@ export async function importEngineCatalogIntoDesignerDb(
       continue;
     }
     const _id = crypto.randomUUID();
+    const color = pickNewModelColorFromUsed(usedModelColors);
+    usedModelColors.push(color);
     newModelRows.push({
       _id,
       engine_name: m.name,
       library_code: code,
       name: labelI18n(m.name),
       description: emptyI18n(),
-      color: '#7c3aed',
+      color,
       posX: 0,
       posY: 0,
       canvas_meta: '',

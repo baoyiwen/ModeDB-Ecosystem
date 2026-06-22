@@ -280,13 +280,22 @@ function reviveWireResult(json: WireExecuteResultJson): unknown {
         failureCount: json.failureCount ?? 0,
       };
     }
+    if (json.op === 'batchDelete') {
+      return {
+        op: 'batchDelete' as const,
+        successCount: json.successCount ?? 0,
+        failureCount: json.failureCount ?? 0,
+        ok: json.ok === true,
+      };
+    }
     if (
       json.op === 'dropModel' ||
       json.op === 'dropRelation' ||
       json.op === 'alterModel' ||
       json.op === 'registerModel' ||
       json.op === 'registerRelation' ||
-      json.op === 'updateRelationLogic'
+      json.op === 'updateRelationLogic' ||
+      json.op === 'delete'
     ) {
       return {
         op: json.op,
@@ -1193,6 +1202,33 @@ export class RemoteModelDBClient {
       typeof out.failureCount !== 'number'
     ) {
       throw new Error('batchUpdate: unexpected remote response shape.');
+    }
+    return { successCount: out.successCount, failureCount: out.failureCount };
+  }
+
+  /**
+   * 单次 RPC 内对多行执行 `delete`（软删 + 清理关系边，服务端在同一 write gate 内 `flushAll`）。
+   */
+  async batchDelete(
+    deletes: readonly { model: string; id: string }[],
+    _opts?: { sync?: boolean },
+  ): Promise<{ successCount: number; failureCount: number }> {
+    if (deletes.length === 0) {
+      return { successCount: 0, failureCount: 0 };
+    }
+    const session = await this.ensureSession();
+    const out = await session.executeWireBody({
+      op: 'batchDelete',
+      deletes: [...deletes],
+      sync: _opts?.sync,
+    });
+    if (
+      !isRecord(out) ||
+      out.op !== 'batchDelete' ||
+      typeof out.successCount !== 'number' ||
+      typeof out.failureCount !== 'number'
+    ) {
+      throw new Error('batchDelete: unexpected remote response shape.');
     }
     return { successCount: out.successCount, failureCount: out.failureCount };
   }

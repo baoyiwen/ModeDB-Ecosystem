@@ -168,5 +168,20 @@
   "layersEmpty": "No layers yet",
   "layerHide": "Hide",
   "layerShow": "Show",
-  "vaultLocked": "Encrypted (vault)"
+  "vaultLocked": "Encrypted (vault)",
+  "notifyCenterTitle": "Notification Center",
+  "fabNotifications": "Notifications",
+  "notifyEmpty": "No messages yet.",
+  "notifyMarkAllRead": "Mark all read",
+  "notifyClearAll": "Clear all",
+  "notifyDismiss": "Dismiss",
+  "notifyUnreadCount": "{count} unread",
+  "notifyLevelInfo": "Info",
+  "notifyLevelSuccess": "Success",
+  "notifyLevelWarning": "Warning",
+  "notifyLevelError": "Error",
+  "notifySaveSuccess": "Saved to engine",
+  "notifyPullSuccess": "Pulled from engine",
+  "notifyLibraryReady": "Library \"{name}\" is ready",
+  "notifyLoadCanvasFailed": "Failed to load canvas"
 }

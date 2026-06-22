@@ -24,6 +24,7 @@ import { paintScene } from '../canvas/paint-scene.js';
 import { CANVAS_VISUAL } from '../config/canvas-visual.js';
 import { isInheritRelation } from '../config/graph-edge-kinds.js';
 import { isCanvasStructureLocked } from '../managers/mode-manager.js';
+import { pickNewModelColor } from '../utils/model-color-pick.js';
 import type { GestureKind } from '../managers/event-manager.js';
 import type { InteractionState } from '../managers/state-manager.js';
 
@@ -269,9 +270,8 @@ export function CanvasContainer(props: {
         return;
       }
       if (mode === 'add' && !nodeId && !relId) {
-        const themes = config.getThemes();
-        const themeId = themes[0]!.id;
         const nid = crypto.randomUUID();
+        const color_value = pickNewModelColor(data.models, (id) => data.getLayout(id));
         // 用户期望「点击位置 = 节点中心」；存储约定 `position` 为外接正方形左上角，故减去半径。
         data.upsertModel(
           {
@@ -281,10 +281,11 @@ export function CanvasContainer(props: {
             // 新建模型：默认不带任何字段（由 Props 面板手动添加）。
             props_objects_array: [],
             name_i18n: { zh: '新模型', en: 'NewModel', ja: '新規モデル' },
+            color_value,
           },
           {
             position: { x: w.x - NODE_RADIUS, y: w.y - NODE_RADIUS },
-            color_theme: themeId,
+            color_theme: 'default',
             z_index: 1,
           },
         );

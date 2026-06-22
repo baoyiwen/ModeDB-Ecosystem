@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { DesignerComponent } from './base/designer-component.js';
+import { pushLibraryToEngine } from '../sync/designer-push-sync.js';
 import {
   importEngineCatalogIntoDesignerDb,
   readBusinessCatalog,
@@ -55,7 +56,7 @@ export class DesignerToolbar extends DesignerComponent<
   }
 
   override render(): ReactNode {
-    const { state, i18n, data, config, modes, graphSync } = this.managers;
+    const { state, i18n, data, config, modes, graphSync, notifications } = this.managers;
     const st = state.state;
     const client = config.remoteClient;
     const mode = modes.mode;
@@ -184,12 +185,22 @@ export class DesignerToolbar extends DesignerComponent<
                 return;
               }
               try {
-                if (graphSync.hasDirty) {
-                  await graphSync.push(client, data);
-                }
-                await data.pushGraphToEngine(client, libName);
-              } catch {
-                window.alert(i18n.t('errors', 'pushFailed'));
+                await pushLibraryToEngine({
+                  designerClient: client,
+                  libraryCode: libName,
+                  data,
+                  graphSync,
+                  host: getStoredHost('127.0.0.1'),
+                  port: getStoredPort(9090),
+                  token: getSessionToken() ?? getStoredToken(''),
+                });
+                notifications.success(i18n.t('ui', 'notifySaveSuccess'), {
+                  message: libName,
+                });
+              } catch (e) {
+                notifications.error(i18n.t('errors', 'pushFailed'), {
+                  message: e instanceof Error ? e.message : String(e),
+                });
               }
             }}
           >
@@ -214,8 +225,13 @@ export class DesignerToolbar extends DesignerComponent<
                 });
                 await importEngineCatalogIntoDesignerDb(client, libName, catalog);
                 await data.loadLibraryCanvas(client, libName, catalog);
-              } catch {
-                window.alert(i18n.t('errors', 'pullFailed'));
+                notifications.success(i18n.t('ui', 'notifyPullSuccess'), {
+                  message: libName,
+                });
+              } catch (e) {
+                notifications.error(i18n.t('errors', 'pullFailed'), {
+                  message: e instanceof Error ? e.message : String(e),
+                });
               }
             }}
           >

@@ -168,5 +168,20 @@
   "layersEmpty": "レイヤーがありません",
   "layerHide": "非表示",
   "layerShow": "表示",
-  "vaultLocked": "暗号化（ヴォルト）"
+  "vaultLocked": "暗号化（ヴォルト）",
+  "notifyCenterTitle": "通知センター",
+  "fabNotifications": "通知",
+  "notifyEmpty": "メッセージはありません。",
+  "notifyMarkAllRead": "すべて既読",
+  "notifyClearAll": "すべて削除",
+  "notifyDismiss": "閉じる",
+  "notifyUnreadCount": "未読 {count} 件",
+  "notifyLevelInfo": "情報",
+  "notifyLevelSuccess": "成功",
+  "notifyLevelWarning": "警告",
+  "notifyLevelError": "エラー",
+  "notifySaveSuccess": "エンジンへ保存しました",
+  "notifyPullSuccess": "エンジンから取得しました",
+  "notifyLibraryReady": "ライブラリ「{name}」の準備ができました",
+  "notifyLoadCanvasFailed": "キャンバスの読み込みに失敗しました"
 }

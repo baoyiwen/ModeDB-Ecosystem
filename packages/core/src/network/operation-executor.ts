@@ -210,6 +210,48 @@ export async function executeDatabaseOperation(
     };
   }
 
+  if (op.op === 'delete') {
+    const ok = await engine.delete(op.model, op.id, { sync: op.sync ?? true });
+    await flush();
+    return {
+      kind: 'mutation',
+      op: 'delete',
+      model: op.model,
+      record: null,
+      ok,
+    };
+  }
+
+  if (op.op === 'batchDelete') {
+    if (op.deletes.length > MAX_BATCH_UPDATE_OPS) {
+      throw new Error(`batchDelete: at most ${MAX_BATCH_UPDATE_OPS} deletes per operation.`);
+    }
+    let successCount = 0;
+    let failureCount = 0;
+    for (const d of op.deletes) {
+      try {
+        const ok = await engine.delete(d.model, d.id, { sync: false });
+        if (ok) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+      } catch {
+        failureCount++;
+      }
+    }
+    await flush();
+    return {
+      kind: 'mutation',
+      op: 'batchDelete',
+      model: '',
+      record: null,
+      successCount,
+      failureCount,
+      ok: failureCount === 0,
+    };
+  }
+
   if (op.op === 'dropModel') {
     await engine.dropModel(op.model);
     EngineLogger.instance.info(

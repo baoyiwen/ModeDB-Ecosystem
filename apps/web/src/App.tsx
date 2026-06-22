@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import {
   ModelDB,
   type ManagementCatalogModelInfo,
@@ -8,6 +8,16 @@ import {
 } from '@mode-db/sdk';
 import { LOCALE_LABEL, type LocaleId } from './i18n/messages';
 import { useI18n } from './i18n/I18nContext';
+import { QueryPanel } from './components/QueryPanel.js';
+import { useHashRoute } from './hooks/use-hash-route.js';
+import { QueryManualPage } from './pages/QueryManualPage.js';
+import { DEFAULT_QUERY_FORM, QUERY_FORM_LS_PREFIX } from './query/query-form-types.js';
+import {
+  clearPlaygroundSession,
+  isPlaygroundSessionValid,
+  loadPlaygroundSession,
+  touchPlaygroundSession,
+} from './session/playground-session.js';
 
 const LS = {
   host: 'modedb.playground.host',
@@ -31,31 +41,54 @@ function save(key: string, value: string): void {
   }
 }
 
+function serializeRowEntity(row: unknown): unknown {
+  if (
+    row &&
+    typeof row === 'object' &&
+    'getData' in row &&
+    typeof (row as { getData: () => unknown }).getData === 'function'
+  ) {
+    const h = row as { getData: (d?: boolean) => unknown; getModelName: () => string };
+    return {
+      model: h.getModelName(),
+      data: h.getData(true),
+    };
+  }
+  return row;
+}
+
 function serializeRows(rows: unknown): unknown {
-  if (!Array.isArray(rows)) {
+  if (Array.isArray(rows)) {
+    return rows.map(serializeRowEntity);
+  }
+  if (!rows || typeof rows !== 'object') {
     return rows;
   }
-  return rows.map((r) => {
-    if (
-      r &&
-      typeof r === 'object' &&
-      'getData' in r &&
-      typeof (r as { getData: () => unknown }).getData === 'function'
-    ) {
-      const h = r as { getData: (d?: boolean) => unknown; getModelName: () => string };
-      return {
-        model: h.getModelName(),
-        data: h.getData(true),
-      };
-    }
-    return r;
-  });
+  const rec = rows as Record<string, unknown>;
+  if (rec.kind === 'paginated' && 'items' in rec) {
+    return { ...rec, items: serializeRows(rec.items) };
+  }
+  if (rec.kind === 'rows' && Array.isArray(rec.rows)) {
+    return { ...rec, rows: rec.rows.map(serializeRowEntity) };
+  }
+  return rows;
 }
 
 const DEFAULT_INSERT = '[\n  { "_id": "row-1", "name": "Example" }\n]';
 const DEFAULT_ALTER_PATCH = '{\n  "note": { "type": "String", "required": false }\n}';
 
 export function App(): ReactElement {
+  const route = useHashRoute();
+
+  return (
+    <>
+      <PlaygroundApp />
+      {route === 'query-manual' ? <QueryManualPage /> : null}
+    </>
+  );
+}
+
+function PlaygroundApp(): ReactElement {
   const { t, locale, setLocale } = useI18n();
 
   const webGpuLabel = (raw: string): string => {
@@ -97,8 +130,10 @@ export function App(): ReactElement {
   const [newDbName, setNewDbName] = useState('');
   const [insertJson, setInsertJson] = useState(DEFAULT_INSERT);
   const [alterPatchJson, setAlterPatchJson] = useState(DEFAULT_ALTER_PATCH);
-  const [relateForward, setRelateForward] = useState('');
   const [dropRelationForward, setDropRelationForward] = useState('');
+  const [queryReloadToken, setQueryReloadToken] = useState(0);
+  const [sessionRestoring, setSessionRestoring] = useState(false);
+  const autoConnectStarted = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,32 +176,55 @@ export function App(): ReactElement {
       }),
     );
     setCatalogs(next);
+    touchPlaygroundSession();
   }, []);
 
-  const connect = useCallback(async (): Promise<void> => {
-    setError(null);
-    setResult(null);
-    const p = Number(port);
-    if (!token.trim() || !Number.isFinite(p)) {
-      setError(t('connect.needCredentials'));
-      return;
-    }
-    setBusy(true);
-    try {
-      const db = new ModelDB({ host: host.trim(), port: p, token: token.trim() });
-      await loadTrees(db);
-      setModelDb(db);
-      setSelectedDb(null);
-      setSelectedModel(null);
-      setWire(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setModelDb(null);
-      setCatalogs({});
-    } finally {
-      setBusy(false);
-    }
-  }, [host, loadTrees, port, t, token]);
+  const connect = useCallback(
+    async (opts?: { silent?: boolean }): Promise<boolean> => {
+      if (!opts?.silent) {
+        setError(null);
+        setResult(null);
+      }
+      const p = Number(port);
+      if (!token.trim() || !Number.isFinite(p)) {
+        if (!opts?.silent) {
+          setError(t('connect.needCredentials'));
+        }
+        return false;
+      }
+      if (!opts?.silent) {
+        setBusy(true);
+      }
+      try {
+        const db = new ModelDB({ host: host.trim(), port: p, token: token.trim() });
+        await loadTrees(db);
+        setModelDb(db);
+        if (!opts?.silent) {
+          setSelectedDb(null);
+          setSelectedModel(null);
+          setWire(null);
+        }
+        touchPlaygroundSession();
+        return true;
+      } catch (e) {
+        clearPlaygroundSession();
+        const message = e instanceof Error ? e.message : String(e);
+        if (opts?.silent) {
+          setError(t('session.reconnectFailed', { reason: message }));
+        } else {
+          setError(message);
+        }
+        setModelDb(null);
+        setCatalogs({});
+        return false;
+      } finally {
+        if (!opts?.silent) {
+          setBusy(false);
+        }
+      }
+    },
+    [host, loadTrees, port, t, token],
+  );
 
   useEffect(() => {
     if (!modelDb || !selectedDb) {
@@ -184,7 +242,34 @@ export function App(): ReactElement {
     };
   }, [modelDb, selectedDb]);
 
+  useEffect(() => {
+    if (autoConnectStarted.current || modelDb) {
+      return;
+    }
+    autoConnectStarted.current = true;
+
+    const session = loadPlaygroundSession();
+    if (!isPlaygroundSessionValid(session)) {
+      if (session) {
+        clearPlaygroundSession();
+        setError(t('session.expired'));
+      }
+      return;
+    }
+
+    const p = Number(port);
+    if (!token.trim() || !Number.isFinite(p)) {
+      return;
+    }
+
+    setSessionRestoring(true);
+    void connect({ silent: true }).finally(() => {
+      setSessionRestoring(false);
+    });
+  }, [connect, modelDb, port, t, token]);
+
   const disconnect = useCallback((): void => {
+    clearPlaygroundSession();
     setModelDb(null);
     setCatalogs({});
     setSelectedDb(null);
@@ -238,62 +323,6 @@ export function App(): ReactElement {
       setBusy(false);
     }
   }, [loadTrees, modelDb, selectedDb, t]);
-
-  const runQuery = useCallback(async (): Promise<void> => {
-    if (!wire || !selectedModel) {
-      setError(t('error.selectDbModel'));
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    setResult(null);
-    try {
-      const rel = relateForward.trim();
-      const chain = wire.model(selectedModel).query() as {
-        relate: (n: string) => { execute: (o?: { includeRelates?: boolean }) => Promise<unknown> };
-        group: (n: string) => {
-          execute: (o?: { includeRelates?: boolean }) => Promise<unknown>;
-          getRemoteExecuteSnapshot: (o?: { includeRelates?: boolean }) => unknown;
-        };
-        execute: (o?: { includeRelates?: boolean }) => Promise<unknown>;
-        getRemoteExecuteSnapshot: (o?: { includeRelates?: boolean }) => unknown;
-      };
-      const q = rel ? chain.relate(rel) : chain;
-      const rows = await q.execute({ includeRelates: true });
-      setResult(serializeRows(rows));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }, [relateForward, selectedModel, t, wire]);
-
-  const runQueryViaApply = useCallback(async (): Promise<void> => {
-    if (!wire || !selectedModel) {
-      setError(t('error.selectDbModel'));
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    setResult(null);
-    try {
-      const rel = relateForward.trim();
-      const base = wire.model(selectedModel).query() as {
-        relate: (n: string) => {
-          getRemoteExecuteSnapshot: (o?: { includeRelates?: boolean }) => unknown;
-        };
-        getRemoteExecuteSnapshot: (o?: { includeRelates?: boolean }) => unknown;
-      };
-      const chain = rel ? base.relate(rel) : base;
-      const snapshot = chain.getRemoteExecuteSnapshot({ includeRelates: true });
-      const out = await wire.apply({ op: 'executeQuery', snapshot });
-      setResult(out);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }, [relateForward, selectedModel, t, wire]);
 
   const runInsert = useCallback(async (): Promise<void> => {
     if (!wire || !selectedModel) {
@@ -453,7 +482,8 @@ export function App(): ReactElement {
           </select>
         </div>
         <p className="meta">{t('meta.endpoint', { endpoint, webGpu: webGpuLabel(webGpu) })}</p>
-        {!modelDb ? (
+        {sessionRestoring && !modelDb && <p className="meta">{t('session.restoring')}</p>}
+        {!modelDb && !sessionRestoring && (
           <>
             <label htmlFor="host">{t('connect.host')}</label>
             <input
@@ -483,7 +513,8 @@ export function App(): ReactElement {
               </button>
             </div>
           </>
-        ) : (
+        )}
+        {modelDb && (
           <>
             <p className="meta">{t('session.connected')}</p>
             <div className="actions">
@@ -535,9 +566,40 @@ export function App(): ReactElement {
                       <li className="meta">{t('tree.relations')}</li>
                       {(cat?.relations ?? []).map((r: ManagementCatalogRelationInfo) => (
                         <li key={`${r.forward}-${r.source}-${r.target}`}>
-                          <code>
-                            {r.forward}: {r.source} → {r.target}
-                          </code>
+                          <button
+                            type="button"
+                            className="model-list-relation"
+                            onClick={() => {
+                              setSelectedDb(db);
+                              if (selectedModel) {
+                                try {
+                                  const key = `${QUERY_FORM_LS_PREFIX}${selectedModel}`;
+                                  const raw = localStorage.getItem(key);
+                                  const prev = raw
+                                    ? ({
+                                        ...DEFAULT_QUERY_FORM,
+                                        ...JSON.parse(raw),
+                                      } as typeof DEFAULT_QUERY_FORM)
+                                    : { ...DEFAULT_QUERY_FORM };
+                                  localStorage.setItem(
+                                    key,
+                                    JSON.stringify({
+                                      ...prev,
+                                      relationForward: r.forward,
+                                      hopKind: 'relate',
+                                    }),
+                                  );
+                                  setQueryReloadToken((n) => n + 1);
+                                } catch {
+                                  /* ignore */
+                                }
+                              }
+                            }}
+                          >
+                            <code>
+                              {r.forward}: {r.source} → {r.target}
+                            </code>
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -578,35 +640,16 @@ export function App(): ReactElement {
             </p>
             <p className="hint">{t('ops.hint')}</p>
 
-            <h3>{t('query.title')}</h3>
-            <label htmlFor="relate">{t('query.relateLabel')}</label>
-            <input
-              id="relate"
-              value={relateForward}
-              onChange={(e) => setRelateForward(e.target.value)}
-              placeholder={t('query.relatePlaceholder')}
+            <QueryPanel
+              wire={wire}
+              selectedModel={selectedModel}
+              busy={busy}
+              serializeRows={serializeRows}
+              onRunResult={setResult}
+              onError={setError}
+              onBusy={setBusy}
+              queryReloadToken={queryReloadToken}
             />
-            <div className="actions">
-              <button
-                type="button"
-                disabled={busy || !wire || !selectedModel}
-                onClick={() => void runQuery()}
-              >
-                {t('query.run')}
-              </button>
-            </div>
-
-            <h3>{t('query.protocolTitle')}</h3>
-            <p className="hint">{t('query.protocolHint')}</p>
-            <div className="actions">
-              <button
-                type="button"
-                disabled={busy || !wire || !selectedModel}
-                onClick={() => void runQueryViaApply()}
-              >
-                {t('query.runViaApply')}
-              </button>
-            </div>
 
             <h3>{t('insert.title')}</h3>
             <textarea
@@ -685,11 +728,13 @@ export function App(): ReactElement {
       </section>
 
       <main className="result">
-        <h2>{t('result.title')}</h2>
-        {error && <pre className="err">{error}</pre>}
-        {!error && result !== null && <pre>{JSON.stringify(result, null, 2)}</pre>}
-        {!error && result === null && !busy && <p className="meta">{t('result.empty')}</p>}
-        {busy && <p className="meta">{t('result.loading')}</p>}
+        <h2 className="result-header">{t('result.title')}</h2>
+        <div className="result-body">
+          {error && <pre className="err">{error}</pre>}
+          {!error && result !== null && <pre>{JSON.stringify(result, null, 2)}</pre>}
+          {!error && result === null && !busy && <p className="meta">{t('result.empty')}</p>}
+          {busy && <p className="meta">{t('result.loading')}</p>}
+        </div>
       </main>
     </div>
   );

@@ -11,12 +11,14 @@ import { isInheritRelation } from '../config/graph-edge-kinds.js';
 import { isSidePanelReadOnly } from '../managers/mode-manager.js';
 import { InfoPanel } from './InfoPanel.js';
 import { PropsEditor } from './PropsEditor.js';
+import { NotificationCenter } from './NotificationCenter.js';
+import { NotificationToasts } from './NotificationToasts.js';
 import { LayerTreePanel } from './LayerTreePanel.js';
 import { RelationDetailPanel } from './RelationDetailPanel.js';
 import type { LocaleCode } from '../managers/i18n-manager.js';
-import { IconGrid, IconSettings } from './designer-icons.js';
+import { IconGrid, IconSettings, IconBell } from './designer-icons.js';
 
-export type ManualPanelKind = 'hierarchy' | 'settings';
+export type ManualPanelKind = 'hierarchy' | 'settings' | 'notifications';
 
 export function EditorChrome(props: {
   selectedModelId: string | undefined;
@@ -25,13 +27,16 @@ export function EditorChrome(props: {
   onRequestClearCanvasSelection: () => void;
   children: ReactNode;
 }): ReactElement {
-  const { i18n, appearance, modes, data, config } = useDesigner();
+  const { i18n, appearance, modes, data, config, notifications } = useDesigner();
   const [, bump] = useState(0);
   const [clearAllBusy, setClearAllBusy] = useState(false);
+  const [notifyBump, setNotifyBump] = useState(0);
   useEffect(() => i18n.subscribe(() => bump((n) => n + 1)), [i18n]);
   useEffect(() => appearance.subscribe(() => bump((n) => n + 1)), [appearance]);
   useEffect(() => modes.subscribe(() => bump((n) => n + 1)), [modes]);
   useEffect(() => data.subscribe(() => bump((n) => n + 1)), [data]);
+  useEffect(() => notifications.subscribe(() => setNotifyBump((n) => n + 1)), [notifications]);
+  void notifyBump;
 
   const readOnly = isSidePanelReadOnly(modes.mode);
   const selectedRel = props.selectedRelationId
@@ -64,9 +69,18 @@ export function EditorChrome(props: {
     }
   }, [manualOpen, passiveOpen, props]);
 
-  const openManual = useCallback((kind: ManualPanelKind): void => {
-    setManualPanel((p) => (p === kind ? null : kind));
-  }, []);
+  const openManual = useCallback(
+    (kind: ManualPanelKind): void => {
+      setManualPanel((p) => {
+        const next = p === kind ? null : kind;
+        if (next === 'notifications') {
+          notifications.markAllRead();
+        }
+        return next;
+      });
+    },
+    [notifications],
+  );
 
   const title = (): string => {
     if (manualPanel === 'hierarchy') {
@@ -74,6 +88,9 @@ export function EditorChrome(props: {
     }
     if (manualPanel === 'settings') {
       return i18n.t('ui', 'settings');
+    }
+    if (manualPanel === 'notifications') {
+      return i18n.t('ui', 'notifyCenterTitle');
     }
     if (showRelationDetail) {
       return i18n.t('ui', 'relations');
@@ -87,6 +104,9 @@ export function EditorChrome(props: {
   const renderBody = (): ReactElement | null => {
     if (manualPanel === 'hierarchy') {
       return <LayerTreePanel selectedId={effectiveModelId} readOnly={readOnly} />;
+    }
+    if (manualPanel === 'notifications') {
+      return <NotificationCenter />;
     }
     if (manualPanel === 'settings') {
       const currentAccent = appearance.accent.toLowerCase();
@@ -164,9 +184,9 @@ export function EditorChrome(props: {
                 setClearAllBusy(true);
                 try {
                   await config.remoteClient.apply({ op: 'clearAllData' });
-                  window.alert(i18n.t('ui', 'dataClearAllDone', { name: lib }));
+                  notifications.success(i18n.t('ui', 'dataClearAllDone', { name: lib }));
                 } catch {
-                  window.alert(i18n.t('errors', 'clearDataFailed'));
+                  notifications.error(i18n.t('errors', 'clearDataFailed'));
                 } finally {
                   setClearAllBusy(false);
                 }
@@ -210,6 +230,8 @@ export function EditorChrome(props: {
     <>
       {props.children}
 
+      <NotificationToasts />
+
       <div className="designer-panel-fabs designer-panel-fabs--row" aria-label="Panel toggles">
         <button
           type="button"
@@ -219,6 +241,20 @@ export function EditorChrome(props: {
           onClick={() => openManual('hierarchy')}
         >
           <IconGrid />
+        </button>
+        <button
+          type="button"
+          className="designer-fab designer-fab--panel designer-fab--notify"
+          data-active={manualPanel === 'notifications' ? 'true' : 'false'}
+          title={i18n.t('ui', 'fabNotifications')}
+          onClick={() => openManual('notifications')}
+        >
+          <IconBell />
+          {notifications.unreadCount > 0 ? (
+            <span className="designer-notify-fab-badge" aria-hidden>
+              {notifications.unreadCount > 99 ? '99+' : notifications.unreadCount}
+            </span>
+          ) : null}
         </button>
         <button
           type="button"
