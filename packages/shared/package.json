@@ -1,6 +1,6 @@
 {
   "name": "@mode-db/shared",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Wire codec, transport framing, remote query plan types, and protocol surfaces for ModelDB clients and server (no sibling workspace packages in dependencies).",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,7 +15,8 @@
   "sideEffects": false,
   "files": [
     "dist",
-    "src"
+    "src",
+    "README.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

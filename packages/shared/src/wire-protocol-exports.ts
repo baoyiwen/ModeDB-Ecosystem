@@ -76,6 +76,20 @@ export type WireExecuteBody =
       readonly sync?: boolean;
     }
   | {
+      readonly op: 'delete';
+      readonly model: string;
+      readonly id: string;
+      readonly sync?: boolean;
+    }
+  | {
+      readonly op: 'batchDelete';
+      readonly deletes: readonly {
+        readonly model: string;
+        readonly id: string;
+      }[];
+      readonly sync?: boolean;
+    }
+  | {
       readonly op: 'dropModel';
       readonly model: string;
     }
@@ -246,6 +260,8 @@ export type WireExecuteResultJson =
         | 'update'
         | 'insertMany'
         | 'batchUpdate'
+        | 'delete'
+        | 'batchDelete'
         | 'dropModel'
         | 'dropRelation'
         | 'alterModel'
