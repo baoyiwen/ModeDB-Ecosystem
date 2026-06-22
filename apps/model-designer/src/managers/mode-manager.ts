@@ -4,9 +4,25 @@
  */
 export type DesignerToolMode = 'select' | 'add' | 'delete' | 'link' | 'inherit';
 
-/** 选择模式：仅查看与选中，禁止增删改（画布与侧栏表单均为只读）。 */
-export function isReadOnlyToolMode(mode: DesignerToolMode): boolean {
+/**
+ * 侧栏表单（Info / Props / Relation）是否只读。
+ * 选择模式下仍允许编辑已选实体的元数据。
+ */
+export function isSidePanelReadOnly(_mode: DesignerToolMode): boolean {
+  return false;
+}
+
+/**
+ * 画布是否禁止**结构变更**（空白处新建、删除实体、连线等）。
+ * 选择模式下可拖拽、编辑侧栏，但不触发增删。
+ */
+export function isCanvasStructureLocked(mode: DesignerToolMode): boolean {
   return mode === 'select';
+}
+
+/** @deprecated 使用 {@link isSidePanelReadOnly} / {@link isCanvasStructureLocked} */
+export function isReadOnlyToolMode(mode: DesignerToolMode): boolean {
+  return isSidePanelReadOnly(mode);
 }
 
 export type ModeManagerListener = () => void;

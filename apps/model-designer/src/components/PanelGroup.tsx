@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { useDesigner } from '../context/designer-context.js';
-import { isReadOnlyToolMode } from '../managers/mode-manager.js';
+import { isSidePanelReadOnly } from '../managers/mode-manager.js';
 import { LayerPanel } from './LayerPanel.js';
 import { InfoPanel } from './InfoPanel.js';
 import { PropsEditor } from './PropsEditor.js';
@@ -9,7 +9,7 @@ import type { LocaleCode } from '../managers/i18n-manager.js';
 
 export function PanelGroup(props: { selectedId: string | undefined }): ReactElement {
   const { i18n, modes } = useDesigner();
-  const readOnly = isReadOnlyToolMode(modes.mode);
+  const readOnly = isSidePanelReadOnly(modes.mode);
   const [, bump] = useState(0);
 
   useEffect(() => {

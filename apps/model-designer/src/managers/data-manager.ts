@@ -1,4 +1,4 @@
-import type { RemoteModelDBClient } from '@mode-db/sdk';
+import type { ManagementCatalogResponse, RemoteModelDBClient } from '@mode-db/sdk';
 import type { DesignerLayerRow, DesignerModelLayout } from '../types/designer-layout.js';
 import type { LayerTreeNode } from '../types/layer-tree.js';
 import type { EngineModelNode, EngineRelationEdge } from '../types/engine-schema.js';
@@ -21,6 +21,7 @@ import {
   serializeMldgDocumentToUint8Array,
 } from '../sync/mldg-wire-bytes.js';
 import { pullLatestDesignerSnapshot, pushDesignerSnapshot } from '../sync/sdk-designer-sync.js';
+import { loadLibraryCanvas as loadLibraryCanvasFromRows } from '../sync/designer-row-hydrate.js';
 import { mapI18nSuffix, pickCanonicalFromI18n } from '../utils/i18n-resolve.js';
 import { makeUniqueName } from '../utils/name-validation.js';
 
@@ -665,6 +666,28 @@ export class DataManager {
     this.emit();
   }
 
+  /**
+   * 从设计器库 catalog 行 hydration 后一次性装入画布（无 mldg 快照时使用）。
+   */
+  loadHydratedGraph(
+    models: readonly EngineModelNode[],
+    relations: readonly EngineRelationEdge[],
+    layouts: readonly DesignerModelLayout[],
+  ): void {
+    this._models = models.map((m) => ({
+      ...m,
+      props_objects_array: m.props_objects_array.map((p) => ({ ...p })),
+    }));
+    this._relations = relations.map((r) => ({ ...r }));
+    this._layoutByModelId.clear();
+    this._nodeToLayers.clear();
+    for (const layout of layouts) {
+      this._layoutByModelId.set(layout.uuid, { ...layout });
+      this.assignModelToPage(layout.uuid, LAYER_DEFAULT_PAGE_ID);
+    }
+    this.emit();
+  }
+
   /** 事务回滚用深快照（pull 失败时恢复画布）。 */
   snapshotForTransaction(): MldgDocument {
     return structuredClone(this.toMldgDocument());
@@ -680,6 +703,25 @@ export class DataManager {
     extractEngineModelRelationPayload(doc);
     const bytes = serializeMldgDocumentToUint8Array(doc);
     await pushDesignerSnapshot(client, bytes, libraryCode);
+  }
+
+  /**
+   * 加载业务库画布：优先 mldg 快照，否则从设计器 catalog 行 hydration。
+   */
+  async loadLibraryCanvas(
+    client: RemoteModelDBClient,
+    libraryCode: string,
+    catalog?: ManagementCatalogResponse,
+  ): Promise<void> {
+    const before = this.snapshotForTransaction();
+    try {
+      await loadLibraryCanvasFromRows(client, this, libraryCode, catalog);
+    } catch (e) {
+      if (this._models.length === 0) {
+        this.loadMldgDocument(before);
+      }
+      throw e;
+    }
   }
 
   /**

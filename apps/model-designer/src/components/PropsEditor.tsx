@@ -67,7 +67,10 @@ export function PropsEditor(props: {
   }, [model?.id]);
 
   const inheritedProps = parentModel ? sortPropsBySort(parentModel.props_objects_array) : [];
-  const sortedOwn = model ? sortPropsBySort(model.props_objects_array) : [];
+  const inheritedNames = new Set(inheritedProps.map((p) => p.name));
+  const sortedOwn = model
+    ? sortPropsBySort(model.props_objects_array).filter((p) => !inheritedNames.has(p.name))
+    : [];
 
   const patchProp = useCallback(
     (pid: string, patch: Partial<PropObject>): void => {

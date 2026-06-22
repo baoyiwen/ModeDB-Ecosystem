@@ -1,6 +1,16 @@
 import type { ReactNode } from 'react';
 import { DesignerComponent } from './base/designer-component.js';
 import {
+  importEngineCatalogIntoDesignerDb,
+  readBusinessCatalog,
+} from '../sync/engine-catalog-import.js';
+import {
+  getSessionToken,
+  getStoredHost,
+  getStoredPort,
+  getStoredToken,
+} from '../config/connection-prefs.js';
+import {
   IconCheckSquare,
   IconDocument,
   IconExport,
@@ -195,7 +205,15 @@ export class DesignerToolbar extends DesignerComponent<
                 return;
               }
               try {
-                await data.pullGraphFromEngine(client, libName);
+                const token = getSessionToken() ?? getStoredToken('');
+                const catalog = await readBusinessCatalog({
+                  host: getStoredHost('127.0.0.1'),
+                  port: getStoredPort(9090),
+                  token,
+                  businessDb: libName,
+                });
+                await importEngineCatalogIntoDesignerDb(client, libName, catalog);
+                await data.loadLibraryCanvas(client, libName, catalog);
               } catch {
                 window.alert(i18n.t('errors', 'pullFailed'));
               }

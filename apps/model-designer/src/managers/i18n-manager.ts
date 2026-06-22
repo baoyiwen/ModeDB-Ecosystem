@@ -88,8 +88,14 @@ export class I18nManager {
     };
   }
 
-  t(ns: Namespace, key: string): string {
+  t(ns: Namespace, key: string, params?: Record<string, string>): string {
     const table = bundles[this._locale][ns];
-    return table[key] ?? bundles.en[ns][key] ?? key;
+    let text = table[key] ?? bundles.en[ns][key] ?? key;
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        text = text.replaceAll(`{${k}}`, v);
+      }
+    }
+    return text;
   }
 }

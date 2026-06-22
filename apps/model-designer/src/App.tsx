@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { RemoteModelDBClient } from '@mode-db/sdk';
+import type { ManagementCatalogResponse, RemoteModelDBClient } from '@mode-db/sdk';
 import './styles/designer-shell.css';
 import { CanvasContainer } from './components/CanvasContainer.js';
 import { ConnectionFlow } from './components/ConnectionFlow.js';
@@ -104,8 +104,9 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
           await seedDefaultWorkspaceRecords(client!, creds.library);
           // 与首次进入逻辑保持一致：重连时同样做一次幂等的业务库 → 设计器库 catalog 同步。
           // 业务库不可达或为空都不应阻塞编辑器加载，因此把整个导入步骤包在 try/catch 里。
+          let catalog: ManagementCatalogResponse | undefined;
           try {
-            const catalog = await readBusinessCatalog({
+            catalog = await readBusinessCatalog({
               host: creds.host,
               port: creds.port,
               token: creds.token,
@@ -116,22 +117,11 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
             // eslint-disable-next-line no-console
             console.warn('[Designer] silent reconnect: engine catalog import failed', e);
           }
+          await this.finishEditorReady(client!, creds.library, catalog);
         })(),
         RECONNECT_BOOTSTRAP_MS,
         'reconnect bootstrap timeout',
       );
-      // 进入编辑器后顺手拉一次最新图谱，让画布与上次保持一致；空快照属于正常情况，吞掉错误。
-      try {
-        await this.managers.data.pullGraphFromEngine(client, creds.library);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        if (!msg.includes('DESIGNER_SYNC_EMPTY')) {
-          // 非空但失败：仍然进入编辑器，避免阻塞；用户可手动重试拉取。
-          // eslint-disable-next-line no-console
-          console.warn('[Designer] silent reconnect: pullGraphFromEngine failed', e);
-        }
-      }
-      this.handleEditorReady(client, creds.library);
     } catch (e) {
       try {
         client?.close();
@@ -146,14 +136,31 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
     }
   }
 
-  private readonly handleEditorReady = (client: RemoteModelDBClient, libraryName: string): void => {
+  private readonly handleEditorReady = (
+    client: RemoteModelDBClient,
+    libraryName: string,
+    catalog?: ManagementCatalogResponse,
+  ): void => {
+    void this.finishEditorReady(client, libraryName, catalog);
+  };
+
+  private async finishEditorReady(
+    client: RemoteModelDBClient,
+    libraryName: string,
+    catalog?: ManagementCatalogResponse,
+  ): Promise<void> {
     const { config, data, layers, modes, state } = this.managers;
+    const reconnecting = this.state.reconnecting;
     config.setRemoteClient(client, true);
     config.setActiveLibraryName(libraryName);
-    // 静默重连路径中已先行 pullGraphFromEngine，这里不要把 dataManager 清空，否则
-    // 会把刚拉回的模型/关系全部抹掉，给用户造成「刷新后回到空画布」的错觉。
-    if (!this.state.reconnecting) {
+    if (!reconnecting) {
       data.resetToNewLibrary();
+    }
+    try {
+      await data.loadLibraryCanvas(client, libraryName, catalog);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[Designer] loadLibraryCanvas failed', e);
     }
     config.resetViewport();
     modes.setMode('select');
@@ -166,7 +173,7 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
       selectedRelationId: undefined,
       sessionEpoch: s.sessionEpoch + 1,
     }));
-  };
+  }
 
   private handleDisconnected = (): void => {
     const { config, data } = this.managers;

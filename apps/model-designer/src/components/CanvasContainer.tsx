@@ -23,7 +23,7 @@ import { segmentFromNodeTowardPoint } from '../canvas/relation-geometry.js';
 import { paintScene } from '../canvas/paint-scene.js';
 import { CANVAS_VISUAL } from '../config/canvas-visual.js';
 import { isInheritRelation } from '../config/graph-edge-kinds.js';
-import { isReadOnlyToolMode } from '../managers/mode-manager.js';
+import { isCanvasStructureLocked } from '../managers/mode-manager.js';
 import type { GestureKind } from '../managers/event-manager.js';
 import type { InteractionState } from '../managers/state-manager.js';
 
@@ -357,12 +357,7 @@ export function CanvasContainer(props: {
   );
 
   const tickForceLayout = useCallback((): void => {
-    if (
-      !config.forceLayoutEnabled ||
-      isReadOnlyToolMode(modesRef.current) ||
-      nodeDragRef.current ||
-      relationDragRef.current
-    ) {
+    if (!config.forceLayoutEnabled || nodeDragRef.current || relationDragRef.current) {
       return;
     }
     const hidden = hiddenIds();
@@ -576,7 +571,7 @@ export function CanvasContainer(props: {
       }
 
       const canDragNode =
-        tool === 'add' &&
+        (tool === 'select' || tool === 'add') &&
         !!hit &&
         !data.isModelPositionLocked(hit) &&
         ev.button === 0 &&
@@ -608,7 +603,7 @@ export function CanvasContainer(props: {
       }
 
       const relHit =
-        !hit && (tool === 'add' || tool === 'link') && !isReadOnlyToolMode(tool)
+        !hit && (tool === 'add' || tool === 'link') && !isCanvasStructureLocked(tool)
           ? hitRelationAt(x, y)
           : undefined;
       const canBendRelation =

@@ -12,17 +12,17 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@mode-db/sdk": "^0.1.7",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "@mode-db/sdk": "^0.1.8",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",
-    "@webgpu/types": "^0.1.69",
+    "@webgpu/types": "^0.1.70",
     "typescript": "~5.9.3",
-    "vite": "^6.4.2",
+    "vite": "^6.4.3",
     "vite-plugin-node-polyfills": "^0.26.0"
   }
 }

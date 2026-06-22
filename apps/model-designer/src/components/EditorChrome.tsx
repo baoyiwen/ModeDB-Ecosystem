@@ -8,7 +8,7 @@ import {
 } from 'react';
 import { useDesigner } from '../context/designer-context.js';
 import { isInheritRelation } from '../config/graph-edge-kinds.js';
-import { isReadOnlyToolMode } from '../managers/mode-manager.js';
+import { isSidePanelReadOnly } from '../managers/mode-manager.js';
 import { InfoPanel } from './InfoPanel.js';
 import { PropsEditor } from './PropsEditor.js';
 import { LayerTreePanel } from './LayerTreePanel.js';
@@ -33,7 +33,7 @@ export function EditorChrome(props: {
   useEffect(() => modes.subscribe(() => bump((n) => n + 1)), [modes]);
   useEffect(() => data.subscribe(() => bump((n) => n + 1)), [data]);
 
-  const readOnly = isReadOnlyToolMode(modes.mode);
+  const readOnly = isSidePanelReadOnly(modes.mode);
   const selectedRel = props.selectedRelationId
     ? data.relations.find((r) => r.id === props.selectedRelationId)
     : undefined;

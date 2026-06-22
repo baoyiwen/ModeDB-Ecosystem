@@ -28,7 +28,11 @@ const CONNECT_MS = 45_000;
 const OPEN_MS = 90_000;
 
 export interface ConnectionFlowProps {
-  onEditorReady: (client: RemoteModelDBClient, libraryName: string) => void;
+  onEditorReady: (
+    client: RemoteModelDBClient,
+    libraryName: string,
+    catalog?: import('@mode-db/sdk').ManagementCatalogResponse,
+  ) => void;
 }
 
 /**
@@ -100,6 +104,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
     setStep('opening');
     let client: RemoteModelDBClient | undefined;
     let connectOk = false;
+    let catalog: Awaited<ReturnType<typeof readBusinessCatalog>> | undefined;
     try {
       // 不连接用户业务库，避免污染；统一连到设计器专属库（必要时自动创建）。
       client = await withTimeout(
@@ -122,7 +127,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
           // 从业务库（Model Engine 层）反向导入 schema：把已注册的引擎模型/关系
           // 在设计器库内"编号入库"，建立 assetMap / 继承拓扑，为后续保存位置与图层归属做好基础。
           setOpeningDetail(`importing engine catalog of "${name}"`);
-          const catalog = await readBusinessCatalog({
+          catalog = await readBusinessCatalog({
             host: host.trim(),
             port,
             token: token.trim(),
@@ -149,7 +154,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
       setRememberToken(rememberToken);
       // `name` 是用户业务库的逻辑标签（=`sys_data_asset_map.code`），用作设计器内的命名空间；
       // 实际 WebSocket 会话连接的是 FIXED_MODEL_DESIGNER_DATABASE。
-      props.onEditorReady(client, name);
+      props.onEditorReady(client, name, catalog);
     } catch (e) {
       try {
         client?.close();

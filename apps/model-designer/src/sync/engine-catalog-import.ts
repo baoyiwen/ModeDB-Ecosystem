@@ -2,8 +2,10 @@ import { RemoteModelDBClient, type ManagementCatalogResponse } from '@mode-db/sd
 import {
   SYS_DATA_ASSET_MAP,
   SYS_MODEL,
+  SYS_PROPS,
   SYS_RELATION_DEF,
 } from '../bootstrap/designer-storage-init.js';
+import { DataType, dataTypeToEngineCode } from '../config/engine-prop-types.js';
 
 /**
  * 业务库 → 设计器库的**反向导入**：
@@ -22,12 +24,12 @@ import {
  */
 
 interface RowDataLike {
-  getData?: () => Record<string, unknown>;
+  getData?: (deep?: boolean) => Record<string, unknown>;
 }
 
 function hydrate(row: unknown): Record<string, unknown> {
   if (row && typeof row === 'object' && typeof (row as RowDataLike).getData === 'function') {
-    return (row as Required<RowDataLike>).getData();
+    return (row as Required<RowDataLike>).getData(true);
   }
   // 兼容已经是 plain object 的场景。
   if (row && typeof row === 'object') {
@@ -103,7 +105,7 @@ export async function importEngineCatalogIntoDesignerDb(
     const d = hydrate(r);
     if (d.library_code === code && typeof d.engine_name === 'string' && d.engine_name !== '') {
       const id = typeof d._id === 'string' ? d._id : '';
-      if (id !== '') {
+      if (id !== '' && !modelIdByEngineName.has(d.engine_name)) {
         modelIdByEngineName.set(d.engine_name, id);
       }
     }
@@ -160,6 +162,115 @@ export async function importEngineCatalogIntoDesignerDb(
       .insertMany(newModelRows, { sync: true });
     if (failureCount > 0) {
       throw new Error('ENGINE_CATALOG_IMPORT_INSERT_MODEL_FAILED');
+    }
+  }
+
+  // 3a. 补全已有 sys_model 行的展示名（历史导入可能只有 engine_name、无 I18N name）。
+  const nameUpdates: Array<{ model: string; id: string; partial: Record<string, unknown> }> = [];
+  for (const r of Array.isArray(existingModelRows) ? existingModelRows : []) {
+    const d = hydrate(r);
+    if (d.library_code !== code || typeof d.engine_name !== 'string') {
+      continue;
+    }
+    const id = typeof d._id === 'string' ? d._id : '';
+    if (!id) {
+      continue;
+    }
+    const rawName = d.name;
+    let needsName = rawName === undefined || rawName === null;
+    if (!needsName && typeof rawName === 'object' && !Array.isArray(rawName)) {
+      needsName = Object.values(rawName as Record<string, unknown>).every(
+        (v) => typeof v !== 'string' || v.trim() === '',
+      );
+    }
+    if (needsName) {
+      nameUpdates.push({
+        model: SYS_MODEL,
+        id,
+        partial: { name: labelI18n(String(d.engine_name)) },
+      });
+    }
+  }
+  if (nameUpdates.length > 0) {
+    await designerClient.batchUpdate(nameUpdates, { sync: true });
+  }
+
+  // 3b. 为业务库模型字段写入 sys_props（按 catalog.fields；已绑定到模型的字段跳过）。
+  const propsByModelEngine = new Map<string, Set<string>>();
+  const modelRowsWithProps = await designerClient
+    .model(SYS_MODEL)
+    .query()
+    .group('modelOwnsProps')
+    .execute({ includeRelates: true });
+  for (const r of Array.isArray(modelRowsWithProps) ? modelRowsWithProps : []) {
+    const d = hydrate(r);
+    if (d.library_code !== code || typeof d.engine_name !== 'string') {
+      continue;
+    }
+    const engineModel = String(d.engine_name);
+    const set = propsByModelEngine.get(engineModel) ?? new Set<string>();
+    const rel = d.relates as Record<string, unknown> | undefined;
+    const slot = rel?.modelOwnsProps;
+    if (Array.isArray(slot)) {
+      for (const p of slot as Record<string, unknown>[]) {
+        if (typeof p.engine_name === 'string') {
+          set.add(p.engine_name);
+        }
+      }
+    }
+    propsByModelEngine.set(engineModel, set);
+  }
+
+  const newPropRows: Array<Record<string, unknown>> = [];
+  const propBindings: Array<{ modelId: string; propId: string }> = [];
+  for (const m of userModels) {
+    const modelId = modelIdByEngineName.get(m.name);
+    if (!modelId) {
+      continue;
+    }
+    const existingFields = propsByModelEngine.get(m.name) ?? new Set<string>();
+    const fields = m.fields ?? [];
+    for (let sort = 0; sort < fields.length; sort++) {
+      const fieldName = fields[sort]!;
+      if (existingFields.has(fieldName)) {
+        continue;
+      }
+      const propId = crypto.randomUUID();
+      newPropRows.push({
+        _id: propId,
+        engine_name: fieldName,
+        library_code: code,
+        name: labelI18n(fieldName),
+        description: emptyI18n(),
+        engineType: dataTypeToEngineCode(DataType.String),
+        sort,
+        isRequired: false,
+        isPrimary: fieldName === 'id' || fieldName === '_id',
+        vaultKey: '',
+      });
+      propBindings.push({ modelId, propId });
+      existingFields.add(fieldName);
+    }
+    propsByModelEngine.set(m.name, existingFields);
+  }
+  if (newPropRows.length > 0) {
+    const { failureCount } = await designerClient
+      .model(SYS_PROPS)
+      .insertMany(newPropRows, { sync: true });
+    if (failureCount > 0) {
+      throw new Error('ENGINE_CATALOG_IMPORT_INSERT_PROP_FAILED');
+    }
+    for (const { modelId, propId } of propBindings) {
+      try {
+        await designerClient.bindRelation(
+          { model: SYS_MODEL, id: modelId },
+          { model: SYS_PROPS, id: propId },
+          'modelOwnsProps',
+          'propOwnedByModel',
+        );
+      } catch {
+        /* idempotent */
+      }
     }
   }
 
