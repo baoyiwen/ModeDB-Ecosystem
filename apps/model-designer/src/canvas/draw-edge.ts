@@ -1,12 +1,29 @@
-import type { DirectedSegment, SelfLoopGeometry } from './relation-geometry.js';
+import type {
+  CurvedDirectedSegment,
+  DirectedSegment,
+  SelfLoopGeometry,
+} from './relation-geometry.js';
+import { quadraticTangentAt } from './relation-geometry.js';
 
 /**
- * 有向边：线段 + 终点箭头（查询方向指向 target）。
- *
- * `lineWidth` 与 `arrowSize` 均为**当前 ctx 用户空间**的尺寸。如果调用方在 `ctx.scale(zoom)` 下
- * 渲染并希望屏幕尺寸恒定，应预先除以 zoom（见 `paint-scene.ts` 中的统一 `RELATION_*_PX / zoom`）。
+ * 有向边：直线或二次贝塞尔 + 终点箭头（查询方向指向 target）。
  */
 export function drawDirectedRelation(
+  ctx: CanvasRenderingContext2D,
+  seg: DirectedSegment | CurvedDirectedSegment,
+  color: string,
+  lineWidth: number,
+  arrowSize: number,
+  dashed: boolean,
+): void {
+  if ('bent' in seg && seg.bent) {
+    drawCurvedDirectedRelation(ctx, seg, color, lineWidth, arrowSize, dashed);
+    return;
+  }
+  drawStraightDirectedRelation(ctx, seg, color, lineWidth, arrowSize, dashed);
+}
+
+function drawStraightDirectedRelation(
   ctx: CanvasRenderingContext2D,
   seg: DirectedSegment,
   color: string,
@@ -31,6 +48,49 @@ export function drawDirectedRelation(
   const bx = x2 - ux * arrowSize;
   const by = y2 - uy * arrowSize;
   ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(bx + px * hw, by + py * hw);
+  ctx.lineTo(bx - px * hw, by - py * hw);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawCurvedDirectedRelation(
+  ctx: CanvasRenderingContext2D,
+  seg: CurvedDirectedSegment,
+  color: string,
+  lineWidth: number,
+  arrowSize: number,
+  dashed: boolean,
+): void {
+  const { x1, y1, x2, y2, cpx, cpy } = seg;
+  const tan = quadraticTangentAt(1, x1, y1, cpx, cpy, x2, y2);
+  const tLen = Math.hypot(tan.x, tan.y);
+  const ux = tLen < 1e-6 ? seg.ux : tan.x / tLen;
+  const uy = tLen < 1e-6 ? seg.uy : tan.y / tLen;
+  const shorten = arrowSize * 1.05;
+  const lx = x2 - ux * shorten;
+  const ly = y2 - uy * shorten;
+  const dash = arrowSize * 0.5;
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.setLineDash(dashed ? [dash, dash] : []);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.quadraticCurveTo(cpx, cpy, lx, ly);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const px = -uy;
+  const py = ux;
+  const hw = arrowSize * 0.48;
+  const bx = x2 - ux * arrowSize;
+  const by = y2 - uy * arrowSize;
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.moveTo(x2, y2);

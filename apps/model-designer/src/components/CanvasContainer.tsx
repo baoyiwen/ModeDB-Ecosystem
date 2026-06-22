@@ -1,11 +1,29 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { useDesigner } from '../context/designer-context.js';
-import { buildPlacedNodes, hitTestNode, hitTestRelation } from '../canvas/hit-test.js';
+import {
+  buildPlacedNodes,
+  hitTestNode,
+  hitTestRelation,
+  type RelationHit,
+} from '../canvas/hit-test.js';
 import { NODE_RADIUS } from '../canvas/node-geometry.js';
+import {
+  buildForceNodes,
+  centerToTopLeft,
+  tickForceLayout as simulateForceLayout,
+  type ForceLayoutNode,
+} from '../canvas/force-layout.js';
+import {
+  collectSnapPeers,
+  snapNodeTopLeft,
+  snapWorldPoint,
+  type SnapGuide,
+} from '../canvas/snap-guides.js';
 import { segmentFromNodeTowardPoint } from '../canvas/relation-geometry.js';
 import { paintScene } from '../canvas/paint-scene.js';
 import { CANVAS_VISUAL } from '../config/canvas-visual.js';
 import { isInheritRelation } from '../config/graph-edge-kinds.js';
+import { isReadOnlyToolMode } from '../managers/mode-manager.js';
 import type { GestureKind } from '../managers/event-manager.js';
 import type { InteractionState } from '../managers/state-manager.js';
 
@@ -48,6 +66,7 @@ export function CanvasContainer(props: {
   const [, bump] = useState(0);
   const [hoveredModelId, setHoveredModelId] = useState<string | undefined>(undefined);
   const [hoveredRelationId, setHoveredRelationId] = useState<string | undefined>(undefined);
+  const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
   const { selectedModelId, selectedRelationId, onSelectModel, onSelectRelation } = props;
 
   const interactionRef = useRef<InteractionState>('SELECT');
@@ -62,14 +81,26 @@ export function CanvasContainer(props: {
   } | null>(null);
   const nodeDragRef = useRef<{
     id: string;
-    lastX: number;
-    lastY: number;
-    startX: number;
-    startY: number;
+    startCenterX: number;
+    startCenterY: number;
+    startWorldX: number;
+    startWorldY: number;
     startCanvasX: number;
     startCanvasY: number;
     moved: boolean;
   } | null>(null);
+  const relationDragRef = useRef<{
+    relationId: string;
+    direction: RelationHit['direction'];
+    startBendX: number;
+    startBendY: number;
+    startWorldX: number;
+    startWorldY: number;
+    moved: boolean;
+  } | null>(null);
+  const forceNodesRef = useRef<ForceLayoutNode[] | null>(null);
+  const forceMovedRef = useRef<Set<string>>(new Set());
+  const forceWasEnabledRef = useRef(false);
   const linkClickRef = useRef<string | undefined>(undefined);
   const spaceDownRef = useRef(false);
   const modesRef = useRef(modes.mode);
@@ -154,6 +185,41 @@ export function CanvasContainer(props: {
 
   const hiddenIds = useCallback(() => data.getHiddenNodeIdsForLayerVisibility(), [data]);
 
+  const snapPeers = useCallback(() => {
+    const hidden = hiddenIds();
+    return collectSnapPeers(
+      data.models.filter((m) => !hidden.has(m.id)).map((m) => m.id),
+      (id) => data.getLayout(id)?.position,
+    );
+  }, [data, hiddenIds]);
+
+  const snapDragOptions = useCallback(
+    () => ({
+      gridSize: config.gridSize,
+      snapGrid: config.snapToGrid,
+      snapAlign: config.snapToGrid,
+      showTripleLineGuides: true,
+      threshold: 14 / config.viewportZoom,
+      lineThreshold: 6 / config.viewportZoom,
+      gapEqualEps: Math.max(8, 12 / config.viewportZoom),
+    }),
+    [config.gridSize, config.snapToGrid, config.viewportZoom],
+  );
+
+  useEffect(() => {
+    if (!config.forceLayoutEnabled) {
+      forceNodesRef.current = null;
+      return;
+    }
+    const hidden = hiddenIds();
+    const visible = data.models.filter((m) => !hidden.has(m.id));
+    forceNodesRef.current = buildForceNodes(
+      visible.map((m) => m.id),
+      (id) => data.getLayout(id)?.position,
+      (id) => data.isModelPositionLocked(id),
+    );
+  }, [config.forceLayoutEnabled, data, hiddenIds]);
+
   const hitAt = useCallback(
     (screenX: number, screenY: number) => {
       const w = toWorld(screenX, screenY);
@@ -163,10 +229,18 @@ export function CanvasContainer(props: {
   );
 
   const hitRelationAt = useCallback(
-    (screenX: number, screenY: number) => {
+    (screenX: number, screenY: number): RelationHit | undefined => {
       const w = toWorld(screenX, screenY);
       const thresholdWorld = REL_HIT_THRESHOLD / config.viewportZoom;
-      return hitTestRelation(w.x, w.y, data.relations, placed(), hiddenIds(), thresholdWorld);
+      return hitTestRelation(
+        w.x,
+        w.y,
+        data.relations,
+        placed(),
+        hiddenIds(),
+        thresholdWorld,
+        (id) => data.getRelationCanvasMeta(id),
+      );
     },
     [data, placed, hiddenIds, config.viewportZoom, toWorld],
   );
@@ -177,7 +251,8 @@ export function CanvasContainer(props: {
       const mode = modesRef.current;
       const w = toWorld(sx, sy);
       const nodeId = hitAt(sx, sy);
-      const relId = nodeId ? undefined : hitRelationAt(sx, sy);
+      const relHit = nodeId ? undefined : hitRelationAt(sx, sy);
+      const relId = relHit?.id;
       if (st === 'LINKING') {
         return;
       }
@@ -257,13 +332,18 @@ export function CanvasContainer(props: {
   const updateHoverAt = useCallback(
     (screenX: number, screenY: number): void => {
       const st = interactionRef.current;
-      if (st === 'LINKING' || panDragRef.current || nodeDragRef.current) {
+      if (
+        st === 'LINKING' ||
+        panDragRef.current ||
+        nodeDragRef.current ||
+        relationDragRef.current
+      ) {
         setHoveredModelId(undefined);
         setHoveredRelationId(undefined);
         return;
       }
       const nodeId = hitAt(screenX, screenY);
-      let relId = nodeId ? undefined : hitRelationAt(screenX, screenY);
+      let relId = nodeId ? undefined : hitRelationAt(screenX, screenY)?.id;
       if (relId) {
         const rel = data.relations.find((r) => r.id === relId);
         if (rel && isInheritRelation(rel.kind)) {
@@ -273,8 +353,74 @@ export function CanvasContainer(props: {
       setHoveredModelId(nodeId);
       setHoveredRelationId(relId);
     },
-    [hitAt, hitRelationAt],
+    [hitAt, hitRelationAt, data.relations],
   );
+
+  const tickForceLayout = useCallback((): void => {
+    if (
+      !config.forceLayoutEnabled ||
+      isReadOnlyToolMode(modesRef.current) ||
+      nodeDragRef.current ||
+      relationDragRef.current
+    ) {
+      return;
+    }
+    const hidden = hiddenIds();
+    const visible = data.models.filter((m) => !hidden.has(m.id));
+    if (visible.length === 0) {
+      return;
+    }
+    const ids = visible
+      .map((m) => m.id)
+      .sort()
+      .join('\n');
+    const prevIds = forceNodesRef.current
+      ?.map((n) => n.id)
+      .sort()
+      .join('\n');
+    if (!forceNodesRef.current || ids !== prevIds) {
+      forceNodesRef.current = buildForceNodes(
+        visible.map((m) => m.id),
+        (id) => data.getLayout(id)?.position,
+        (id) => data.isModelPositionLocked(id),
+      );
+    }
+    const nodes = forceNodesRef.current;
+    const edges = data.relations
+      .filter((r) => !hidden.has(r.source_model_id) && !hidden.has(r.target_model_id))
+      .map((r) => ({ source: r.source_model_id, target: r.target_model_id }));
+    const cx = (cssSizeRef.current.width / 2 - config.viewportPanX) / config.viewportZoom;
+    const cy = (cssSizeRef.current.height / 2 - config.viewportPanY) / config.viewportZoom;
+    const changed = simulateForceLayout(nodes, edges, { x: cx, y: cy });
+    if (!changed) {
+      return;
+    }
+    for (const n of nodes) {
+      if (n.fixed) {
+        continue;
+      }
+      const layout = data.getLayout(n.id);
+      if (!layout) {
+        continue;
+      }
+      const pos = centerToTopLeft(n.x, n.y);
+      if (layout.position.x !== pos.x || layout.position.y !== pos.y) {
+        data.setLayout({ ...layout, position: pos });
+        forceMovedRef.current.add(n.id);
+      }
+    }
+  }, [config, data, hiddenIds]);
+
+  const flushForceLayoutDirty = useCallback((): void => {
+    if (forceWasEnabledRef.current && !config.forceLayoutEnabled) {
+      for (const id of forceMovedRef.current) {
+        graphSync.markModelDirty(id);
+      }
+      forceMovedRef.current.clear();
+      forceNodesRef.current = null;
+    }
+    forceWasEnabledRef.current = config.forceLayoutEnabled;
+  }, [config.forceLayoutEnabled, graphSync]);
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
@@ -307,6 +453,7 @@ export function CanvasContainer(props: {
       hiddenNodeIds: data.getHiddenNodeIdsForLayerVisibility(),
       linkPreview,
       uiLocale: i18n.locale,
+      snapGuides,
     });
   }, [
     config,
@@ -318,10 +465,16 @@ export function CanvasContainer(props: {
     placed,
     toWorld,
     i18n.locale,
+    snapGuides,
   ]);
 
   useEffect(() => {
     const loop = (): void => {
+      if (config.forceLayoutEnabled) {
+        tickForceLayout();
+      } else {
+        flushForceLayoutDirty();
+      }
       paint();
       rafRef.current = requestAnimationFrame(loop);
     };
@@ -331,7 +484,7 @@ export function CanvasContainer(props: {
         cancelAnimationFrame(rafRef.current);
       }
     };
-  }, [paint]);
+  }, [paint, tickForceLayout, flushForceLayoutDirty, config.forceLayoutEnabled]);
 
   useEffect(() => {
     const onGesture = (g: GestureKind): void => {
@@ -425,21 +578,60 @@ export function CanvasContainer(props: {
       const canDragNode =
         tool === 'add' &&
         !!hit &&
+        !data.isModelPositionLocked(hit) &&
         ev.button === 0 &&
         !ev.ctrlKey &&
         !ev.metaKey &&
         (st === 'SELECT' || st === 'ADD_NODE');
       if (canDragNode) {
+        const layout = data.getLayout(hit!);
+        const startCenterX = (layout?.position.x ?? 0) + NODE_RADIUS;
+        const startCenterY = (layout?.position.y ?? 0) + NODE_RADIUS;
         nodeDragRef.current = {
           id: hit!,
-          lastX: w.x,
-          lastY: w.y,
-          startX: w.x,
-          startY: w.y,
+          startCenterX,
+          startCenterY,
+          startWorldX: w.x,
+          startWorldY: w.y,
           startCanvasX: x,
           startCanvasY: y,
           moved: false,
         };
+        if (forceNodesRef.current) {
+          const fn = forceNodesRef.current.find((n) => n.id === hit);
+          if (fn) {
+            fn.fixed = true;
+          }
+        }
+        canvas.setPointerCapture(ev.pointerId);
+        return;
+      }
+
+      const relHit =
+        !hit && (tool === 'add' || tool === 'link') && !isReadOnlyToolMode(tool)
+          ? hitRelationAt(x, y)
+          : undefined;
+      const canBendRelation =
+        !!relHit &&
+        relHit.direction !== 'self' &&
+        !data.isRelationLocked(relHit.id) &&
+        ev.button === 0 &&
+        !ev.ctrlKey &&
+        !ev.metaKey &&
+        (st === 'SELECT' || st === 'ADD_NODE');
+      if (canBendRelation && relHit) {
+        const meta = data.getRelationCanvasMeta(relHit.id);
+        const bend = relHit.direction === 'reverse' ? meta.reverse_bend : meta.forward_bend;
+        relationDragRef.current = {
+          relationId: relHit.id,
+          direction: relHit.direction,
+          startBendX: bend?.x ?? w.x,
+          startBendY: bend?.y ?? w.y,
+          startWorldX: w.x,
+          startWorldY: w.y,
+          moved: false,
+        };
+        onSelectRelation(relHit.id);
         canvas.setPointerCapture(ev.pointerId);
         return;
       }
@@ -481,28 +673,58 @@ export function CanvasContainer(props: {
 
       if (nodeDragRef.current) {
         const d = nodeDragRef.current;
-        const layout = data.getLayout(d.id);
-        if (layout) {
-          const dx = w.x - d.lastX;
-          const dy = w.y - d.lastY;
-          if (Math.hypot(x - d.startCanvasX, y - d.startCanvasY) > DRAG_THRESHOLD_CANVAS) {
-            d.moved = true;
-          }
-          data.setLayout({
-            ...layout,
-            position: { x: layout.position.x + dx, y: layout.position.y + dy },
-          });
+        if (Math.hypot(x - d.startCanvasX, y - d.startCanvasY) > DRAG_THRESHOLD_CANVAS) {
+          d.moved = true;
         }
-        nodeDragRef.current = {
-          id: d.id,
-          lastX: w.x,
-          lastY: w.y,
-          startX: d.startX,
-          startY: d.startY,
-          startCanvasX: d.startCanvasX,
-          startCanvasY: d.startCanvasY,
-          moved: d.moved,
-        };
+        const layout = data.getLayout(d.id);
+        if (layout && !data.isModelPositionLocked(d.id)) {
+          const totalDx = w.x - d.startWorldX;
+          const totalDy = w.y - d.startWorldY;
+          const proposedCx = d.startCenterX + totalDx;
+          const proposedCy = d.startCenterY + totalDy;
+          const snapped = snapNodeTopLeft(
+            d.id,
+            proposedCx,
+            proposedCy,
+            snapPeers(),
+            snapDragOptions(),
+          );
+          setSnapGuides(snapped.guides);
+          data.setLayout({ ...layout, position: snapped.position });
+          if (forceNodesRef.current) {
+            const fn = forceNodesRef.current.find((n) => n.id === d.id);
+            if (fn) {
+              fn.x = snapped.position.x + NODE_RADIUS;
+              fn.y = snapped.position.y + NODE_RADIUS;
+              fn.vx = 0;
+              fn.vy = 0;
+            }
+          }
+        }
+        nodeDragRef.current = { ...d, moved: d.moved };
+        return;
+      }
+
+      if (relationDragRef.current) {
+        const d = relationDragRef.current;
+        if (!data.isRelationLocked(d.relationId)) {
+          const totalDx = w.x - d.startWorldX;
+          const totalDy = w.y - d.startWorldY;
+          let bx = d.startBendX + totalDx;
+          let by = d.startBendY + totalDy;
+          const snapped = snapWorldPoint(bx, by, snapPeers(), undefined, snapDragOptions());
+          setSnapGuides(snapped.guides);
+          bx = snapped.x;
+          by = snapped.y;
+          const bend = { x: bx, y: by };
+          if (d.direction === 'reverse') {
+            data.patchRelationCanvasMeta(d.relationId, { reverse_bend: bend });
+          } else {
+            data.patchRelationCanvasMeta(d.relationId, { forward_bend: bend });
+          }
+          d.moved = true;
+        }
+        relationDragRef.current = { ...d, moved: d.moved };
         return;
       }
 
@@ -521,6 +743,7 @@ export function CanvasContainer(props: {
       if (panDragRef.current) {
         const d = panDragRef.current;
         panDragRef.current = null;
+        setSnapGuides([]);
         try {
           canvas.releasePointerCapture(ev.pointerId);
         } catch {
@@ -536,6 +759,13 @@ export function CanvasContainer(props: {
         const moved = nodeDragRef.current.moved;
         const draggedId = nodeDragRef.current.id;
         nodeDragRef.current = null;
+        setSnapGuides([]);
+        if (forceNodesRef.current) {
+          const fn = forceNodesRef.current.find((n) => n.id === draggedId);
+          if (fn) {
+            fn.fixed = false;
+          }
+        }
         try {
           canvas.releasePointerCapture(ev.pointerId);
         } catch {
@@ -545,6 +775,24 @@ export function CanvasContainer(props: {
           applyCanvasPick(x, y);
         } else {
           graphSync.markModelDirty(draggedId);
+        }
+        return;
+      }
+
+      if (relationDragRef.current) {
+        const moved = relationDragRef.current.moved;
+        const relationId = relationDragRef.current.relationId;
+        relationDragRef.current = null;
+        setSnapGuides([]);
+        try {
+          canvas.releasePointerCapture(ev.pointerId);
+        } catch {
+          /* ignore */
+        }
+        if (moved) {
+          graphSync.markRelationDirty(relationId);
+        } else {
+          applyCanvasPick(x, y);
         }
         return;
       }
@@ -635,6 +883,8 @@ export function CanvasContainer(props: {
     onSelectRelation,
     graphSync,
     updateHoverAt,
+    snapPeers,
+    snapDragOptions,
   ]);
 
   useEffect(() => {

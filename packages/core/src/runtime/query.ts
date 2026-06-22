@@ -18,7 +18,10 @@ import {
   WireQueryError,
   type QueryPlanASTv2,
   type QueryStartSpec,
+  type RecursiveHopSpec,
   type RemoteExecuteSnapshot,
+  type TreeTraversalStrategy,
+  type WireHopJSON,
 } from '@mode-db/shared';
 import {
   ComputeBuilder,
@@ -136,8 +139,12 @@ interface HopPlan {
   readonly relationName: string;
   readonly sourcePredicate: PredicateNode;
   readonly targetPredicate: PredicateNode;
-  /** 自关联 / 多级寻址：BFS 扩展，每层仅累计 ID，最后统一 `getByIds` */
-  readonly recursive?: { readonly maxDepth: number };
+  /** 自关联 / 多级寻址：BFS 扩展，每层仅累计 ID，最后统一 `getByIds`；`tree` 时构建嵌套子树 */
+  readonly recursive?: RecursiveHopSpec;
+  /** `group`（横向附加）：沿关系附加到当前主体行下，但**不推进**主体游标。 */
+  readonly lateral?: boolean;
+  /** 从**本跳目标**分叉出的嵌套子链（数据网）：每个分支为一棵 hop 树，附加到本跳目标实体之下。 */
+  readonly branches?: readonly HopPlan[];
 }
 
 /** 分页执行结果：`execute()` 在设置 **`limit`**（链或 options）时返回本结构。 */
@@ -287,12 +294,23 @@ export class QueryChain<
       );
     }
     const trailing = deserializePredicate(plan.trailing as Record<string, unknown>);
-    const hops: HopPlan[] = plan.hops.map((h) => ({
+    const deserializeHop = (h: WireHopJSON): HopPlan => ({
       relationName: h.relationName,
       sourcePredicate: deserializePredicate(h.source as Record<string, unknown>),
       targetPredicate: deserializePredicate(h.target as Record<string, unknown>),
-      ...(h.recursive ? { recursive: { maxDepth: h.recursive.maxDepth } } : {}),
-    }));
+      ...(h.recursive
+        ? {
+            recursive: {
+              maxDepth: h.recursive.maxDepth,
+              ...(h.recursive.tree ? { tree: true } : {}),
+              ...(h.recursive.strategy ? { strategy: h.recursive.strategy } : {}),
+            },
+          }
+        : {}),
+      ...(h.lateral ? { lateral: true } : {}),
+      ...(h.branches && h.branches.length > 0 ? { branches: h.branches.map(deserializeHop) } : {}),
+    });
+    const hops: HopPlan[] = plan.hops.map(deserializeHop);
     if (treeHasCallback(trailing)) {
       throw new QueryError('Wire query plan contains callback predicates.');
     }
@@ -343,16 +361,27 @@ export class QueryChain<
   }
 
   private _buildRawQuery(): QueryPlanASTv2 {
+    const serializeHop = (h: HopPlan): WireHopJSON => ({
+      relationName: h.relationName,
+      source: serializePredicate(h.sourcePredicate),
+      target: serializePredicate(h.targetPredicate),
+      ...(h.recursive
+        ? {
+            recursive: {
+              maxDepth: h.recursive.maxDepth,
+              ...(h.recursive.tree ? { tree: true } : {}),
+              ...(h.recursive.strategy ? { strategy: h.recursive.strategy } : {}),
+            },
+          }
+        : {}),
+      ...(h.lateral ? { lateral: true } : {}),
+      ...(h.branches && h.branches.length > 0 ? { branches: h.branches.map(serializeHop) } : {}),
+    });
     return {
       version: 2,
       originModel: this.originModel,
       start: this.start,
-      hops: this.hops.map((h) => ({
-        relationName: h.relationName,
-        source: serializePredicate(h.sourcePredicate),
-        target: serializePredicate(h.targetPredicate),
-        ...(h.recursive ? { recursive: { maxDepth: h.recursive.maxDepth } } : {}),
-      })),
+      hops: this.hops.map(serializeHop),
       trailing: serializePredicate(this.compiledRoot()),
     };
   }
@@ -558,9 +587,47 @@ export class QueryChain<
     return this;
   }
 
+  /** 沿主线（非 `lateral`）跳逐级解析当前主体模型名（用于在分叉前确定子链起点）。 */
+  private currentSubjectModel(): string {
+    let m = this.originModel;
+    for (const h of this.hops) {
+      if (h.lateral) {
+        continue;
+      }
+      m = targetModelName(resolveRelationOnRegistry(this.registry, h.relationName, m));
+    }
+    return m;
+  }
+
+  /**
+   * 在**本跳目标**上构建嵌套子链（分支）：以目标模型为起点新建一条链，回调内描述其关系/过滤，
+   * 捕获 hop 序列作为分支返回。多个分支并存于同一父实体下即「同一起点的数据网」。
+   */
+  private buildSubBranches<Target extends Record<string, unknown>>(
+    relationName: string,
+    build: (sub: QueryChain<Target>) => void,
+  ): readonly HopPlan[] {
+    const targetModel = targetModelName(
+      resolveRelationOnRegistry(this.registry, relationName, this.currentSubjectModel()),
+    );
+    const sub = new QueryChain<Target>(
+      this.registry,
+      this.indexReader,
+      this.dataReader,
+      targetModel,
+      this.start,
+      this.fieldCtx,
+      this.memoryShadow,
+      this.smartCache,
+    );
+    build(sub);
+    return (sub as unknown as { hops: HopPlan[] }).hops;
+  }
+
   relate<Target extends Record<string, unknown> = Record<string, unknown>>(
     relationName: string,
     targetSetup?: (b: FilterBuilder<Target>) => void,
+    build?: (sub: QueryChain<Target>) => void,
   ): this {
     const sourcePredicate = clonePredicateNode(this.compiledRoot());
     let targetPredicate: PredicateNode = { type: 'group', logic: 'AND', children: [] };
@@ -571,10 +638,12 @@ export class QueryChain<
         ? { type: 'group', logic: 'AND', children: [] }
         : b.toPredicateNode();
     }
+    const branches = build ? this.buildSubBranches(relationName, build) : undefined;
     this.hops.push({
       relationName,
       sourcePredicate,
       targetPredicate,
+      ...(branches && branches.length > 0 ? { branches } : {}),
     });
     this.segments.length = 0;
     this.segments.push([]);
@@ -609,6 +678,90 @@ export class QueryChain<
       sourcePredicate,
       targetPredicate,
       recursive: { maxDepth },
+    });
+    this.segments.length = 0;
+    this.segments.push([]);
+    return this;
+  }
+
+  /**
+   * 横向附加（**保持主体**）：沿关系 **`relationName`** 把目标实体挂到当前主体行的关系槽位下，
+   * 但**不推进**主体游标——与 {@link relate} 同级，区别在于 `group` 之后查询主体仍是当前模型，可继续 `group` 或再 `relate`（`relate` 才会改变主体）。
+   *
+   * 适用于 N:N 层级（如 `sys_layers` 的组/页）等「附加视图」场景。结果为 origin 根的嵌套树（与 **`includeRelates`** 一致），无需显式传 **`includeRelates`**。
+   *
+   * 传入 **`build`** 可在目标上继续构建嵌套子链；配合多次 `group` 即可从同一起点拉出**多条链 / 数据网**。
+   */
+  group<Target extends Record<string, unknown> = Record<string, unknown>>(
+    relationName: string,
+    targetSetup?: (b: FilterBuilder<Target>) => void,
+    build?: (sub: QueryChain<Target>) => void,
+  ): this {
+    const sourcePredicate = clonePredicateNode(this.compiledRoot());
+    let targetPredicate: PredicateNode = { type: 'group', logic: 'AND', children: [] };
+    if (targetSetup) {
+      const b = new FilterBuilder<Target>();
+      targetSetup(b);
+      targetPredicate = b.isEmpty()
+        ? { type: 'group', logic: 'AND', children: [] }
+        : b.toPredicateNode();
+    }
+    const branches = build ? this.buildSubBranches(relationName, build) : undefined;
+    this.hops.push({
+      relationName,
+      sourcePredicate,
+      targetPredicate,
+      lateral: true,
+      ...(branches && branches.length > 0 ? { branches } : {}),
+    });
+    this.segments.length = 0;
+    this.segments.push([]);
+    return this;
+  }
+
+  /**
+   * 自关联**树形**查询：沿同一关系向下展开为嵌套子树，子节点直接挂在对应实体之下（无需 **`includeRelates`**）。
+   * 适用于父子 / 上下级 / 上下游等自引用模型；结果实体提供 **`flatten()`**（展平为有序数组，一对一链即强顺序上下游）
+   * 与 **`toTree()`**（嵌套 JSON，子节点在 **`children`** 字段）。
+   *
+   * 结果按「数据守恒」组装为森林：被作为子节点出现的实体从顶层移除；多对多子节点仍可挂在多个父之下。
+   *
+   * @param relationName - 自关联正向关系名（如 `children`）。
+   * @param options.depth - 最大展开层数（关系跳数），默认 **`10000`**（近似全量），范围 `[1, 10000]`。
+   * @param options.strategy - 遍历方向（影响 **`flatten()`** 默认顺序）：`bfs` / `dfs`（默认 `dfs`）。
+   */
+  children<Target extends Record<string, unknown> = Record<string, unknown>>(
+    relationName: string,
+    options?: {
+      readonly depth?: number;
+      readonly strategy?: TreeTraversalStrategy;
+      readonly target?: (b: FilterBuilder<Target>) => void;
+      readonly build?: (sub: QueryChain<Target>) => void;
+    },
+  ): this {
+    const raw = options?.depth ?? 10_000;
+    const maxDepth = Math.floor(raw);
+    if (maxDepth < 1 || maxDepth > 10_000) {
+      throw new QueryError('children: depth must be in [1, 10000].');
+    }
+    const sourcePredicate = clonePredicateNode(this.compiledRoot());
+    let targetPredicate: PredicateNode = { type: 'group', logic: 'AND', children: [] };
+    if (options?.target) {
+      const b = new FilterBuilder<Target>();
+      options.target(b);
+      targetPredicate = b.isEmpty()
+        ? { type: 'group', logic: 'AND', children: [] }
+        : b.toPredicateNode();
+    }
+    const branches = options?.build
+      ? this.buildSubBranches(relationName, options.build)
+      : undefined;
+    this.hops.push({
+      relationName,
+      sourcePredicate,
+      targetPredicate,
+      recursive: { maxDepth, tree: true, strategy: options?.strategy ?? 'dfs' },
+      ...(branches && branches.length > 0 ? { branches } : {}),
     });
     this.segments.length = 0;
     this.segments.push([]);
@@ -704,7 +857,10 @@ export class QueryChain<
         : HydratedEntity[];
     }
 
-    if (options?.includeRelates) {
+    const treeMode = this.hops.some((h) => h.recursive?.tree);
+    const lateralMode = this.hops.some((h) => h.lateral);
+    const branchMode = this.hops.some((h) => h.branches && h.branches.length > 0);
+    if (options?.includeRelates || treeMode || lateralMode || branchMode) {
       const rows = await this.executeWithRelates();
       if (doPage) {
         const total = rows.length;
@@ -1072,20 +1228,55 @@ export class QueryChain<
     }
 
     const roots = records.map((r) => new HydratedEntity(r, model, c));
-    let frontier: HydratedEntity[] = roots;
-    let frontierModel = model;
+    await this.processChain(this.hops, roots, model, c, true);
+    return this.assembleConservedForest(roots);
+  }
 
-    for (let hi = 0; hi < this.hops.length; hi++) {
-      const hop = this.hops[hi]!;
+  /**
+   * 沿一条 hop 链处理给定 `frontier`：逐跳附加关系到实体的关系槽位下，`lateral`（`group`）跳不推进主体游标。
+   * 每跳的 **`branches`** 子链以「本跳目标」为新 frontier 递归处理，从而在同一起点下并行展开**多条链 / 数据网**。
+   *
+   * @param skipFirstSourceFilter - 主线首跳的源已在 {@link loadOriginRecords} 预过滤，跳过重复校验；子链（分支）首跳需校验。
+   */
+  private async processChain(
+    hops: readonly HopPlan[],
+    initialFrontier: readonly HydratedEntity[],
+    initialModel: string,
+    c: HydrationContext,
+    skipFirstSourceFilter: boolean,
+  ): Promise<void> {
+    let frontier: readonly HydratedEntity[] = initialFrontier;
+    let frontierModel = initialModel;
+
+    for (let hi = 0; hi < hops.length; hi++) {
+      const hop = hops[hi]!;
       const resolved = resolveRelationOnRegistry(this.registry, hop.relationName, frontierModel);
       const nextModel = targetModelName(resolved);
       const targetRoot = hop.targetPredicate;
+
+      if (hop.recursive?.tree) {
+        await this.buildNestedChildrenTree(
+          frontier,
+          resolved,
+          hop.relationName,
+          frontierModel,
+          nextModel,
+          hop.recursive.maxDepth,
+          targetRoot,
+          c,
+        );
+        // 整棵子树在本跳内消费完毕；树形查询不再向后续跳推进。
+        frontier = [];
+        frontierModel = nextModel;
+        continue;
+      }
+
       const nextFrontier: HydratedEntity[] = [];
 
       for (const entity of frontier) {
         const srcRec = entity.materializeRow();
 
-        if (hi > 0) {
+        if (hi > 0 || !skipFirstSourceFilter) {
           const srcEv = evaluatePredicate(
             srcRec,
             hop.sourcePredicate,
@@ -1194,11 +1385,172 @@ export class QueryChain<
         nextFrontier.push(...children);
       }
 
-      frontier = nextFrontier;
-      frontierModel = nextModel;
+      // 数据网：本跳的 branches 子链以本跳目标为新起点递归展开（子链首跳需做源过滤）。
+      if (hop.branches && hop.branches.length > 0 && nextFrontier.length > 0) {
+        await this.processChain(hop.branches, nextFrontier, nextModel, c, false);
+      }
+
+      // `group`（横向附加）保持主体游标不变：附加完成后仍以同一 frontier/model 继续后续跳。
+      if (!hop.lateral) {
+        frontier = nextFrontier;
+        frontierModel = nextModel;
+      }
+    }
+  }
+
+  /**
+   * 为 {@link children} 树形查询构建嵌套子树：从 `seeds` 出发，沿自关联逐层向下展开，
+   * 每个节点的**直接**子节点挂在自身的关系槽位下；用规范化实体（同 `model`+`_id` 复用同一对象）与全局 `seen`
+   * 既共享多对多子树、又防止环路无限展开。最终由 {@link assembleConservedForest} 做顶层去重以守恒实体总数。
+   */
+  private async buildNestedChildrenTree(
+    seeds: readonly HydratedEntity[],
+    resolved: ResolvedRelation,
+    relationName: string,
+    seedModel: string,
+    childModel: string,
+    maxDepth: number,
+    targetPredicate: PredicateNode,
+    c: HydrationContext,
+  ): Promise<void> {
+    // 仅支持自关联（源与目标同模型）；否则退化为单层 relate 语义。
+    const idKey = (model: string, id: string): string => `${model}\u0000${id}`;
+    const canonical = new Map<string, HydratedEntity>();
+    for (const s of seeds) {
+      canonical.set(idKey(seedModel, String((s.getData() as ModelRecord)._id)), s);
+    }
+    const expanded = new Set<string>();
+    let queue: Array<{ entity: HydratedEntity; model: string }> = seeds.map((e) => ({
+      entity: e,
+      model: seedModel,
+    }));
+
+    for (let depth = 0; depth < maxDepth && queue.length > 0; depth++) {
+      const next: Array<{ entity: HydratedEntity; model: string }> = [];
+      for (const { entity, model } of queue) {
+        const id = String((entity.getData() as ModelRecord)._id);
+        const selfKey = idKey(model, id);
+        if (expanded.has(selfKey)) {
+          continue;
+        }
+        expanded.add(selfKey);
+
+        const linked = await this.linkedIds(resolved, id);
+        if (linked.length === 0) {
+          entity._setRelate(relationName, []);
+          entity._setDiagnostic(relationName, {
+            reason: 'NO_LINK_IN_INDEX',
+            message: `No edges in .rid for "${model}" _id "${id}" via "${relationName}".`,
+          });
+          continue;
+        }
+
+        const childRecords = await this.dataReader.getByIds(childModel, linked);
+        const { passed } = filterRecordsWithTrace(
+          childRecords,
+          targetPredicate,
+          this._fieldCtxForModel(childModel),
+        );
+        const children = passed.map((r) => {
+          const k = idKey(childModel, r._id);
+          const existing = canonical.get(k);
+          if (existing) {
+            return existing;
+          }
+          const created = new HydratedEntity(r, childModel, c);
+          canonical.set(k, created);
+          return created;
+        });
+        entity._setRelate(relationName, children);
+
+        for (const child of children) {
+          if (!expanded.has(idKey(childModel, String((child.getData() as ModelRecord)._id)))) {
+            next.push({ entity: child, model: childModel });
+          }
+        }
+      }
+      queue = next;
+    }
+  }
+
+  /**
+   * 将 {@link executeWithRelates} 的顶层根集合组装为「数据守恒」的森林：
+   * 凡在结果中已作为其它实体子节点出现的实体（同 `model` + `_id`），从顶层移除，仅保留其嵌套形态，
+   * 使「分堆 / 分组」后实体总数守恒。多对多（同一实体被多个父引用）仍允许在各父节点下重复嵌套。
+   *
+   * - **非递归** hop：将子槽位重写为已完整展开的规范根实体，避免单层 `relate` 丢失深层节点（组装为真正的嵌套树）。
+   * - **递归** hop：根已按种子平铺收纳全部后代，仅做顶层去重即可无损守恒，不重写以免重复成边。
+   * - 仅当目标记录与源记录可能重叠（自关联等）时才会发生降级；普通跨模型关系不受影响。
+   */
+  private assembleConservedForest(roots: HydratedEntity[]): HydratedEntity[] {
+    if (roots.length === 0) {
+      return roots;
+    }
+    const rewrite = !this.hops.some((h) => h.recursive);
+    const idKey = (e: HydratedEntity): string =>
+      `${e.getModelName()}\u0000${String((e.getData() as ModelRecord)._id)}`;
+
+    const canonical = new Map<string, HydratedEntity>();
+    for (const r of roots) {
+      const k = idKey(r);
+      if (!canonical.has(k)) {
+        canonical.set(k, r);
+      }
     }
 
-    return roots;
+    const childIds = new Set<string>();
+    const visited = new Set<HydratedEntity>();
+    const walk = (e: HydratedEntity): void => {
+      if (visited.has(e)) {
+        return;
+      }
+      visited.add(e);
+      for (const [relName, children] of e.getRelates()) {
+        if (children.length === 0) {
+          continue;
+        }
+        let list = children;
+        if (rewrite) {
+          let changed = false;
+          const mapped = children.map((c) => {
+            const canon = canonical.get(idKey(c));
+            if (canon && canon !== c) {
+              changed = true;
+              return canon;
+            }
+            return c;
+          });
+          if (changed) {
+            e._setRelate(relName, mapped);
+            list = mapped;
+          }
+        }
+        for (const c of list) {
+          childIds.add(idKey(c));
+        }
+        for (const c of list) {
+          walk(c);
+        }
+      }
+    };
+    for (const r of roots) {
+      walk(r);
+    }
+
+    const out: HydratedEntity[] = [];
+    const emittedTop = new Set<string>();
+    for (const r of roots) {
+      const k = idKey(r);
+      if (childIds.has(k)) {
+        continue;
+      }
+      if (canonical.get(k) !== r || emittedTop.has(k)) {
+        continue;
+      }
+      emittedTop.add(k);
+      out.push(r);
+    }
+    return out;
   }
 
   /** Build a FieldMatchContext for a specific model, merging global locale with per-model fieldTypes. */

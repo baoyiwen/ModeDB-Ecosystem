@@ -6,6 +6,11 @@ import type { MldgDocument } from '../types/mldg-document.js';
 import { createEmptyMldgDocument } from '../types/mldg-document.js';
 import type { PropObject } from '../types/prop-object.js';
 import {
+  parseRelationCanvasMeta,
+  serializeRelationCanvasMeta,
+  type RelationCanvasMeta,
+} from '../types/relation-canvas-meta.js';
+import {
   GRAPH_INHERIT_KIND,
   INHERIT_RELATION_DEFAULT_NAME,
   INHERIT_RELATION_LABEL_I18N,
@@ -511,6 +516,29 @@ export class DataManager {
     }
     Object.assign(r, patch);
     this.emit();
+  }
+
+  getRelationCanvasMeta(relationId: string): RelationCanvasMeta {
+    const r = this._relations.find((x) => x.id === relationId);
+    return parseRelationCanvasMeta(r?.canvas_meta_str);
+  }
+
+  patchRelationCanvasMeta(relationId: string, patch: Partial<RelationCanvasMeta>): void {
+    const r = this._relations.find((x) => x.id === relationId);
+    if (!r) {
+      return;
+    }
+    const next = { ...parseRelationCanvasMeta(r.canvas_meta_str), ...patch };
+    r.canvas_meta_str = serializeRelationCanvasMeta(next);
+    this.emit();
+  }
+
+  isModelPositionLocked(modelId: string): boolean {
+    return this.getLayout(modelId)?.position_locked === true;
+  }
+
+  isRelationLocked(relationId: string): boolean {
+    return this.getRelationCanvasMeta(relationId).locked === true;
   }
 
   cloneModel(sourceId: string, at: { x: number; y: number }): string | undefined {

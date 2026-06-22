@@ -119,6 +119,27 @@ export function IconGrid(): ReactElement {
   );
 }
 
+export function IconForceLayout(): ReactElement {
+  return (
+    <svg {...common}>
+      <circle cx="6" cy="6" r="2.5" />
+      <circle cx="18" cy="6" r="2.5" />
+      <circle cx="12" cy="18" r="2.5" />
+      <path d="M8 7.5l3 8M16 7.5l-3 8M8.5 6h7" />
+    </svg>
+  );
+}
+
+export function IconSnap(): ReactElement {
+  return (
+    <svg {...common}>
+      <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 9v6M9 12h6" strokeWidth={1.5} />
+    </svg>
+  );
+}
+
 export function IconLogout(): ReactElement {
   return (
     <svg {...common}>

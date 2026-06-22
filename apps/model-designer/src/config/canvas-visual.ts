@@ -34,6 +34,12 @@ export const CANVAS_VISUAL = {
   grid: {
     dotColor: 'rgba(100, 116, 139, 0.35)',
   },
+  snapGuide: {
+    tangentColor: 'rgba(37, 99, 235, 0.95)',
+    centerColor: 'rgba(236, 72, 153, 0.95)',
+    previewTangentColor: 'rgba(59, 130, 246, 0.42)',
+    equalGapColor: 'rgba(5, 150, 105, 1)',
+  },
   /** 连线 / 继承预览 */
   preview: {
     linkColor: '#2563eb',
@@ -42,6 +48,12 @@ export const CANVAS_VISUAL = {
   /** 关系标签 */
   label: {
     color: '#334155',
+    bgColor: 'rgba(255, 255, 255, 0.94)',
+    borderColor: 'rgba(148, 163, 184, 0.9)',
+    borderWidth: 1,
+    paddingX: 6,
+    paddingY: 3,
+    radius: 4,
   },
 } as const;
 

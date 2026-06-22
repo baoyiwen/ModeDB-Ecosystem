@@ -251,12 +251,43 @@ export function App(): ReactElement {
       const rel = relateForward.trim();
       const chain = wire.model(selectedModel).query() as {
         relate: (n: string) => { execute: (o?: { includeRelates?: boolean }) => Promise<unknown> };
+        group: (n: string) => {
+          execute: (o?: { includeRelates?: boolean }) => Promise<unknown>;
+          getRemoteExecuteSnapshot: (o?: { includeRelates?: boolean }) => unknown;
+        };
         execute: (o?: { includeRelates?: boolean }) => Promise<unknown>;
+        getRemoteExecuteSnapshot: (o?: { includeRelates?: boolean }) => unknown;
       };
-      const rows = rel
-        ? await chain.relate(rel).execute({ includeRelates: true })
-        : await chain.execute();
+      const q = rel ? chain.relate(rel) : chain;
+      const rows = await q.execute({ includeRelates: true });
       setResult(serializeRows(rows));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [relateForward, selectedModel, t, wire]);
+
+  const runQueryViaApply = useCallback(async (): Promise<void> => {
+    if (!wire || !selectedModel) {
+      setError(t('error.selectDbModel'));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      const rel = relateForward.trim();
+      const base = wire.model(selectedModel).query() as {
+        relate: (n: string) => {
+          getRemoteExecuteSnapshot: (o?: { includeRelates?: boolean }) => unknown;
+        };
+        getRemoteExecuteSnapshot: (o?: { includeRelates?: boolean }) => unknown;
+      };
+      const chain = rel ? base.relate(rel) : base;
+      const snapshot = chain.getRemoteExecuteSnapshot({ includeRelates: true });
+      const out = await wire.apply({ op: 'executeQuery', snapshot });
+      setResult(out);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -357,6 +388,48 @@ export function App(): ReactElement {
       setBusy(false);
     }
   }, [dropRelationForward, loadTrees, modelDb, selectedDb, t, wire]);
+
+  const runClearModelData = useCallback(async (): Promise<void> => {
+    if (!wire || !selectedModel) {
+      setError(t('error.selectDbModel'));
+      return;
+    }
+    if (!globalThis.confirm(t('data.confirmClearModel', { name: selectedModel }))) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      const out = await wire.apply({ op: 'clearModelData', model: selectedModel });
+      setResult(out);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [selectedModel, t, wire]);
+
+  const runClearAllData = useCallback(async (): Promise<void> => {
+    if (!wire || !selectedDb) {
+      setError(t('ops.selectDb'));
+      return;
+    }
+    if (!globalThis.confirm(t('data.confirmClearAll', { db: selectedDb }))) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      const out = await wire.apply({ op: 'clearAllData' });
+      setResult(out);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [selectedDb, t, wire]);
 
   const dbNames = useMemo(() => Object.keys(catalogs).sort(), [catalogs]);
 
@@ -523,6 +596,18 @@ export function App(): ReactElement {
               </button>
             </div>
 
+            <h3>{t('query.protocolTitle')}</h3>
+            <p className="hint">{t('query.protocolHint')}</p>
+            <div className="actions">
+              <button
+                type="button"
+                disabled={busy || !wire || !selectedModel}
+                onClick={() => void runQueryViaApply()}
+              >
+                {t('query.runViaApply')}
+              </button>
+            </div>
+
             <h3>{t('insert.title')}</h3>
             <textarea
               className="code"
@@ -575,6 +660,24 @@ export function App(): ReactElement {
             <div className="actions">
               <button type="button" disabled={busy || !wire} onClick={() => void runDropRelation()}>
                 {t('rel.drop')}
+              </button>
+            </div>
+
+            <h3>{t('data.title')}</h3>
+            <div className="actions">
+              <button
+                type="button"
+                disabled={busy || !wire || !selectedModel}
+                onClick={() => void runClearModelData()}
+              >
+                {t('data.clearModel')}
+              </button>
+              <button
+                type="button"
+                disabled={busy || !wire || !selectedDb}
+                onClick={() => void runClearAllData()}
+              >
+                {t('data.clearAll')}
               </button>
             </div>
           </>

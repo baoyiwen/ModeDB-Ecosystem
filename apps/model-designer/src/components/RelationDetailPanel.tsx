@@ -64,6 +64,7 @@ export function RelationDetailPanel(props: {
     return <div style={{ fontSize: 12, color: '#64748b' }}>—</div>;
   }
 
+  const relMeta = data.getRelationCanvasMeta(rel.id);
   const isInherit = isInheritRelation(rel.kind);
 
   if (isInherit) {
@@ -126,6 +127,16 @@ export function RelationDetailPanel(props: {
           pickLocaleLabel={i18n.t('ui', 'i18nPickLocale')}
           addRowHint={i18n.t('ui', 'i18nAddLocaleFill')}
         />
+        <label className="designer-switch-row">
+          <span className="designer-field-label">{i18n.t('ui', 'relationPositionLock')}</span>
+          <input
+            type="checkbox"
+            className="designer-switch"
+            disabled={readOnly}
+            checked={!!relMeta.locked}
+            onChange={(e) => data.patchRelationCanvasMeta(rel.id, { locked: e.target.checked })}
+          />
+        </label>
       </div>
     );
   }
@@ -324,6 +335,17 @@ export function RelationDetailPanel(props: {
           </button>
         </div>
       </div>
+
+      <label className="designer-switch-row">
+        <span className="designer-field-label">{i18n.t('ui', 'relationPositionLock')}</span>
+        <input
+          type="checkbox"
+          className="designer-switch"
+          disabled={readOnly}
+          checked={!!relMeta.locked}
+          onChange={(e) => data.patchRelationCanvasMeta(rel.id, { locked: e.target.checked })}
+        />
+      </label>
     </div>
   );
 }

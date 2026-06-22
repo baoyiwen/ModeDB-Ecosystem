@@ -52,13 +52,17 @@ RPC 明文 JSON 在发送前经 **`encodeWirePayload`**（**`@mode-db/shared`**�
 
 请求体（**`WireExecuteBody`**）在 **`@mode-db/shared`** 中定义；服务端 **`request-dispatcher`** 在已解析逻辑库并构造 **`AuthoringEngine`** 后执行：
 
-| `op`               | 载荷字段                                               | 服务端调用                                                                 |
-| ------------------ | ------------------------------------------------------ | -------------------------------------------------------------------------- |
-| **`dropModel`**    | `model`                                                | **`await engine.dropModel`**                                               |
-| **`dropRelation`** | `relation`（正向名）                                   | **`await engine.dropRelation`**                                            |
-| **`alterModel`**   | `model`, `schema`（JSON 对象）, 可选 **`patch: true`** | **`alterModelPatch`** 或 **`alterModel`**（cast 为 **`FieldDefsRecord`**） |
+| `op`                 | 载荷字段                                               | 服务端调用                                                                                                                            |
+| -------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **`dropModel`**      | `model`                                                | **`await engine.dropModel`**                                                                                                          |
+| **`dropRelation`**   | `relation`（正向名）                                   | **`await engine.dropRelation`**                                                                                                       |
+| **`alterModel`**     | `model`, `schema`（JSON 对象）, 可选 **`patch: true`** | **`alterModelPatch`** 或 **`alterModel`**（cast 为 **`FieldDefsRecord`**）                                                            |
+| **`clearModelData`** | `model`                                                | **`await engine.clearModelData(model)`** — tombstone 该模型全部行并清空触及它的关系索引；**保留 schema**                              |
+| **`clearAllData`**   | （无）                                                 | **`await engine.clearAllData()`** — tombstone 库内全部行并清空所有关系索引；**保留 schema**；返回 **`deletedCount`** / **`perModel`** |
 
-响应为 **`WireExecuteResultJson`** 中带 **`kind: 'mutation'`**、`**op**` 与 **`ok: true`** 的分支。
+响应为 **`WireExecuteResultJson`** 中带 **`kind: 'mutation'`**、`**op**` 与 **`ok: true`** 的分支；清除类操作额外含 **`deletedCount`**（及 **`clearAllData`** 的 **`perModel`**）。
+
+> 完整操作协议（含 **`executeQuery`** 查询快照示例、`apply` / `applyAll`）见 [engine-operation-protocol.md](./engine-operation-protocol.md)。
 
 ## 6. SDK：`RemoteModelDBClient` / `ModelDBClient.connect`
 

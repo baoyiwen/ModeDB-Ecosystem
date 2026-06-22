@@ -8,6 +8,7 @@
   "tokenRequired": "Connect token is required",
   "pushFailed": "Could not push graph to the engine",
   "pullFailed": "Could not pull graph from the engine",
+  "clearDataFailed": "Could not clear row data on the engine",
   "bootstrapFailed": "Connected but designer catalog bootstrap failed",
   "invalidJson": "Invalid JSON in metadata"
 }

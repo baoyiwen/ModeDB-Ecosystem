@@ -4,7 +4,9 @@ import {
   IconCheckSquare,
   IconDocument,
   IconExport,
+  IconForceLayout,
   IconGrid,
+  IconSnap,
   IconHand,
   IconLink,
   IconLogout,
@@ -200,6 +202,30 @@ export class DesignerToolbar extends DesignerComponent<
             }}
           >
             <IconExport />
+          </button>
+          <button
+            type="button"
+            className="designer-fab designer-fab--ghost"
+            title={i18n.t('ui', 'toolForceLayout')}
+            data-active={config.forceLayoutEnabled}
+            onClick={() => {
+              config.forceLayoutEnabled = !config.forceLayoutEnabled;
+              this.forceUpdate();
+            }}
+          >
+            <IconForceLayout />
+          </button>
+          <button
+            type="button"
+            className="designer-fab designer-fab--ghost"
+            title={i18n.t('ui', 'toolSnap')}
+            data-active={config.snapToGrid}
+            onClick={() => {
+              config.snapToGrid = !config.snapToGrid;
+              this.forceUpdate();
+            }}
+          >
+            <IconSnap />
           </button>
           <button
             type="button"

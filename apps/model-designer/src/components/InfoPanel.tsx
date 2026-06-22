@@ -10,12 +10,14 @@ export function InfoPanel(props: {
   modelId: string | undefined;
   readOnly?: boolean;
 }): ReactElement {
-  const { i18n, data } = useDesigner();
+  const { i18n, data, config } = useDesigner();
   const readOnly = props.readOnly ?? false;
   const [, bump] = useState(0);
+  const [clearBusy, setClearBusy] = useState(false);
   useEffect(() => data.subscribe(() => bump((n) => n + 1)), [data]);
 
   const model = props.modelId ? data.models.find((m) => m.id === props.modelId) : undefined;
+  const layout = model ? data.getLayout(model.id) : undefined;
   const parentModel = model?.parent_id
     ? data.models.find((m) => m.id === model.parent_id)
     : undefined;
@@ -194,6 +196,60 @@ export function InfoPanel(props: {
           }}
         />
       </label>
+
+      <label className="designer-switch-row">
+        <span className="designer-field-label">{i18n.t('ui', 'modelPositionLock')}</span>
+        <input
+          type="checkbox"
+          className="designer-switch"
+          disabled={!model || readOnly}
+          checked={!!layout?.position_locked}
+          onChange={(e) => {
+            if (model) {
+              data.patchLayout(model.id, { position_locked: e.target.checked });
+            }
+          }}
+        />
+      </label>
+
+      <div
+        className="designer-field"
+        style={{ marginTop: 8, paddingTop: 12, borderTop: '1px solid var(--designer-border)' }}
+      >
+        <span className="designer-field-label">{i18n.t('ui', 'dataSectionTitle')}</span>
+        <p style={{ fontSize: 12, color: 'var(--designer-text-soft)', margin: '6px 0 10px' }}>
+          {i18n.t('ui', 'dataClearModelHint')}
+        </p>
+        <button
+          type="button"
+          className="designer-tree-action designer-tree-action--danger"
+          disabled={!model?.model_name || !config.remoteClient || readOnly || clearBusy}
+          onClick={async () => {
+            if (!model?.model_name || !config.remoteClient) {
+              return;
+            }
+            if (
+              !globalThis.confirm(i18n.t('ui', 'dataConfirmClearModel', { name: model.model_name }))
+            ) {
+              return;
+            }
+            setClearBusy(true);
+            try {
+              await config.remoteClient.apply({
+                op: 'clearModelData',
+                model: model.model_name,
+              });
+              window.alert(i18n.t('ui', 'dataClearModelDone', { name: model.model_name }));
+            } catch {
+              window.alert(i18n.t('errors', 'clearDataFailed'));
+            } finally {
+              setClearBusy(false);
+            }
+          }}
+        >
+          {i18n.t('ui', 'dataClearModel')}
+        </button>
+      </div>
     </div>
   );
 }

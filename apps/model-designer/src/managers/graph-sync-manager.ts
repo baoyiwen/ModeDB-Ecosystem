@@ -135,6 +135,7 @@ export class GraphSyncManager {
             position: layout.position,
             color_theme: layout.color_theme,
             z_index: layout.z_index,
+            position_locked: layout.position_locked,
             edge_bend_hints: layout.edge_bend_hints,
           }),
         },

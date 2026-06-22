@@ -222,6 +222,10 @@ export type {
 export type { WireExecuteResultJson } from './src/network/execute-result-wire.js';
 export { serializeExecuteResultForWire } from './src/network/execute-result-wire.js';
 export {
+  executeDatabaseOperation,
+  type DatabaseOperationContext,
+} from './src/network/operation-executor.js';
+export {
   registerPipeGalleryModels,
   type PipeGalleryModelNames,
 } from './templates/pipe-gallery/register.js';

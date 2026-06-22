@@ -14,6 +14,8 @@ export interface DesignerModelLayout {
   position: { x: number; y: number };
   color_theme: string;
   z_index: number;
+  /** 锁定后节点不可被拖动或力导向布局移动。 */
+  position_locked?: boolean;
   edge_bend_hints?: Array<{ edge_id: string; points: Array<{ x: number; y: number }> }>;
 }
 

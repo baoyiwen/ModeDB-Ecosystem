@@ -2,7 +2,11 @@ import {
   decodeWirePayload,
   deriveWireSessionKey,
   encodeWirePayload,
+  isDatabaseOperation,
   WireQueryChain,
+  type EngineApplyOutcome,
+  type EngineOperation,
+  type EngineOperationResult,
   type ManagementCatalogResponse,
   type ManagementDatabaseInfo,
   type ManagementDatabasesResponse,
@@ -53,6 +57,100 @@ export class RemoteHydratedEntity implements RowRef {
 
   getModelName(): string {
     return this.model;
+  }
+
+  /** 本行所有关系槽位（`relates`）下的子行（按插入顺序合并）；树形查询通常只有一个自关联槽位。 */
+  private childRows(): Record<string, unknown>[] {
+    const rel = this.row.relates as Record<string, unknown> | undefined;
+    if (!rel || typeof rel !== 'object') {
+      return [];
+    }
+    const out: Record<string, unknown>[] = [];
+    for (const v of Object.values(rel)) {
+      if (Array.isArray(v)) {
+        for (const child of v) {
+          if (isRecord(child)) {
+            out.push(child);
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  /**
+   * 将以本行为根的子树**展平**为有序行数组（含自身）。
+   * 一对一链时即「上下游」强顺序；`dfs`（默认）前序，`bfs` 层序。
+   */
+  flatten(options?: { readonly order?: 'dfs' | 'bfs' }): RemoteHydratedEntity[] {
+    const order = options?.order ?? 'dfs';
+    const out: RemoteHydratedEntity[] = [];
+    if (order === 'bfs') {
+      const seen = new Set<Record<string, unknown>>();
+      let level: RemoteHydratedEntity[] = [this];
+      while (level.length > 0) {
+        const next: RemoteHydratedEntity[] = [];
+        for (const e of level) {
+          out.push(e);
+          if (seen.has(e.row)) {
+            continue;
+          }
+          seen.add(e.row);
+          next.push(...e.childRows().map((r) => new RemoteHydratedEntity(r, this.model)));
+        }
+        level = next;
+      }
+      return out;
+    }
+    const path = new Set<Record<string, unknown>>();
+    const visit = (e: RemoteHydratedEntity): void => {
+      out.push(e);
+      if (path.has(e.row)) {
+        return;
+      }
+      path.add(e.row);
+      for (const r of e.childRows()) {
+        visit(new RemoteHydratedEntity(r, this.model));
+      }
+      path.delete(e.row);
+    };
+    visit(this);
+    return out;
+  }
+
+  /**
+   * 将以本行为根的子树**聚合为一棵树**：返回纯 JSON，子节点置于 `childrenKey`（默认 `children`）字段下。
+   */
+  toTree(options?: { readonly childrenKey?: string }): Record<string, unknown> {
+    return this._toTreeGuarded(this.row, options?.childrenKey ?? 'children', new Set());
+  }
+
+  private _toTreeGuarded(
+    row: Record<string, unknown>,
+    childrenKey: string,
+    path: Set<Record<string, unknown>>,
+  ): Record<string, unknown> {
+    const { relates: _relates, ...rest } = row;
+    const out: Record<string, unknown> = { ...rest };
+    const rel = row.relates as Record<string, unknown> | undefined;
+    if (rel && typeof rel === 'object' && !path.has(row)) {
+      const kids: Record<string, unknown>[] = [];
+      for (const v of Object.values(rel)) {
+        if (Array.isArray(v)) {
+          for (const child of v) {
+            if (isRecord(child)) {
+              kids.push(child);
+            }
+          }
+        }
+      }
+      if (kids.length > 0) {
+        path.add(row);
+        out[childrenKey] = kids.map((c) => this._toTreeGuarded(c, childrenKey, path));
+        path.delete(row);
+      }
+    }
+    return out;
   }
 
   /** `_id` extracted from the row payload; throws if the backend did not include one. */
@@ -213,6 +311,15 @@ function reviveWireResult(json: WireExecuteResultJson): unknown {
         ok: json.ok === true,
         created: json.created ?? { models: [], relations: [] },
         skipped: json.skipped ?? { models: [], relations: [] },
+      };
+    }
+    if (json.op === 'clearModelData' || json.op === 'clearAllData') {
+      return {
+        op: json.op,
+        model: json.model,
+        ok: json.ok === true,
+        deletedCount: json.deletedCount ?? 0,
+        ...(json.perModel ? { perModel: json.perModel } : {}),
       };
     }
     return {
@@ -404,7 +511,10 @@ type QuerySession = {
   readonly atlas: string;
   connectHandshake(): Promise<void>;
   executeSnapshot(snapshot: RemoteExecuteSnapshot): Promise<unknown>;
+  /** Send a wire op, returning the **revived** result (rows -> RemoteHydratedEntity, etc.). */
   executeWireBody(body: WireExecuteBody): Promise<unknown>;
+  /** Send a wire op, returning the **raw** JSON result (protocol-faithful; used by `apply`). */
+  executeWireBodyRaw(body: WireExecuteBody): Promise<WireExecuteResultJson>;
 };
 
 class ShortRemoteSession implements QuerySession {
@@ -425,7 +535,7 @@ class ShortRemoteSession implements QuerySession {
     }
   }
 
-  async executeWireBody(body: WireExecuteBody): Promise<unknown> {
+  async executeWireBodyRaw(body: WireExecuteBody): Promise<WireExecuteResultJson> {
     const id = nextRpcId();
     const sessionKey = deriveWireSessionKey(this.connectToken, this.atlas);
     const cipher = encodeWirePayload(JSON.stringify(body), sessionKey);
@@ -459,8 +569,11 @@ class ShortRemoteSession implements QuerySession {
       throw new Error('Short mode: expected { type: "rpc.ok", cipher }.');
     }
     const plain = decodeWirePayload(msg.cipher, sessionKey);
-    const json = JSON.parse(plain) as WireExecuteResultJson;
-    return reviveWireResult(json);
+    return JSON.parse(plain) as WireExecuteResultJson;
+  }
+
+  async executeWireBody(body: WireExecuteBody): Promise<unknown> {
+    return reviveWireResult(await this.executeWireBodyRaw(body));
   }
 
   async executeSnapshot(snapshot: RemoteExecuteSnapshot): Promise<unknown> {
@@ -477,7 +590,7 @@ class RemoteSession implements QuerySession {
   } | null = null;
   private readonly pending = new Map<
     string,
-    { readonly resolve: (v: unknown) => void; readonly reject: (e: Error) => void }
+    { readonly resolve: (v: WireExecuteResultJson) => void; readonly reject: (e: Error) => void }
   >();
 
   constructor(
@@ -550,7 +663,7 @@ class RemoteSession implements QuerySession {
         try {
           const plain = decodeWirePayload(cipher, this.sessionKey);
           const body = JSON.parse(plain) as WireExecuteResultJson;
-          def.resolve(reviveWireResult(body));
+          def.resolve(body);
         } catch (e) {
           def.reject(e instanceof Error ? e : new Error(String(e)));
         }
@@ -584,15 +697,19 @@ class RemoteSession implements QuerySession {
     });
   }
 
-  executeWireBody(body: WireExecuteBody): Promise<unknown> {
+  executeWireBodyRaw(body: WireExecuteBody): Promise<WireExecuteResultJson> {
     const id = nextRpcId();
     const cipher = encodeWirePayload(JSON.stringify(body), this.sessionKey);
     const payload = JSON.stringify({ type: 'rpc', id, cipher });
-    const p = new Promise<unknown>((resolve, reject) => {
+    const p = new Promise<WireExecuteResultJson>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
     });
     this.ws.send(payload);
     return p;
+  }
+
+  async executeWireBody(body: WireExecuteBody): Promise<unknown> {
+    return reviveWireResult(await this.executeWireBodyRaw(body));
   }
 
   executeSnapshot(snapshot: RemoteExecuteSnapshot): Promise<unknown> {
@@ -912,6 +1029,78 @@ export class RemoteModelDBClient {
 
   model(name: string): RemoteRuntimeModel {
     return new RemoteRuntimeModel(() => this.ensureSession(), name);
+  }
+
+  /**
+   * Data: truncate **one** model — tombstone all of its rows and clear relation indexes touching it.
+   * Schema / registration is preserved. Returns the number of rows deleted.
+   */
+  async clearModelData(model: string): Promise<number> {
+    const session = await this.ensureSession();
+    const out = await session.executeWireBody({ op: 'clearModelData', model });
+    if (!isRecord(out) || out.op !== 'clearModelData' || out.ok !== true) {
+      throw new Error('clearModelData: unexpected remote response.');
+    }
+    return typeof out.deletedCount === 'number' ? out.deletedCount : 0;
+  }
+
+  /**
+   * Data: truncate **all** models in this library — tombstone every row and clear all relation indexes.
+   * Schema / registration is preserved. Returns the total deleted plus a per-model breakdown.
+   */
+  async clearAllData(): Promise<{ totalDeleted: number; perModel: Record<string, number> }> {
+    const session = await this.ensureSession();
+    const out = await session.executeWireBody({ op: 'clearAllData' });
+    if (!isRecord(out) || out.op !== 'clearAllData' || out.ok !== true) {
+      throw new Error('clearAllData: unexpected remote response.');
+    }
+    const perModel =
+      isRecord(out.perModel) && out.perModel ? (out.perModel as Record<string, number>) : {};
+    return {
+      totalDeleted: typeof out.deletedCount === 'number' ? out.deletedCount : 0,
+      perModel,
+    };
+  }
+
+  /**
+   * Protocol entry: run one **database-scope** {@link EngineDatabaseOperation} (JSON) against this
+   * connected library and return the **raw** JSON {@link EngineOperationResult}. This is the JSON/
+   * Designer-friendly counterpart of the fluent methods (`insert`, `bind`, `query().execute()`, ...),
+   * which remain available unchanged. Use `model().query()` for revived entity results.
+   */
+  async apply(op: EngineOperation): Promise<EngineOperationResult> {
+    if (!isDatabaseOperation(op)) {
+      throw new Error(
+        `RemoteModelDBClient.apply: "${op.op}" is not a database-scope operation; use the management API.`,
+      );
+    }
+    const session = await this.ensureSession();
+    return (await session.executeWireBodyRaw(op)) as EngineOperationResult;
+  }
+
+  /**
+   * Protocol entry: run an ordered batch of database-scope operations over one connection. Returns one
+   * {@link EngineApplyOutcome} per attempted op; with **`failFast`** (default `true`) it stops after the
+   * first failure (the failing outcome is included).
+   */
+  async applyAll(
+    ops: readonly EngineOperation[],
+    opts?: { readonly failFast?: boolean },
+  ): Promise<EngineApplyOutcome[]> {
+    const failFast = opts?.failFast ?? true;
+    const out: EngineApplyOutcome[] = [];
+    for (const op of ops) {
+      try {
+        const result = await this.apply(op);
+        out.push({ ok: true, result });
+      } catch (e) {
+        out.push({ ok: false, error: e instanceof Error ? e.message : String(e) });
+        if (failFast) {
+          break;
+        }
+      }
+    }
+    return out;
   }
 
   /** Meta: drop model schema and vault payload (server-side {@link AuthoringEngine.dropModel}). */

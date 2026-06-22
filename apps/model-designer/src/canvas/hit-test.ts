@@ -1,6 +1,8 @@
 import type { EngineModelNode, EngineRelationEdge } from '../types/engine-schema.js';
+import type { RelationCanvasMeta } from '../types/relation-canvas-meta.js';
 import {
-  directedShortestSegment,
+  directedCurvedSegment,
+  distancePointToQuadraticBezier,
   distancePointToSegment,
   distancePointToSelfLoopArc,
   edgePerpOffsetById,
@@ -15,6 +17,13 @@ export interface PlacedNode {
   model: EngineModelNode;
   x: number;
   y: number;
+}
+
+export type RelationHitDirection = 'forward' | 'reverse' | 'inherit' | 'self';
+
+export interface RelationHit {
+  id: string;
+  direction: RelationHitDirection;
 }
 
 export function buildPlacedNodes(
@@ -68,8 +77,19 @@ export function anchorLeftCenter(placed: PlacedNode): { x: number; y: number } {
   return { x: cx - r, y: cy };
 }
 
+function segmentHitDistance(
+  px: number,
+  py: number,
+  seg: ReturnType<typeof directedCurvedSegment>,
+): number {
+  if (seg.bent) {
+    return distancePointToQuadraticBezier(px, py, seg.x1, seg.y1, seg.cpx, seg.cpy, seg.x2, seg.y2);
+  }
+  return distancePointToSegment(px, py, seg.x1, seg.y1, seg.x2, seg.y2);
+}
+
 /**
- * 世界坐标下命中关系边（与绘制一致的有向最短平行线段）；`threshold` 为最大可点击距离（px）。
+ * 世界坐标下命中关系边；`threshold` 为最大可点击距离（px）。
  */
 export function hitTestRelation(
   px: number,
@@ -78,14 +98,15 @@ export function hitTestRelation(
   placed: readonly PlacedNode[],
   hiddenIds: ReadonlySet<string> | undefined,
   threshold: number,
-): string | undefined {
+  getMeta?: (relationId: string) => RelationCanvasMeta,
+): RelationHit | undefined {
   const byId = new Map<string, PlacedNode>();
   for (const p of placed) {
     byId.set(p.model.id, p);
   }
   const offMap = edgePerpOffsetById(relations);
   const loopSlotMap = edgeSelfLoopSlotById(relations);
-  let bestId: string | undefined;
+  let best: RelationHit | undefined;
   let bestD = Infinity;
   for (const r of relations) {
     if (hiddenIds?.has(r.source_model_id) || hiddenIds?.has(r.target_model_id)) {
@@ -96,31 +117,61 @@ export function hitTestRelation(
     if (!a || !b) {
       continue;
     }
-    // 自关联：内外两圈同心圆弧，命中取两圈较近距离。
-    let d: number;
+    const meta = getMeta?.(r.id) ?? {};
     if (r.source_model_id === r.target_model_id) {
       const slot = loopSlotMap.get(r.id) ?? 0;
       const loop = selfLoopGeometry(a, slot);
-      d = Math.min(
+      const d = Math.min(
         distancePointToSelfLoopArc(px, py, loop.forward),
         distancePointToSelfLoopArc(px, py, loop.reverse),
       );
-    } else if (isInheritRelation(r.kind)) {
-      const slotOff = offMap.get(r.id) ?? 0;
-      const seg = directedShortestSegment(a, b, slotOff);
-      d = distancePointToSegment(px, py, seg.x1, seg.y1, seg.x2, seg.y2);
-    } else {
-      const slotOff = offMap.get(r.id) ?? 0;
-      const fwd = directedShortestSegment(a, b, slotOff + RELATION_INTRA_PAIR_GAP);
-      const rev = directedShortestSegment(b, a, -(slotOff - RELATION_INTRA_PAIR_GAP));
-      const dFwd = distancePointToSegment(px, py, fwd.x1, fwd.y1, fwd.x2, fwd.y2);
-      const dRev = distancePointToSegment(px, py, rev.x1, rev.y1, rev.x2, rev.y2);
-      d = Math.min(dFwd, dRev);
+      if (d <= threshold && d < bestD) {
+        bestD = d;
+        best = { id: r.id, direction: 'self' };
+      }
+      continue;
     }
-    if (d <= threshold && d < bestD) {
-      bestD = d;
-      bestId = r.id;
+    const slotOff = offMap.get(r.id) ?? 0;
+    if (isInheritRelation(r.kind)) {
+      const seg = directedCurvedSegment(a, b, slotOff, meta.forward_bend);
+      const d = segmentHitDistance(px, py, seg);
+      if (d <= threshold && d < bestD) {
+        bestD = d;
+        best = { id: r.id, direction: 'inherit' };
+      }
+      continue;
+    }
+    const fwd = directedCurvedSegment(a, b, slotOff + RELATION_INTRA_PAIR_GAP, meta.forward_bend);
+    const rev = directedCurvedSegment(
+      b,
+      a,
+      -(slotOff - RELATION_INTRA_PAIR_GAP),
+      meta.reverse_bend,
+    );
+    const dFwd = segmentHitDistance(px, py, fwd);
+    const dRev = segmentHitDistance(px, py, rev);
+    if (dFwd <= dRev) {
+      if (dFwd <= threshold && dFwd < bestD) {
+        bestD = dFwd;
+        best = { id: r.id, direction: 'forward' };
+      }
+    } else if (dRev <= threshold && dRev < bestD) {
+      bestD = dRev;
+      best = { id: r.id, direction: 'reverse' };
     }
   }
-  return bestId;
+  return best;
+}
+
+/** @deprecated 使用 {@link RelationHit.id} */
+export function hitTestRelationId(
+  px: number,
+  py: number,
+  relations: readonly EngineRelationEdge[],
+  placed: readonly PlacedNode[],
+  hiddenIds: ReadonlySet<string> | undefined,
+  threshold: number,
+  getMeta?: (relationId: string) => RelationCanvasMeta,
+): string | undefined {
+  return hitTestRelation(px, py, relations, placed, hiddenIds, threshold, getMeta)?.id;
 }

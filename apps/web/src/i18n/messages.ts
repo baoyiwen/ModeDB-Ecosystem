@@ -62,6 +62,19 @@ const en = {
   'schema.dropModel': 'Drop model',
   'schema.confirmDrop': 'Drop model "{name}" (logical delete on server)?',
 
+  'data.title': 'Data · clear rows',
+  'data.clearModel': 'Clear selected model data',
+  'data.clearAll': 'Clear all data in library',
+  'data.confirmClearModel':
+    'Clear all row data for model "{name}"? Schema and relations stay registered.',
+  'data.confirmClearAll':
+    'Clear all row data in library "{db}"? All models and relations stay registered.',
+
+  'query.protocolTitle': 'Query · apply(JSON)',
+  'query.protocolHint':
+    'Same query as above, executed via apply({ op: "executeQuery", snapshot }). Returns raw protocol JSON.',
+  'query.runViaApply': 'Run via apply(JSON)',
+
   'rel.title': 'Relation · drop',
   'rel.placeholder': 'Relation forward label',
   'rel.drop': 'Drop relation',
@@ -125,6 +138,17 @@ const zhCN: Record<keyof typeof en, string> = {
   'schema.applyPatch': '应用补丁',
   'schema.dropModel': '删除模型',
   'schema.confirmDrop': '在服务端逻辑删除模型「{name}」？',
+
+  'data.title': '数据 · 清除行',
+  'data.clearModel': '清除所选模型数据',
+  'data.clearAll': '清除库内全部数据',
+  'data.confirmClearModel': '清除模型「{name}」的全部行数据？模型与关系定义保留。',
+  'data.confirmClearAll': '清除逻辑库「{db}」的全部行数据？所有模型与关系定义保留。',
+
+  'query.protocolTitle': '查询 · apply(JSON)',
+  'query.protocolHint':
+    '与上方相同查询，经 apply({ op: "executeQuery", snapshot }) 执行，返回协议 JSON。',
+  'query.runViaApply': '经 apply(JSON) 执行',
 
   'rel.title': '关系 · 删除',
   'rel.placeholder': '关系正向标签',

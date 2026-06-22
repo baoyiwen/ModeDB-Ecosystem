@@ -180,6 +180,15 @@ export type WireExecuteBody =
       readonly forward: string;
       readonly logic: WireRelationLogic;
       readonly matchOn?: WireMatchPredicate;
+    }
+  /** Truncate one model: tombstone all of its rows and clear relation indexes touching it (schema kept). */
+  | {
+      readonly op: 'clearModelData';
+      readonly model: string;
+    }
+  /** Truncate the whole library: tombstone every row of every model and clear all relation indexes (schema kept). */
+  | {
+      readonly op: 'clearAllData';
     };
 
 export type WireServerMessage = WireHandshakeOk | WireRpcResponse | WireErrorMessage;
@@ -246,7 +255,9 @@ export type WireExecuteResultJson =
         | 'bindPair'
         | 'unlinkPair'
         | 'bind'
-        | 'updateRelationLogic';
+        | 'updateRelationLogic'
+        | 'clearModelData'
+        | 'clearAllData';
       readonly model: string;
       readonly record: Record<string, unknown> | null;
       /** Multi-row echo for **`insertMany({ returning: true })`** (each row carries its `_id`). */
@@ -268,6 +279,10 @@ export type WireExecuteResultJson =
         readonly models: readonly string[];
         readonly relations: readonly string[];
       };
+      /** Rows tombstoned by `clearModelData` / `clearAllData`. */
+      readonly deletedCount?: number;
+      /** Per-model row deletion breakdown for `clearAllData`. */
+      readonly perModel?: Readonly<Record<string, number>>;
     }
   | {
       readonly kind: 'previewBind';

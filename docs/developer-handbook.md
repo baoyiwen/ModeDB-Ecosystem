@@ -303,6 +303,9 @@ import {
 - **`serializeExecuteResultForWire`**、**`WireExecuteResultJson`**（**`execute-result-wire.ts`**）
 - **`WireClientMessage`**、**`WireExecuteBody`** 等类型（**`wire-protocol.ts`**）
 - **`deriveWireSessionKey` / `encodeWirePayload` / `decodeWirePayload`**（**`@mode-db/shared`** **`wire-codec.ts`**；SHA-256 与 Node **`crypto`** 字节级一致）
+- **统一操作协议**：**`EngineOperation`**、**`apply` / `applyAll`**、**`executeDatabaseOperation`**；查询示例与 **`clearModelData` / `clearAllData`** 见 [engine-operation-protocol.md](./engine-operation-protocol.md)
+
+**数据清除（保留 schema）**：**`AuthoringEngine.clearModelData(model)`**、**`clearAllData()`**；wire **`op: 'clearModelData' | 'clearAllData'`**；SDK **`RemoteModelDBClient.clearModelData` / `clearAllData`** 或 **`apply({ op: ... })`**。
 
 ---
 

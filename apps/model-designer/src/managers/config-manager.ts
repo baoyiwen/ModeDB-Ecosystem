@@ -28,6 +28,7 @@ export interface ConfigManagerSnapshot {
   viewportPanX: number;
   viewportPanY: number;
   viewportZoom: number;
+  forceLayoutEnabled: boolean;
 }
 
 /**
@@ -46,6 +47,7 @@ export class ConfigManager {
   private _viewportPanX = 0;
   private _viewportPanY = 0;
   private _viewportZoom = 1;
+  private _forceLayoutEnabled = false;
   private readonly _viewportListeners = new Set<ConfigViewportListener>();
 
   get gridEnabled(): boolean {
@@ -70,6 +72,7 @@ export class ConfigManager {
 
   set snapToGrid(v: boolean) {
     this._snapToGrid = v;
+    this.emitViewport();
   }
 
   get longPressMs(): number {
@@ -114,6 +117,18 @@ export class ConfigManager {
 
   get viewportZoom(): number {
     return this._viewportZoom;
+  }
+
+  get forceLayoutEnabled(): boolean {
+    return this._forceLayoutEnabled;
+  }
+
+  set forceLayoutEnabled(v: boolean) {
+    if (this._forceLayoutEnabled === v) {
+      return;
+    }
+    this._forceLayoutEnabled = v;
+    this.emitViewport();
   }
 
   setViewportPan(x: number, y: number): void {
@@ -186,6 +201,7 @@ export class ConfigManager {
       viewportPanX: this._viewportPanX,
       viewportPanY: this._viewportPanY,
       viewportZoom: this._viewportZoom,
+      forceLayoutEnabled: this._forceLayoutEnabled,
     };
   }
 }

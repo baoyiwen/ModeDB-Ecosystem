@@ -5,12 +5,12 @@ import { NODE_RADIUS } from './node-geometry.js';
 export type PlacedLike = { x: number; y: number };
 
 /** 多条平行关系（同一对端点）之间的槽位间距，单位：世界坐标像素。 */
-const PAIR_GAP = 18;
+const PAIR_GAP = 32;
 /**
  * **同一关系**的正/逆向两条线在其 slot 内的左右偏移；为避免两条线视觉合并，必须 < `PAIR_GAP / 2`。
  * 用于 `paint-scene` 渲染时 forward 取 `slot + INTRA_PAIR_GAP`、reverse 取 `slot - INTRA_PAIR_GAP`。
  */
-export const RELATION_INTRA_PAIR_GAP = 6;
+export const RELATION_INTRA_PAIR_GAP = 10;
 
 /** 圆形节点几何中心（与 draw-node / hit-test 一致）。 */
 export function nodeCircleCenter(p: PlacedLike): { x: number; y: number } {
@@ -57,6 +57,88 @@ export interface DirectedSegment {
   uy: number;
   midX: number;
   midY: number;
+}
+
+/** 带可选二次贝塞尔弯曲的有向线段。 */
+export interface CurvedDirectedSegment extends DirectedSegment {
+  cpx: number;
+  cpy: number;
+  bent: boolean;
+}
+
+const BEND_EPS = 4;
+
+export interface RelationLabelPlacement {
+  x: number;
+  y: number;
+  /** 弧度；标签沿连线切线方向，且已校正为可读朝向。 */
+  angle: number;
+}
+
+/** 使标签沿切线方向且文字不倒置。 */
+export function normalizeLabelAngle(angle: number): number {
+  if (angle > Math.PI / 2) {
+    return angle - Math.PI;
+  }
+  if (angle < -Math.PI / 2) {
+    return angle + Math.PI;
+  }
+  return angle;
+}
+
+/** 直线关系标签：落在线段中点，沿连线方向；弯曲时沿曲线 t=0.5 切线。 */
+export function segmentLabelPlacement(
+  seg: DirectedSegment | CurvedDirectedSegment,
+): RelationLabelPlacement {
+  if ('bent' in seg && seg.bent) {
+    return curvedLabelPlacement(seg);
+  }
+  return {
+    x: seg.midX,
+    y: seg.midY,
+    angle: normalizeLabelAngle(Math.atan2(seg.uy, seg.ux)),
+  };
+}
+
+/** 弯曲关系标签：曲线中点 + 切线方向。 */
+export function curvedLabelPlacement(seg: CurvedDirectedSegment): RelationLabelPlacement {
+  const pt = quadraticPointAt(0.5, seg.x1, seg.y1, seg.cpx, seg.cpy, seg.x2, seg.y2);
+  const tan = quadraticTangentAt(0.5, seg.x1, seg.y1, seg.cpx, seg.cpy, seg.x2, seg.y2);
+  const len = Math.hypot(tan.x, tan.y);
+  const ux = len < 1e-6 ? seg.ux : tan.x / len;
+  const uy = len < 1e-6 ? seg.uy : tan.y / len;
+  return {
+    x: pt.x,
+    y: pt.y,
+    angle: normalizeLabelAngle(Math.atan2(uy, ux)),
+  };
+}
+
+/** 自关联弧标签：沿弧在 (x,y) 处的切线方向。 */
+export function arcLabelPlacement(arc: SelfLoopArc, x: number, y: number): RelationLabelPlacement {
+  const radial = Math.atan2(y - arc.cy, x - arc.cx);
+  const tangent = arc.counterclockwise ? radial + Math.PI / 2 : radial - Math.PI / 2;
+  return { x, y, angle: normalizeLabelAngle(tangent) };
+}
+
+/**
+ * 圆上离世界点最近的一点（在圆边界上）。
+ */
+export function circlePointClosestTo(
+  cx: number,
+  cy: number,
+  radius: number,
+  px: number,
+  py: number,
+): { x: number; y: number } {
+  const dx = px - cx;
+  const dy = py - cy;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-6) {
+    return { x: cx + radius, y: cy };
+  }
+  const s = radius / len;
+  return { x: cx + dx * s, y: cy + dy * s };
 }
 
 /**
@@ -108,6 +190,128 @@ export function directedShortestSegment(
   };
 }
 
+/** 带可选二次贝塞尔弯曲的有向线段（`bend` 为锚点/控制点，端点贴在圆上离锚点最近处）。 */
+export function directedCurvedSegment(
+  source: PlacedLike,
+  target: PlacedLike,
+  perpOffset: number,
+  bend?: { x: number; y: number } | null,
+): CurvedDirectedSegment {
+  const base = directedShortestSegment(source, target, perpOffset);
+  if (!bend) {
+    return { ...base, cpx: base.midX, cpy: base.midY, bent: false };
+  }
+  const dist = Math.hypot(bend.x - base.midX, bend.y - base.midY);
+  return buildCurvedSegmentToAnchor(source, target, perpOffset, bend, dist >= BEND_EPS);
+}
+
+function buildCurvedSegmentToAnchor(
+  source: PlacedLike,
+  target: PlacedLike,
+  perpOffset: number,
+  anchor: { x: number; y: number },
+  bent: boolean,
+): CurvedDirectedSegment {
+  const cs = nodeCircleCenter(source);
+  const ct = nodeCircleCenter(target);
+  let dx = ct.x - cs.x;
+  let dy = ct.y - cs.y;
+  const len = Math.hypot(dx, dy);
+  const ux0 = len < 1e-6 ? 1 : dx / len;
+  const uy0 = len < 1e-6 ? 0 : dy / len;
+  const px = -uy0;
+  const py = ux0;
+  const ax = anchor.x + px * perpOffset;
+  const ay = anchor.y + py * perpOffset;
+  const p1 = circlePointClosestTo(cs.x, cs.y, NODE_RADIUS, ax, ay);
+  const p2 = circlePointClosestTo(ct.x, ct.y, NODE_RADIUS, ax, ay);
+  const x1 = p1.x;
+  const y1 = p1.y;
+  const x2 = p2.x;
+  const y2 = p2.y;
+  const cpx = ax;
+  const cpy = ay;
+  const mid = bent
+    ? quadraticPointAt(0.5, x1, y1, cpx, cpy, x2, y2)
+    : { x: (x1 + x2) / 2, y: (y1 + y2) / 2 };
+  const tEnd = bent ? quadraticTangentAt(1, x1, y1, cpx, cpy, x2, y2) : { x: x2 - x1, y: y2 - y1 };
+  const tLen = Math.hypot(tEnd.x, tEnd.y);
+  const ux = tLen < 1e-6 ? ux0 : tEnd.x / tLen;
+  const uy = tLen < 1e-6 ? uy0 : tEnd.y / tLen;
+  return {
+    x1,
+    y1,
+    x2,
+    y2,
+    ux,
+    uy,
+    midX: mid.x,
+    midY: mid.y,
+    cpx,
+    cpy,
+    bent,
+  };
+}
+
+export function quadraticPointAt(
+  t: number,
+  x1: number,
+  y1: number,
+  cpx: number,
+  cpy: number,
+  x2: number,
+  y2: number,
+): { x: number; y: number } {
+  const u = 1 - t;
+  return {
+    x: u * u * x1 + 2 * u * t * cpx + t * t * x2,
+    y: u * u * y1 + 2 * u * t * cpy + t * t * y2,
+  };
+}
+
+export function quadraticTangentAt(
+  t: number,
+  x1: number,
+  y1: number,
+  cpx: number,
+  cpy: number,
+  x2: number,
+  y2: number,
+): { x: number; y: number } {
+  return {
+    x: 2 * (1 - t) * (cpx - x1) + 2 * t * (x2 - cpx),
+    y: 2 * (1 - t) * (cpy - y1) + 2 * t * (y2 - cpy),
+  };
+}
+
+/** 二次贝塞尔曲线到点的近似距离。 */
+export function distancePointToQuadraticBezier(
+  px: number,
+  py: number,
+  x1: number,
+  y1: number,
+  cpx: number,
+  cpy: number,
+  x2: number,
+  y2: number,
+  samples = 14,
+): number {
+  let prevX = x1;
+  let prevY = y1;
+  let best = Infinity;
+  for (let i = 1; i <= samples; i++) {
+    const t = i / samples;
+    const pt = quadraticPointAt(t, x1, y1, cpx, cpy, x2, y2);
+    const d = distancePointToSegment(px, py, prevX, prevY, pt.x, pt.y);
+    if (d < best) {
+      best = d;
+    }
+    prevX = pt.x;
+    prevY = pt.y;
+  }
+  return best;
+}
+
 /** 预览：从源节点圆上指向世界点的一条射线（到鼠标）。 */
 export function segmentFromNodeTowardPoint(
   source: PlacedLike,
@@ -115,22 +319,21 @@ export function segmentFromNodeTowardPoint(
   worldY: number,
 ): DirectedSegment {
   const cs = nodeCircleCenter(source);
-  const dx0 = worldX - cs.x;
-  const dy0 = worldY - cs.y;
+  const p1 = circlePointClosestTo(cs.x, cs.y, NODE_RADIUS, worldX, worldY);
+  const dx0 = worldX - p1.x;
+  const dy0 = worldY - p1.y;
   const len = Math.hypot(dx0, dy0);
   const ux = len < 1e-6 ? 1 : dx0 / len;
   const uy = len < 1e-6 ? 0 : dy0 / len;
-  const x1 = cs.x + ux * NODE_RADIUS;
-  const y1 = cs.y + uy * NODE_RADIUS;
   return {
-    x1,
-    y1,
+    x1: p1.x,
+    y1: p1.y,
     x2: worldX,
     y2: worldY,
     ux,
     uy,
-    midX: (x1 + worldX) / 2,
-    midY: (y1 + worldY) / 2,
+    midX: (p1.x + worldX) / 2,
+    midY: (p1.y + worldY) / 2,
   };
 }
 

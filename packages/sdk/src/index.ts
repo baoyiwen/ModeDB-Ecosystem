@@ -17,7 +17,22 @@ export {
   type WebSocketCtor,
 } from './remote-client.js';
 export { ModelDB, type ModelDBConfig } from './model-db.js';
+export {
+  WORKSPACE_OP_NAMES,
+  DATABASE_OP_NAMES,
+  operationScope,
+  isWorkspaceOperation,
+  isDatabaseOperation,
+  isMutatingDatabaseOperation,
+  isEngineOperation,
+  assertEngineOperation,
+} from '@mode-db/shared';
 export type {
+  EngineOperation,
+  EngineDatabaseOperation,
+  EngineWorkspaceOperation,
+  EngineOperationResult,
+  EngineApplyOutcome,
   ManagementCatalogModelInfo,
   ManagementCatalogRelationInfo,
   ManagementCatalogResponse,
@@ -25,6 +40,8 @@ export type {
   ManagementDatabasesResponse,
   ManagementStatusResponse,
   WireBindStrategy,
+  WireExecuteBody,
+  WireExecuteResultJson,
   WireMatchPredicate,
   WireRelationLogic,
   WireRelationStats,

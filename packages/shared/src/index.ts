@@ -55,11 +55,31 @@ export {
   treeHasCallback,
 } from './wire-query-plan.js';
 export type {
+  EngineOperation,
+  EngineDatabaseOperation,
+  EngineWorkspaceOperation,
+  EngineOperationResult,
+  EngineApplyOutcome,
+} from './engine-operations.js';
+export {
+  WORKSPACE_OP_NAMES,
+  DATABASE_OP_NAMES,
+  operationScope,
+  isWorkspaceOperation,
+  isDatabaseOperation,
+  isMutatingDatabaseOperation,
+  isEngineOperation,
+  assertEngineOperation,
+} from './engine-operations.js';
+export type {
   AggregateOp,
   AggregateInputEntry,
   QueryExecuteOptions,
   QueryStartSpec,
   QueryPlanASTv2,
+  WireHopJSON,
+  RecursiveHopSpec,
+  TreeTraversalStrategy,
   RemoteExecuteSnapshot,
   RemoteSnapshotChainState,
   PredicateNode,

@@ -132,17 +132,24 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
    * raw record (no ValueObject wrappers).
    */
   getData(deep?: boolean): T {
+    return this._getDataGuarded(deep === true, new Set());
+  }
+
+  /** {@link getData} 的内部实现：`path` 记录当前 DFS 祖先链，防止共享/环状引用导致无限递归（多对多兄弟重复仍保留）。 */
+  private _getDataGuarded(deep: boolean, path: Set<HydratedEntity>): T {
     const materialized = this.materializeRow();
     if (!deep) {
       return materialized;
     }
     const base = { ...materialized } as Record<string, unknown>;
-    if (this.relates.size > 0) {
+    if (this.relates.size > 0 && !path.has(this)) {
+      path.add(this);
       const rel: Record<string, Record<string, unknown>[]> = {};
       for (const [k, v] of this.relates) {
-        rel[k] = v.map((c) => c.getData(true) as Record<string, unknown>);
+        rel[k] = v.map((c) => c._getDataGuarded(true, path) as Record<string, unknown>);
       }
       base['relates'] = rel;
+      path.delete(this);
     }
     return base as T;
   }
@@ -283,14 +290,20 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
   }
 
   toNested(): Record<string, unknown> {
+    return this._toNestedGuarded(new Set());
+  }
+
+  private _toNestedGuarded(path: Set<HydratedEntity>): Record<string, unknown> {
     const data = this.getData() as Record<string, unknown>;
     const out: Record<string, unknown> = { ...data };
-    if (this.relates.size > 0) {
+    if (this.relates.size > 0 && !path.has(this)) {
+      path.add(this);
       const rel: Record<string, unknown[]> = {};
       for (const [k, v] of this.relates) {
-        rel[k] = v.map((c) => c.toNested());
+        rel[k] = v.map((c) => c._toNestedGuarded(path));
       }
       out['relates'] = rel;
+      path.delete(this);
     }
     return out;
   }
@@ -299,6 +312,10 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
    * 轻量拓扑快照：纯 JSON、无函数、无 HydrationContext；便于前端 / 3D 缓存加载。
    */
   toSnapshot(): HydratedEntitySnapshot {
+    return this._toSnapshotGuarded(new Set());
+  }
+
+  private _toSnapshotGuarded(path: Set<HydratedEntity>): HydratedEntitySnapshot {
     const data = this.getData() as Record<string, unknown>;
     const snap: {
       model: string;
@@ -306,12 +323,14 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
       relates?: Record<string, HydratedEntitySnapshot[]>;
       relationStatus?: Record<string, RelationTraceStatus>;
     } = { model: this.modelName, data: { ...data } };
-    if (this.relates.size > 0) {
+    if (this.relates.size > 0 && !path.has(this)) {
+      path.add(this);
       const rel: Record<string, HydratedEntitySnapshot[]> = {};
       for (const [k, v] of this.relates) {
-        rel[k] = v.map((c) => c.toSnapshot());
+        rel[k] = v.map((c) => c._toSnapshotGuarded(path));
       }
       snap.relates = rel;
+      path.delete(this);
     }
     const st: Record<string, RelationTraceStatus> = {};
     for (const [k, v] of this.relationStatus) {
@@ -321,6 +340,73 @@ export class HydratedEntity<T extends ModelRecord = ModelRecord> {
       snap.relationStatus = st;
     }
     return snap;
+  }
+
+  /** 所有关系槽位下的子实体（按插入顺序合并）；树形查询通常只有一个自关联槽位。 */
+  private childEntities(): HydratedEntity[] {
+    const out: HydratedEntity[] = [];
+    for (const v of this.relates.values()) {
+      out.push(...v);
+    }
+    return out;
+  }
+
+  /**
+   * 将以本实体为根的子树**展平**为有序实体数组（含自身）。
+   * 一对一链时即「上下游」强顺序；`dfs`（默认）为前序，`bfs` 为层序。多对多被多个父引用的子节点会按其在树中的出现各计一次。
+   */
+  flatten(options?: { readonly order?: 'dfs' | 'bfs' }): HydratedEntity[] {
+    const order = options?.order ?? 'dfs';
+    const out: HydratedEntity[] = [];
+    if (order === 'bfs') {
+      const seen = new Set<HydratedEntity>();
+      let level: HydratedEntity[] = [this];
+      while (level.length > 0) {
+        const next: HydratedEntity[] = [];
+        for (const e of level) {
+          out.push(e);
+          if (seen.has(e)) {
+            continue;
+          }
+          seen.add(e);
+          next.push(...e.childEntities());
+        }
+        level = next;
+      }
+      return out;
+    }
+    const path = new Set<HydratedEntity>();
+    const visit = (e: HydratedEntity): void => {
+      out.push(e);
+      if (path.has(e)) {
+        return;
+      }
+      path.add(e);
+      for (const child of e.childEntities()) {
+        visit(child);
+      }
+      path.delete(e);
+    };
+    visit(this);
+    return out;
+  }
+
+  /**
+   * 将以本实体为根的子树**聚合为一棵树**：返回纯 JSON，子节点置于 `childrenKey`（默认 `children`）字段下。
+   */
+  toTree(options?: { readonly childrenKey?: string }): Record<string, unknown> {
+    return this._toTreeGuarded(options?.childrenKey ?? 'children', new Set());
+  }
+
+  private _toTreeGuarded(childrenKey: string, path: Set<HydratedEntity>): Record<string, unknown> {
+    const out = { ...(this.getData() as Record<string, unknown>) };
+    const kids = this.childEntities();
+    if (kids.length > 0 && !path.has(this)) {
+      path.add(this);
+      out[childrenKey] = kids.map((c) => c._toTreeGuarded(childrenKey, path));
+      path.delete(this);
+    }
+    return out;
   }
 
   /** @internal */

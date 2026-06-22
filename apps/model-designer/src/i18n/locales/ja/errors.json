@@ -8,6 +8,7 @@
   "tokenRequired": "接続トークンが必要です",
   "pushFailed": "エンジンへグラフをプッシュできませんでした",
   "pullFailed": "エンジンからグラフをプルできませんでした",
+  "clearDataFailed": "エンジン上の行データを消去できませんでした",
   "bootstrapFailed": "接続済みですがデザイナーカタログの初期化に失敗しました",
   "invalidJson": "metadata の JSON が無効です"
 }

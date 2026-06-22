@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import {
   AtlasManifestError,
   DiagnosticCenter,
+  EngineError,
   EngineLogger,
   InternalVault,
   ModelRegistry,
@@ -34,7 +35,14 @@ import { QueryChain } from '../src/runtime/query.js';
 import { QueryEngine } from '../src/runtime/query-engine.js';
 import type { PredicateNode } from '../src/runtime/predicate-tree.js';
 import type { RuntimeContext } from '../src/runtime/context.js';
+import { executeDatabaseOperation } from '../src/network/operation-executor.js';
 import { AtlasSingleVault } from './atlas-single-vault.js';
+import {
+  isDatabaseOperation,
+  type EngineApplyOutcome,
+  type EngineOperation,
+  type EngineOperationResult,
+} from '@mode-db/shared';
 
 function modelDefinitionToFieldDefsRecord(m: ModelDefinition): FieldDefsRecord {
   const out: FieldDefsRecord = {};
@@ -290,6 +298,47 @@ export class AuthoringEngine {
     };
   }
 
+  /**
+   * Protocol entry: run one **database-scope** {@link EngineOperation} (JSON) against this library —
+   * the in-process counterpart to the remote `RemoteModelDBClient.apply`. Workspace-scope ops
+   * (createDatabase / dropDatabase / listDatabases / catalog) are not engine-scoped and are rejected here.
+   *
+   * @returns JSON-safe {@link EngineOperationResult} (mutations flush via `flushAll()`).
+   */
+  async apply(op: EngineOperation): Promise<EngineOperationResult> {
+    if (!isDatabaseOperation(op)) {
+      throw new EngineError(
+        `AuthoringEngine.apply: "${op.op}" is a workspace-scope operation; use the workspace/admin API.`,
+      );
+    }
+    return executeDatabaseOperation({ engine: this, atlas: this.paths.atlasName }, op);
+  }
+
+  /**
+   * Protocol entry: run an ordered batch of database-scope operations. Always returns one
+   * {@link EngineApplyOutcome} per attempted op; with **`failFast`** (default `true`) it stops after
+   * the first failure (the failing outcome is still included).
+   */
+  async applyAll(
+    ops: readonly EngineOperation[],
+    opts?: { readonly failFast?: boolean },
+  ): Promise<EngineApplyOutcome[]> {
+    const failFast = opts?.failFast ?? true;
+    const out: EngineApplyOutcome[] = [];
+    for (const op of ops) {
+      try {
+        const result = await this.apply(op);
+        out.push({ ok: true, result });
+      } catch (e) {
+        out.push({ ok: false, error: e instanceof Error ? e.message : String(e) });
+        if (failFast) {
+          break;
+        }
+      }
+    }
+    return out;
+  }
+
   /** Build a FieldMatchContext from the current registry for I18N-aware queries. */
   private _buildFieldContext():
     | { locale?: string; fieldTypes?: ReadonlyMap<string, FieldTypeDef> }
@@ -454,6 +503,76 @@ export class AuthoringEngine {
       await this.persistence.flushModelToDisk(modelName);
     }
     return count;
+  }
+
+  /**
+   * Truncate one model: tombstone **every** row of `modelName` and clear all relation indexes that
+   * touch it (its edges become invalid once its rows are gone). The model's schema / registration and
+   * the other side's rows are untouched. Physical compaction happens on flush.
+   *
+   * @returns Number of rows tombstoned.
+   * @throws {RegistryError} If the model is not registered.
+   */
+  async clearModelData(modelName: string, options?: DeleteOptions): Promise<number> {
+    if (!this.registry.getModel(modelName)) {
+      throw new RegistryError(`clearModelData: model "${modelName}" is not registered.`);
+    }
+    const rows = await this.persistence.getMergedReader().getAll(modelName);
+    let count = 0;
+    for (const row of rows) {
+      if (await this.persistence.delete(modelName, row._id)) {
+        count++;
+      }
+    }
+    for (const rel of this.registry.getRelationsOf(modelName)) {
+      await this.indexer.clearIndex(rel);
+    }
+    EngineLogger.instance.info(
+      `[META] clearModelData model='${modelName}' deleted=${count}`,
+      undefined,
+      'Authoring',
+    );
+    if (options?.sync) {
+      await this.flushAll();
+    }
+    return count;
+  }
+
+  /**
+   * Truncate **all** data in this atlas: tombstone every row of every registered model and clear all
+   * relation indexes. Schema / registration (models + relations) is preserved — only row data and
+   * edges are removed. Physical compaction happens on flush.
+   *
+   * @returns Total rows tombstoned and a per-model breakdown.
+   */
+  async clearAllData(
+    options?: DeleteOptions,
+  ): Promise<{ totalDeleted: number; perModel: Record<string, number> }> {
+    const perModel: Record<string, number> = {};
+    let totalDeleted = 0;
+    for (const def of this.registry.getModelDefinitions()) {
+      const rows = await this.persistence.getMergedReader().getAll(def.name);
+      let count = 0;
+      for (const row of rows) {
+        if (await this.persistence.delete(def.name, row._id)) {
+          count++;
+        }
+      }
+      perModel[def.name] = count;
+      totalDeleted += count;
+    }
+    for (const rel of this.registry.getRelations()) {
+      await this.indexer.clearIndex(rel);
+    }
+    EngineLogger.instance.info(
+      `[META] clearAllData models=${Object.keys(perModel).length} deleted=${totalDeleted}`,
+      undefined,
+      'Authoring',
+    );
+    if (options?.sync) {
+      await this.flushAll();
+    }
+    return { totalDeleted, perModel };
   }
 
   async bind(

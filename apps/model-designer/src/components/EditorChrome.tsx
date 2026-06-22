@@ -25,8 +25,9 @@ export function EditorChrome(props: {
   onRequestClearCanvasSelection: () => void;
   children: ReactNode;
 }): ReactElement {
-  const { i18n, appearance, modes, data } = useDesigner();
+  const { i18n, appearance, modes, data, config } = useDesigner();
   const [, bump] = useState(0);
+  const [clearAllBusy, setClearAllBusy] = useState(false);
   useEffect(() => i18n.subscribe(() => bump((n) => n + 1)), [i18n]);
   useEffect(() => appearance.subscribe(() => bump((n) => n + 1)), [appearance]);
   useEffect(() => modes.subscribe(() => bump((n) => n + 1)), [modes]);
@@ -136,6 +137,43 @@ export function EditorChrome(props: {
                 onChange={(e) => appearance.setAccent(e.target.value)}
               />
             </div>
+          </div>
+
+          <div
+            className="designer-settings-row"
+            style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}
+          >
+            <span className="designer-panel-section-title" style={{ margin: 0 }}>
+              {i18n.t('ui', 'dataSectionTitle')}
+            </span>
+            <p style={{ fontSize: 12, color: 'var(--designer-text-soft)', margin: 0 }}>
+              {i18n.t('ui', 'dataClearAllHint')}
+            </p>
+            <button
+              type="button"
+              className="designer-tree-action designer-tree-action--danger"
+              disabled={!config.remoteClient || !config.activeLibraryName || clearAllBusy}
+              onClick={async () => {
+                const lib = config.activeLibraryName;
+                if (!config.remoteClient || !lib) {
+                  return;
+                }
+                if (!globalThis.confirm(i18n.t('ui', 'dataConfirmClearAll', { name: lib }))) {
+                  return;
+                }
+                setClearAllBusy(true);
+                try {
+                  await config.remoteClient.apply({ op: 'clearAllData' });
+                  window.alert(i18n.t('ui', 'dataClearAllDone', { name: lib }));
+                } catch {
+                  window.alert(i18n.t('errors', 'clearDataFailed'));
+                } finally {
+                  setClearAllBusy(false);
+                }
+              }}
+            >
+              {i18n.t('ui', 'dataClearAll')}
+            </button>
           </div>
         </div>
       );

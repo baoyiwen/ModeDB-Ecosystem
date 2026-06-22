@@ -1,7 +1,11 @@
-import { ModelDB } from '@mode-db/sdk';
-// import { DataType} from '@mode-db/common';
+import { ModelDB, RemoteHydratedEntity } from '@mode-db/sdk';
+import { DataType} from '@mode-db/common';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const datasDir = path.join(scriptDir, 'datas');
 
 type ParsedData = unknown;
 
@@ -98,33 +102,39 @@ const client = await modelDB.use('test_db');
 //   name: DataType.String,
 // });
 
-const administrativeDivision = client.model('administrative_division');
-console.error(administrativeDivision);
-const [province, cities] = await readFiles([
-  './datas/provinces.csv',
-  './datas/cities.csv',
-]);
-const provinceData = province.data as Record<string, string>[];
-const citiesData   = cities.data   as Record<string, string>[];
+// const administrativeDivision = client.model('administrative_division');
+// console.error(administrativeDivision);
+// const [province, cities] = await readFiles([
+//   path.join(datasDir, 'provinces.csv'),
+//   path.join(datasDir, 'cities.csv'),
+// ]);
+// if (province.error) {
+//   throw province.error;
+// }
+// if (cities.error) {
+//   throw cities.error;
+// }
+// const provinceData = province.data as Record<string, string>[];
+// const citiesData   = cities.data   as Record<string, string>[];
 
-console.error(citiesData);
-console.error(provinceData);
-provinceData.forEach(async p => {
-    // const pRow = await client.model('administrative_division').insertOne({
-    //     code: p.code,
-    //     name: p.name,
-    // });
-    citiesData.forEach(async c => {
-        if (c.provinceCode === p.code) {
-            // const cRow = await client.model('administrative_division').insertOne({
-            //     code: c.code,
-            //     name: c.name,
-            // });
-            // await client.bindRelation(pRow, cRow, 'children', 'parent');
-            // console.error(p, c)
-        }
-    })
-})
+// console.error(province);
+// console.error(provinceData);
+// // provinceData.forEach(async p => {
+// //     const pRow = await client.model('administrative_division').insertOne({
+// //         code: p.code,
+// //         name: p.name,
+// //     });
+// //     citiesData.forEach(async c => {
+// //         if (c.provinceCode === p.code) {
+// //             const cRow = await client.model('administrative_division').insertOne({
+// //                 code: c.code,
+// //                 name: c.name,
+// //             });
+// //             await client.bindRelation(pRow, cRow, 'children', 'parent');
+// //             console.error(p, c)
+// //         }
+// //     })
+// // })
 // const provinceByCode = new Map<string, unknown>();
 // for (const p of provinceData) {
 //   const row = await client.model('administrative_division').insertOne({
@@ -146,7 +156,7 @@ provinceData.forEach(async p => {
 const res = await client
   .model('administrative_division')
   .query()
-  .relate('children', r => r.is('code', '2310'))
+  .relate('children')
   .execute();
 console.log('Res:', res);
 

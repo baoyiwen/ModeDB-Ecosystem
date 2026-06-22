@@ -1,5 +1,11 @@
 import { RemoteModelDBClient, type WebSocketCtor } from './remote-client.js';
-import type { ManagementCatalogResponse } from '@mode-db/shared';
+import {
+  isWorkspaceOperation,
+  type EngineApplyOutcome,
+  type EngineOperation,
+  type EngineOperationResult,
+  type ManagementCatalogResponse,
+} from '@mode-db/shared';
 
 /**
  * Primary SDK entry: host/port/token only (no raw URL). Use {@link ModelDB.use} for per-database
@@ -103,6 +109,71 @@ export class ModelDB {
       this.pending.set(name, inflight);
     }
     return inflight;
+  }
+
+  /**
+   * Protocol entry: run one {@link EngineOperation} (JSON), routing by scope:
+   * - **workspace** ops (createDatabase / dropDatabase / listDatabases / catalog) hit the management surface;
+   * - **database** ops are executed on the connected client for **`database`** (required for that scope).
+   *
+   * This is the JSON/Designer-friendly counterpart of the fluent methods, all of which remain available.
+   */
+  async apply(op: EngineOperation, database?: string): Promise<EngineOperationResult> {
+    if (isWorkspaceOperation(op)) {
+      switch (op.op) {
+        case 'createDatabase':
+          await this.createDatabase(op.name);
+          return { kind: 'database', op: 'createDatabase', name: op.name, ok: true };
+        case 'dropDatabase':
+          await this.deleteDatabase(op.name);
+          this.releaseClient(op.name);
+          return { kind: 'database', op: 'dropDatabase', name: op.name, ok: true };
+        case 'listDatabases': {
+          const databases = await RemoteModelDBClient.listDatabases({
+            host: this.host,
+            port: this.port,
+            token: this.token,
+          });
+          return { kind: 'databases', databases };
+        }
+        case 'catalog': {
+          const catalog = await this.getDatabaseCatalog(op.database);
+          return { kind: 'catalog', ...catalog };
+        }
+      }
+    }
+    if (!database) {
+      throw new Error(
+        `ModelDB.apply: database-scope operation "${op.op}" requires a target database name.`,
+      );
+    }
+    const client = await this.use(database);
+    return client.apply(op);
+  }
+
+  /**
+   * Protocol entry: run an ordered batch of operations (mixed scopes allowed). Returns one
+   * {@link EngineApplyOutcome} per attempted op; with **`failFast`** (default `true`) it stops after the
+   * first failure. Provide **`database`** to target database-scope ops in the batch.
+   */
+  async applyAll(
+    ops: readonly EngineOperation[],
+    opts?: { readonly database?: string; readonly failFast?: boolean },
+  ): Promise<EngineApplyOutcome[]> {
+    const failFast = opts?.failFast ?? true;
+    const out: EngineApplyOutcome[] = [];
+    for (const op of ops) {
+      try {
+        const result = await this.apply(op, opts?.database);
+        out.push({ ok: true, result });
+      } catch (e) {
+        out.push({ ok: false, error: e instanceof Error ? e.message : String(e) });
+        if (failFast) {
+          break;
+        }
+      }
+    }
+    return out;
   }
 
   /**

@@ -1,20 +1,26 @@
 import { isInheritRelation } from '../config/graph-edge-kinds.js';
 import { CANVAS_VISUAL } from '../config/canvas-visual.js';
 import { drawDirectedRelation, drawSelfLoop } from './draw-edge.js';
+import { drawRelationLabel } from './draw-relation-label.js';
 import { drawNodeCircle } from './draw-node.js';
 import type { ConfigManager } from '../managers/config-manager.js';
 import type { DataManager } from '../managers/data-manager.js';
 import type { EngineRelationEdge } from '../types/engine-schema.js';
 import { buildPlacedNodes, type PlacedNode } from './hit-test.js';
 import {
-  directedShortestSegment,
+  directedCurvedSegment,
   edgePerpOffsetById,
   edgeSelfLoopSlotById,
   RELATION_INTRA_PAIR_GAP,
+  arcLabelPlacement,
   selfLoopGeometry,
+  segmentLabelPlacement,
+  type CurvedDirectedSegment,
   type DirectedSegment,
+  type RelationLabelPlacement,
 } from './relation-geometry.js';
 import { computeNodeHeight } from './node-geometry.js';
+import { paintSnapGuides, type SnapGuide } from './snap-guides.js';
 import { parseFillHex } from '../utils/color-utils.js';
 import {
   resolveModelDisplayName,
@@ -38,6 +44,8 @@ export interface PaintSceneParams {
   inheritPreview?: DirectedSegment | null;
   /** 界面语言（`en` | `zh` | `ja`），用于节点标题与正/逆向关系标签按 i18n 解析 */
   uiLocale: string;
+  /** 拖拽吸附时显示的对齐标线（世界坐标）。 */
+  snapGuides?: readonly SnapGuide[];
 }
 
 /**
@@ -79,28 +87,9 @@ export function paintVisibleWorldDotGrid(
   ctx.restore();
 }
 
-/** 在世界坐标 (worldX, worldY) 处绘制关系标签；标签自身按屏幕像素恒定渲染（`1 / zoom`）。 */
-function drawRelationLabel(
-  ctx: CanvasRenderingContext2D,
-  worldX: number,
-  worldY: number,
-  label: string,
-  zoom: number,
-): void {
-  ctx.save();
-  ctx.translate(worldX, worldY);
-  ctx.scale(1 / zoom, 1 / zoom);
-  ctx.font = '600 11px system-ui, "Segoe UI", sans-serif';
-  ctx.fillStyle = CANVAS_VISUAL.label.color;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(label, 0, 0);
-  ctx.restore();
-}
-
-/** 由有向线段计算"沿垂直方向 18 世界单位"的标签锚点；与原有标签摆放语义一致。 */
-function segmentLabelAnchor(seg: DirectedSegment): { x: number; y: number } {
-  return { x: seg.midX + -seg.uy * 18, y: seg.midY + seg.ux * 18 };
+/** 由有向线段计算标签锚点（沿连线中点 + 切线方向）。 */
+function segmentLabelAnchor(seg: DirectedSegment | CurvedDirectedSegment): RelationLabelPlacement {
+  return segmentLabelPlacement(seg);
 }
 
 export function paintScene(params: PaintSceneParams): void {
@@ -118,6 +107,7 @@ export function paintScene(params: PaintSceneParams): void {
     linkPreview,
     inheritPreview,
     uiLocale,
+    snapGuides,
   } = params;
   const hide = hiddenNodeIds;
   ctx.clearRect(0, 0, width, height);
@@ -131,6 +121,22 @@ export function paintScene(params: PaintSceneParams): void {
   ctx.scale(zoom, zoom);
 
   paintVisibleWorldDotGrid(ctx, width, height, panX, panY, zoom, snap.gridSize, snap.gridEnabled);
+
+  if (snapGuides && snapGuides.length > 0) {
+    paintSnapGuides({
+      ctx,
+      width,
+      height,
+      panX,
+      panY,
+      zoom,
+      guides: snapGuides,
+      tangentColor: CANVAS_VISUAL.snapGuide.tangentColor,
+      centerColor: CANVAS_VISUAL.snapGuide.centerColor,
+      previewTangentColor: CANVAS_VISUAL.snapGuide.previewTangentColor,
+      equalGapColor: CANVAS_VISUAL.snapGuide.equalGapColor,
+    });
+  }
 
   const placed = buildPlacedNodes(data.models, (id) => data.getLayout(id)?.position);
   const byId = new Map<string, PlacedNode>();
@@ -172,8 +178,8 @@ export function paintScene(params: PaintSceneParams): void {
    * - **自关联**：「帽子」两圈弧（内檐 reverse + 外顶 forward）扣在节点 slot 方向。
    */
   type EdgeLabelAnchors = {
-    forward: { x: number; y: number };
-    reverse?: { x: number; y: number };
+    forward: RelationLabelPlacement;
+    reverse?: RelationLabelPlacement;
   };
   const drawEdgeStroke = (
     r: EngineRelationEdge,
@@ -195,18 +201,29 @@ export function paintScene(params: PaintSceneParams): void {
       const loop = selfLoopGeometry(a, slot);
       drawSelfLoop(ctx, loop, color, lw, arrow, isInherit);
       return {
-        forward: { x: loop.forward.labelX, y: loop.forward.labelY },
-        reverse: { x: loop.reverse.labelX, y: loop.reverse.labelY },
+        forward: arcLabelPlacement(loop.forward, loop.forward.labelX, loop.forward.labelY),
+        reverse: arcLabelPlacement(loop.reverse, loop.reverse.labelX, loop.reverse.labelY),
       };
     }
+    const meta = data.getRelationCanvasMeta(r.id);
     const slotOff = offMap.get(r.id) ?? 0;
     if (isInherit) {
-      const seg = directedShortestSegment(a, b, slotOff);
+      const seg = directedCurvedSegment(a, b, slotOff, meta.forward_bend);
       drawDirectedRelation(ctx, seg, color, lw, arrow, true);
       return { forward: segmentLabelAnchor(seg) };
     }
-    const forward = directedShortestSegment(a, b, slotOff + RELATION_INTRA_PAIR_GAP);
-    const reverse = directedShortestSegment(b, a, -(slotOff - RELATION_INTRA_PAIR_GAP));
+    const forward = directedCurvedSegment(
+      a,
+      b,
+      slotOff + RELATION_INTRA_PAIR_GAP,
+      meta.forward_bend,
+    );
+    const reverse = directedCurvedSegment(
+      b,
+      a,
+      -(slotOff - RELATION_INTRA_PAIR_GAP),
+      meta.reverse_bend,
+    );
     drawDirectedRelation(ctx, forward, color, lw, arrow, false);
     drawDirectedRelation(ctx, reverse, color, lw, arrow, false);
     return {
@@ -217,22 +234,21 @@ export function paintScene(params: PaintSceneParams): void {
 
   const selRel = selectedRelationId;
   const hovRel = hoveredRelationId;
-  const labelEntries: { x: number; y: number; text: string }[] = [];
+  const labelEntries: { placement: RelationLabelPlacement; text: string }[] = [];
 
   const pushLabels = (r: EngineRelationEdge, anchors: EdgeLabelAnchors): void => {
     if (isInheritRelation(r.kind)) {
       labelEntries.push({
-        x: anchors.forward.x,
-        y: anchors.forward.y,
+        placement: anchors.forward,
         text: resolveInheritRelationLabel(r, uiLocale),
       });
       return;
     }
     const fwdText = resolveRelationForwardLabel(r, uiLocale);
     const revText = resolveRelationReverseLabel(r, uiLocale);
-    labelEntries.push({ x: anchors.forward.x, y: anchors.forward.y, text: fwdText });
+    labelEntries.push({ placement: anchors.forward, text: fwdText });
     if (anchors.reverse) {
-      labelEntries.push({ x: anchors.reverse.x, y: anchors.reverse.y, text: revText });
+      labelEntries.push({ placement: anchors.reverse, text: revText });
     }
   };
 
@@ -301,8 +317,8 @@ export function paintScene(params: PaintSceneParams): void {
     }
   }
 
-  for (const { x, y, text } of labelEntries) {
-    drawRelationLabel(ctx, x, y, text, zoom);
+  for (const { placement, text } of labelEntries) {
+    drawRelationLabel(ctx, placement, text, zoom);
   }
 
   ctx.restore();

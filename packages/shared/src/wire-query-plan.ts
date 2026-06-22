@@ -475,17 +475,39 @@ export type QueryStartSpec =
   | { readonly kind: 'all' }
   | { readonly kind: 'ids'; readonly ids: readonly string[] };
 
+/**
+ * 序列化后的单跳 JSON。`branches` 为从**本跳目标**分叉出的嵌套子链（每个分支本身又是一棵跳树），
+ * 用于表达「同一起点的数据网」——多个 `group`/`relate` 子链可并存于同一父实体之下。
+ */
+export interface WireHopJSON {
+  readonly relationName: string;
+  readonly source: Record<string, unknown>;
+  readonly target: Record<string, unknown>;
+  readonly recursive?: RecursiveHopSpec;
+  readonly lateral?: boolean;
+  readonly branches?: ReadonlyArray<WireHopJSON>;
+}
+
 export interface QueryPlanASTv2 {
   readonly version: 2;
   readonly originModel: string;
   readonly start: QueryStartSpec;
-  readonly hops: ReadonlyArray<{
-    readonly relationName: string;
-    readonly source: Record<string, unknown>;
-    readonly target: Record<string, unknown>;
-    readonly recursive?: { readonly maxDepth: number };
-  }>;
+  readonly hops: ReadonlyArray<WireHopJSON>;
   readonly trailing: Record<string, unknown>;
+}
+
+/** 遍历方向（影响展平默认顺序）：`bfs` 广度优先，`dfs` 深度优先。 */
+export type TreeTraversalStrategy = 'bfs' | 'dfs';
+
+/**
+ * 递归 / 自关联跳的执行规格。
+ * - **`tree: false`**（默认）：平铺收纳全部后代（{@link relateRecursive} 行为）。
+ * - **`tree: true`**：构建真正的嵌套子树（{@link children} 行为），每个节点的直接子节点挂在自身之下。
+ */
+export interface RecursiveHopSpec {
+  readonly maxDepth: number;
+  readonly tree?: boolean;
+  readonly strategy?: TreeTraversalStrategy;
 }
 
 export function queryPlanHasSerializedCallback(plan: QueryPlanASTv2): boolean {
@@ -576,7 +598,30 @@ interface HopPlan {
   readonly relationName: string;
   readonly sourcePredicate: PredicateNode;
   readonly targetPredicate: PredicateNode;
-  readonly recursive?: { readonly maxDepth: number };
+  readonly recursive?: RecursiveHopSpec;
+  readonly lateral?: boolean;
+  readonly branches?: readonly HopPlan[];
+}
+
+/** 序列化递归跳规格（仅写出存在的字段，保持 wire JSON 精简）。 */
+function serializeRecursiveHop(spec: RecursiveHopSpec): RecursiveHopSpec {
+  return {
+    maxDepth: spec.maxDepth,
+    ...(spec.tree ? { tree: true } : {}),
+    ...(spec.strategy ? { strategy: spec.strategy } : {}),
+  };
+}
+
+/** 递归序列化单跳（含 `branches` 子链），保持 wire JSON 精简。 */
+function serializeHopPlan(h: HopPlan): WireHopJSON {
+  return {
+    relationName: h.relationName,
+    source: serializePredicate(h.sourcePredicate),
+    target: serializePredicate(h.targetPredicate),
+    ...(h.recursive ? { recursive: serializeRecursiveHop(h.recursive) } : {}),
+    ...(h.lateral ? { lateral: true } : {}),
+    ...(h.branches && h.branches.length > 0 ? { branches: h.branches.map(serializeHopPlan) } : {}),
+  };
 }
 
 /**
@@ -622,12 +667,7 @@ export class WireQueryChain<
       version: 2,
       originModel: this.originModel,
       start: this.start,
-      hops: this.hops.map((h) => ({
-        relationName: h.relationName,
-        source: serializePredicate(h.sourcePredicate),
-        target: serializePredicate(h.targetPredicate),
-        ...(h.recursive ? { recursive: { maxDepth: h.recursive.maxDepth } } : {}),
-      })),
+      hops: this.hops.map(serializeHopPlan),
       trailing: serializePredicate(this.compiledRoot()),
     };
   }
@@ -811,9 +851,22 @@ export class WireQueryChain<
     return this;
   }
 
+  /**
+   * 在**本跳目标**上构建嵌套子链（分支）：回调内用一条全新链描述从目标出发的关系/过滤，
+   * 捕获其 hop 序列作为分支返回。多个分支可并存于同一父实体下，构成「同一起点的数据网」。
+   */
+  private buildSubBranches<Target extends Record<string, unknown>>(
+    build: (sub: WireQueryChain<Target>) => void,
+  ): readonly HopPlan[] {
+    const sub = new WireQueryChain<Target>(this.originModel, this.start);
+    build(sub);
+    return (sub as unknown as { hops: HopPlan[] }).hops;
+  }
+
   relate<Target extends Record<string, unknown> = Record<string, unknown>>(
     relationName: string,
     targetSetup?: (b: FilterBuilder<Target>) => void,
+    build?: (sub: WireQueryChain<Target>) => void,
   ): this {
     const sourcePredicate = clonePredicateNode(this.compiledRoot());
     let targetPredicate: PredicateNode = { type: 'group', logic: 'AND', children: [] };
@@ -824,10 +877,46 @@ export class WireQueryChain<
         ? { type: 'group', logic: 'AND', children: [] }
         : b.toPredicateNode();
     }
+    const branches = build ? this.buildSubBranches(build) : undefined;
     this.hops.push({
       relationName,
       sourcePredicate,
       targetPredicate,
+      ...(branches && branches.length > 0 ? { branches } : {}),
+    });
+    this.segments.length = 0;
+    this.segments.push([]);
+    return this;
+  }
+
+  /**
+   * 横向附加（**保持主体**）：沿关系把目标实体挂到当前主体行的关系槽位下，但**不推进**主体游标。
+   * 与 {@link relate} 同级，区别在于 `group` 之后查询主体仍是当前模型，可继续 `group` 或再 `relate`（`relate` 才改变主体）。
+   * 适用于 N:N 层级（如 `sys_layers` 的组/页）等「附加视图」。结果为 origin 根的嵌套树（与 `includeRelates` 一致）。
+   *
+   * 传入 **`build`** 可在目标上继续构建嵌套子链；配合多次 `group` 即可从同一起点拉出**多条链 / 数据网**。
+   */
+  group<Target extends Record<string, unknown> = Record<string, unknown>>(
+    relationName: string,
+    targetSetup?: (b: FilterBuilder<Target>) => void,
+    build?: (sub: WireQueryChain<Target>) => void,
+  ): this {
+    const sourcePredicate = clonePredicateNode(this.compiledRoot());
+    let targetPredicate: PredicateNode = { type: 'group', logic: 'AND', children: [] };
+    if (targetSetup) {
+      const b = new FilterBuilder<Target>();
+      targetSetup(b);
+      targetPredicate = b.isEmpty()
+        ? { type: 'group', logic: 'AND', children: [] }
+        : b.toPredicateNode();
+    }
+    const branches = build ? this.buildSubBranches(build) : undefined;
+    this.hops.push({
+      relationName,
+      sourcePredicate,
+      targetPredicate,
+      lateral: true,
+      ...(branches && branches.length > 0 ? { branches } : {}),
     });
     this.segments.length = 0;
     this.segments.push([]);
@@ -858,6 +947,50 @@ export class WireQueryChain<
       sourcePredicate,
       targetPredicate,
       recursive: { maxDepth },
+    });
+    this.segments.length = 0;
+    this.segments.push([]);
+    return this;
+  }
+
+  /**
+   * 自关联**树形**查询：沿同一关系向下展开为嵌套子树，子节点直接挂在对应实体之下。
+   * 结果实体提供 **`flatten()`**（展平为有序数组；一对一链即「上下游」强顺序）与 **`toTree()`**（嵌套 JSON）。
+   *
+   * @param relationName - 自关联的正向关系名（如 `children`）。
+   * @param options.depth - 最大展开层数（关系跳数），默认 `10000`（近似全量），范围 `[1, 10000]`。
+   * @param options.strategy - 遍历方向，影响展平默认顺序：`bfs` 广度 / `dfs` 深度（默认 `dfs`）。
+   */
+  children<Target extends Record<string, unknown> = Record<string, unknown>>(
+    relationName: string,
+    options?: {
+      readonly depth?: number;
+      readonly strategy?: TreeTraversalStrategy;
+      readonly target?: (b: FilterBuilder<Target>) => void;
+      readonly build?: (sub: WireQueryChain<Target>) => void;
+    },
+  ): this {
+    const raw = options?.depth ?? 10_000;
+    const maxDepth = Math.floor(raw);
+    if (maxDepth < 1 || maxDepth > 10_000) {
+      throw new WireQueryError('children: depth must be in [1, 10000].');
+    }
+    const sourcePredicate = clonePredicateNode(this.compiledRoot());
+    let targetPredicate: PredicateNode = { type: 'group', logic: 'AND', children: [] };
+    if (options?.target) {
+      const b = new FilterBuilder<Target>();
+      options.target(b);
+      targetPredicate = b.isEmpty()
+        ? { type: 'group', logic: 'AND', children: [] }
+        : b.toPredicateNode();
+    }
+    const branches = options?.build ? this.buildSubBranches(options.build) : undefined;
+    this.hops.push({
+      ...(branches && branches.length > 0 ? { branches } : {}),
+      relationName,
+      sourcePredicate,
+      targetPredicate,
+      recursive: { maxDepth, tree: true, strategy: options?.strategy ?? 'dfs' },
     });
     this.segments.length = 0;
     this.segments.push([]);
