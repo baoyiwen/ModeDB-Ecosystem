@@ -1,6 +1,6 @@
 {
   "name": "@mode-db/common",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Shared types, registry, diagnostics, storage root, and engine utilities for ModelDB (publishable workspace package).",
   "type": "module",
   "main": "./dist/index.js",
