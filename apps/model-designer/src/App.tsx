@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { ManagementCatalogResponse, RemoteModelDBClient } from '@mode-db/sdk';
 import './styles/designer-shell.css';
 import { CanvasContainer } from './components/CanvasContainer.js';
+import { NotificationToasts } from './components/NotificationToasts.js';
 import { ConnectionFlow } from './components/ConnectionFlow.js';
 import { EditorChrome } from './components/EditorChrome.js';
 import { DesignerToolbar } from './components/DesignerToolbar.js';
@@ -14,17 +15,17 @@ import {
 } from './sync/engine-catalog-import.js';
 import {
   clearSessionToken,
-  getRememberToken,
   getSessionToken,
   getStoredHost,
   getStoredLastLibrary,
   getStoredPort,
-  getStoredToken,
 } from './config/connection-prefs.js';
 import { FIXED_MODEL_DESIGNER_DATABASE } from './config/fixed-database.js';
 import { isInheritRelation } from './config/graph-edge-kinds.js';
 import { withTimeout } from './engine/async-timeout.js';
 import { ensureDesignerWorkspaceSession } from './engine/workspace-session.js';
+import { interactionStateForToolMode } from './utils/tool-mode-state.js';
+import { getLibraryByCode } from './sync/library-registry.js';
 
 const RECONNECT_TIMEOUT_MS = 20_000;
 const RECONNECT_BOOTSTRAP_MS = 60_000;
@@ -69,10 +70,9 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
   } | null {
     const host = getStoredHost(import.meta.env.VITE_MODE_DB_HOST ?? '').trim();
     const port = getStoredPort(Number(import.meta.env.VITE_MODE_DB_PORT ?? 0) || 0);
-    // 优先 session（标签页内缓存），否则若用户勾过「记住 Token」则用 localStorage。
-    const sessionToken = getSessionToken();
-    const persistedToken = getRememberToken() ? getStoredToken('') : '';
-    const token = (sessionToken ?? persistedToken).trim();
+    // 静默重连仅依赖 sessionStorage 中的会话 token（F5 刷新当前工作区）。
+    // 手动断开会清除 session token；「记住 Token」只用于预填连接表单，不触发自动重连。
+    const token = getSessionToken()?.trim() ?? '';
     const library = getStoredLastLibrary('').trim();
     if (!host || !port || !token || !library) {
       return null;
@@ -99,26 +99,28 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
         'reconnect timeout',
       );
       await withTimeout(
-        (async () => {
-          await ensureDesignerCatalog(client!);
-          await seedDefaultWorkspaceRecords(client!, creds.library);
-          // 与首次进入逻辑保持一致：重连时同样做一次幂等的业务库 → 设计器库 catalog 同步。
-          // 业务库不可达或为空都不应阻塞编辑器加载，因此把整个导入步骤包在 try/catch 里。
-          let catalog: ManagementCatalogResponse | undefined;
-          try {
-            catalog = await readBusinessCatalog({
-              host: creds.host,
-              port: creds.port,
-              token: creds.token,
-              businessDb: creds.library,
-            });
-            await importEngineCatalogIntoDesignerDb(client!, creds.library, catalog);
-          } catch (e) {
-            // eslint-disable-next-line no-console
-            console.warn('[Designer] silent reconnect: engine catalog import failed', e);
-          }
-          await this.finishEditorReady(client!, creds.library, catalog);
-        })(),
+        this.managers.asyncOps.run(
+          'reconnect',
+          async () => {
+            await ensureDesignerCatalog(client!);
+            await seedDefaultWorkspaceRecords(client!, creds.library);
+            let catalog: ManagementCatalogResponse | undefined;
+            try {
+              catalog = await readBusinessCatalog({
+                host: creds.host,
+                port: creds.port,
+                token: creds.token,
+                businessDb: creds.library,
+              });
+              await importEngineCatalogIntoDesignerDb(client!, creds.library, catalog);
+            } catch (e) {
+              // eslint-disable-next-line no-console
+              console.warn('[Designer] silent reconnect: engine catalog import failed', e);
+            }
+            await this.finishEditorReady(client!, creds.library, catalog);
+          },
+          { detail: creds.library },
+        ),
         RECONNECT_BOOTSTRAP_MS,
         'reconnect bootstrap timeout',
       );
@@ -140,37 +142,45 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
     client: RemoteModelDBClient,
     libraryName: string,
     catalog?: ManagementCatalogResponse,
+    libraryMeta?: { name: Record<string, string> },
   ): void => {
-    void this.finishEditorReady(client, libraryName, catalog);
+    void this.finishEditorReady(client, libraryName, catalog, libraryMeta);
   };
 
   private async finishEditorReady(
     client: RemoteModelDBClient,
     libraryName: string,
     catalog?: ManagementCatalogResponse,
+    libraryMeta?: { name: Record<string, string> },
   ): Promise<void> {
-    const { config, data, layers, modes, state, i18n, notifications } = this.managers;
+    const { config, data, layers, modes, state, asyncOps } = this.managers;
     const reconnecting = this.state.reconnecting;
     config.setRemoteClient(client, true);
     config.setActiveLibraryName(libraryName);
+    if (libraryMeta?.name) {
+      config.setActiveLibraryMeta(libraryMeta.name);
+    } else {
+      try {
+        const rec = await getLibraryByCode(client, libraryName);
+        config.setActiveLibraryMeta(rec?.name ?? null);
+      } catch {
+        config.setActiveLibraryMeta(null);
+      }
+    }
     if (!reconnecting) {
       data.resetToNewLibrary();
     }
     try {
-      await data.loadLibraryCanvas(client, libraryName, catalog);
-      notifications.success(i18n.t('ui', 'notifyLibraryReady', { name: libraryName }), {
-        toast: false,
+      await asyncOps.run('loadCanvas', () => data.loadLibraryCanvas(client, libraryName, catalog), {
+        detail: libraryName,
       });
     } catch (e) {
       // eslint-disable-next-line no-console
       console.warn('[Designer] loadLibraryCanvas failed', e);
-      notifications.warning(i18n.t('ui', 'notifyLoadCanvasFailed'), {
-        message: e instanceof Error ? e.message : String(e),
-      });
     }
     config.resetViewport();
     modes.setMode('select');
-    state.transition('SELECT');
+    state.transition(interactionStateForToolMode('select'));
     layers.setActiveLayer(data.defaultPageLayerId);
     this.setState((s) => ({
       connected: true,
@@ -224,48 +234,59 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
 
     if (reconnecting) {
       return this.wrapRoot(
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            color: '#475569',
-            fontSize: 13,
-          }}
-        >
-          {this.managers.i18n.t('ui', 'bootstrapRunning')}
-        </div>,
+        <>
+          <NotificationToasts />
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '100vh',
+              color: '#475569',
+              fontSize: 13,
+            }}
+          >
+            {this.managers.i18n.t('ui', 'bootstrapRunning')}
+          </div>
+        </>,
       );
     }
 
     if (!connected) {
-      return this.wrapRoot(<ConnectionFlow onEditorReady={this.handleEditorReady} />);
+      return this.wrapRoot(
+        <>
+          <NotificationToasts />
+          <ConnectionFlow onEditorReady={this.handleEditorReady} />
+        </>,
+      );
     }
 
     return this.wrapRoot(
-      <EditorChrome
-        key={sessionEpoch}
-        selectedModelId={selectedModelId}
-        selectedRelationId={selectedRelationId}
-        onRequestClearCanvasSelection={this.handleClearCanvasSelection}
-      >
-        <div className="designer-editor-root">
-          <div className="designer-canvas-wrap">
-            <CanvasContainer
-              selectedModelId={selectedModelId}
-              selectedRelationId={selectedRelationId}
-              onSelectModel={this.handleSelectModel}
-              onSelectRelation={this.handleSelectRelation}
-            />
-            <DesignerToolbar
-              selectedId={selectedModelId}
-              onSelect={this.handleSelectModel}
-              onDisconnected={this.handleDisconnected}
-            />
+      <>
+        <NotificationToasts />
+        <EditorChrome
+          key={sessionEpoch}
+          selectedModelId={selectedModelId}
+          selectedRelationId={selectedRelationId}
+          onRequestClearCanvasSelection={this.handleClearCanvasSelection}
+        >
+          <div className="designer-editor-root">
+            <div className="designer-canvas-wrap">
+              <CanvasContainer
+                selectedModelId={selectedModelId}
+                selectedRelationId={selectedRelationId}
+                onSelectModel={this.handleSelectModel}
+                onSelectRelation={this.handleSelectRelation}
+              />
+              <DesignerToolbar
+                selectedId={selectedModelId}
+                onSelect={this.handleSelectModel}
+                onDisconnected={this.handleDisconnected}
+              />
+            </div>
           </div>
-        </div>
-      </EditorChrome>,
+        </EditorChrome>
+      </>,
     );
   }
 }

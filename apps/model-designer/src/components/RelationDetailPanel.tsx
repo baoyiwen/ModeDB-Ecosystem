@@ -57,8 +57,10 @@ export function RelationDetailPanel(props: {
   useEffect(() => {
     setForwardDraft(rel?.forward_name ?? '');
     setReverseDraft(rel?.reverse_name ?? '');
-    setEditingDirection('forward');
   }, [rel?.id, rel?.forward_name, rel?.reverse_name]);
+  useEffect(() => {
+    setEditingDirection('forward');
+  }, [rel?.id]);
 
   if (!rel) {
     return <div style={{ fontSize: 12, color: '#64748b' }}>—</div>;

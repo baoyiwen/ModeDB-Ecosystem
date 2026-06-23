@@ -374,6 +374,7 @@ textarea.code {
   z-index: 200;
   min-height: 100vh;
   overflow: auto;
+  overflow-anchor: none;
   background: #0f1115;
   color: #e8eaed;
 }
@@ -451,13 +452,31 @@ textarea.code {
   line-height: 1.55;
 }
 
-.query-manual-toc a {
+.query-manual-toc__link {
+  display: block;
+  width: 100%;
+  padding: 0.2rem 0.35rem;
+  margin: 0 -0.35rem;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
   color: #9eb8e8;
-  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: inherit;
+  line-height: inherit;
 }
 
-.query-manual-toc a:hover {
-  text-decoration: underline;
+.query-manual-toc__link:hover {
+  background: rgba(62, 90, 140, 0.25);
+  color: #c5d4f0;
+}
+
+.query-manual-toc__link--active {
+  background: #1a2433;
+  color: #e8eaed;
+  box-shadow: inset 2px 0 0 #5b8fd4;
 }
 
 .query-manual-body {
@@ -466,7 +485,7 @@ textarea.code {
 
 .query-manual-section {
   margin-bottom: 2rem;
-  scroll-margin-top: 1rem;
+  scroll-margin-top: 20px;
 }
 
 .query-manual-section h2 {

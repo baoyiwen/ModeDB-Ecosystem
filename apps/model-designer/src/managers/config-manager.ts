@@ -18,6 +18,7 @@ const DEFAULT_THEMES: ThemePalette[] = [
 import type { RemoteModelDBClient } from '@mode-db/sdk';
 
 export type ConfigViewportListener = () => void;
+export type ConfigLibraryListener = () => void;
 
 export interface ConfigManagerSnapshot {
   gridEnabled: boolean;
@@ -44,11 +45,14 @@ export class ConfigManager {
   private _workspaceValidated = false;
   /** 当前打开的逻辑库（用于标题展示）。 */
   private _activeLibraryName: string | null = null;
+  /** 当前逻辑库 i18n 显示名（`sys_data_asset_map.name`）。 */
+  private _activeLibraryNameI18n: Record<string, string> | null = null;
   private _viewportPanX = 0;
   private _viewportPanY = 0;
   private _viewportZoom = 1;
   private _forceLayoutEnabled = false;
   private readonly _viewportListeners = new Set<ConfigViewportListener>();
+  private readonly _libraryListeners = new Set<ConfigLibraryListener>();
 
   get gridEnabled(): boolean {
     return this._gridEnabled;
@@ -103,8 +107,33 @@ export class ConfigManager {
     return this._activeLibraryName;
   }
 
+  get activeLibraryNameI18n(): Record<string, string> | null {
+    return this._activeLibraryNameI18n;
+  }
+
   setActiveLibraryName(name: string | null): void {
     this._activeLibraryName = name;
+    if (!name) {
+      this._activeLibraryNameI18n = null;
+    }
+  }
+
+  setActiveLibraryMeta(nameI18n: Record<string, string> | null): void {
+    this._activeLibraryNameI18n = nameI18n ? { ...nameI18n } : null;
+    this.emitLibrary();
+  }
+
+  subscribeLibrary(fn: ConfigLibraryListener): () => void {
+    this._libraryListeners.add(fn);
+    return () => {
+      this._libraryListeners.delete(fn);
+    };
+  }
+
+  private emitLibrary(): void {
+    for (const fn of this._libraryListeners) {
+      fn();
+    }
   }
 
   get viewportPanX(): number {

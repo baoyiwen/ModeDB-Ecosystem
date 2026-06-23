@@ -27,6 +27,11 @@ import { isCanvasStructureLocked } from '../managers/mode-manager.js';
 import { pickNewModelColor } from '../utils/model-color-pick.js';
 import type { GestureKind } from '../managers/event-manager.js';
 import type { InteractionState } from '../managers/state-manager.js';
+import {
+  canStartLinkGesture,
+  interactionStateForToolMode,
+  isIdleCanvasInteractionState,
+} from '../utils/tool-mode-state.js';
 
 /**
  * 把鼠标 `clientX/clientY`（视口 CSS 像素）转换为画布**局部 CSS 像素**坐标。
@@ -164,7 +169,7 @@ export function CanvasContainer(props: {
       if (e.key === 'Escape') {
         linkingFromAddCtrlRef.current = false;
         modes.setMode('select');
-        state.transition('SELECT');
+        state.transition(interactionStateForToolMode('select'));
         linkSourceRef.current = undefined;
         linkClickRef.current = undefined;
         onSelectModel(undefined);
@@ -491,7 +496,7 @@ export function CanvasContainer(props: {
       // 仅选择模式：长按进入连线（新建模式用 Ctrl+单击拖线）
       if (g.type === 'long_press' && mode === 'link') {
         const id = hitAt(sx, sy);
-        if (!id || (interactionRef.current !== 'SELECT' && interactionRef.current !== 'ADD_NODE')) {
+        if (!id || !canStartLinkGesture(interactionRef.current)) {
           return;
         }
         linkingFromAddCtrlRef.current = false;
@@ -504,7 +509,11 @@ export function CanvasContainer(props: {
         return;
       }
       if (g.type === 'double_click' && mode === 'add') {
-        if (interactionRef.current !== 'ADD_NODE' && interactionRef.current !== 'SELECT') {
+        if (
+          interactionRef.current !== 'ADD_NODE' &&
+          interactionRef.current !== 'SELECT' &&
+          interactionRef.current !== 'LINK'
+        ) {
           return;
         }
         const under = hitAt(sx, sy);
@@ -517,7 +526,7 @@ export function CanvasContainer(props: {
         if (nid) {
           onSelectModel(nid);
         }
-        state.transition('SELECT');
+        state.transition(interactionStateForToolMode(modesRef.current));
         return;
       }
     };
@@ -614,7 +623,7 @@ export function CanvasContainer(props: {
         ev.button === 0 &&
         !ev.ctrlKey &&
         !ev.metaKey &&
-        (st === 'SELECT' || st === 'ADD_NODE');
+        (st === 'SELECT' || st === 'ADD_NODE' || st === 'LINK');
       if (canBendRelation && relHit) {
         const meta = data.getRelationCanvasMeta(relHit.id);
         const bend = relHit.direction === 'reverse' ? meta.reverse_bend : meta.forward_bend;
@@ -642,7 +651,7 @@ export function CanvasContainer(props: {
         !hit &&
         !ev.ctrlKey &&
         !ev.metaKey &&
-        (st === 'SELECT' || st === 'ADD_NODE')
+        isIdleCanvasInteractionState(st)
       ) {
         panDragRef.current = { lastX: x, lastY: y, startX: x, startY: y, moved: false };
         canvas.setPointerCapture(ev.pointerId);
@@ -829,7 +838,7 @@ export function CanvasContainer(props: {
             onSelectRelation(edgeId);
           }
         }
-        state.transition('SELECT');
+        state.transition(interactionStateForToolMode(modesRef.current));
         try {
           canvas.releasePointerCapture(ev.pointerId);
         } catch {

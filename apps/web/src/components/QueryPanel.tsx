@@ -165,7 +165,7 @@ export function QueryPanel(props: {
     <div className="query-panel">
       <div className="query-panel-head">
         <h3>{t('query.title')}</h3>
-        <button type="button" className="query-manual-link" onClick={navigateToQueryManual}>
+        <button type="button" className="query-manual-link" onClick={() => navigateToQueryManual()}>
           {t('query.openManual')}
         </button>
       </div>

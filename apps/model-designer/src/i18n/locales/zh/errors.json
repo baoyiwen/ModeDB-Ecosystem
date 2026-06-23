@@ -10,5 +10,7 @@
   "pullFailed": "无法从引擎拉取图谱",
   "clearDataFailed": "无法在引擎上清除行数据",
   "bootstrapFailed": "已连接但设计器元数据自举失败",
-  "invalidJson": "metadata 的 JSON 无效"
+  "invalidJson": "metadata 的 JSON 无效",
+  "libraryDuplicateCode": "已存在相同唯一 code 的逻辑库。",
+  "librarySaveFailed": "无法保存库基本信息。"
 }

@@ -74,7 +74,7 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
 
   private readonly inputStyle: CSSProperties = {
     padding: 9,
-    borderRadius: 8,
+    borderRadius: 4,
     background: 'rgba(255, 255, 255, 0.78)',
     border: '1px solid rgba(15, 23, 42, 0.08)',
     color: '#1e293b',

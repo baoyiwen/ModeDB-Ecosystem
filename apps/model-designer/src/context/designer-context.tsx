@@ -10,6 +10,7 @@ import { ModeManager } from '../managers/mode-manager.js';
 import { PropVaultController } from '../managers/prop-vault-controller.js';
 import { GraphSyncManager } from '../managers/graph-sync-manager.js';
 import { NotificationManager } from '../managers/notification-manager.js';
+import { AsyncOperationManager } from '../managers/async-operation-manager.js';
 import { StateManager } from '../managers/state-manager.js';
 
 export interface DesignerManagers {
@@ -25,6 +26,7 @@ export interface DesignerManagers {
   propVault: PropVaultController;
   graphSync: GraphSyncManager;
   notifications: NotificationManager;
+  asyncOps: AsyncOperationManager;
 }
 
 /** Class 组件可通过 `static contextType = DesignerContext` 订阅。 */
@@ -47,6 +49,7 @@ export function DesignerProvider({ children }: { children: ReactNode }): React.R
       propVault: new PropVaultController(),
       graphSync: new GraphSyncManager(),
       notifications: new NotificationManager(),
+      asyncOps: new AsyncOperationManager(),
     };
   }
   const value = useMemo(() => managers.current as DesignerManagers, []);

@@ -71,22 +71,21 @@ export function resolveRelationReverseLabel(rel: EngineRelationEdge, locale: str
 }
 
 /**
- * 继承关系名（单向）：`forward_name_i18n` → `forward_name` → 默认 `inherits`。
- * 继承边不使用 reverse_name / 成对命名。
+ * 继承关系名（单向）：`forward_name_i18n`（含跨语言回退）→ 默认 inherits 文案 → `forward_name`。
  */
 export function resolveInheritRelationLabel(rel: EngineRelationEdge, locale: string): string {
-  const direct = rel.forward_name_i18n?.[locale]?.trim();
-  if (direct) {
-    return direct;
-  }
   const name = rel.forward_name || INHERIT_RELATION_DEFAULT_NAME;
+  const fromMap = resolveI18nForLocale(rel.forward_name_i18n, locale, '');
+  if (fromMap) {
+    return fromMap;
+  }
   if (
     name === INHERIT_RELATION_DEFAULT_NAME ||
     name.startsWith(`${INHERIT_RELATION_DEFAULT_NAME}-`)
   ) {
     return INHERIT_RELATION_LABEL_I18N[locale] ?? INHERIT_RELATION_LABEL_I18N.en ?? name;
   }
-  return resolveI18nForLocale(rel.forward_name_i18n, locale, name);
+  return name;
 }
 
 /** 对应关系基数文案的 ui.json 键名（一对多 / 多对一）。 */

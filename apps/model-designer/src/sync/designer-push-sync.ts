@@ -180,18 +180,31 @@ async function pruneRemovedBusinessSchema(
       .filter((name): name is string => typeof name === 'string' && name.length > 0),
   );
 
-  for (const model of catalog.models) {
-    if (model.name.startsWith('sys_') || canvasModelNames.has(model.name)) {
-      continue;
-    }
-    await businessClient.dropModel(model.name);
-  }
+  const modelsToRemove = catalog.models.filter(
+    (model) => !model.name.startsWith('sys_') && !canvasModelNames.has(model.name),
+  );
+  const removingModelNames = new Set(modelsToRemove.map((model) => model.name));
 
+  // 仅显式从画布删除、且端点仍保留的关系；涉及待删模型的关系由 dropModel 一并移除。
   for (const rel of catalog.relations) {
     if (canvasRelationForwards.has(rel.forward)) {
       continue;
     }
-    await businessClient.dropRelation(rel.forward);
+    if (removingModelNames.has(rel.source) || removingModelNames.has(rel.target)) {
+      continue;
+    }
+    try {
+      await businessClient.dropRelation(rel.forward);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (!/not found/i.test(message)) {
+        throw e;
+      }
+    }
+  }
+
+  for (const model of modelsToRemove) {
+    await businessClient.dropModel(model.name);
   }
 }
 
@@ -256,7 +269,7 @@ async function pushDesignerCatalogRows(
       }
     }
 
-    if (model.parent_id) {
+    if (model.parent_id && data.models.some((m) => m.id === model.parent_id)) {
       try {
         await client.bindRelation(
           { model: SYS_MODEL, id: model.parent_id },
@@ -493,8 +506,8 @@ export async function pushLibraryToEngine(params: PushLibraryParams): Promise<vo
     throw new Error('DESIGNER_PUSH_NO_LIBRARY_CODE');
   }
 
-  await pushDesignerCatalogRows(params.designerClient, code, params.data);
   await pruneRemovedDesignerCatalogRows(params.designerClient, code, params.data);
+  await pushDesignerCatalogRows(params.designerClient, code, params.data);
 
   const catalogBefore = await readBusinessCatalog({
     host: params.host,

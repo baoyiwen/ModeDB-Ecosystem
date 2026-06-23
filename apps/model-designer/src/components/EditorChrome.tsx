@@ -11,8 +11,8 @@ import { isInheritRelation } from '../config/graph-edge-kinds.js';
 import { isSidePanelReadOnly } from '../managers/mode-manager.js';
 import { InfoPanel } from './InfoPanel.js';
 import { PropsEditor } from './PropsEditor.js';
+import { ActiveLibraryPanel } from './ActiveLibraryPanel.js';
 import { NotificationCenter } from './NotificationCenter.js';
-import { NotificationToasts } from './NotificationToasts.js';
 import { LayerTreePanel } from './LayerTreePanel.js';
 import { RelationDetailPanel } from './RelationDetailPanel.js';
 import type { LocaleCode } from '../managers/i18n-manager.js';
@@ -27,9 +27,8 @@ export function EditorChrome(props: {
   onRequestClearCanvasSelection: () => void;
   children: ReactNode;
 }): ReactElement {
-  const { i18n, appearance, modes, data, config, notifications } = useDesigner();
+  const { i18n, appearance, modes, data, config, notifications, asyncOps } = useDesigner();
   const [, bump] = useState(0);
-  const [clearAllBusy, setClearAllBusy] = useState(false);
   const [notifyBump, setNotifyBump] = useState(0);
   useEffect(() => i18n.subscribe(() => bump((n) => n + 1)), [i18n]);
   useEffect(() => appearance.subscribe(() => bump((n) => n + 1)), [appearance]);
@@ -159,6 +158,8 @@ export function EditorChrome(props: {
             </div>
           </div>
 
+          <ActiveLibraryPanel />
+
           <div
             className="designer-settings-row"
             style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}
@@ -172,7 +173,7 @@ export function EditorChrome(props: {
             <button
               type="button"
               className="designer-tree-action designer-tree-action--danger"
-              disabled={!config.remoteClient || !config.activeLibraryName || clearAllBusy}
+              disabled={!config.remoteClient || !config.activeLibraryName || asyncOps.isBusy}
               onClick={async () => {
                 const lib = config.activeLibraryName;
                 if (!config.remoteClient || !lib) {
@@ -181,14 +182,14 @@ export function EditorChrome(props: {
                 if (!globalThis.confirm(i18n.t('ui', 'dataConfirmClearAll', { name: lib }))) {
                   return;
                 }
-                setClearAllBusy(true);
                 try {
-                  await config.remoteClient.apply({ op: 'clearAllData' });
-                  notifications.success(i18n.t('ui', 'dataClearAllDone', { name: lib }));
+                  await asyncOps.run(
+                    'clearAllData',
+                    () => config.remoteClient!.apply({ op: 'clearAllData' }),
+                    { detail: lib },
+                  );
                 } catch {
-                  notifications.error(i18n.t('errors', 'clearDataFailed'));
-                } finally {
-                  setClearAllBusy(false);
+                  /* 失败态由右侧 toast 展示 */
                 }
               }}
             >
@@ -229,8 +230,6 @@ export function EditorChrome(props: {
   return (
     <>
       {props.children}
-
-      <NotificationToasts />
 
       <div className="designer-panel-fabs designer-panel-fabs--row" aria-label="Panel toggles">
         <button

@@ -10,10 +10,9 @@ export function InfoPanel(props: {
   modelId: string | undefined;
   readOnly?: boolean;
 }): ReactElement {
-  const { i18n, data, config } = useDesigner();
+  const { i18n, data, config, asyncOps } = useDesigner();
   const readOnly = props.readOnly ?? false;
   const [, bump] = useState(0);
-  const [clearBusy, setClearBusy] = useState(false);
   useEffect(() => data.subscribe(() => bump((n) => n + 1)), [data]);
 
   const model = props.modelId ? data.models.find((m) => m.id === props.modelId) : undefined;
@@ -223,7 +222,7 @@ export function InfoPanel(props: {
         <button
           type="button"
           className="designer-tree-action designer-tree-action--danger"
-          disabled={!model?.model_name || !config.remoteClient || readOnly || clearBusy}
+          disabled={!model?.model_name || !config.remoteClient || readOnly || asyncOps.isBusy}
           onClick={async () => {
             if (!model?.model_name || !config.remoteClient) {
               return;
@@ -233,17 +232,18 @@ export function InfoPanel(props: {
             ) {
               return;
             }
-            setClearBusy(true);
             try {
-              await config.remoteClient.apply({
-                op: 'clearModelData',
-                model: model.model_name,
-              });
-              window.alert(i18n.t('ui', 'dataClearModelDone', { name: model.model_name }));
+              await asyncOps.run(
+                'clearModelData',
+                () =>
+                  config.remoteClient!.apply({
+                    op: 'clearModelData',
+                    model: model.model_name,
+                  }),
+                { detail: model.model_name },
+              );
             } catch {
-              window.alert(i18n.t('errors', 'clearDataFailed'));
-            } finally {
-              setClearBusy(false);
+              /* 失败态由右侧 toast 展示 */
             }
           }}
         >

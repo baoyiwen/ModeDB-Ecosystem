@@ -10,5 +10,7 @@
   "pullFailed": "Could not pull graph from the engine",
   "clearDataFailed": "Could not clear row data on the engine",
   "bootstrapFailed": "Connected but designer catalog bootstrap failed",
-  "invalidJson": "Invalid JSON in metadata"
+  "invalidJson": "Invalid JSON in metadata",
+  "libraryDuplicateCode": "A library with this unique code already exists.",
+  "librarySaveFailed": "Could not save library profile."
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import type { RemoteModelDBClient } from '@mode-db/sdk';
 import { RemoteModelDBClient as RClient } from '@mode-db/sdk';
 import { ensureDesignerCatalog } from '../bootstrap/designer-storage-init.js';
@@ -23,6 +23,16 @@ import {
   importEngineCatalogIntoDesignerDb,
   readBusinessCatalog,
 } from '../sync/engine-catalog-import.js';
+import {
+  ensureLibraryRecord,
+  formatLibraryLabel,
+  listLibraryRegistry,
+  mergeLibraryRegistryWithDbNames,
+  updateLibraryMetadata,
+} from '../sync/library-registry.js';
+import type { LibraryRegistryRecord } from '../types/library-registry.js';
+import { LibraryRegistryForm } from './LibraryRegistryForm.js';
+import { isValidUniqueName } from '../utils/name-validation.js';
 
 const CONNECT_MS = 45_000;
 const OPEN_MS = 90_000;
@@ -32,16 +42,27 @@ export interface ConnectionFlowProps {
     client: RemoteModelDBClient,
     libraryName: string,
     catalog?: import('@mode-db/sdk').ManagementCatalogResponse,
+    libraryMeta?: { name: Record<string, string> },
   ) => void;
 }
 
-/**
- * 两步：1）校验服务器并枚举逻辑库；2）选择或新建逻辑库后建立 WebSocket 并完成 catalog 自举。
- */
+type LibraryEditorMode = 'existing' | 'create';
+
+function emptyDraft(): {
+  code: string;
+  name: Record<string, string>;
+  description: Record<string, string>;
+} {
+  return { code: '', name: {}, description: {} };
+}
+
+/** 连接门：枚举逻辑库、维护基本信息、打开画布。 */
 export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
-  const { i18n } = useDesigner();
+  const { i18n, asyncOps } = useDesigner();
   const [, bump] = useState(0);
   useEffect(() => i18n.subscribe(() => bump((n) => n + 1)), [i18n]);
+
+  const designerClientRef = useRef<RemoteModelDBClient | null>(null);
 
   const [step, setStep] = useState<'credentials' | 'library' | 'opening'>('credentials');
   const [host, setHost] = useState(() =>
@@ -54,17 +75,57 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
     getStoredToken(import.meta.env.VITE_MODE_DB_TOKEN ?? ''),
   );
   const [rememberToken, setRememberTokenState] = useState(getRememberToken);
-  const [databases, setDatabases] = useState<readonly { name: string }[]>([]);
+  const [libraries, setLibraries] = useState<readonly LibraryRegistryRecord[]>([]);
   const [selectedDb, setSelectedDb] = useState(() =>
     getStoredLastLibrary(FIXED_MODEL_DESIGNER_DATABASE),
   );
-  const [newDbName, setNewDbName] = useState('');
+  const [editorMode, setEditorMode] = useState<LibraryEditorMode>('existing');
+  const [draft, setDraft] = useState(emptyDraft);
   const [busy, setBusy] = useState(false);
   const [openingDetail, setOpeningDetail] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [saveHint, setSaveHint] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      try {
+        designerClientRef.current?.close();
+      } catch {
+        /* ignore */
+      }
+      designerClientRef.current = null;
+    };
+  }, []);
+
+  const applyRecordToDraft = useCallback((rec: LibraryRegistryRecord): void => {
+    setDraft({
+      code: rec.code,
+      name: { ...rec.name },
+      description: { ...rec.description },
+    });
+  }, []);
+
+  useEffect(() => {
+    if (editorMode !== 'existing') {
+      return;
+    }
+    const rec = libraries.find((l) => l.code === selectedDb);
+    if (rec) {
+      applyRecordToDraft(rec);
+    }
+  }, [editorMode, selectedDb, libraries, applyRecordToDraft]);
+
+  const refreshLibraries = useCallback(
+    async (client: RemoteModelDBClient, dbNames: readonly string[]): Promise<void> => {
+      const registry = await listLibraryRegistry(client);
+      setLibraries(mergeLibraryRegistryWithDbNames(dbNames, registry));
+    },
+    [],
+  );
 
   const fetchDatabases = useCallback(async (): Promise<void> => {
     setErr(null);
+    setSaveHint(null);
     setBusy(true);
     try {
       const list = await withTimeout(
@@ -72,42 +133,11 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
         CONNECT_MS,
         i18n.t('errors', 'connectTimeout'),
       );
-      // 设计器专属库属于内部存储，不在「目标业务库」选项里展示。
-      const visible = list.filter((d) => d.name !== FIXED_MODEL_DESIGNER_DATABASE);
-      setDatabases(visible);
-      if (visible.length > 0 && !visible.some((d) => d.name === selectedDb)) {
-        setSelectedDb(visible[0].name);
-      }
-      setStep('library');
-      persistConnectionFields(host.trim(), port, FIXED_MODEL_DESIGNER_DATABASE);
-      if (rememberToken) {
-        persistToken(token.trim());
-      } else {
-        persistToken('');
-      }
-      setRememberToken(rememberToken);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }, [host, port, token, rememberToken, selectedDb, i18n]);
+      const dbNames = list
+        .filter((d) => d.name !== FIXED_MODEL_DESIGNER_DATABASE)
+        .map((d) => d.name);
 
-  const openLibrary = useCallback(async (): Promise<void> => {
-    const name = selectedDb.trim();
-    if (!name || !token.trim()) {
-      window.alert(i18n.t('errors', 'tokenRequired'));
-      return;
-    }
-    setErr(null);
-    setBusy(true);
-    setStep('opening');
-    let client: RemoteModelDBClient | undefined;
-    let connectOk = false;
-    let catalog: Awaited<ReturnType<typeof readBusinessCatalog>> | undefined;
-    try {
-      // 不连接用户业务库，避免污染；统一连到设计器专属库（必要时自动创建）。
-      client = await withTimeout(
+      const client = await withTimeout(
         ensureDesignerWorkspaceSession({
           host: host.trim(),
           port,
@@ -117,49 +147,197 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
         CONNECT_MS,
         i18n.t('errors', 'connectTimeout'),
       );
-      connectOk = true;
-      await withTimeout(
-        (async () => {
-          await ensureDesignerCatalog(client!, (p) => {
-            setOpeningDetail(`${p.stepIndex}/${p.stepTotal} ${p.detail}`);
-          });
-          await seedDefaultWorkspaceRecords(client!, name);
-          // 从业务库（Model Engine 层）反向导入 schema：把已注册的引擎模型/关系
-          // 在设计器库内"编号入库"，建立 assetMap / 继承拓扑，为后续保存位置与图层归属做好基础。
-          setOpeningDetail(`importing engine catalog of "${name}"`);
-          catalog = await readBusinessCatalog({
+      try {
+        designerClientRef.current?.close();
+      } catch {
+        /* ignore */
+      }
+      designerClientRef.current = client;
+
+      await ensureDesignerCatalog(client);
+      await refreshLibraries(client, dbNames);
+
+      if (dbNames.length > 0 && !dbNames.includes(selectedDb)) {
+        setSelectedDb(dbNames[0]!);
+      }
+      setEditorMode('existing');
+      setStep('library');
+      persistConnectionFields(host.trim(), port, FIXED_MODEL_DESIGNER_DATABASE);
+      persistToken(rememberToken ? token.trim() : '');
+      setRememberToken(rememberToken);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [host, port, token, rememberToken, selectedDb, i18n, refreshLibraries]);
+
+  const saveLibraryDetails = useCallback(async (): Promise<void> => {
+    const client = designerClientRef.current;
+    if (!client) {
+      return;
+    }
+    setErr(null);
+    setSaveHint(null);
+    setBusy(true);
+    try {
+      if (editorMode === 'create') {
+        const code = draft.code.trim();
+        if (!code || !isValidUniqueName(code)) {
+          setErr(i18n.t('ui', 'nameInvalidFormat'));
+          return;
+        }
+        if (libraries.some((l) => l.code === code)) {
+          setErr(i18n.t('errors', 'libraryDuplicateCode'));
+          return;
+        }
+        await withTimeout(
+          RClient.createDatabase({
             host: host.trim(),
             port,
             token: token.trim(),
-            businessDb: name,
-          });
-          const report = await importEngineCatalogIntoDesignerDb(client!, name, catalog);
-          if (report.insertedModels > 0 || report.insertedRelations > 0) {
-            setOpeningDetail(
-              `imported ${report.insertedModels} models / ${report.insertedRelations} relations`,
-            );
-          }
-        })(),
+            name: code,
+          }),
+          CONNECT_MS,
+          i18n.t('errors', 'connectTimeout'),
+        );
+        await ensureLibraryRecord(client, {
+          code,
+          name: draft.name,
+          description: draft.description,
+        });
+        const list = await RClient.listDatabases({
+          host: host.trim(),
+          port,
+          token: token.trim(),
+        });
+        const dbNames = list
+          .filter((d) => d.name !== FIXED_MODEL_DESIGNER_DATABASE)
+          .map((d) => d.name);
+        await refreshLibraries(client, dbNames);
+        setSelectedDb(code);
+        setEditorMode('existing');
+        setSaveHint(i18n.t('ui', 'libraryCreateDone'));
+        return;
+      }
+
+      const code = selectedDb.trim();
+      if (!code) {
+        return;
+      }
+      const rec = libraries.find((l) => l.code === code);
+      const next = await updateLibraryMetadata(
+        client,
+        { id: rec?.id ?? '', code },
+        { name: draft.name, description: draft.description },
+      );
+      const list = await RClient.listDatabases({
+        host: host.trim(),
+        port,
+        token: token.trim(),
+      });
+      const dbNames = list
+        .filter((d) => d.name !== FIXED_MODEL_DESIGNER_DATABASE)
+        .map((d) => d.name);
+      await refreshLibraries(client, dbNames);
+      applyRecordToDraft(next);
+      setSaveHint(i18n.t('ui', 'librarySaveDone'));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [
+    editorMode,
+    draft,
+    libraries,
+    selectedDb,
+    host,
+    port,
+    token,
+    i18n,
+    refreshLibraries,
+    applyRecordToDraft,
+  ]);
+
+  const openLibrary = useCallback(async (): Promise<void> => {
+    const name = selectedDb.trim();
+    if (!name || !token.trim()) {
+      window.alert(i18n.t('errors', 'tokenRequired'));
+      return;
+    }
+    setErr(null);
+    setSaveHint(null);
+    setBusy(true);
+    setStep('opening');
+    let client: RemoteModelDBClient | undefined;
+    let connectOk = false;
+    let catalog: Awaited<ReturnType<typeof readBusinessCatalog>> | undefined;
+    const meta = { name: { ...draft.name }, description: { ...draft.description } };
+    try {
+      client = designerClientRef.current ?? undefined;
+      if (!client) {
+        client = await withTimeout(
+          ensureDesignerWorkspaceSession({
+            host: host.trim(),
+            port,
+            token: token.trim(),
+            designerWorkspace: FIXED_MODEL_DESIGNER_DATABASE,
+          }),
+          CONNECT_MS,
+          i18n.t('errors', 'connectTimeout'),
+        );
+        designerClientRef.current = client;
+      }
+      connectOk = true;
+      await withTimeout(
+        asyncOps.run(
+          'openLibrary',
+          async () => {
+            await ensureDesignerCatalog(client!, (p) => {
+              setOpeningDetail(`${p.stepIndex}/${p.stepTotal} ${p.detail}`);
+            });
+            await seedDefaultWorkspaceRecords(client!, name, meta);
+            const rec = libraries.find((l) => l.code === name);
+            await updateLibraryMetadata(client!, { id: rec?.id ?? '', code: name }, meta);
+            setOpeningDetail(i18n.t('ui', 'asyncOp_openLibraryDetail', { name }));
+            catalog = await readBusinessCatalog({
+              host: host.trim(),
+              port,
+              token: token.trim(),
+              businessDb: name,
+            });
+            const report = await importEngineCatalogIntoDesignerDb(client!, name, catalog);
+            if (report.insertedModels > 0 || report.insertedRelations > 0) {
+              setOpeningDetail(
+                i18n.t('ui', 'asyncOp_openLibraryImported', {
+                  models: String(report.insertedModels),
+                  relations: String(report.insertedRelations),
+                }),
+              );
+            }
+          },
+          { detail: name },
+        ),
         OPEN_MS,
         i18n.t('errors', 'bootstrapTimeout'),
       );
       persistConnectionFields(host.trim(), port, FIXED_MODEL_DESIGNER_DATABASE);
       persistLastLibrary(name);
-      // 无论是否勾选「记住 Token」，都在 sessionStorage 里短期缓存，使 F5 后能无感重连；
-      // 关闭标签页/浏览器即清空，安全性与一次性登录等价。
       persistSessionToken(token.trim());
       if (rememberToken) {
         persistToken(token.trim());
       }
       setRememberToken(rememberToken);
-      // `name` 是用户业务库的逻辑标签（=`sys_data_asset_map.code`），用作设计器内的命名空间；
-      // 实际 WebSocket 会话连接的是 FIXED_MODEL_DESIGNER_DATABASE。
-      props.onEditorReady(client, name, catalog);
+      props.onEditorReady(client, name, catalog, { name: meta.name });
     } catch (e) {
       try {
         client?.close();
       } catch {
         /* ignore */
+      }
+      if (designerClientRef.current === client) {
+        designerClientRef.current = null;
       }
       const detail = e instanceof Error ? e.message : String(e);
       const title = connectOk
@@ -171,42 +349,10 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
       setBusy(false);
       setOpeningDetail(null);
     }
-  }, [host, port, token, selectedDb, rememberToken, i18n, props]);
-
-  const createDatabase = useCallback(async (): Promise<void> => {
-    const name = newDbName.trim();
-    if (!name || !token.trim()) {
-      return;
-    }
-    setErr(null);
-    setBusy(true);
-    try {
-      await withTimeout(
-        RClient.createDatabase({
-          host: host.trim(),
-          port,
-          token: token.trim(),
-          name,
-        }),
-        CONNECT_MS,
-        i18n.t('errors', 'connectTimeout'),
-      );
-      const list = await RClient.listDatabases({
-        host: host.trim(),
-        port,
-        token: token.trim(),
-      });
-      setDatabases(list.filter((d) => d.name !== FIXED_MODEL_DESIGNER_DATABASE));
-      setSelectedDb(name);
-      setNewDbName('');
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }, [host, port, token, newDbName, i18n]);
+  }, [host, port, token, selectedDb, rememberToken, draft, libraries, i18n, props, asyncOps]);
 
   const fieldClass = 'designer-connection-field';
+  const locale = i18n.locale;
 
   return (
     <div className="designer-connection-flow designer-scrollbar-hide">
@@ -259,7 +405,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
               />
               {i18n.t('ui', 'rememberToken')}
             </label>
-            {err && <div style={{ color: '#b91c1c', fontSize: 12 }}>{err}</div>}
+            {err ? <div style={{ color: '#b91c1c', fontSize: 12 }}>{err}</div> : null}
             <div className="designer-connection-actions">
               <button
                 type="button"
@@ -278,38 +424,117 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
             <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 12px', textAlign: 'center' }}>
               {i18n.t('ui', 'pickLibraryHint')}
             </p>
-            <label className={fieldClass}>
-              <select
-                className="designer-select"
-                style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
-                value={selectedDb}
-                onChange={(e) => setSelectedDb(e.target.value)}
-              >
-                {databases.map((d) => (
-                  <option key={d.name} value={d.name}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
-              <input
-                className="designer-input"
-                placeholder={i18n.t('ui', 'newDatabasePlaceholder')}
-                value={newDbName}
-                onChange={(e) => setNewDbName(e.target.value)}
-                style={{ flex: 1 }}
-              />
+            {editorMode === 'existing' ? (
+              <label className={fieldClass}>
+                <span>{i18n.t('ui', 'librarySelectLabel')}</span>
+                <select
+                  className="designer-select"
+                  style={{ width: '100%', padding: '10px 12px', fontSize: 13 }}
+                  value={selectedDb}
+                  disabled={busy}
+                  onChange={(e) => setSelectedDb(e.target.value)}
+                >
+                  {libraries.map((rec) => (
+                    <option key={rec.code} value={rec.code}>
+                      {formatLibraryLabel(rec, locale)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
+            <div style={{ display: 'flex', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
               <button
                 type="button"
-                className="designer-btn"
+                className={`designer-btn${editorMode === 'existing' ? ' designer-btn-primary' : ''}`}
                 disabled={busy}
-                onClick={() => void createDatabase()}
+                onClick={() => {
+                  setEditorMode('existing');
+                  setErr(null);
+                  setSaveHint(null);
+                  const rec = libraries.find((l) => l.code === selectedDb);
+                  if (rec) {
+                    applyRecordToDraft(rec);
+                  }
+                }}
               >
-                {i18n.t('ui', 'btnCreateDb')}
+                {i18n.t('ui', 'libraryModeExisting')}
+              </button>
+              <button
+                type="button"
+                className={`designer-btn${editorMode === 'create' ? ' designer-btn-primary' : ''}`}
+                disabled={busy}
+                onClick={() => {
+                  setEditorMode('create');
+                  setErr(null);
+                  setSaveHint(null);
+                  setDraft(emptyDraft());
+                }}
+              >
+                {i18n.t('ui', 'libraryModeCreate')}
               </button>
             </div>
-            <div className="designer-connection-actions">
+
+            <div
+              style={{
+                marginTop: 8,
+                padding: '12px 0 0',
+                borderTop: '1px solid rgba(15, 23, 42, 0.08)',
+              }}
+            >
+              <p
+                className="designer-panel-section-title"
+                style={{ margin: '0 0 10px', fontSize: 13 }}
+              >
+                {i18n.t('ui', 'libraryDetailsTitle')}
+              </p>
+              <LibraryRegistryForm
+                code={editorMode === 'create' ? draft.code : selectedDb}
+                codeReadOnly={editorMode === 'existing'}
+                name={draft.name}
+                description={draft.description}
+                disabled={busy}
+                codeLabel={i18n.t('ui', 'libraryCode')}
+                codePlaceholder={i18n.t('ui', 'libraryCodePlaceholder')}
+                codeInvalidHint={i18n.t('ui', 'nameInvalidFormat')}
+                displayNameLabel={i18n.t('ui', 'libraryDisplayNameI18n')}
+                descriptionLabel={i18n.t('ui', 'libraryDescriptionI18n')}
+                pickLocaleLabel={i18n.t('ui', 'i18nPickLocale')}
+                addRowHint={i18n.t('ui', 'i18nAddLocaleFill')}
+                onCodeChange={(code) => setDraft((d) => ({ ...d, code }))}
+                onNameCommit={(name) => setDraft((d) => ({ ...d, name }))}
+                onDescriptionCommit={(description) => setDraft((d) => ({ ...d, description }))}
+              />
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  marginTop: 12,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <button
+                  type="button"
+                  className="designer-btn"
+                  disabled={busy}
+                  onClick={() => void saveLibraryDetails()}
+                >
+                  {editorMode === 'create'
+                    ? i18n.t('ui', 'libraryCreateSave')
+                    : i18n.t('ui', 'librarySave')}
+                </button>
+                {saveHint ? (
+                  <span style={{ fontSize: 12, color: '#64748b' }}>{saveHint}</span>
+                ) : null}
+              </div>
+            </div>
+
+            {err ? (
+              <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 10 }}>{err}</div>
+            ) : null}
+
+            <div className="designer-connection-actions" style={{ marginTop: 16 }}>
               <button
                 type="button"
                 className="designer-btn"
@@ -321,7 +546,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
               <button
                 type="button"
                 className="designer-btn designer-btn-primary"
-                disabled={busy}
+                disabled={busy || editorMode === 'create' || !selectedDb.trim()}
                 onClick={() => void openLibrary()}
               >
                 {i18n.t('ui', 'btnOpenLibrary')}
@@ -333,11 +558,11 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
         {step === 'opening' && (
           <div style={{ fontSize: 13, color: '#475569', textAlign: 'center' }}>
             <div>{i18n.t('ui', 'bootstrapRunning')}</div>
-            {openingDetail && (
+            {openingDetail ? (
               <code style={{ display: 'block', marginTop: 10, color: '#94a3b8', fontSize: 11 }}>
                 {openingDetail}
               </code>
-            )}
+            ) : null}
           </div>
         )}
       </div>

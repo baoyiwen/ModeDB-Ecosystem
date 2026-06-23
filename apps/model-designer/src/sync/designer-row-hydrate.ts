@@ -1,7 +1,12 @@
 import type { ManagementCatalogResponse, RemoteModelDBClient } from '@mode-db/sdk';
 import { SYS_MODEL, SYS_PROPS, SYS_RELATION_DEF } from '../bootstrap/designer-storage-init.js';
 import { DataType } from '../config/engine-prop-types.js';
-import { GRAPH_INHERIT_KIND, GRAPH_NODE_LINK_KIND } from '../config/graph-edge-kinds.js';
+import {
+  GRAPH_INHERIT_KIND,
+  GRAPH_NODE_LINK_KIND,
+  INHERIT_RELATION_DEFAULT_NAME,
+  INHERIT_RELATION_LABEL_I18N,
+} from '../config/graph-edge-kinds.js';
 import type { DataManager } from '../managers/data-manager.js';
 import type { EngineModelNode, EngineRelationEdge } from '../types/engine-schema.js';
 import type { PropObject } from '../types/prop-object.js';
@@ -457,8 +462,8 @@ export async function fetchGraphFromDesignerRows(
       id: crypto.randomUUID(),
       source_model_id: m.parent_id,
       target_model_id: m.id,
-      forward_name: 'parentModelHasChildren',
-      reverse_name: 'modelBelongsToParent',
+      forward_name: INHERIT_RELATION_DEFAULT_NAME,
+      forward_name_i18n: { ...INHERIT_RELATION_LABEL_I18N },
       kind: GRAPH_INHERIT_KIND,
     });
   }
@@ -495,6 +500,46 @@ function overlayLayoutsFromMldg(
   });
 }
 
+/** 从 mldg 快照恢复继承边的展示名 / 描述 / 画布元数据（catalog 行不存继承边）。 */
+function overlayInheritRelationsFromMldg(
+  relations: readonly EngineRelationEdge[],
+  doc: MldgDocument,
+): EngineRelationEdge[] {
+  const inheritByPair = new Map<string, EngineRelationEdge>();
+  for (const rel of doc.engine_schema.relations) {
+    if (rel.kind !== GRAPH_INHERIT_KIND) {
+      continue;
+    }
+    inheritByPair.set(`${rel.source_model_id}:${rel.target_model_id}`, rel);
+  }
+  if (inheritByPair.size === 0) {
+    return [...relations];
+  }
+
+  return relations.map((rel) => {
+    if (rel.kind !== GRAPH_INHERIT_KIND) {
+      return rel;
+    }
+    const overlay = inheritByPair.get(`${rel.source_model_id}:${rel.target_model_id}`);
+    if (!overlay) {
+      return rel;
+    }
+    return {
+      ...rel,
+      forward_name: overlay.forward_name ?? rel.forward_name,
+      forward_name_i18n: overlay.forward_name_i18n
+        ? { ...overlay.forward_name_i18n }
+        : rel.forward_name_i18n,
+      description_i18n: overlay.description_i18n
+        ? { ...overlay.description_i18n }
+        : rel.description_i18n,
+      canvas_meta_str: overlay.canvas_meta_str ?? rel.canvas_meta_str,
+      pos_x: overlay.pos_x ?? rel.pos_x,
+      pos_y: overlay.pos_y ?? rel.pos_y,
+    };
+  });
+}
+
 /**
  * 当 `sys_designer_graph` 尚无快照时，从设计器 catalog 行 hydration。
  */
@@ -523,11 +568,13 @@ export async function loadLibraryCanvas(
   }
 
   let layouts = hydrated.layouts;
+  let relations = hydrated.relations;
   try {
     const bytes = await pullLatestDesignerSnapshot(client, libraryCode);
     const doc = parseMldgDocumentFromUint8Array(bytes);
     if (doc.engine_schema.models.length > 0) {
       layouts = overlayLayoutsFromMldg(hydrated, doc);
+      relations = overlayInheritRelationsFromMldg(relations, doc);
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -540,5 +587,5 @@ export async function loadLibraryCanvas(
     }
   }
 
-  data.loadHydratedGraph(hydrated.models, hydrated.relations, layouts);
+  data.loadHydratedGraph(hydrated.models, relations, layouts);
 }

@@ -208,3 +208,22 @@ const result = await wire.apply({ op: 'executeQuery', snapshot });`,
     paragraphKeys: ['manual.sTips.p1', 'manual.sTips.p2', 'manual.sTips.p3'],
   },
 ];
+
+export interface ManualTocEntry {
+  readonly id: string;
+  readonly titleKey: MessageKey;
+}
+
+export const MANUAL_TABLE_SECTIONS: readonly ManualTocEntry[] = [
+  { id: 'filter-ops', titleKey: 'manual.sFilterOps.title' },
+  { id: 'hop-compare', titleKey: 'manual.sHopCompare.title' },
+  { id: 'compute-ops', titleKey: 'manual.sComputeOps.title' },
+];
+
+export const MANUAL_TOC_ENTRIES: readonly ManualTocEntry[] = [
+  ...QUERY_MANUAL_SECTIONS.map((section) => ({
+    id: section.id,
+    titleKey: section.titleKey,
+  })),
+  ...MANUAL_TABLE_SECTIONS,
+];

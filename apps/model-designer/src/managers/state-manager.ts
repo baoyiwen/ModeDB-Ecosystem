@@ -1,4 +1,10 @@
-export type InteractionState = 'SELECT' | 'ADD_NODE' | 'LINKING' | 'INHERITING';
+export type InteractionState =
+  | 'SELECT'
+  | 'ADD_NODE'
+  | 'DELETING'
+  | 'LINK'
+  | 'LINKING'
+  | 'INHERITING';
 
 export type StateListener = (state: InteractionState) => void;
 

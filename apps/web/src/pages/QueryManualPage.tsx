@@ -1,8 +1,12 @@
-import { type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { useI18n } from '../i18n/I18nContext.js';
 import type { MessageKey } from '../i18n/messages.js';
-import { navigateToPlayground } from '../hooks/use-hash-route.js';
-import { QUERY_MANUAL_SECTIONS } from '../query/query-manual-sections.js';
+import {
+  getManualSectionFromHash,
+  navigateToPlayground,
+  replaceManualSectionHash,
+} from '../hooks/use-hash-route.js';
+import { MANUAL_TOC_ENTRIES, QUERY_MANUAL_SECTIONS } from '../query/query-manual-sections.js';
 
 const COMPUTE_OP_KEYS: readonly { op: string; key: MessageKey }[] = [
   { op: 'sum', key: 'manual.compute.sum' },
@@ -14,11 +18,165 @@ const COMPUTE_OP_KEYS: readonly { op: string; key: MessageKey }[] = [
   { op: 'stdDev', key: 'manual.compute.stdDev' },
 ];
 
+const MANUAL_SECTION_IDS = MANUAL_TOC_ENTRIES.map((entry) => entry.id);
+
+/** 章节标题对齐线：距滚动容器顶部的偏移（px） */
+const SCROLL_SPY_OFFSET = 20;
+
+function sectionScrollTop(root: HTMLElement, section: HTMLElement): number {
+  return section.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop;
+}
+
+function scrollToSection(root: HTMLElement, sectionId: string, behavior: ScrollBehavior): void {
+  const target = root.querySelector<HTMLElement>(`#${CSS.escape(sectionId)}`);
+  if (!target) {
+    return;
+  }
+  const top = Math.max(0, sectionScrollTop(root, target) - SCROLL_SPY_OFFSET);
+  root.scrollTo({ top, behavior });
+}
+
+/** 根据滚动位置判定当前章节（最后一段在触底时保持高亮）。 */
+function resolveActiveSectionId(root: HTMLElement): string {
+  const ids = MANUAL_SECTION_IDS;
+  if (ids.length === 0) {
+    return 'overview';
+  }
+
+  const maxScroll = root.scrollHeight - root.clientHeight;
+  if (maxScroll > 0 && root.scrollTop >= maxScroll - 2) {
+    return ids[ids.length - 1]!;
+  }
+
+  const marker = root.scrollTop + SCROLL_SPY_OFFSET;
+  let active = ids[0]!;
+  for (const id of ids) {
+    const el = root.querySelector<HTMLElement>(`#${CSS.escape(id)}`);
+    if (!el) {
+      continue;
+    }
+    if (sectionScrollTop(root, el) <= marker) {
+      active = id;
+    } else {
+      break;
+    }
+  }
+  return active;
+}
+
 export function QueryManualPage(): ReactElement {
   const { t } = useI18n();
+  const scrollRootRef = useRef<HTMLDivElement>(null);
+  const programmaticScrollRef = useRef(false);
+  const pendingSectionRef = useRef<string | null>(null);
+  const scrollFallbackRef = useRef<number>(0);
+  const [activeSectionId, setActiveSectionId] = useState<string>(
+    () => MANUAL_SECTION_IDS[0] ?? 'overview',
+  );
+
+  const finishProgrammaticScroll = useCallback((root: HTMLElement): void => {
+    const target = pendingSectionRef.current;
+    pendingSectionRef.current = null;
+    programmaticScrollRef.current = false;
+    window.clearTimeout(scrollFallbackRef.current);
+    if (!target) {
+      return;
+    }
+    scrollToSection(root, target, 'instant');
+    setActiveSectionId(target);
+  }, []);
+
+  const jumpToSection = useCallback(
+    (sectionId: string, updateHash: boolean): void => {
+      const root = scrollRootRef.current;
+      if (!root) {
+        return;
+      }
+      window.clearTimeout(scrollFallbackRef.current);
+      pendingSectionRef.current = sectionId;
+      programmaticScrollRef.current = true;
+      setActiveSectionId(sectionId);
+      scrollToSection(root, sectionId, 'smooth');
+      if (updateHash) {
+        replaceManualSectionHash(sectionId);
+      }
+      scrollFallbackRef.current = window.setTimeout(() => {
+        if (programmaticScrollRef.current && scrollRootRef.current) {
+          finishProgrammaticScroll(scrollRootRef.current);
+        }
+      }, 900);
+    },
+    [finishProgrammaticScroll],
+  );
+
+  useEffect(() => {
+    const root = scrollRootRef.current;
+    if (!root) {
+      return;
+    }
+
+    const initial = getManualSectionFromHash();
+    if (initial) {
+      requestAnimationFrame(() => {
+        scrollToSection(root, initial, 'instant');
+        setActiveSectionId(initial);
+      });
+    }
+
+    let rafId = 0;
+    const syncActiveFromScroll = (): void => {
+      if (programmaticScrollRef.current) {
+        return;
+      }
+      const next = resolveActiveSectionId(root);
+      setActiveSectionId((prev) => (prev === next ? prev : next));
+    };
+
+    const onScroll = (): void => {
+      if (programmaticScrollRef.current || rafId !== 0) {
+        return;
+      }
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        syncActiveFromScroll();
+      });
+    };
+
+    const onScrollEnd = (): void => {
+      if (programmaticScrollRef.current) {
+        finishProgrammaticScroll(root);
+      }
+    };
+
+    root.addEventListener('scroll', onScroll, { passive: true });
+    root.addEventListener('scrollend', onScrollEnd);
+    onScroll();
+
+    const onHashChange = (): void => {
+      const section = getManualSectionFromHash();
+      if (!section) {
+        return;
+      }
+      pendingSectionRef.current = null;
+      programmaticScrollRef.current = false;
+      scrollToSection(root, section, 'instant');
+      setActiveSectionId(section);
+    };
+    window.addEventListener('hashchange', onHashChange);
+
+    return () => {
+      root.removeEventListener('scroll', onScroll);
+      root.removeEventListener('scrollend', onScrollEnd);
+      window.removeEventListener('hashchange', onHashChange);
+      window.clearTimeout(scrollFallbackRef.current);
+      if (rafId !== 0) {
+        cancelAnimationFrame(rafId);
+      }
+    };
+  }, [finishProgrammaticScroll]);
 
   return (
-    <div className="query-manual-page">
+    <div className="query-manual-page" ref={scrollRootRef}>
       <header className="query-manual-header">
         <div className="query-manual-header-inner">
           <button type="button" className="query-manual-back" onClick={navigateToPlayground}>
@@ -33,20 +191,23 @@ export function QueryManualPage(): ReactElement {
         <nav className="query-manual-toc" aria-label={t('manual.toc')}>
           <h2>{t('manual.toc')}</h2>
           <ol>
-            {QUERY_MANUAL_SECTIONS.map((section) => (
-              <li key={section.id}>
-                <a href={`#${section.id}`}>{t(section.titleKey)}</a>
+            {MANUAL_TOC_ENTRIES.map((entry) => (
+              <li key={entry.id}>
+                <button
+                  type="button"
+                  className={
+                    activeSectionId === entry.id
+                      ? 'query-manual-toc__link query-manual-toc__link--active'
+                      : 'query-manual-toc__link'
+                  }
+                  aria-current={activeSectionId === entry.id ? 'location' : undefined}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => jumpToSection(entry.id, true)}
+                >
+                  {t(entry.titleKey)}
+                </button>
               </li>
             ))}
-            <li>
-              <a href="#filter-ops">{t('manual.sFilterOps.title')}</a>
-            </li>
-            <li>
-              <a href="#hop-compare">{t('manual.sHopCompare.title')}</a>
-            </li>
-            <li>
-              <a href="#compute-ops">{t('manual.sComputeOps.title')}</a>
-            </li>
           </ol>
         </nav>
 
