@@ -2,6 +2,14 @@
 
 ModelDB **网络服务进程**：WebSocket + HTTP 管理面、线协议分发、写串行化门闩、CLI（`modeldb-server`）。将客户端 RPC 委托给 **`@mode-db/core`** 的 `AuthoringEngine` 与查询运行时。
 
+## 文档导航
+
+- 模块说明文档：[`docs/module-overview.md`](./docs/module-overview.md)
+- 操作手册：[`docs/operation-manual.md`](./docs/operation-manual.md)
+- 开发手册：[`docs/developer-handbook.md`](./docs/developer-handbook.md)
+- 模块级 AI 协作约束：[`AGENTS.md`](./AGENTS.md)
+- 面向后续 AI 的上下文资料：[`../../.agents/server/`](../../.agents/server/)
+
 ## 模块用途
 
 | 能力               | 说明                                                 |

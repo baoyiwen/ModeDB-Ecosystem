@@ -27,6 +27,8 @@ export type {
   WireRpcResponse,
   WireErrorMessage,
   WireExecuteResultJson,
+  WireEntityNode,
+  WireGroupBucket,
   WireRelationLogic,
   WireMatchPredicate,
   WireRowRef,

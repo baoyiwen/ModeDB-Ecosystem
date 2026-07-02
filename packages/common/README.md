@@ -2,6 +2,14 @@
 
 ModelDB 引擎与服务的**公共基础层**：领域类型、注册表、Vault/Atlas 路径约定、磁盘适配、诊断与日志。被 **`@mode-db/core`** 与 **`@mode-db/server`** 依赖；应用层一般**不**直接引用，除非扩展引擎或写服务端插件。
 
+## 文档导航
+
+- 模块说明文档：[`docs/module-overview.md`](./docs/module-overview.md)
+- 操作手册：[`docs/operation-manual.md`](./docs/operation-manual.md)
+- 开发手册：[`docs/developer-handbook.md`](./docs/developer-handbook.md)
+- 模块级 AI 协作约束：[`AGENTS.md`](./AGENTS.md)
+- 面向后续 AI 的上下文资料：[`../../.agents/common/`](../../.agents/common/)
+
 ## 模块用途
 
 | 能力              | 说明                                                          |

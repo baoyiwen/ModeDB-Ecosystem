@@ -1,0 +1,95 @@
+.import-failure-panel {
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fff5f5;
+  min-width: 0;
+}
+
+.import-failure-panel-header {
+  padding: 10px 12px;
+  border-bottom: 1px solid #fecaca;
+}
+
+.import-failure-panel-header h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #991b1b;
+}
+
+.import-failure-panel-summary {
+  margin: 0;
+  font-size: 12px;
+  color: #b91c1c;
+  line-height: 1.45;
+}
+
+.import-failure-panel-scroll {
+  overflow: auto;
+  max-width: 100%;
+}
+
+.import-failure-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
+  font-size: 12px;
+}
+
+.import-failure-table th,
+.import-failure-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(153, 27, 27, 0.12);
+  text-align: left;
+  vertical-align: top;
+}
+
+.import-failure-table th {
+  background: #fef2f2;
+  font-weight: 600;
+}
+
+.import-failure-cell-input {
+  width: 100%;
+  min-width: 80px;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.import-failure-reasons ul {
+  margin: 0;
+  padding-left: 16px;
+  color: #9a3412;
+}
+
+.import-failure-reasons li {
+  margin-bottom: 4px;
+}
+
+.import-failure-actions {
+  padding: 10px 12px;
+  border-top: 1px solid #fecaca;
+}
+
+.import-failure-actions button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.import-failure-actions button.primary {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+}
+
+.import-failure-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

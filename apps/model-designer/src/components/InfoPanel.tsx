@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import { useDesigner } from '../context/designer-context.js';
+import { withBusinessLibrarySession } from '../engine/business-library-session.js';
 import { I18nLocaleRows } from './i18n-locale-rows.js';
 import { contrastTextOnHex, normalizeHex } from '../utils/color-utils.js';
 import { collectLayerPages } from '../utils/layer-tree-pages.js';
@@ -222,9 +223,17 @@ export function InfoPanel(props: {
         <button
           type="button"
           className="designer-tree-action designer-tree-action--danger"
-          disabled={!model?.model_name || !config.remoteClient || readOnly || asyncOps.isBusy}
+          disabled={
+            !model?.model_name ||
+            model.model_name.startsWith('sys_') ||
+            !config.remoteClient ||
+            !config.activeLibraryName ||
+            readOnly ||
+            asyncOps.isBusy
+          }
           onClick={async () => {
-            if (!model?.model_name || !config.remoteClient) {
+            const libraryCode = config.activeLibraryName;
+            if (!model?.model_name || !config.remoteClient || !libraryCode) {
               return;
             }
             if (
@@ -236,10 +245,12 @@ export function InfoPanel(props: {
               await asyncOps.run(
                 'clearModelData',
                 () =>
-                  config.remoteClient!.apply({
-                    op: 'clearModelData',
-                    model: model.model_name,
-                  }),
+                  withBusinessLibrarySession(libraryCode, (businessClient) =>
+                    businessClient.apply({
+                      op: 'clearModelData',
+                      model: model.model_name,
+                    }),
+                  ),
                 { detail: model.model_name },
               );
             } catch {

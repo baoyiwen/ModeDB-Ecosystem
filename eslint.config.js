@@ -61,6 +61,7 @@ export default [
             'lint-staged.config.mjs',
             'scripts/*.mjs',
             'packages/server/scripts/*.mjs',
+            'packages/data-ui/scripts/*.mjs',
           ],
         },
       },

@@ -1,0 +1,84 @@
+.data-pivot-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.data-pivot-crumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0 10px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.data-pivot-crumb button {
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.data-pivot-crumb button:hover {
+  border-color: #6366f1;
+  color: #4338ca;
+}
+
+.data-pivot-scroll {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.data-pivot-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-pivot-table th,
+.data-pivot-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  text-align: left;
+}
+
+.data-pivot-table th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+  z-index: 1;
+}
+
+.data-pivot-drill {
+  color: #4338ca;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.data-pivot-drill:hover {
+  color: #312e81;
+}
+
+.data-pivot-metric {
+  font-variant-numeric: tabular-nums;
+  color: #334155;
+}
+
+.data-pivot-hint {
+  padding: 8px 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+}

@@ -2,6 +2,14 @@
 
 ModelDB 的**协议与传输层**：WebSocket 线协议类型、二进制帧编解码、远程查询计划 AST、统一引擎操作 JSON（`EngineOperation`）。**不依赖** monorepo 内其它 workspace 包，可被浏览器与 Node 共用。
 
+## 文档导航
+
+- 模块说明文档：[`docs/module-overview.md`](./docs/module-overview.md)
+- 操作手册：[`docs/operation-manual.md`](./docs/operation-manual.md)
+- 开发手册：[`docs/developer-handbook.md`](./docs/developer-handbook.md)
+- 模块级 AI 协作约束：[`AGENTS.md`](./AGENTS.md)
+- 面向后续 AI 的上下文资料：[`../../.agents/shared/`](../../.agents/shared/)
+
 ## 模块用途
 
 | 能力             | 说明                                                             |

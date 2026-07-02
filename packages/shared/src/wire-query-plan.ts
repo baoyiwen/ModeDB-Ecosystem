@@ -571,9 +571,6 @@ export function finalizeRemoteExecuteSnapshot(
     if (gb === null || gb.length === 0) {
       throw new WireQueryError('wrapGroups requires groupBy(...) or pivot(...).');
     }
-    throw new WireQueryError(
-      'Remote execute does not support wrapGroups() with groupBy/pivot in this version.',
-    );
   }
   const limitOpt = options?.limit ?? chainState.paginationPartial?.limit;
   const pageOpt = options?.page ?? chainState.paginationPartial?.page ?? 0;

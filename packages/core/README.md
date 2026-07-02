@@ -2,6 +2,14 @@
 
 ModeDB **核心引擎**：治理端写入（**`AuthoringEngine`**）、只读运行时（**`ModelDBClient`** / **`QueryChain`**）、单文件 Vault（**`atlas.mld`**）、关系索引与查询分析。跨包共享类型与路径工具见 **`@mode-db/common`**。
 
+## 文档导航
+
+- 模块说明文档：[`docs/module-overview.md`](./docs/module-overview.md)
+- 操作手册：[`docs/operation-manual.md`](./docs/operation-manual.md)
+- 开发手册：[`docs/developer-handbook.md`](./docs/developer-handbook.md)
+- 模块级 AI 协作约束：[`AGENTS.md`](./AGENTS.md)
+- 面向后续 AI 的上下文资料：[`../../.agents/core/`](../../.agents/core/)
+
 ## 模块用途
 
 | 子系统           | 说明                                          |

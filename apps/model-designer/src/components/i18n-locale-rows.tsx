@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   type ReactElement,
 } from 'react';
+import { DesignerSelect } from './base/designer-select.js';
 
 const EXTRA_LOCALE_OPTIONS = ['ja', 'ko', 'fr', 'de'] as const;
 
@@ -33,7 +34,6 @@ function buildCommit(
     if (raw.length === 0) {
       return;
     }
-    // 展示名 / 描述：保留空格与特殊符号，仅跳过空字符串。
     next[key] = raw;
   };
   put('zh', zh);
@@ -56,10 +56,6 @@ type I18nLocaleRowsProps = {
   readonly multiline?: boolean;
 };
 
-/**
- * Collapsible I18N rows: zh / en by default, extra locales below,
- * with a locale-picker trailing row.
- */
 export function I18nLocaleRows(props: I18nLocaleRowsProps): ReactElement {
   const {
     disabled,
@@ -126,7 +122,7 @@ export function I18nLocaleRows(props: I18nLocaleRowsProps): ReactElement {
         rows={4}
         disabled={disabled}
         value={val}
-        placeholder="—"
+        placeholder="--"
         style={{ resize: 'vertical', minHeight: 72 }}
         onChange={(e) => onChange(e.target.value)}
         onBlur={(e) => onBlur(e.target.value)}
@@ -136,7 +132,7 @@ export function I18nLocaleRows(props: I18nLocaleRowsProps): ReactElement {
         className="designer-input"
         disabled={disabled}
         value={val}
-        placeholder="—"
+        placeholder="--"
         onChange={(e) => onChange(e.target.value)}
         onBlur={(e) => onBlur(e.target.value)}
       />
@@ -211,23 +207,22 @@ export function I18nLocaleRows(props: I18nLocaleRowsProps): ReactElement {
             borderTop: '1px dashed rgba(15, 23, 42, 0.1)',
           }}
         >
-          <select
-            className="designer-input"
-            style={{ maxWidth: multiline ? '100%' : 120, fontSize: 11 }}
-            disabled={disabled}
-            value={pick}
-            onChange={(e) => {
-              setPick(e.target.value);
-              setAddVal('');
-            }}
-          >
-            <option value="">{pickLocaleLabel}</option>
-            {pickOptions.map((k) => (
-              <option key={k} value={k}>
-                {k}
-              </option>
-            ))}
-          </select>
+          <div style={{ maxWidth: multiline ? '100%' : 140 }}>
+            <DesignerSelect
+              compact
+              disabled={disabled}
+              placeholder={pickLocaleLabel}
+              value={pick}
+              options={[
+                { value: '', label: pickLocaleLabel },
+                ...pickOptions.map((k) => ({ value: k, label: k })),
+              ]}
+              onChange={(next) => {
+                setPick(next);
+                setAddVal('');
+              }}
+            />
+          </div>
           {multiline ? (
             <textarea
               className="designer-input"

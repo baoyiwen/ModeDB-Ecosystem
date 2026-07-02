@@ -14,14 +14,14 @@
  *   pnpm run publish:npm -- --branch develop              # 先检出该分支再 dry-run / 后续步骤
  *   pnpm run publish:npm -- --live --branch release/1.2 --yes
  *
- * 发布顺序：shared → common → sdk → core → server
+ * 发布顺序：shared → common → data-kit → data-ui → sdk → core → server
  *
  * 前置：pnpm login（或 npm login）、各包 version 已 bump、作用域在 npm 已开放 public。
  * 若未提交 git 且 pnpm 拒绝发布，可临时：$env:PUBLISH_NO_GIT_CHECKS='1'（PowerShell）再执行。
  */
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import * as readline from 'node:readline/promises';
+import * as readline from 'node:readline';
 import { stdin as input, stdout as output } from 'node:process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -34,6 +34,12 @@ const args = new Set(rawArgs);
 const live = args.has('--live');
 const yes = args.has('--yes');
 const noBuild = args.has('--no-build');
+
+function ask(rl, prompt) {
+  return new Promise((resolve) => {
+    rl.question(prompt, resolve);
+  });
+}
 
 /** `--branch foo` 或 `--branch=foo` */
 function parseBranchArg(argv) {
@@ -87,10 +93,12 @@ function ensureGitBranch(branch) {
   console.log(`[mode-db publish] 当前分支: ${head.stdout?.trim() ?? '?'}\n`);
 }
 
-/** 与仓库依赖顺序一致：先 leaf 依赖，后 server */
+/** 与仓库依赖顺序一致：先 leaf 依赖，后依赖它们的包 */
 const ORDER = [
   '@mode-db/shared',
   '@mode-db/common',
+  '@mode-db/data-kit',
+  '@mode-db/data-ui',
   '@mode-db/sdk',
   '@mode-db/core',
   '@mode-db/server',
@@ -100,6 +108,8 @@ const ORDER = [
 const PKG_DIR = {
   '@mode-db/shared': 'packages/shared',
   '@mode-db/common': 'packages/common',
+  '@mode-db/data-kit': 'packages/data-kit',
+  '@mode-db/data-ui': 'packages/data-ui',
   '@mode-db/sdk': 'packages/sdk',
   '@mode-db/core': 'packages/core',
   '@mode-db/server': 'packages/server',
@@ -166,9 +176,7 @@ async function main() {
 
   if (!publishBranch && live && !yes) {
     const rl = readline.createInterface({ input, output });
-    publishBranch = (
-      await rl.question('发布基于哪个 Git 分支？(回车=不切换，保持当前 HEAD): ')
-    ).trim();
+    publishBranch = (await ask(rl, '发布基于哪个 Git 分支？(回车=不切换，保持当前 HEAD): ')).trim();
     rl.close();
   }
 
@@ -182,7 +190,7 @@ async function main() {
 
   if (live && !yes) {
     const rl = readline.createInterface({ input, output });
-    const ans = await rl.question('确认发布到 npm？输入大写 YES 继续: ');
+    const ans = await ask(rl, '确认发布到 npm？输入大写 YES 继续: ');
     rl.close();
     if (ans.trim() !== 'YES') {
       console.log('已取消。');

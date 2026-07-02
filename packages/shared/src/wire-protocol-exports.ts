@@ -151,6 +151,25 @@ export type WireExecuteBody =
       readonly source: WireRowRef;
       readonly target: WireRowRef;
     }
+  /**
+   * Import-only: bind freshly inserted rows to existing peer rows by lookup value.
+   * Join values come from CSV columns that are **not** stored on the import model (`bindOnly`).
+   * Skips pairs when no peer row matches `peerMatchField` (no error).
+   */
+  | {
+      readonly op: 'bindImportLookup';
+      readonly forward: string;
+      readonly reverse: string;
+      readonly importModel: string;
+      readonly peerModel: string;
+      readonly peerMatchField: string;
+      /** Peer match field DataType (`String`, `Int`, …) for lookup coercion. */
+      readonly peerMatchFieldType?: string;
+      readonly pairs: readonly {
+        readonly importedId: string;
+        readonly lookupValue: unknown;
+      }[];
+    }
   | {
       readonly op: 'unlinkPair';
       readonly forward: string;
@@ -233,17 +252,49 @@ export interface WireRelationStats {
   readonly totalLinks: number;
 }
 
+/** Per-row validation failure from `insertMany` (index into the request `rows` array). */
+export interface WireInsertManyRowFailure {
+  readonly index: number;
+  readonly diagnostics: readonly {
+    readonly code: string;
+    readonly severity: string;
+    readonly message: string;
+  }[];
+}
+
+/** Nested entity node for wire transport (mirrors {@link HydratedEntitySnapshot}). */
+export interface WireEntityNode {
+  readonly model: string;
+  readonly data: Record<string, unknown>;
+  readonly relates?: Readonly<Record<string, readonly WireEntityNode[]>>;
+  readonly relationStatus?: Readonly<Record<string, string>>;
+}
+
+/** One grouped bucket with aggregate metrics and member entities. */
+export interface WireGroupBucket {
+  readonly dimensionValues: readonly unknown[];
+  readonly aggregates: Record<string, unknown>;
+  readonly members: readonly WireEntityNode[];
+}
+
 /** JSON-safe execute result for wire transport (must match the host serializer contract). */
 export type WireExecuteResultJson =
   | {
       readonly kind: 'rows';
-      readonly rows: readonly { readonly model: string; readonly data: Record<string, unknown> }[];
+      readonly rows: readonly WireEntityNode[];
     }
   | {
       readonly kind: 'analysis';
       readonly dimensionKeys: readonly string[];
-      readonly shape: 'flat';
+      readonly shape: 'flat' | 'tree';
       readonly rows: readonly Record<string, unknown>[];
+      /** Nested pivot tree ({@link AnalysisResult.asTree}); present when `shape` is `tree` or alongside flat rows. */
+      readonly tree?: Record<string, unknown>;
+    }
+  | {
+      readonly kind: 'groups';
+      readonly dimensionKeys: readonly string[];
+      readonly groups: readonly WireGroupBucket[];
     }
   | {
       readonly kind: 'paginated';
@@ -269,6 +320,7 @@ export type WireExecuteResultJson =
         | 'registerRelation'
         | 'batchRegister'
         | 'bindPair'
+        | 'bindImportLookup'
         | 'unlinkPair'
         | 'bind'
         | 'updateRelationLogic'
@@ -280,6 +332,8 @@ export type WireExecuteResultJson =
       readonly records?: readonly Record<string, unknown>[];
       readonly successCount?: number;
       readonly failureCount?: number;
+      /** Populated when `failureCount > 0` — maps to indices in the request `rows` array. */
+      readonly rowFailures?: readonly WireInsertManyRowFailure[];
       readonly relation?: string;
       readonly ok?: boolean;
       /** Net edges created (or removed) by a `bind` / `bindPair` / `unlinkPair` RPC. */
@@ -297,6 +351,8 @@ export type WireExecuteResultJson =
       };
       /** Rows tombstoned by `clearModelData` / `clearAllData`. */
       readonly deletedCount?: number;
+      /** Peers not found during `bindImportLookup` (lookup value had no match). */
+      readonly skippedCount?: number;
       /** Per-model row deletion breakdown for `clearAllData`. */
       readonly perModel?: Readonly<Record<string, number>>;
     }

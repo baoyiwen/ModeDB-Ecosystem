@@ -6,13 +6,15 @@ Publish (or dry-run) in this order so dependents exist on the registry:
 
 1. `@mode-db/shared`
 2. `@mode-db/common`
-3. `@mode-db/sdk` (depends only on shared)
-4. `@mode-db/core` (**`packages/core`**; depends on common + shared)
-5. `@mode-db/server` (depends on core + common + shared)
+3. `@mode-db/data-kit` (depends on common + shared)
+4. `@mode-db/data-ui` (depends on data-kit; peer depends on React)
+5. `@mode-db/sdk` (depends only on shared)
+6. `@mode-db/core` (**`packages/core`**; depends on common + shared)
+7. `@mode-db/server` (depends on core + common + shared)
 
 ## Commands（一键脚本）
 
-脚本：`scripts/publish-workspaces.mjs`（会先 **`pnpm run build`**，再按顺序 **`pnpm --filter <pkg> publish`**）。
+脚本：`scripts/publish-workspaces.mjs`（会先 **`pnpm run build`**，再按顺序 **`pnpm --filter <pkg> publish`**；当前包含 **shared / common / data-kit / data-ui / sdk / core / server**）。
 
 | 命令                                              | 说明                                            |
 | ------------------------------------------------- | ----------------------------------------------- |
@@ -33,7 +35,15 @@ Publish (or dry-run) in this order so dependents exist on the registry:
 
 1. **默认命令是 dry-run**：`pnpm run publish:npm` **不会**向 registry 上传；只有加 **`--live`**（或 `publish:npm:go`）才会真发。
 2. **真发时版本必须新**：npm 不允许覆盖已存在的 **`@scope/name@version`**。若 registry 上已有 `0.1.0`，你必须把对应包的 **`version`** 改成 **`0.1.1`** 等未占用版本再发。
-3. **不必非用版本 CLI**：手动改各子包 **`package.json` 的 `version`** 也可以。单包示例（不写 git tag）：
+3. **推荐用一键版本脚本**：`scripts/bump-package-versions.mjs` 会按发布队列更新 `packages/*` 下可发布包的 `package.json` 版本。
+   ```bash
+   pnpm run version:packages:dry              # 预览：默认 patch
+   pnpm run version:packages                  # 实际 patch
+   pnpm run version:packages -- minor         # 实际 minor
+   pnpm run version:packages -- --set 0.2.0   # 设置为精确版本
+   pnpm run version:packages -- --packages @mode-db/data-kit,@mode-db/data-ui
+   ```
+4. **仍可手动改版本**：手动改各子包 **`package.json` 的 `version`** 也可以。单包示例（不写 git tag）：
    ```bash
    cd packages/shared
    pnpm version patch --no-git-tag-version
@@ -56,4 +66,4 @@ pnpm install
 pnpm run build
 ```
 
-Each publishable package emits **`dist/`** via **`tsc`**：**`@mode-db/core`** 使用 **`packages/core/tsconfig.build.json`**；**`@mode-db/shared`** / **`@mode-db/sdk`** 使用各自的 **`tsconfig.build.json`**；**`@mode-db/common`** 与 **`@mode-db/server`** 使用包内 **`tsconfig.json`**。部分包的 **`package.json` → `files`** 另含 **`src/`**（供 **`exports.types` → `./src/index.ts`** 的 TypeScript 解析）；registry 消费者仍以 **`dist/`** 为运行时代码入口。
+Each publishable package emits **`dist/`** via **`tsc`**：**`@mode-db/core`** 使用 **`packages/core/tsconfig.build.json`**；**`@mode-db/shared`** / **`@mode-db/sdk`** / **`@mode-db/data-kit`** / **`@mode-db/data-ui`** 使用各自的 **`tsconfig.build.json`**；**`@mode-db/common`** 与 **`@mode-db/server`** 使用包内 **`tsconfig.json`**。其中 **`@mode-db/data-ui`** 构建后会额外执行 **`scripts/copy-css.mjs`** 复制组件 CSS。部分包的 **`package.json` → `files`** 另含 **`src/`**（供 **`exports.types` → `./src/index.ts`** 的 TypeScript 解析）；registry 消费者仍以 **`dist/`** 为运行时代码入口。

@@ -5,6 +5,7 @@
       "@mode-db/common": ["./packages/common/src/index.ts"],
       "@mode-db/shared": ["./packages/shared/src/index.ts"],
       "@mode-db/sdk": ["./packages/sdk/src/index.ts"],
+      "@mode-db/data-kit": ["./packages/data-kit/src/index.ts"],
       "@mode-db/server": ["./packages/server/src/index.ts"]
     },
     "target": "ES2022",

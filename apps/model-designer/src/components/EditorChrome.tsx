@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useDesigner } from '../context/designer-context.js';
+import { withBusinessLibrarySession } from '../engine/business-library-session.js';
 import { isInheritRelation } from '../config/graph-edge-kinds.js';
 import { isSidePanelReadOnly } from '../managers/mode-manager.js';
 import { InfoPanel } from './InfoPanel.js';
@@ -185,7 +186,10 @@ export function EditorChrome(props: {
                 try {
                   await asyncOps.run(
                     'clearAllData',
-                    () => config.remoteClient!.apply({ op: 'clearAllData' }),
+                    () =>
+                      withBusinessLibrarySession(lib, (businessClient) =>
+                        businessClient.apply({ op: 'clearAllData' }),
+                      ),
                     { detail: lib },
                   );
                 } catch {

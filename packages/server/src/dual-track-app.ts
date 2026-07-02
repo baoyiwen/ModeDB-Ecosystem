@@ -424,6 +424,9 @@ export async function buildDualTrackFastify(
             name: d.name,
             parentId: d.parentId,
             fields: [...d.fields],
+            fieldTypes: Object.fromEntries(
+              [...d.fieldTypes.entries()].map(([field, def]) => [field, def.type]),
+            ),
           })),
           relations: rels.map((r) => ({
             forward: r.forward,

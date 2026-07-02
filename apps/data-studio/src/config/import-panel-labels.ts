@@ -1,0 +1,44 @@
+import type { ImportPanelLabels } from '@mode-db/data-ui';
+import type { StudioI18n } from '../managers/i18n-manager.js';
+
+/** Builds localized labels for {@link ImportPanel} from Data Studio i18n. */
+export function buildImportPanelLabels(i18n: StudioI18n): ImportPanelLabels {
+  return {
+    csvFile: i18n.t('importCsvFile'),
+    targetModel: i18n.t('importTargetModel'),
+    loadedSummary: i18n.t('importLoadedSummary'),
+    mappingNotes: i18n.t('importMappingNotes'),
+    columnMapping: i18n.t('importColumnMapping'),
+    csvColumn: i18n.t('importCsvColumn'),
+    modelField: i18n.t('importModelField'),
+    skipColumn: i18n.t('importSkipColumn'),
+    selectOption: i18n.t('importSelectOption'),
+    relationBindings: i18n.t('importRelationBindings'),
+    relationHint: i18n.t('importRelationHint'),
+    relationEmpty: i18n.t('importRelationEmpty'),
+    relation: i18n.t('importRelation'),
+    relatedModel: i18n.t('importRelatedModel'),
+    matchField: i18n.t('importMatchField'),
+    remove: i18n.t('importRemove'),
+    addRelationBinding: i18n.t('importAddRelationBinding'),
+    previewTitle: i18n.t('importPreviewTitle'),
+    stageImport: i18n.t('importStageImport'),
+    working: i18n.t('importWorking'),
+    pendingOps: i18n.t('importPendingOps'),
+    selectFileFirst: i18n.t('importSelectFileFirst'),
+    stagedSummary: i18n.t('importStagedSummary'),
+    stagedSummaryBind: i18n.t('importStagedSummaryBind'),
+    stagedSkipped: i18n.t('importStagedSkipped'),
+    noRowsToImport: i18n.t('importNoRowsToImport'),
+    ambiguityMultipleFields: i18n.t('importAmbiguityMultipleFields'),
+    ambiguityUnmappedColumn: i18n.t('importAmbiguityUnmappedColumn'),
+    ambiguityRequiredField: i18n.t('importAmbiguityRequiredField'),
+    candidatesPrefix: i18n.t('importCandidatesPrefix'),
+    failureTitle: i18n.t('importFailureTitle'),
+    failureSummary: i18n.t('importFailureSummary'),
+    failureRowNumber: i18n.t('importFailureRowNumber'),
+    failureReasons: i18n.t('importFailureReasons'),
+    failureRetryCommit: i18n.t('importFailureRetryCommit'),
+    failurePartialSuccess: i18n.t('importFailurePartialSuccess'),
+  };
+}

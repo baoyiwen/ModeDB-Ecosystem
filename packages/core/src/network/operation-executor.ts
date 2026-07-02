@@ -8,7 +8,7 @@
  * {@link WireExecuteResultJson}; callers own gating (write-serialization) and encoding.
  */
 
-import { EngineLogger } from '@mode-db/common';
+import { EngineLogger, importLookupCanonicalKey } from '@mode-db/common';
 import type {
   FieldDefsRecord,
   MatchPredicate,
@@ -30,6 +30,20 @@ import { serializeExecuteResultForWire } from './execute-result-wire.js';
 
 const MAX_INSERT_MANY_ROWS = 20_000;
 const MAX_BATCH_UPDATE_OPS = 20_000;
+
+function resolvePeerMatchFieldType(
+  engine: AuthoringEngine,
+  peerModel: string,
+  peerMatchField: string,
+  opFieldType: string | undefined,
+): string {
+  if (opFieldType !== undefined && opFieldType.length > 0) {
+    return opFieldType;
+  }
+  const def = engine.registry.getModel(peerModel);
+  const ft = def?.fieldTypes.get(peerMatchField);
+  return ft?.type ?? 'String';
+}
 
 /** Dependencies for {@link executeDatabaseOperation}. */
 export interface DatabaseOperationContext {
@@ -170,6 +184,17 @@ export async function executeDatabaseOperation(
             .filter((d): d is ModelRecord => d !== undefined)
             .map((d) => d as unknown as Record<string, unknown>)
         : undefined;
+    const rowFailures =
+      report.failureCount > 0
+        ? report.failed.map((r) => ({
+            index: r.index,
+            diagnostics: r.diagnostics.map((d) => ({
+              code: d.code,
+              severity: d.severity,
+              message: d.message,
+            })),
+          }))
+        : undefined;
     return {
       kind: 'mutation',
       op: 'insertMany',
@@ -178,6 +203,7 @@ export async function executeDatabaseOperation(
       ...(records ? { records } : {}),
       successCount: report.successCount,
       failureCount: report.failureCount,
+      ...(rowFailures ? { rowFailures } : {}),
     };
   }
 
@@ -397,6 +423,84 @@ export async function executeDatabaseOperation(
       record: null,
       ok: true,
       pairsCount: 1,
+    };
+  }
+
+  if (op.op === 'bindImportLookup') {
+    const rel = findRelationByLabels(engine, op.forward, op.reverse);
+    if (op.importModel !== rel.source && op.importModel !== rel.target) {
+      throw new Error(
+        `bindImportLookup: importModel "${op.importModel}" is not an endpoint of relation "${op.forward}".`,
+      );
+    }
+    if (op.peerModel !== rel.source && op.peerModel !== rel.target) {
+      throw new Error(
+        `bindImportLookup: peerModel "${op.peerModel}" is not an endpoint of relation "${op.forward}".`,
+      );
+    }
+    if (op.importModel === op.peerModel) {
+      throw new Error('bindImportLookup: importModel and peerModel must differ.');
+    }
+
+    const peerMatchFieldType = resolvePeerMatchFieldType(
+      engine,
+      op.peerModel,
+      op.peerMatchField,
+      op.peerMatchFieldType,
+    );
+
+    const peerRows = await engine.persistence.getMergedReader().getAll(op.peerModel);
+    const peerIndex = new Map<string, string>();
+    for (const row of peerRows) {
+      const rec = row as Record<string, unknown>;
+      const id = rec._id;
+      if (typeof id !== 'string' || id.length === 0) {
+        continue;
+      }
+      const key = importLookupCanonicalKey(rec[op.peerMatchField], peerMatchFieldType);
+      if (key !== null && !peerIndex.has(key)) {
+        peerIndex.set(key, id);
+      }
+    }
+
+    const manualPairs: Array<[string, string]> = [];
+    let skippedCount = 0;
+    for (const pair of op.pairs) {
+      const key = importLookupCanonicalKey(pair.lookupValue, peerMatchFieldType);
+      if (key === null) {
+        skippedCount += 1;
+        continue;
+      }
+      const peerId = peerIndex.get(key);
+      if (peerId === undefined) {
+        skippedCount += 1;
+        continue;
+      }
+      if (op.importModel === rel.source) {
+        manualPairs.push([pair.importedId, peerId]);
+      } else {
+        manualPairs.push([peerId, pair.importedId]);
+      }
+    }
+
+    let pairsCount = 0;
+    if (manualPairs.length > 0) {
+      const before = await engine.indexer.getStats(rel);
+      await engine.bind(op.forward, 'MANUAL', { pairs: manualPairs });
+      await flush();
+      const after = await engine.indexer.getStats(rel);
+      pairsCount = Math.max(0, after.totalLinks - before.totalLinks);
+    }
+
+    return {
+      kind: 'mutation',
+      op: 'bindImportLookup',
+      model: op.importModel,
+      relation: op.forward,
+      record: null,
+      ok: true,
+      pairsCount,
+      skippedCount,
     };
   }
 

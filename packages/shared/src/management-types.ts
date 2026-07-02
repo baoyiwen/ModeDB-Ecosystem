@@ -33,6 +33,10 @@ export interface ManagementCatalogModelInfo {
   readonly name: string;
   readonly parentId: string | null;
   readonly fields: readonly string[];
+  /** Optional prop display names keyed by field name, then locale (`en` / `zh` / `ja`). */
+  readonly fieldLabels?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  /** Engine DataType per prop field (`String`, `Int`, …) from model registry. */
+  readonly fieldTypes?: Readonly<Record<string, string>>;
 }
 
 export interface ManagementCatalogRelationInfo {

@@ -580,3 +580,239 @@ textarea.code {
   border-right: 1px solid #2a2f3a;
   max-height: 100vh;
 }
+
+:root {
+  color-scheme: light;
+  --web-accent: #5b6cff;
+  --web-accent-soft: rgba(91, 108, 255, 0.14);
+  --web-surface: rgba(255, 255, 255, 0.8);
+  --web-surface-strong: rgba(255, 255, 255, 0.92);
+  --web-border: rgba(148, 163, 184, 0.18);
+  --web-border-strong: rgba(91, 108, 255, 0.34);
+  --web-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+  --web-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+html {
+  background:
+    radial-gradient(circle at 15% 15%, rgba(91, 108, 255, 0.16), transparent 28%),
+    radial-gradient(circle at 85% 10%, rgba(56, 189, 248, 0.12), transparent 26%),
+    linear-gradient(180deg, #eef4ff 0%, #f7fafc 38%, #eef2f7 100%);
+}
+
+body {
+  position: relative;
+  color: #1e293b;
+  background:
+    radial-gradient(circle at top left, rgba(91, 108, 255, 0.14), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.1), transparent 24%),
+    linear-gradient(180deg, #eef4ff 0%, #f8fafc 42%, #edf2f7 100%);
+}
+
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: -20%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+body::before {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(91, 108, 255, 0.12), transparent 24%),
+    radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.08), transparent 20%),
+    radial-gradient(circle at 60% 80%, rgba(14, 165, 233, 0.08), transparent 18%);
+  filter: blur(26px);
+  animation: web-bg-drift 18s ease-in-out infinite alternate;
+}
+
+body::after {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), transparent 45%);
+  opacity: 0.55;
+}
+
+#root {
+  isolation: isolate;
+}
+
+.layout,
+.app-grid {
+  gap: 16px;
+  padding: 16px;
+}
+
+.panel {
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 22px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.84) 0%, rgba(248, 250, 252, 0.72) 100%);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  box-shadow: var(--web-shadow);
+}
+
+.sidebar,
+.center,
+.result {
+  max-height: calc(100vh - 32px);
+  border-right: none;
+}
+
+.panel h1,
+.query-panel-head h3,
+.result-header,
+.query-manual-header h1 {
+  letter-spacing: -0.02em;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  border: 1px solid var(--web-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow:
+    inset 0 1px 2px rgba(15, 23, 42, 0.05),
+    0 1px 0 rgba(255, 255, 255, 0.65);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    background-color 0.2s ease;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: rgba(91, 108, 255, 0.28);
+  background: var(--web-surface-strong);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--web-border-strong);
+  box-shadow:
+    0 0 0 4px var(--web-accent-soft),
+    inset 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+button {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.query-panel,
+.result-body,
+.query-manual-toc,
+.query-fieldset,
+.query-manual-example pre {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: var(--web-shadow-soft);
+}
+
+.query-panel {
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.query-tabs {
+  background: rgba(241, 245, 249, 0.9);
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.query-tab {
+  border-radius: 10px;
+  border-color: transparent;
+}
+
+.query-tab--active {
+  background: linear-gradient(180deg, #ffffff 0%, #f0f5ff 100%);
+  color: #1d4ed8;
+  box-shadow: 0 6px 14px rgba(91, 108, 255, 0.12);
+}
+
+.actions button,
+.query-manual-link,
+.query-manual-back {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(241, 245, 249, 0.92) 100%);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+.actions button:hover:not(:disabled),
+.query-manual-link:hover,
+.query-manual-back:hover {
+  border-color: rgba(91, 108, 255, 0.3);
+  box-shadow: 0 10px 22px rgba(91, 108, 255, 0.12);
+}
+
+.result {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(248, 250, 252, 0.72) 100%);
+}
+
+.result-body pre,
+.query-manual-example pre {
+  border-radius: 16px;
+  background: rgba(11, 15, 26, 0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 16px 40px rgba(15, 23, 42, 0.14);
+}
+
+.query-fieldset input,
+.query-fieldset select,
+.query-fieldset textarea,
+.panel input,
+.panel select,
+.panel textarea {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.query-manual-page {
+  background:
+    radial-gradient(circle at top left, rgba(91, 108, 255, 0.12), transparent 24%),
+    linear-gradient(180deg, #eef4ff 0%, #f8fafc 100%);
+}
+
+@keyframes web-bg-drift {
+  from {
+    transform: translate3d(-1.5%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(1.5%, 1%, 0) scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before {
+    animation: none;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    transition: none;
+  }
+}

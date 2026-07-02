@@ -2,6 +2,7 @@ export * from './types.js';
 export * from './errors.js';
 export * from './atlas-segments.js';
 export * from './data-types.js';
+export * from './coerce-import-cell.js';
 export * from './diagnostic.js';
 export * from './engine-logger.js';
 export * from './default-storage-root.js';

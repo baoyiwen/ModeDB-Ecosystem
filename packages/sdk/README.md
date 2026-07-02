@@ -2,6 +2,14 @@
 
 ModelDB **远程客户端**：通过 WebSocket 连接 **`@mode-db/server`**，提供链式查询、Meta-DDL、数据变更与 **`EngineOperation` JSON** 入口。**不**内置、也**不得**在 SDK 内启动服务端——须单独运行 **`modeldb-server start`**。
 
+## 文档导航
+
+- 模块说明文档：[`docs/module-overview.md`](./docs/module-overview.md)
+- 操作手册：[`docs/operation-manual.md`](./docs/operation-manual.md)
+- 开发手册：[`docs/developer-handbook.md`](./docs/developer-handbook.md)
+- 模块级 AI 协作约束：[`AGENTS.md`](./AGENTS.md)
+- 面向后续 AI 的上下文资料：[`../../.agents/sdk/`](../../.agents/sdk/)
+
 实现依赖 **`@mode-db/shared`**（线协议与编解码），**不**依赖 **`@mode-db/core`** 源码，可在 **浏览器与 Node** 共用。
 
 ## 模块用途
