@@ -107,3 +107,111 @@
   height: 16px;
   cursor: pointer;
 }
+
+/* Compact console treatment used by Data Studio. */
+.data-table-scroll {
+  border-color: #ccd6e4;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(22, 32, 51, 0.06);
+}
+
+.data-table {
+  color: #162033;
+}
+
+.data-table th,
+.data-table td {
+  padding: 9px 12px;
+  border-bottom-color: #e0e7f0;
+}
+
+.data-table th {
+  background: #e8eef6;
+  color: #334155;
+  letter-spacing: 0.01em;
+}
+
+.data-table tbody tr {
+  transition:
+    background-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.data-table tbody tr:hover {
+  background: rgba(36, 81, 156, 0.06);
+  box-shadow: inset 3px 0 0 #24519c;
+}
+
+.data-table-input {
+  border-color: #94a6bd;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #162033;
+  transition:
+    border-color 0.14s ease,
+    box-shadow 0.14s ease,
+    background-color 0.14s ease;
+}
+
+.data-table-input:focus {
+  border-color: #24519c;
+  box-shadow: 0 0 0 3px rgba(36, 81, 156, 0.13);
+}
+
+.data-table-input:disabled {
+  background: transparent;
+  box-shadow: none;
+}
+
+.data-table-pager {
+  padding-top: 12px;
+  color: #5a697f;
+}
+
+.data-table-pager button {
+  border-color: #ccd6e4;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #ffffff 0%, #edf2f7 100%);
+  color: #162033;
+  transition:
+    transform 0.14s ease,
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.data-table-pager button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #24519c;
+  box-shadow: 0 7px 16px rgba(36, 81, 156, 0.12);
+}
+
+.data-table-empty {
+  color: #5a697f;
+}
+
+.data-table-wrap,
+.data-table-wrap * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.data-table-wrap::-webkit-scrollbar,
+.data-table-wrap *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.data-table-pager button:hover:not(:disabled) {
+  background: #dce8f7;
+  border-color: #24519c;
+  color: #102a56;
+}
+
+.data-table-pager button:active:not(:disabled) {
+  transform: translateY(0);
+  background: #24519c;
+  border-color: #193a73;
+  color: #ffffff;
+}

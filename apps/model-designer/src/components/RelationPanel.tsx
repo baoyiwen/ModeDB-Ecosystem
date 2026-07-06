@@ -5,11 +5,14 @@ import {
   resolveRelationForwardLabel,
   resolveRelationReverseLabel,
   resolveInheritRelationLabel,
-  relationCardinalityUiKey,
 } from '../utils/i18n-resolve.js';
 import { GRAPH_NODE_LINK_KIND, isInheritRelation } from '../config/graph-edge-kinds.js';
-import { RELATION_CARDINALITY_MANY } from '../config/relation-cardinality.js';
+import {
+  RELATION_CARDINALITY_MANY,
+  RELATION_CARDINALITY_ONE,
+} from '../config/relation-cardinality.js';
 import { makeUniqueName, sanitizeUniqueNameFragment } from '../utils/name-validation.js';
+import { relationCardinalityLabel, relationNamesUsedInScope } from '../utils/relation-identity.js';
 
 export function RelationPanel(props: {
   modelId: string | undefined;
@@ -59,8 +62,7 @@ export function RelationPanel(props: {
         </div>
         {!isInherit && (
           <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-            {i18n.t('ui', 'relationCardinalityLabel')}:{' '}
-            {i18n.t('ui', relationCardinalityUiKey(r.self_cardinality))}
+            {i18n.t('ui', 'relationCardinalityLabel')}: {relationCardinalityLabel(r)}
           </div>
         )}
       </div>
@@ -90,11 +92,7 @@ export function RelationPanel(props: {
           const t = sanitizeUniqueNameFragment(target.model_name) || 'target';
           const forwardBase = isSelf ? 'children' : `${s}-${t}`;
           const reverseBase = isSelf ? 'parent' : `${t}-${s}`;
-          const used = new Set<string>();
-          for (const r of data.relations) {
-            if (r.forward_name) used.add(r.forward_name);
-            if (r.reverse_name) used.add(r.reverse_name);
-          }
+          const used = relationNamesUsedInScope(data.relations, mid, target.id);
           const forward_name = makeUniqueName(forwardBase, used);
           used.add(forward_name);
           const reverse_name = makeUniqueName(reverseBase, used);
@@ -106,6 +104,8 @@ export function RelationPanel(props: {
             reverse_name,
             kind: GRAPH_NODE_LINK_KIND,
             self_cardinality: RELATION_CARDINALITY_MANY,
+            source_cardinality: RELATION_CARDINALITY_ONE,
+            target_cardinality: RELATION_CARDINALITY_MANY,
           });
         }}
       >

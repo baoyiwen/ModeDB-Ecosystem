@@ -51,6 +51,8 @@ export async function ensureDesignerCatalog(
       schema: {
         name: 'I18N',
         description: 'I18N',
+        forwardDescription: 'I18N',
+        reverseDescription: 'I18N',
         sort: 'Int',
         icon: 'String',
         isVisible: 'Boolean',
@@ -102,6 +104,8 @@ export async function ensureDesignerCatalog(
         description: 'I18N',
         /** 本侧在关系中的角色：`one` | `many`（与反向行共同描述完整 Cardinality）。 */
         selfCardinality: 'String',
+        sourceCardinality: 'String',
+        targetCardinality: 'String',
         posX: 'Number',
         posY: 'Number',
         canvas_meta: 'String',
@@ -251,6 +255,10 @@ export async function ensureDesignerCatalog(
     { model: SYS_MODEL, fields: { engine_name: 'String' } },
     { model: SYS_MODEL, fields: { library_code: 'String' } },
     { model: SYS_RELATION_DEF, fields: { canvas_meta: 'String' } },
+    { model: SYS_RELATION_DEF, fields: { forwardDescription: 'I18N' } },
+    { model: SYS_RELATION_DEF, fields: { reverseDescription: 'I18N' } },
+    { model: SYS_RELATION_DEF, fields: { sourceCardinality: 'String' } },
+    { model: SYS_RELATION_DEF, fields: { targetCardinality: 'String' } },
     { model: SYS_RELATION_DEF, fields: { engine_name: 'String' } },
     { model: SYS_RELATION_DEF, fields: { library_code: 'String' } },
     { model: SYS_PROPS, fields: { engine_name: 'String' } },

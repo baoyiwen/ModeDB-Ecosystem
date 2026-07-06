@@ -28,6 +28,18 @@ import { makeUniqueName } from '../utils/name-validation.js';
 
 export type DataListener = () => void;
 
+export interface LayerVisibilitySnapshot {
+  hiddenNodeIds: Set<string>;
+  hiddenRelationIds: Set<string>;
+  mutedNodeIds: Set<string>;
+  mutedRelationIds: Set<string>;
+}
+
+export interface LayerPageMembershipSnapshot {
+  nodeIds: Set<string>;
+  relationIds: Set<string>;
+}
+
 function newId(): string {
   return crypto.randomUUID();
 }
@@ -83,8 +95,12 @@ export class DataManager {
   private _layers: DesignerLayerRow[] = [];
   /** node → layer ids（未出现在映射中的节点视为未归属图层，始终参与绘制）。 */
   private readonly _nodeToLayers = new Map<string, Set<string>>();
+  private readonly _relationToLayers = new Map<string, Set<string>>();
+  private readonly _autoRelationToLayers = new Map<string, Set<string>>();
   private _layerTreeRoots: LayerTreeNode[] = createDefaultLayerTree();
   private readonly _listeners = new Set<DataListener>();
+  private _hoveredLayerPageId: string | undefined;
+  private _layerTreePanelOpen = false;
 
   constructor() {
     this.resyncLayersFromTree();
@@ -96,6 +112,8 @@ export class DataManager {
     this._relations = [];
     this._layoutByModelId.clear();
     this._nodeToLayers.clear();
+    this._relationToLayers.clear();
+    this._autoRelationToLayers.clear();
     this._layerTreeRoots = createDefaultLayerTree();
     this.resyncLayersFromTree();
     this.emit();
@@ -109,6 +127,33 @@ export class DataManager {
     return LAYER_DEFAULT_PAGE_ID;
   }
 
+  get hoveredLayerPageId(): string | undefined {
+    return this._hoveredLayerPageId;
+  }
+
+  setHoveredLayerPageId(pageId: string | undefined): void {
+    if (this._hoveredLayerPageId === pageId) {
+      return;
+    }
+    this._hoveredLayerPageId = pageId;
+    this.emit();
+  }
+
+  get layerTreePanelOpen(): boolean {
+    return this._layerTreePanelOpen;
+  }
+
+  setLayerTreePanelOpen(isOpen: boolean): void {
+    if (this._layerTreePanelOpen === isOpen) {
+      return;
+    }
+    this._layerTreePanelOpen = isOpen;
+    if (!isOpen) {
+      this._hoveredLayerPageId = undefined;
+    }
+    this.emit();
+  }
+
   isLayerRootGroup(id: string): boolean {
     return isLayerRootGroupId(id);
   }
@@ -120,6 +165,7 @@ export class DataManager {
       description_i18n: n.description_i18n ? { ...n.description_i18n } : undefined,
       children: n.kind === 'group' ? this.cloneTree(n.children) : [],
       memberModelIds: n.kind === 'page' ? [...n.memberModelIds] : [],
+      memberRelationIds: n.kind === 'page' ? [...(n.memberRelationIds ?? [])] : [],
     }));
   }
 
@@ -149,6 +195,7 @@ export class DataManager {
   setLayerTree(roots: LayerTreeNode[]): void {
     this._layerTreeRoots = normalizeLayerTreeRoots(roots);
     this.resyncLayersFromTree();
+    this.rebuildAutoRelationLayers();
     this.emit();
   }
 
@@ -254,18 +301,31 @@ export class DataManager {
         this._nodeToLayers.delete(modelId);
       }
     }
+    for (const [relationId, layerSet] of this._relationToLayers) {
+      for (const pageId of removedPageIds) {
+        layerSet.delete(pageId);
+      }
+      if (layerSet.size === 0) {
+        this._relationToLayers.delete(relationId);
+      }
+    }
     const next = this.cloneTree(this._layerTreeRoots);
     if (!removeLayerNodeFromTree(next, id)) {
       return false;
     }
     this._layerTreeRoots = next;
     this.resyncLayersFromTree();
+    this.rebuildAutoRelationLayers();
     this.emit();
     return true;
   }
 
   assignModelToPage(modelId: string, pageId: string): void {
     this.assignNodeToLayers(modelId, [pageId]);
+  }
+
+  assignRelationToPage(relationId: string, pageId: string): void {
+    this.assignRelationToLayers(relationId, [pageId]);
   }
 
   private walkTree(fn: (n: LayerTreeNode) => void): void {
@@ -329,6 +389,65 @@ export class DataManager {
     this._layers.sort((a, b) => a.order - b.order);
   }
 
+  private syncRelationLayerIndex(relationId: string, layerIds: string[]): void {
+    this._relationToLayers.delete(relationId);
+    if (layerIds.length === 0) {
+      return;
+    }
+    this._relationToLayers.set(relationId, new Set(layerIds));
+    for (const lid of layerIds) {
+      if (!this._layers.some((l) => l.id === lid)) {
+        this._layers.push({ id: lid, label: lid, order: this._layers.length, isVisible: true });
+      }
+    }
+    this._layers.sort((a, b) => a.order - b.order);
+  }
+
+  private effectiveRelationLayerIds(relationId: string): Set<string> {
+    const layerIds = new Set<string>();
+    const addLayer = (layerId: string): void => {
+      if (layerId !== LAYER_DEFAULT_PAGE_ID) {
+        layerIds.add(layerId);
+      }
+    };
+    const manual = this._relationToLayers.get(relationId);
+    const automatic = this._autoRelationToLayers.get(relationId);
+    if (manual) {
+      for (const layerId of manual) {
+        addLayer(layerId);
+      }
+    }
+    if (automatic) {
+      for (const layerId of automatic) {
+        addLayer(layerId);
+      }
+    }
+    return layerIds;
+  }
+
+  private rebuildAutoRelationLayers(): void {
+    this._autoRelationToLayers.clear();
+    for (const relation of this._relations) {
+      const sourceLayers = this._nodeToLayers.get(relation.source_model_id);
+      const targetLayers =
+        relation.source_model_id === relation.target_model_id
+          ? sourceLayers
+          : this._nodeToLayers.get(relation.target_model_id);
+      if (!sourceLayers || !targetLayers) {
+        continue;
+      }
+      const autoLayers = new Set<string>();
+      for (const layerId of sourceLayers) {
+        if (layerId !== LAYER_DEFAULT_PAGE_ID && targetLayers.has(layerId)) {
+          autoLayers.add(layerId);
+        }
+      }
+      if (autoLayers.size > 0) {
+        this._autoRelationToLayers.set(relation.id, autoLayers);
+      }
+    }
+  }
+
   ensureLayer(row: DesignerLayerRow): void {
     const idx = this._layers.findIndex((l) => l.id === row.id);
     if (idx >= 0) {
@@ -361,6 +480,44 @@ export class DataManager {
   assignNodeToLayers(nodeId: string, layerIds: string[]): void {
     this.syncNodeLayerIndex(nodeId, layerIds);
     this.syncTreeMembersForNode(nodeId, layerIds);
+    this.rebuildAutoRelationLayers();
+    this.emit();
+  }
+
+  assignRelationToLayers(relationId: string, layerIds: string[]): void {
+    this.syncRelationLayerIndex(relationId, layerIds);
+    this.syncTreeMembersForRelation(relationId, layerIds);
+    this.emit();
+  }
+
+  toggleModelPageMembership(modelId: string, pageId: string): void {
+    if (pageId === LAYER_DEFAULT_PAGE_ID) {
+      return;
+    }
+    const next = new Set(this._nodeToLayers.get(modelId) ?? []);
+    if (next.has(pageId)) {
+      next.delete(pageId);
+    } else {
+      next.add(pageId);
+    }
+    this.syncNodeLayerIndex(modelId, [...next]);
+    this.syncTreeMembersForNode(modelId, [...next]);
+    this.rebuildAutoRelationLayers();
+    this.emit();
+  }
+
+  toggleRelationPageMembership(relationId: string, pageId: string): void {
+    if (pageId === LAYER_DEFAULT_PAGE_ID) {
+      return;
+    }
+    const next = new Set(this._relationToLayers.get(relationId) ?? []);
+    if (next.has(pageId)) {
+      next.delete(pageId);
+    } else {
+      next.add(pageId);
+    }
+    this.syncRelationLayerIndex(relationId, [...next]);
+    this.syncTreeMembersForRelation(relationId, [...next]);
     this.emit();
   }
 
@@ -380,37 +537,129 @@ export class DataManager {
     });
   }
 
+  private syncTreeMembersForRelation(relationId: string, layerIds: readonly string[]): void {
+    const set = new Set(layerIds);
+    this.walkTree((node) => {
+      if (node.kind !== 'page') {
+        return;
+      }
+      const members = node.memberRelationIds ?? [];
+      const idx = members.indexOf(relationId);
+      const want = set.has(node.id);
+      if (idx >= 0 && !want) {
+        members.splice(idx, 1);
+      } else if (want && idx < 0) {
+        members.push(relationId);
+      }
+      node.memberRelationIds = members;
+    });
+  }
+
   getLayersForNode(nodeId: string): readonly string[] {
     const s = this._nodeToLayers.get(nodeId);
     return s ? [...s] : [];
+  }
+
+  getLayersForRelation(relationId: string): readonly string[] {
+    return [...this.effectiveRelationLayerIds(relationId)];
+  }
+
+  private isLayerVisible(layerId: string): boolean {
+    const layer = this._layers.find((x) => x.id === layerId);
+    return layer?.isVisible ?? layerId === LAYER_DEFAULT_PAGE_ID;
+  }
+
+  private layerMembershipForNode(nodeId: string): Set<string> {
+    const layerIds = new Set<string>([LAYER_DEFAULT_PAGE_ID]);
+    const explicit = this._nodeToLayers.get(nodeId);
+    if (explicit) {
+      for (const layerId of explicit) {
+        layerIds.add(layerId);
+      }
+    }
+    return layerIds;
+  }
+
+  private layerMembershipForRelation(relationId: string): Set<string> {
+    const layerIds = new Set<string>([LAYER_DEFAULT_PAGE_ID]);
+    const explicit = this.effectiveRelationLayerIds(relationId);
+    if (explicit) {
+      for (const layerId of explicit) {
+        layerIds.add(layerId);
+      }
+    }
+    return layerIds;
+  }
+
+  private visibleLayerWeight(layerIds: ReadonlySet<string>): number {
+    let weight = 0;
+    for (const layerId of layerIds) {
+      if (this.isLayerVisible(layerId)) {
+        weight += 1;
+      }
+    }
+    return weight;
+  }
+
+  getLayerVisibilitySnapshot(): LayerVisibilitySnapshot {
+    const hiddenNodeIds = new Set<string>();
+    const hiddenRelationIds = new Set<string>();
+    const mutedNodeIds = new Set<string>();
+    const mutedRelationIds = new Set<string>();
+
+    for (const model of this._models) {
+      const weight = this.visibleLayerWeight(this.layerMembershipForNode(model.id));
+      if (weight <= 0) {
+        hiddenNodeIds.add(model.id);
+      } else if (weight === 1) {
+        mutedNodeIds.add(model.id);
+      }
+    }
+
+    for (const relation of this._relations) {
+      const weight = this.visibleLayerWeight(this.layerMembershipForRelation(relation.id));
+      if (weight <= 0) {
+        hiddenRelationIds.add(relation.id);
+      } else if (weight === 1) {
+        mutedRelationIds.add(relation.id);
+      }
+    }
+
+    return { hiddenNodeIds, hiddenRelationIds, mutedNodeIds, mutedRelationIds };
+  }
+
+  getLayerPageMembershipSnapshot(pageId: string): LayerPageMembershipSnapshot {
+    const nodeIds = new Set<string>();
+    const relationIds = new Set<string>();
+
+    if (pageId === LAYER_DEFAULT_PAGE_ID) {
+      for (const model of this._models) {
+        nodeIds.add(model.id);
+      }
+      for (const relation of this._relations) {
+        relationIds.add(relation.id);
+      }
+      return { nodeIds, relationIds };
+    }
+
+    for (const model of this._models) {
+      if (this._nodeToLayers.get(model.id)?.has(pageId)) {
+        nodeIds.add(model.id);
+      }
+    }
+    for (const relation of this._relations) {
+      if (this.effectiveRelationLayerIds(relation.id).has(pageId)) {
+        relationIds.add(relation.id);
+      }
+    }
+    return { nodeIds, relationIds };
   }
 
   /**
    * 未归属任何图层的节点始终绘制；已归属的节点仅当其至少所属图层之一 `isVisible` 时绘制。
    */
   getHiddenNodeIdsForLayerVisibility(): Set<string> {
-    const hidden = new Set<string>();
-    const layerVisible = (id: string): boolean => {
-      const l = this._layers.find((x) => x.id === id);
-      return l?.isVisible ?? false;
-    };
-    for (const m of this._models) {
-      const ls = this._nodeToLayers.get(m.id);
-      if (!ls || ls.size === 0) {
-        continue;
-      }
-      let anyVis = false;
-      for (const lid of ls) {
-        if (layerVisible(lid)) {
-          anyVis = true;
-          break;
-        }
-      }
-      if (!anyVis) {
-        hidden.add(m.id);
-      }
-    }
-    return hidden;
+    return this.getLayerVisibilitySnapshot().hiddenNodeIds;
   }
 
   getLayout(modelId: string): DesignerModelLayout | undefined {
@@ -484,6 +733,11 @@ export class DataManager {
   }
 
   removeModel(id: string): void {
+    const removedRelationIds = new Set(
+      this._relations
+        .filter((r) => r.source_model_id === id || r.target_model_id === id)
+        .map((r) => r.id),
+    );
     this._models = this._models.filter((m) => m.id !== id);
     this._relations = this._relations.filter(
       (r) => r.source_model_id !== id && r.target_model_id !== id,
@@ -496,18 +750,44 @@ export class DataManager {
         if (i >= 0) {
           node.memberModelIds.splice(i, 1);
         }
+        if (removedRelationIds.size > 0) {
+          node.memberRelationIds = (node.memberRelationIds ?? []).filter(
+            (relationId) => !removedRelationIds.has(relationId),
+          );
+        }
       }
     });
+    for (const relationId of removedRelationIds) {
+      this._relationToLayers.delete(relationId);
+      this._autoRelationToLayers.delete(relationId);
+    }
+    this.rebuildAutoRelationLayers();
     this.emit();
   }
 
   addRelation(edge: EngineRelationEdge): void {
     this._relations.push(edge);
+    this.syncRelationLayerIndex(edge.id, [LAYER_DEFAULT_PAGE_ID]);
+    this.syncTreeMembersForRelation(edge.id, [LAYER_DEFAULT_PAGE_ID]);
+    this.rebuildAutoRelationLayers();
     this.emit();
   }
 
   removeRelation(id: string): void {
     this._relations = this._relations.filter((r) => r.id !== id);
+    this._relationToLayers.delete(id);
+    this._autoRelationToLayers.delete(id);
+    this.walkTree((node) => {
+      if (node.kind !== 'page') {
+        return;
+      }
+      const members = node.memberRelationIds ?? [];
+      const i = members.indexOf(id);
+      if (i >= 0) {
+        members.splice(i, 1);
+      }
+      node.memberRelationIds = members;
+    });
     this.emit();
   }
 
@@ -517,6 +797,7 @@ export class DataManager {
       return;
     }
     Object.assign(r, patch);
+    this.rebuildAutoRelationLayers();
     this.emit();
   }
 
@@ -644,6 +925,15 @@ export class DataManager {
     if (Object.keys(model_layers).length > 0) {
       doc.designer_layout.model_layers = model_layers;
     }
+    const relation_layers: Record<string, string[]> = {};
+    for (const [rid, set] of this._relationToLayers) {
+      if (set.size > 0) {
+        relation_layers[rid] = [...set];
+      }
+    }
+    if (Object.keys(relation_layers).length > 0) {
+      doc.designer_layout.relation_layers = relation_layers;
+    }
     doc.designer_layout.layer_tree = this.cloneTree(this._layerTreeRoots);
     return doc;
   }
@@ -653,6 +943,8 @@ export class DataManager {
     this._relations = doc.engine_schema.relations.map((r) => ({ ...r }));
     this._layoutByModelId.clear();
     this._nodeToLayers.clear();
+    this._relationToLayers.clear();
+    this._autoRelationToLayers.clear();
     for (const m of doc.designer_layout.models) {
       this._layoutByModelId.set(m.uuid, { ...m });
     }
@@ -665,6 +957,11 @@ export class DataManager {
     for (const [nid, lids] of Object.entries(ml)) {
       this.syncNodeLayerIndex(nid, lids);
     }
+    const rl = doc.designer_layout.relation_layers ?? {};
+    for (const [rid, lids] of Object.entries(rl)) {
+      this.syncRelationLayerIndex(rid, lids);
+    }
+    this.rebuildAutoRelationLayers();
     this.emit();
   }
 
@@ -683,6 +980,8 @@ export class DataManager {
     this._relations = relations.map((r) => ({ ...r }));
     this._layoutByModelId.clear();
     this._nodeToLayers.clear();
+    this._relationToLayers.clear();
+    this._autoRelationToLayers.clear();
     for (const layout of layouts) {
       this._layoutByModelId.set(layout.uuid, { ...layout });
       this.assignModelToPage(layout.uuid, LAYER_DEFAULT_PAGE_ID);

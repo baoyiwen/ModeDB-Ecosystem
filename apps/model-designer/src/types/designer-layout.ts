@@ -32,6 +32,8 @@ export interface DesignerLayout {
   layers?: DesignerLayerRow[];
   /** 模型节点 id → 所属 layer id 列表（多对多，与 `layerHasNodes` 语义一致）。 */
   model_layers?: Record<string, string[]>;
+  /** Relation id to layer page ids. */
+  relation_layers?: Record<string, string[]>;
   /** 分组 / 页 层级树（与 flat `layers` 同步维护）。 */
   layer_tree?: LayerTreeNode[];
 }

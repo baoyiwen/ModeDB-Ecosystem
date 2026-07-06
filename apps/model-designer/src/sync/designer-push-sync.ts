@@ -16,6 +16,12 @@ import { readBusinessCatalog } from './engine-catalog-import.js';
 import { pushDesignerSnapshot } from './sdk-designer-sync.js';
 import { extractEngineModelRelationPayload } from './engine-model-relation.js';
 import { serializeMldgDocumentToUint8Array } from './mldg-wire-bytes.js';
+import {
+  relationLogicFromCardinality,
+  relationSourceCardinality,
+  relationTargetCardinality,
+  type RelationLogicWire,
+} from '../utils/relation-identity.js';
 
 interface RowDataLike {
   getData?: (deep?: boolean) => Record<string, unknown>;
@@ -173,11 +179,18 @@ async function pruneRemovedBusinessSchema(
   const canvasModelNames = new Set(
     data.models.filter((m) => !m.model_name.startsWith('sys_')).map((m) => m.model_name),
   );
-  const canvasRelationForwards = new Set(
+  const modelNameByIdForPrune = new Map(data.models.map((m) => [m.id, m.model_name] as const));
+  const canvasRelationKeys = new Set(
     data.relations
       .filter((r) => !isInheritRelation(r.kind))
-      .map((r) => r.forward_name ?? r.kind)
-      .filter((name): name is string => typeof name === 'string' && name.length > 0),
+      .map((r) => {
+        const source = modelNameByIdForPrune.get(r.source_model_id);
+        const target = modelNameByIdForPrune.get(r.target_model_id);
+        const forward = r.forward_name ?? r.kind;
+        const reverse = r.reverse_name ?? `${forward}_rev`;
+        return source && target && forward ? `${source}::${target}::${forward}::${reverse}` : '';
+      })
+      .filter((key) => key.length > 0),
   );
 
   const modelsToRemove = catalog.models.filter(
@@ -187,7 +200,7 @@ async function pruneRemovedBusinessSchema(
 
   // 仅显式从画布删除、且端点仍保留的关系；涉及待删模型的关系由 dropModel 一并移除。
   for (const rel of catalog.relations) {
-    if (canvasRelationForwards.has(rel.forward)) {
+    if (canvasRelationKeys.has(`${rel.source}::${rel.target}::${rel.forward}::${rel.reverse}`)) {
       continue;
     }
     if (removingModelNames.has(rel.source) || removingModelNames.has(rel.target)) {
@@ -366,15 +379,30 @@ async function pushDesignerCatalogRows(
       engine_name: forward,
       library_code: code,
       name: rel.forward_name_i18n ?? { en: forward, zh: forward, ja: forward },
-      description: rel.description_i18n ?? { en: '', zh: '', ja: '' },
+      description: rel.forward_description_i18n ??
+        rel.description_i18n ?? { en: '', zh: '', ja: '' },
+      forwardDescription: rel.forward_description_i18n ??
+        rel.description_i18n ?? { en: '', zh: '', ja: '' },
+      reverseDescription: rel.reverse_description_i18n ??
+        rel.description_i18n ?? { en: '', zh: '', ja: '' },
       selfCardinality: rel.self_cardinality ?? '',
+      sourceCardinality: relationSourceCardinality(rel),
+      targetCardinality: relationTargetCardinality(rel),
       posX: rel.pos_x ?? 0,
       posY: rel.pos_y ?? 0,
       canvas_meta: JSON.stringify({
         forward,
         reverse: rel.reverse_name ?? `${forward}_rev`,
+        sourceId: source.id,
+        targetId: target.id,
         source: source.model_name,
         target: target.model_name,
+        forwardDescription: rel.forward_description_i18n ??
+          rel.description_i18n ?? { en: '', zh: '', ja: '' },
+        reverseDescription: rel.reverse_description_i18n ??
+          rel.description_i18n ?? { en: '', zh: '', ja: '' },
+        sourceCardinality: relationSourceCardinality(rel),
+        targetCardinality: relationTargetCardinality(rel),
       }),
     };
     const exists = await modelRowExists(client, SYS_RELATION_DEF, rel.id);
@@ -451,13 +479,12 @@ async function pushSchemaToBusinessDb(
     await businessClient.batchRegister({ models: newModels });
   }
 
-  const catalogRelations = new Set(catalog.relations.map((r) => r.forward));
   const newRelations: Array<{
     source: string;
     target: string;
     forward: string;
     reverse: string;
-    logic: 'many-to-many';
+    logic: RelationLogicWire;
   }> = [];
 
   for (const rel of data.relations) {
@@ -465,7 +492,8 @@ async function pushSchemaToBusinessDb(
       continue;
     }
     const forward = rel.forward_name ?? rel.kind;
-    if (!forward || catalogRelations.has(forward)) {
+    const reverse = rel.reverse_name ?? `${forward}_rev`;
+    if (!forward) {
       continue;
     }
     const source = modelNameById.get(rel.source_model_id);
@@ -473,12 +501,23 @@ async function pushSchemaToBusinessDb(
     if (!source || !target) {
       continue;
     }
+    const exists = catalog.relations.some(
+      (r) =>
+        r.source === source &&
+        r.target === target &&
+        r.forward === forward &&
+        r.reverse === reverse,
+    );
+    if (exists) {
+      await businessClient.updateRelationLogic(forward, relationLogicFromCardinality(rel));
+      continue;
+    }
     newRelations.push({
       source,
       target,
       forward,
-      reverse: rel.reverse_name ?? `${forward}_rev`,
-      logic: 'many-to-many',
+      reverse,
+      logic: relationLogicFromCardinality(rel),
     });
   }
 

@@ -14,6 +14,8 @@ export function interactionStateForToolMode(mode: DesignerToolMode): Interaction
       return 'LINK';
     case 'inherit':
       return 'INHERITING';
+    case 'page':
+      return 'SELECT';
   }
 }
 

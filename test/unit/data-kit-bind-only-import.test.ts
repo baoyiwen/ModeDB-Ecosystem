@@ -22,6 +22,13 @@ const PROVINCE_CATALOG = {
   fieldTypes: { id: 'Int', name: 'String' },
 };
 
+const ADMIN_DIVISION_SELF = {
+  forward: 'children',
+  reverse: 'parent',
+  source: 'AdministrativeDivision',
+  target: 'AdministrativeDivision',
+};
+
 describe('isBindOnlyRelationRule', () => {
   it('defaults to bind-only when CSV column is not in column mapping', () => {
     assert.equal(
@@ -151,6 +158,52 @@ describe('buildBindImportLookupOps', () => {
       assert.equal(ops[0].peerMatchField, 'id');
       assert.equal(ops[0].peerMatchFieldType, 'Int');
       assert.deepEqual(ops[0].pairs, [{ importedId: 'city-1', lookupValue: 11 }]);
+    }
+  });
+
+  it('marks imported rows as target for self-relation lookup binds by default', () => {
+    const staging = {
+      targetModel: 'AdministrativeDivision',
+      relations: [ADMIN_DIVISION_SELF],
+      catalogModels: [
+        {
+          name: 'AdministrativeDivision',
+          fields: ['id', 'name'],
+          fieldTypes: { id: 'String', name: 'String' },
+        },
+      ],
+      chunks: [
+        {
+          joinValues: [
+            {
+              rule: {
+                relation: 'children',
+                sourceColumn: 'provinceCode',
+                targetModel: 'AdministrativeDivision',
+                targetMatchColumn: 'id',
+              },
+              values: ['province-001'],
+            },
+          ],
+        },
+      ],
+    };
+
+    const ops = buildBindImportLookupOps(staging, [
+      {
+        op: 'insertMany',
+        model: 'AdministrativeDivision',
+        records: [{ _id: 'city-1', id: 'city-001', name: 'City' }],
+      },
+    ]);
+
+    assert.equal(ops.length, 1);
+    assert.equal(ops[0]?.op, 'bindImportLookup');
+    if (ops[0]?.op === 'bindImportLookup') {
+      assert.equal(ops[0].importModel, 'AdministrativeDivision');
+      assert.equal(ops[0].peerModel, 'AdministrativeDivision');
+      assert.equal(ops[0].importSide, 'target');
+      assert.deepEqual(ops[0].pairs, [{ importedId: 'city-1', lookupValue: 'province-001' }]);
     }
   });
 });

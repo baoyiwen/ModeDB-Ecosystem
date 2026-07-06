@@ -38,6 +38,10 @@ export interface EngineRelationEdge {
   forward_name_i18n?: Record<string, string>;
   /** 逆向展示名（I18N），优先于 `reverse_name` 显示。 */
   reverse_name_i18n?: Record<string, string>;
+  /** Forward relation description (I18N). */
+  forward_description_i18n?: Record<string, string>;
+  /** Reverse relation description (I18N). */
+  reverse_description_i18n?: Record<string, string>;
   /**
    * 画布语义分类（连线 / 继承等）。继承边由 `createChildModel` 写为 `GRAPH_INHERIT_KIND`，
    * 普通连线为 `GRAPH_NODE_LINK_KIND`。运行时仍用于决定虚实线 / 颜色。
@@ -50,6 +54,10 @@ export interface EngineRelationEdge {
   description_i18n?: Record<string, string>;
   /** `sys_relation.selfCardinality`（与 `kind` 可并存：kind=画布语义，此项为基数侧） */
   self_cardinality?: string;
+  /** Source-side cardinality: `one` | `many`. */
+  source_cardinality?: string;
+  /** Target-side cardinality: `one` | `many`. */
+  target_cardinality?: string;
   /** `sys_relation.posX` / `posY`（标签锚点等） */
   pos_x?: number;
   pos_y?: number;

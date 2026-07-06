@@ -17,4 +17,6 @@ export interface LayerTreeNode {
   children: LayerTreeNode[];
   /** 仅 kind === `page`：关联画布模型 id */
   memberModelIds: string[];
+  /** Page member relation ids. Kept separate from models so relations can be layered independently. */
+  memberRelationIds?: string[];
 }

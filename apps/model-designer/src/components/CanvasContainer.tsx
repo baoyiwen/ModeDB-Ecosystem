@@ -22,6 +22,7 @@ import {
 import { segmentFromNodeTowardPoint } from '../canvas/relation-geometry.js';
 import { paintScene } from '../canvas/paint-scene.js';
 import { CANVAS_VISUAL } from '../config/canvas-visual.js';
+import { LAYER_DEFAULT_PAGE_ID } from '../config/layer-tree-defaults.js';
 import { isInheritRelation } from '../config/graph-edge-kinds.js';
 import { isCanvasStructureLocked } from '../managers/mode-manager.js';
 import { pickNewModelColor } from '../utils/model-color-pick.js';
@@ -64,7 +65,7 @@ export function CanvasContainer(props: {
   onSelectModel: (id: string | undefined) => void;
   onSelectRelation: (id: string | undefined) => void;
 }): ReactElement {
-  const { state, events, config, data, graphLink, modes, i18n, graphSync } = useDesigner();
+  const { state, events, config, data, graphLink, modes, layers, i18n, graphSync } = useDesigner();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number | null>(null);
   /** 画布当前 CSS 像素尺寸；由 resize 写入，paint 读取 —— 与绘制 ctx 的 `setTransform(dpr,…)` 配套。 */
@@ -189,7 +190,9 @@ export function CanvasContainer(props: {
     return buildPlacedNodes(data.models, (id) => data.getLayout(id)?.position);
   }, [data]);
 
-  const hiddenIds = useCallback(() => data.getHiddenNodeIdsForLayerVisibility(), [data]);
+  const layerVisibility = useCallback(() => data.getLayerVisibilitySnapshot(), [data]);
+
+  const hiddenIds = useCallback(() => layerVisibility().hiddenNodeIds, [layerVisibility]);
 
   const snapPeers = useCallback(() => {
     const hidden = hiddenIds();
@@ -217,14 +220,15 @@ export function CanvasContainer(props: {
       forceNodesRef.current = null;
       return;
     }
-    const hidden = hiddenIds();
+    const visibility = layerVisibility();
+    const hidden = visibility.hiddenNodeIds;
     const visible = data.models.filter((m) => !hidden.has(m.id));
     forceNodesRef.current = buildForceNodes(
       visible.map((m) => m.id),
       (id) => data.getLayout(id)?.position,
       (id) => data.isModelPositionLocked(id),
     );
-  }, [config.forceLayoutEnabled, data, hiddenIds]);
+  }, [config.forceLayoutEnabled, data, layerVisibility]);
 
   const hitAt = useCallback(
     (screenX: number, screenY: number) => {
@@ -238,17 +242,19 @@ export function CanvasContainer(props: {
     (screenX: number, screenY: number): RelationHit | undefined => {
       const w = toWorld(screenX, screenY);
       const thresholdWorld = REL_HIT_THRESHOLD / config.viewportZoom;
+      const visibility = layerVisibility();
       return hitTestRelation(
         w.x,
         w.y,
         data.relations,
         placed(),
-        hiddenIds(),
+        visibility.hiddenNodeIds,
         thresholdWorld,
         (id) => data.getRelationCanvasMeta(id),
+        visibility.hiddenRelationIds,
       );
     },
-    [data, placed, hiddenIds, config.viewportZoom, toWorld],
+    [data, placed, layerVisibility, config.viewportZoom, toWorld],
   );
 
   const applyCanvasPick = useCallback(
@@ -260,6 +266,29 @@ export function CanvasContainer(props: {
       const relHit = nodeId ? undefined : hitRelationAt(sx, sy);
       const relId = relHit?.id;
       if (st === 'LINKING') {
+        return;
+      }
+      if (mode === 'page') {
+        const pageId = layers.activeLayerId;
+        const canEditPage = data.layerTreePanelOpen && pageId && pageId !== LAYER_DEFAULT_PAGE_ID;
+        if (nodeId) {
+          onSelectModel(nodeId);
+          onSelectRelation(undefined);
+          if (canEditPage) {
+            data.toggleModelPageMembership(nodeId, pageId);
+          }
+          return;
+        }
+        if (relId) {
+          onSelectModel(undefined);
+          onSelectRelation(relId);
+          if (canEditPage) {
+            data.toggleRelationPageMembership(relId, pageId);
+          }
+          return;
+        }
+        onSelectModel(undefined);
+        onSelectRelation(undefined);
         return;
       }
       if (mode === 'delete') {
@@ -332,7 +361,17 @@ export function CanvasContainer(props: {
         onSelectRelation(undefined);
       }
     },
-    [hitAt, hitRelationAt, toWorld, data, config, graphLink, onSelectModel, onSelectRelation],
+    [
+      hitAt,
+      hitRelationAt,
+      toWorld,
+      data,
+      config,
+      graphLink,
+      layers,
+      onSelectModel,
+      onSelectRelation,
+    ],
   );
 
   const updateHoverAt = useCallback(
@@ -366,7 +405,8 @@ export function CanvasContainer(props: {
     if (!config.forceLayoutEnabled || nodeDragRef.current || relationDragRef.current) {
       return;
     }
-    const hidden = hiddenIds();
+    const visibility = layerVisibility();
+    const hidden = visibility.hiddenNodeIds;
     const visible = data.models.filter((m) => !hidden.has(m.id));
     if (visible.length === 0) {
       return;
@@ -388,7 +428,12 @@ export function CanvasContainer(props: {
     }
     const nodes = forceNodesRef.current;
     const edges = data.relations
-      .filter((r) => !hidden.has(r.source_model_id) && !hidden.has(r.target_model_id))
+      .filter(
+        (r) =>
+          !visibility.hiddenRelationIds.has(r.id) &&
+          !hidden.has(r.source_model_id) &&
+          !hidden.has(r.target_model_id),
+      )
       .map((r) => ({ source: r.source_model_id, target: r.target_model_id }));
     const cx = (cssSizeRef.current.width / 2 - config.viewportPanX) / config.viewportZoom;
     const cy = (cssSizeRef.current.height / 2 - config.viewportPanY) / config.viewportZoom;
@@ -410,7 +455,7 @@ export function CanvasContainer(props: {
         forceMovedRef.current.add(n.id);
       }
     }
-  }, [config, data, hiddenIds]);
+  }, [config, data, layerVisibility]);
 
   const flushForceLayoutDirty = useCallback((): void => {
     if (forceWasEnabledRef.current && !config.forceLayoutEnabled) {
@@ -441,6 +486,28 @@ export function CanvasContainer(props: {
         linkPreview = segmentFromNodeTowardPoint(src, pW.x, pW.y);
       }
     }
+    const visibility = data.getLayerVisibilitySnapshot();
+    const layerVisualActive = modes.mode === 'page' || data.layerTreePanelOpen;
+    const hoveredLayerPageId = layerVisualActive ? data.hoveredLayerPageId : undefined;
+    const pageMembership = hoveredLayerPageId
+      ? data.getLayerPageMembershipSnapshot(hoveredLayerPageId)
+      : undefined;
+    const mutedNodeIds = layerVisualActive ? new Set(visibility.mutedNodeIds) : new Set<string>();
+    const mutedRelationIds = layerVisualActive
+      ? new Set(visibility.mutedRelationIds)
+      : new Set<string>();
+    if (pageMembership) {
+      for (const model of data.models) {
+        if (!pageMembership.nodeIds.has(model.id)) {
+          mutedNodeIds.add(model.id);
+        }
+      }
+      for (const relation of data.relations) {
+        if (!pageMembership.relationIds.has(relation.id)) {
+          mutedRelationIds.add(relation.id);
+        }
+      }
+    }
     paintScene({
       ctx,
       width: cssSizeRef.current.width,
@@ -451,7 +518,12 @@ export function CanvasContainer(props: {
       selectedRelationId,
       hoveredModelId,
       hoveredRelationId,
-      hiddenNodeIds: data.getHiddenNodeIdsForLayerVisibility(),
+      hiddenNodeIds: visibility.hiddenNodeIds,
+      hiddenRelationIds: visibility.hiddenRelationIds,
+      mutedNodeIds,
+      mutedRelationIds,
+      highlightNodeIds: pageMembership?.nodeIds,
+      highlightRelationIds: pageMembership?.relationIds,
       linkPreview,
       uiLocale: i18n.locale,
       snapGuides,
@@ -459,6 +531,7 @@ export function CanvasContainer(props: {
   }, [
     config,
     data,
+    modes.mode,
     selectedModelId,
     selectedRelationId,
     hoveredModelId,

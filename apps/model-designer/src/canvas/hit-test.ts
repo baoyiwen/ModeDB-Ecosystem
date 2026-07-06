@@ -99,6 +99,7 @@ export function hitTestRelation(
   hiddenIds: ReadonlySet<string> | undefined,
   threshold: number,
   getMeta?: (relationId: string) => RelationCanvasMeta,
+  hiddenRelationIds?: ReadonlySet<string>,
 ): RelationHit | undefined {
   const byId = new Map<string, PlacedNode>();
   for (const p of placed) {
@@ -109,6 +110,9 @@ export function hitTestRelation(
   let best: RelationHit | undefined;
   let bestD = Infinity;
   for (const r of relations) {
+    if (hiddenRelationIds?.has(r.id)) {
+      continue;
+    }
     if (hiddenIds?.has(r.source_model_id) || hiddenIds?.has(r.target_model_id)) {
       continue;
     }
@@ -172,6 +176,16 @@ export function hitTestRelationId(
   hiddenIds: ReadonlySet<string> | undefined,
   threshold: number,
   getMeta?: (relationId: string) => RelationCanvasMeta,
+  hiddenRelationIds?: ReadonlySet<string>,
 ): string | undefined {
-  return hitTestRelation(px, py, relations, placed, hiddenIds, threshold, getMeta)?.id;
+  return hitTestRelation(
+    px,
+    py,
+    relations,
+    placed,
+    hiddenIds,
+    threshold,
+    getMeta,
+    hiddenRelationIds,
+  )?.id;
 }

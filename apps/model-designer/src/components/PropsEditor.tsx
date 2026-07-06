@@ -24,16 +24,6 @@ function sortPropsBySort(props: readonly PropObject[]): PropObject[] {
   return [...props].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
 }
 
-function reorderProps(list: PropObject[], from: number, to: number): PropObject[] {
-  if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) {
-    return list;
-  }
-  const arr = [...list];
-  const [sp] = arr.splice(from, 1);
-  arr.splice(to, 0, sp);
-  return arr.map((p, i) => ({ ...p, sort: i }));
-}
-
 type DraftProp = {
   name: string;
   type: string;
@@ -50,6 +40,28 @@ function emptyDraft(): DraftProp {
     name_i18n: {},
     description_i18n: {},
   };
+}
+
+type PropDropZone = 'before' | 'after';
+
+type PropDropHint = {
+  targetId: string;
+  zone: PropDropZone;
+};
+
+function detectPropDropZone(ev: DragEvent, row: HTMLElement): PropDropZone {
+  const rect = row.getBoundingClientRect();
+  const y = ev.clientY - rect.top;
+  return y < rect.height / 2 ? 'before' : 'after';
+}
+
+function setPropDragPreview(e: DragEvent, label: string): void {
+  const preview = document.createElement('div');
+  preview.className = 'designer-prop-drag-preview';
+  preview.textContent = label || 'field';
+  document.body.appendChild(preview);
+  e.dataTransfer.setDragImage(preview, 14, 14);
+  window.setTimeout(() => preview.remove(), 0);
 }
 
 function GripIcon(): ReactElement {
@@ -168,11 +180,13 @@ export function PropsEditor(props: {
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
   const [draftExpanded, setDraftExpanded] = useState(false);
   const [draft, setDraft] = useState<DraftProp>(emptyDraft);
-  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropHint, setDropHint] = useState<PropDropHint | null>(null);
 
   useEffect(() => {
     setDraft(emptyDraft());
-    setDragFrom(null);
+    setDragId(null);
+    setDropHint(null);
     setExpandedIds({});
     setDraftExpanded(false);
   }, [model?.id]);
@@ -221,15 +235,35 @@ export function PropsEditor(props: {
   );
 
   const applyReorder = useCallback(
-    (from: number, to: number): void => {
-      if (!model) {
+    (sourceId: string, targetId: string, zone: PropDropZone): void => {
+      if (!model || sourceId === targetId) {
         return;
       }
-      const ordered = sortPropsBySort(model.props_objects_array);
-      const next = reorderProps(ordered, from, to);
+      const orderedOwn = sortPropsBySort(model.props_objects_array).filter(
+        (p) => !inheritedNames.has(p.name),
+      );
+      const from = orderedOwn.findIndex((p) => p.id === sourceId);
+      const target = orderedOwn.findIndex((p) => p.id === targetId);
+      if (from < 0 || target < 0) {
+        return;
+      }
+
+      const reordered = [...orderedOwn];
+      const [moving] = reordered.splice(from, 1);
+      let insertAt = zone === 'after' ? target + 1 : target;
+      if (from < insertAt) {
+        insertAt -= 1;
+      }
+      reordered.splice(Math.max(0, Math.min(insertAt, reordered.length)), 0, moving);
+
+      const reorderedIds = new Set(reordered.map((p) => p.id));
+      const untouched = sortPropsBySort(model.props_objects_array).filter(
+        (p) => !reorderedIds.has(p.id),
+      );
+      const next = [...reordered, ...untouched].map((p, index) => ({ ...p, sort: index }));
       data.updateProps(model.id, next);
     },
-    [data, model],
+    [data, inheritedNames, model],
   );
 
   const commitDraft = useCallback((): void => {
@@ -257,34 +291,52 @@ export function PropsEditor(props: {
     setDraftExpanded(false);
   }, [data, draft, model]);
 
-  const onDragStartOwn = (e: DragEvent, index: number): void => {
-    setDragFrom(index);
-    e.dataTransfer.setData('text/plain', String(index));
+  const onDragStartOwn = (e: DragEvent, prop: PropObject): void => {
+    const propId = prop.id;
+    setDragId(propId);
+    setDropHint(null);
+    e.dataTransfer.setData('text/plain', propId);
     e.dataTransfer.effectAllowed = 'move';
+    setPropDragPreview(e, prop.name);
   };
 
-  const onDragOverOwn = (e: DragEvent): void => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const onDropOwn = (e: DragEvent, toIndex: number): void => {
-    e.preventDefault();
-    const from = dragFrom ?? Number(e.dataTransfer.getData('text/plain'));
-    setDragFrom(null);
-    if (Number.isNaN(from)) {
+  const onDragOverOwn = (e: DragEvent, targetId: string): void => {
+    const sourceId = dragId ?? e.dataTransfer.getData('text/plain');
+    if (!sourceId || sourceId === targetId) {
+      setDropHint(null);
       return;
     }
-    applyReorder(from, toIndex);
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const zone = detectPropDropZone(e, e.currentTarget as HTMLElement);
+    setDropHint((prev) =>
+      prev?.targetId === targetId && prev.zone === zone ? prev : { targetId, zone },
+    );
+  };
+
+  const onDropOwn = (e: DragEvent, targetId: string): void => {
+    e.preventDefault();
+    const sourceId = dragId ?? e.dataTransfer.getData('text/plain');
+    const zone = dropHint?.targetId === targetId ? dropHint.zone : 'before';
+    setDragId(null);
+    setDropHint(null);
+    if (!sourceId || sourceId === targetId) {
+      return;
+    }
+    applyReorder(sourceId, targetId, zone);
   };
 
   const onDragEndOwn = (): void => {
-    setDragFrom(null);
+    setDragId(null);
+    setDropHint(null);
   };
 
   const isPropDragBlocked = (target: EventTarget | null): boolean => {
     if (!(target instanceof HTMLElement)) {
       return true;
+    }
+    if (target.closest('.designer-prop-drag-handle')) {
+      return false;
     }
     return Boolean(
       target.closest(
@@ -364,7 +416,7 @@ export function PropsEditor(props: {
             <span>{i18n.t('ui', 'propActions')}</span>
           </div>
           <div className="designer-prop-table__body">
-            {sortedOwn.map((p, index) => {
+            {sortedOwn.map((p) => {
               const locked = propVault.isVaultField(p) && !unlocked[p.id];
               const canDragRow = !readOnly && !locked;
               const pTypeNorm = normalizeLegacyPropType(p.type);
@@ -382,7 +434,13 @@ export function PropsEditor(props: {
                   className={[
                     'designer-prop-row',
                     expanded ? 'designer-prop-row--expanded' : '',
-                    dragFrom === index ? 'designer-prop-row--dragging' : '',
+                    dragId === p.id ? 'designer-prop-row--dragging' : '',
+                    dropHint?.targetId === p.id && dropHint.zone === 'before'
+                      ? 'designer-prop-row--drop-before'
+                      : '',
+                    dropHint?.targetId === p.id && dropHint.zone === 'after'
+                      ? 'designer-prop-row--drop-after'
+                      : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
@@ -392,11 +450,16 @@ export function PropsEditor(props: {
                       e.preventDefault();
                       return;
                     }
-                    onDragStartOwn(e, index);
+                    onDragStartOwn(e, p);
                   }}
                   onDragEnd={onDragEndOwn}
-                  onDragOver={onDragOverOwn}
-                  onDrop={(e) => onDropOwn(e, index)}
+                  onDragOver={(e) => onDragOverOwn(e, p.id)}
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                      setDropHint((prev) => (prev?.targetId === p.id ? null : prev));
+                    }
+                  }}
+                  onDrop={(e) => onDropOwn(e, p.id)}
                 >
                   <div
                     className="designer-prop-row__main"

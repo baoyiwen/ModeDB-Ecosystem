@@ -40,6 +40,11 @@ export interface PaintSceneParams {
   hoveredModelId?: string | undefined;
   hoveredRelationId?: string | undefined;
   hiddenNodeIds?: ReadonlySet<string>;
+  hiddenRelationIds?: ReadonlySet<string>;
+  mutedNodeIds?: ReadonlySet<string>;
+  mutedRelationIds?: ReadonlySet<string>;
+  highlightNodeIds?: ReadonlySet<string>;
+  highlightRelationIds?: ReadonlySet<string>;
   linkPreview: DirectedSegment | null;
   inheritPreview?: DirectedSegment | null;
   /** 界面语言（`en` | `zh` | `ja`），用于节点标题与正/逆向关系标签按 i18n 解析 */
@@ -104,12 +109,18 @@ export function paintScene(params: PaintSceneParams): void {
     hoveredModelId,
     hoveredRelationId,
     hiddenNodeIds,
+    hiddenRelationIds,
+    mutedNodeIds,
+    mutedRelationIds,
+    highlightNodeIds,
+    highlightRelationIds,
     linkPreview,
     inheritPreview,
     uiLocale,
     snapGuides,
   } = params;
   const hide = hiddenNodeIds;
+  const hideRelation = hiddenRelationIds;
   ctx.clearRect(0, 0, width, height);
 
   const snap = config.snapshot();
@@ -153,7 +164,7 @@ export function paintScene(params: PaintSceneParams): void {
   const empLw = vis.strokeSelectedPx / zoom;
   const arrow = vis.arrowPx / zoom;
 
-  type EdgeDrawKind = 'normal' | 'hover' | 'selected';
+  type EdgeDrawKind = 'normal' | 'hover' | 'selected' | 'muted' | 'highlight';
   const relationColor = (r: EngineRelationEdge, kind: EdgeDrawKind): string => {
     const inherit = isInheritRelation(r.kind);
     if (kind === 'selected') {
@@ -162,10 +173,17 @@ export function paintScene(params: PaintSceneParams): void {
     if (kind === 'hover') {
       return inherit ? vis.inheritHoverColor : vis.hoverColor;
     }
+    if (kind === 'highlight') {
+      return '#f59e0b';
+    }
+    if (kind === 'muted') {
+      return '#cbd5e1';
+    }
     return inherit ? vis.inheritColor : vis.normalColor;
   };
   const relationWidth = (kind: EdgeDrawKind): number => {
     if (kind === 'selected') return empLw;
+    if (kind === 'highlight') return hoverLw;
     if (kind === 'hover') return hoverLw;
     return baseLw;
   };
@@ -185,6 +203,9 @@ export function paintScene(params: PaintSceneParams): void {
     r: EngineRelationEdge,
     drawKind: EdgeDrawKind,
   ): EdgeLabelAnchors | null => {
+    if (hideRelation?.has(r.id)) {
+      return null;
+    }
     if (hide?.has(r.source_model_id) || hide?.has(r.target_model_id)) {
       return null;
     }
@@ -255,6 +276,8 @@ export function paintScene(params: PaintSceneParams): void {
   const edgeDrawKind = (relId: string): EdgeDrawKind => {
     if (relId === selRel) return 'selected';
     if (relId === hovRel) return 'hover';
+    if (highlightRelationIds?.has(relId)) return 'highlight';
+    if (mutedRelationIds?.has(relId)) return 'muted';
     return 'normal';
   };
 
@@ -295,6 +318,8 @@ export function paintScene(params: PaintSceneParams): void {
     const themeId = layout?.color_theme ?? 'default';
     const theme = config.getTheme(themeId) ?? config.getThemes()[0];
     computeNodeHeight(p.model);
+    const highlighted = highlightNodeIds?.has(p.model.id) === true;
+    const muted = !highlighted && mutedNodeIds?.has(p.model.id) === true;
     drawNodeCircle({
       ctx,
       x: p.x,
@@ -303,13 +328,20 @@ export function paintScene(params: PaintSceneParams): void {
       theme,
       selected: p.model.id === selectedModelId,
       hovered: p.model.id === hoveredModelId && p.model.id !== selectedModelId,
+      muted,
+      highlighted,
       nodeFillHex: parseFillHex(p.model.color_value),
     });
   }
 
   if (selRel) {
     const r = data.relations.find((x) => x.id === selRel);
-    if (r && !hide?.has(r.source_model_id) && !hide?.has(r.target_model_id)) {
+    if (
+      r &&
+      !hideRelation?.has(r.id) &&
+      !hide?.has(r.source_model_id) &&
+      !hide?.has(r.target_model_id)
+    ) {
       const anchors = drawEdgeStroke(r, 'selected');
       if (anchors) {
         pushLabels(r, anchors);

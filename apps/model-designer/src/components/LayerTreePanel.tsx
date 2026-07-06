@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState, type DragEvent, type ReactElement } f
 import { useDesigner } from '../context/designer-context.js';
 import type { LayerTreeNode } from '../types/layer-tree.js';
 import type { LayerDropZone } from '../utils/layer-tree-ops.js';
-import { isLayerRootGroupId, LAYER_ROOT_GROUP_ID } from '../config/layer-tree-defaults.js';
+import {
+  isLayerRootGroupId,
+  LAYER_DEFAULT_PAGE_ID,
+  LAYER_ROOT_GROUP_ID,
+} from '../config/layer-tree-defaults.js';
 import { collectAllPageIds, collectPageIdsInSubtree } from '../utils/layer-tree-ops.js';
 import {
   findLayerNode,
@@ -74,16 +78,31 @@ function TreeNodes(props: {
     afterRow?: ReactElement,
   ): ReactElement => {
     const canDrag = !props.readOnly && !isLayerRootGroupId(n.id);
+    const pageHoverClass =
+      n.kind === 'page' && data.hoveredLayerPageId === n.id ? ' designer-tree-page--hovered' : '';
     return (
       <div className="designer-tree-node">
         <div
-          className={`${rowClass}${rowDropClass(n.id)}${rowSelectedClass(n.id)}`}
+          className={`${rowClass}${rowDropClass(n.id)}${rowSelectedClass(n.id)}${pageHoverClass}`}
           draggable={canDrag}
+          onMouseEnter={() => {
+            if (n.kind === 'page' && n.id !== LAYER_DEFAULT_PAGE_ID) {
+              data.setHoveredLayerPageId(n.id);
+            }
+          }}
+          onMouseLeave={() => {
+            if (n.kind === 'page') {
+              data.setHoveredLayerPageId(undefined);
+            }
+          }}
           onClick={(e) => {
             if (isTreeActionTarget(e.target)) {
               return;
             }
             props.onSelectNode(n.id);
+            if (n.kind === 'page') {
+              layers.setActiveLayer(n.id);
+            }
           }}
           onDoubleClick={(e) => {
             if (isTreeActionTarget(e.target) || props.readOnly) {
@@ -256,6 +275,11 @@ export function LayerTreePanel(props: {
   const [dropHint, setDropHint] = useState<DropHint | null>(null);
 
   useEffect(() => data.subscribe(() => bump((n) => n + 1)), [data]);
+
+  useEffect(() => {
+    data.setLayerTreePanelOpen(true);
+    return () => data.setLayerTreePanelOpen(false);
+  }, [data]);
 
   useEffect(() => {
     if (selectedNodeId && findLayerNode(data.layerTreeRoots, selectedNodeId)) {

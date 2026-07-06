@@ -82,3 +82,96 @@
   font-size: 11px;
   color: #94a3b8;
 }
+
+/* Match Data Studio's compact square table treatment. */
+.data-pivot-crumb {
+  gap: 8px;
+  padding-bottom: 12px;
+  color: #5a697f;
+}
+
+.data-pivot-crumb button {
+  border-color: #ccd6e4;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #ffffff 0%, #edf2f7 100%);
+  color: #162033;
+  transition:
+    transform 0.14s ease,
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.data-pivot-crumb button:hover {
+  transform: translateY(-1px);
+  border-color: #24519c;
+  color: #193a73;
+  box-shadow: 0 7px 16px rgba(36, 81, 156, 0.12);
+}
+
+.data-pivot-scroll {
+  border-color: #ccd6e4;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(22, 32, 51, 0.06);
+}
+
+.data-pivot-table {
+  color: #162033;
+}
+
+.data-pivot-table th,
+.data-pivot-table td {
+  padding: 9px 12px;
+  border-bottom-color: #e0e7f0;
+}
+
+.data-pivot-table th {
+  background: #e8eef6;
+  color: #334155;
+  letter-spacing: 0.01em;
+}
+
+.data-pivot-table tbody tr {
+  transition: background-color 0.14s ease;
+}
+
+.data-pivot-table tbody tr:hover {
+  background: rgba(36, 81, 156, 0.06);
+}
+
+.data-pivot-drill {
+  color: #193a73;
+  text-decoration-thickness: 1px;
+}
+
+.data-pivot-drill:hover {
+  color: #24519c;
+}
+
+.data-pivot-hint {
+  color: #5a697f;
+}
+
+.data-pivot-wrap,
+.data-pivot-wrap * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.data-pivot-wrap::-webkit-scrollbar,
+.data-pivot-wrap *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.data-pivot-crumb button:hover {
+  background: #dce8f7;
+}
+
+.data-pivot-crumb button:active {
+  transform: translateY(0);
+  background: #24519c;
+  border-color: #193a73;
+  color: #ffffff;
+}

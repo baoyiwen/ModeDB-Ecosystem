@@ -10,7 +10,18 @@ function hydrateRowData(row: unknown): Record<string, unknown> {
     'getData' in row &&
     typeof (row as { getData?: unknown }).getData === 'function'
   ) {
-    return (row as { getData: () => Record<string, unknown> }).getData();
+    const data = { ...(row as { getData: () => Record<string, unknown> }).getData() };
+    if (typeof data._id !== 'string' || data._id.length === 0) {
+      try {
+        const id = (row as { id?: unknown }).id;
+        if (typeof id === 'string' && id.length > 0) {
+          data._id = id;
+        }
+      } catch {
+        /* Older row handles may not expose id outside getData(). */
+      }
+    }
+    return data;
   }
   throw new Error('LIBRARY_REGISTRY_BAD_ROW');
 }
@@ -42,7 +53,50 @@ function rowToRecord(row: Record<string, unknown>): LibraryRegistryRecord | null
   };
 }
 
-/** 选择列表展示：`显示名 [唯一 code]`。 */
+/** 同 code 出现重复登记时，优先保留信息更完整且不是兜底 code 的记录。 */
+function sameI18nMap(a: Record<string, string>, b: Record<string, string>): boolean {
+  const aKeys = Object.keys(a).filter((k) => a[k] !== '');
+  const bKeys = Object.keys(b).filter((k) => b[k] !== '');
+  if (aKeys.length !== bKeys.length) {
+    return false;
+  }
+  return aKeys.every((key) => a[key] === b[key]);
+}
+
+function scoreLibraryRecord(record: LibraryRegistryRecord): number {
+  const code = record.code.trim();
+  let score = record.id ? 1 : 0;
+  for (const raw of Object.values(record.name)) {
+    const value = raw.trim();
+    if (!value) {
+      continue;
+    }
+    score += value === code ? 1 : 10;
+  }
+  for (const raw of Object.values(record.description)) {
+    if (raw.trim()) {
+      score += 3;
+    }
+  }
+  return score;
+}
+
+function pickPreferredLibraryRecord(
+  records: readonly LibraryRegistryRecord[],
+): LibraryRegistryRecord | null {
+  let best: LibraryRegistryRecord | null = null;
+  let bestScore = -1;
+  for (const record of records) {
+    const score = scoreLibraryRecord(record);
+    if (score > bestScore) {
+      best = record;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+/** 选择列表展示：`显示名[唯一 code]`。 */
 export function formatLibraryLabel(
   record: Pick<LibraryRegistryRecord, 'code' | 'name'>,
   locale: string,
@@ -51,7 +105,7 @@ export function formatLibraryLabel(
   if (!display || display === record.code) {
     return record.code;
   }
-  return `${display} [${record.code}]`;
+  return `${display}[${record.code}]`;
 }
 
 /** 读取设计器库内全部逻辑库登记。 */
@@ -60,8 +114,18 @@ export async function listLibraryRegistry(
 ): Promise<LibraryRegistryRecord[]> {
   const rows = await client.model(SYS_DATA_ASSET_MAP).query().execute();
   const list = Array.isArray(rows) ? rows.map((r) => hydrateRowData(r)) : [];
-  const out: LibraryRegistryRecord[] = [];
+  const latestById = new Map<string, Record<string, unknown>>();
+  const withoutId: Record<string, unknown>[] = [];
   for (const row of list) {
+    const id = typeof row._id === 'string' ? row._id : '';
+    if (id) {
+      latestById.set(id, row);
+    } else {
+      withoutId.push(row);
+    }
+  }
+  const out: LibraryRegistryRecord[] = [];
+  for (const row of [...latestById.values(), ...withoutId]) {
     const rec = rowToRecord(row);
     if (rec) {
       out.push(rec);
@@ -81,7 +145,7 @@ export async function getLibraryByCode(
     return null;
   }
   const all = await listLibraryRegistry(client);
-  return all.find((r) => r.code === trimmed) ?? null;
+  return pickPreferredLibraryRecord(all.filter((r) => r.code === trimmed));
 }
 
 /**
@@ -91,7 +155,17 @@ export function mergeLibraryRegistryWithDbNames(
   dbNames: readonly string[],
   registry: readonly LibraryRegistryRecord[],
 ): LibraryRegistryRecord[] {
-  const byCode = new Map(registry.map((r) => [r.code, r]));
+  const groups = new Map<string, LibraryRegistryRecord[]>();
+  for (const record of registry) {
+    groups.set(record.code, [...(groups.get(record.code) ?? []), record]);
+  }
+  const byCode = new Map<string, LibraryRegistryRecord>();
+  for (const [code, records] of groups) {
+    const preferred = pickPreferredLibraryRecord(records);
+    if (preferred) {
+      byCode.set(code, preferred);
+    }
+  }
   return dbNames.map((code) => {
     const hit = byCode.get(code);
     if (hit) {
@@ -157,18 +231,27 @@ export async function updateLibraryMetadata(
     throw new Error('LIBRARY_REGISTRY_CODE_REQUIRED');
   }
 
+  const matchingRecords = await listLibraryRegistry(client);
+  const targetIds = new Set<string>();
   if (record.id) {
+    targetIds.add(record.id);
+  }
+  for (const rec of matchingRecords) {
+    if (rec.code === code && rec.id) {
+      targetIds.add(rec.id);
+    }
+  }
+
+  if (targetIds.size > 0) {
     const { failureCount } = await client.batchUpdate(
-      [
-        {
-          model: SYS_DATA_ASSET_MAP,
-          id: record.id,
-          partial: {
-            name: patch.name,
-            description: patch.description,
-          },
+      [...targetIds].map((id) => ({
+        model: SYS_DATA_ASSET_MAP,
+        id,
+        partial: {
+          name: patch.name,
+          description: patch.description,
         },
-      ],
+      })),
       { sync: true },
     );
     if (failureCount > 0) {
@@ -185,6 +268,9 @@ export async function updateLibraryMetadata(
   const next = await getLibraryByCode(client, code);
   if (!next) {
     throw new Error('LIBRARY_REGISTRY_UPDATE_FAILED');
+  }
+  if (!sameI18nMap(next.name, patch.name) || !sameI18nMap(next.description, patch.description)) {
+    throw new Error('LIBRARY_REGISTRY_UPDATE_NOT_PERSISTED');
   }
   return next;
 }

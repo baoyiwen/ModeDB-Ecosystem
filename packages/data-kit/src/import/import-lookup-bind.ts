@@ -1,8 +1,8 @@
 import type { EngineOperation } from '@mode-db/shared';
-import { importLookupCanonicalKey } from '@mode-db/common';
 
 import type { CatalogModelRef, CatalogRelationRef } from './relation-bind.js';
 import type { RelationBindingRule } from './import-profile.js';
+import { importLookupCanonicalKey } from './coerce-import-cell.js';
 import { coerceImportValue } from './coerce-import-row.js';
 
 /** Join values for one bind-only rule, aligned with rows in one insertMany batch. */
@@ -117,6 +117,9 @@ export function buildBindImportLookupOps(
         reverse: relation.reverse,
         importModel: staging.targetModel,
         peerModel: rule.targetModel,
+        ...(relation.source === relation.target
+          ? { importSide: rule.importSide ?? ('target' as const) }
+          : {}),
         peerMatchField: rule.targetMatchColumn,
         peerMatchFieldType,
         pairs,

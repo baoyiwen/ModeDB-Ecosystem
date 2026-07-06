@@ -128,8 +128,8 @@ importers:
   apps/web:
     dependencies:
       '@mode-db/sdk':
-        specifier: ^0.1.8
-        version: 0.1.8
+        specifier: workspace:*
+        version: link:../../packages/sdk
       react:
         specifier: ^19.2.7
         version: 19.2.7
@@ -788,12 +788,6 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
-
-  '@mode-db/sdk@0.1.8':
-    resolution: {integrity: sha512-SS7tF3QrR5ce7ilh7zhVdu9QNN7JUtrURvZ9QIPyiVC1v4s3n21FLGS58vbIZ4o66s5UpVSZWJJczC7/ZWmBrQ==}
-
-  '@mode-db/shared@0.1.9':
-    resolution: {integrity: sha512-9iCnifw7HwB0+KOpJSy/n0j8m5yID+keOTGLMRc0Za7m1N3SsiaRqMAQMaX5/KX5VFALtA2V4Eh7BiPkiWaqzw==}
 
   '@noble/hashes@1.8.0':
     resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
@@ -2561,18 +2555,6 @@ packages:
       utf-8-validate:
         optional: true
 
-  ws@8.21.0:
-    resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
-
   xtend@4.0.2:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
     engines: {node: '>=0.4'}
@@ -2965,19 +2947,6 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
-
-  '@mode-db/sdk@0.1.8':
-    dependencies:
-      '@mode-db/shared': 0.1.9
-    optionalDependencies:
-      ws: 8.21.0
-    transitivePeerDependencies:
-      - bufferutil
-      - utf-8-validate
-
-  '@mode-db/shared@0.1.9':
-    dependencies:
-      '@noble/hashes': 1.8.0
 
   '@noble/hashes@1.8.0': {}
 
@@ -4820,9 +4789,6 @@ snapshots:
   wrappy@1.0.2: {}
 
   ws@8.20.0: {}
-
-  ws@8.21.0:
-    optional: true
 
   xtend@4.0.2: {}
 

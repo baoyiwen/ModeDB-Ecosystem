@@ -171,7 +171,7 @@ export function isPaginatedExecuteResult(x: unknown): x is Paginated<unknown> {
 
 type OriginLoadHint =
   | { readonly kind: 'by_uuid'; readonly id: string }
-  | { readonly kind: 'by_business_id'; readonly value: unknown };
+  | { readonly kind: 'scan_all' };
 
 function tryOptimizedOriginLoad(root: PredicateNode): OriginLoadHint | undefined {
   const atom = tryExtractSingleIdEq(root);
@@ -181,7 +181,7 @@ function tryOptimizedOriginLoad(root: PredicateNode): OriginLoadHint | undefined
   if (atom.field === '_id') {
     return { kind: 'by_uuid', id: String(atom.value) };
   }
-  return { kind: 'by_business_id', value: atom.value };
+  return { kind: 'scan_all' };
 }
 
 function filterRecordsWithTrace(
@@ -1092,17 +1092,8 @@ export class QueryChain<
       const hint = tryOptimizedOriginLoad(root);
       if (hint?.kind === 'by_uuid') {
         const rows = await this.dataReader.getByIds(this.originModel, [hint.id]);
-        const m = predicateMatcher(root);
+        const m = predicateMatcher(root, this._fieldCtxForModel(this.originModel));
         return rows.filter(m);
-      }
-      if (hint?.kind === 'by_business_id' && this.dataReader.findFirstByFieldEq) {
-        const hit = await this.dataReader.findFirstByFieldEq(this.originModel, 'id', hint.value);
-        if (!hit) {
-          return [];
-        }
-        return QueryEngine.matches(hit, root, this._fieldCtxForModel(this.originModel))
-          ? [hit]
-          : [];
       }
     }
 

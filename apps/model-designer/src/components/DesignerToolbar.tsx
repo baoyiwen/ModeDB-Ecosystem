@@ -22,6 +22,7 @@ import {
   IconGrid,
   IconSnap,
   IconHand,
+  IconLayers,
   IconLink,
   IconLogout,
   IconPan,
@@ -147,6 +148,18 @@ export class DesignerToolbar extends DesignerComponent<
           </button>
           <button type="button" className="designer-fab" title={i18n.t('ui', 'toolMulti')} disabled>
             <IconCheckSquare />
+          </button>
+          <button
+            type="button"
+            className="designer-fab"
+            data-active={mode === 'page' ? 'true' : 'false'}
+            title={i18n.t('ui', 'toolPageMode')}
+            onClick={() => {
+              modes.setMode('page');
+              state.transition(interactionStateForToolMode('page'));
+            }}
+          >
+            <IconLayers />
           </button>
           <button
             type="button"
@@ -307,8 +320,14 @@ export class DesignerToolbar extends DesignerComponent<
           <IconLogout />
         </button>
 
-        <div className="designer-state-badge">
-          {i18n.t('ui', 'stateLabel')}: {formatInteractionState(i18n, st)}
+        <div className="designer-status-card" data-connected={client && libName ? 'true' : 'false'}>
+          <span className="designer-status-card__dot" aria-hidden />
+          <span className="designer-status-card__body">
+            {libTag ? <span className="designer-status-card__database">{libTag}</span> : null}
+            <span className="designer-status-card__state">
+              {i18n.t('ui', 'stateLabel')}: {formatInteractionState(i18n, st)}
+            </span>
+          </span>
         </div>
       </div>
     );

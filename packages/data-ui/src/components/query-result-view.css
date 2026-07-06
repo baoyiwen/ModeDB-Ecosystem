@@ -123,3 +123,102 @@
   color: #64748b;
   font-size: 13px;
 }
+
+/* Match Data Studio's refined, squared-off console surface. */
+.data-result-scroll {
+  border-color: #ccd6e4;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(22, 32, 51, 0.06);
+}
+
+.data-result-table {
+  color: #162033;
+}
+
+.data-result-table th,
+.data-result-table td {
+  padding: 9px 12px;
+  border-bottom-color: #e0e7f0;
+}
+
+.data-result-table th {
+  background: #e8eef6;
+  color: #334155;
+  letter-spacing: 0.01em;
+}
+
+.data-result-table tbody tr {
+  transition:
+    background-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.data-result-table tbody tr:hover {
+  background: rgba(36, 81, 156, 0.06);
+}
+
+.data-tree-toggle {
+  border-color: #94a6bd;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #334155;
+  transition:
+    transform 0.14s ease,
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.data-tree-toggle:hover {
+  transform: translateY(-1px);
+  border-color: #24519c;
+  color: #193a73;
+  box-shadow: 0 5px 12px rgba(36, 81, 156, 0.12);
+}
+
+.data-tree-label {
+  color: #162033;
+}
+
+.data-tree-relation {
+  border-radius: 4px;
+  background: #e8eef6;
+  color: #193a73;
+}
+
+.data-group-header {
+  background: #edf2f7;
+}
+
+.data-group-header:hover {
+  background: #dfe7f1;
+}
+
+.data-group-members td {
+  background: #fbfcfe;
+}
+
+.data-result-hint,
+.data-result-empty {
+  color: #5a697f;
+}
+
+.data-result-wrap,
+.data-result-wrap * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.data-result-wrap::-webkit-scrollbar,
+.data-result-wrap *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.data-tree-toggle:active {
+  transform: translateY(0);
+  background: #24519c;
+  border-color: #193a73;
+  color: #ffffff;
+}

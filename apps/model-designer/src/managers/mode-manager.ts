@@ -2,7 +2,7 @@
  * 工具模式：决定**下一步**操作语义（非即时动作）。
  * 例如 `add` 时空白处点击新建模型；`delete` 时点击已有模型即删除。
  */
-export type DesignerToolMode = 'select' | 'add' | 'delete' | 'link' | 'inherit';
+export type DesignerToolMode = 'select' | 'add' | 'delete' | 'link' | 'inherit' | 'page';
 
 /**
  * 侧栏表单（Info / Props / Relation）是否只读。
@@ -17,7 +17,7 @@ export function isSidePanelReadOnly(_mode: DesignerToolMode): boolean {
  * 选择模式下可拖拽、编辑侧栏，但不触发增删。
  */
 export function isCanvasStructureLocked(mode: DesignerToolMode): boolean {
-  return mode === 'select';
+  return mode === 'select' || mode === 'page';
 }
 
 /** @deprecated 使用 {@link isSidePanelReadOnly} / {@link isCanvasStructureLocked} */

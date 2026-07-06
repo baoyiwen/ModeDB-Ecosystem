@@ -119,6 +119,16 @@ export function IconGrid(): ReactElement {
   );
 }
 
+export function IconLayers(): ReactElement {
+  return (
+    <svg {...common}>
+      <path d="M12 3 3 8l9 5 9-5-9-5z" />
+      <path d="M3 12l9 5 9-5" />
+      <path d="M3 16l9 5 9-5" />
+    </svg>
+  );
+}
+
 export function IconForceLayout(): ReactElement {
   return (
     <svg {...common}>

@@ -83,8 +83,8 @@ wire.model('Country')
         captionKey: 'manual.ex.children',
         code: `wire.model('Category')
   .query()
-  .children('parent', { maxDepth: 3 })
-  .execute({ includeRelates: true })`,
+  .children('children', { depth: 3 })
+  .execute()`,
       },
       {
         captionKey: 'manual.ex.recursive',
@@ -138,8 +138,11 @@ wire.model('Country')
         captionKey: 'manual.ex.snapshotMinimal',
         code: `{
   "plan": {
-    "start": { "model": "Country", "mode": "rows" },
-    "hops": []
+    "version": 2,
+    "originModel": "Country",
+    "start": { "kind": "all" },
+    "hops": [],
+    "trailing": { "type": "group", "logic": "AND", "children": [] }
   },
   "execute": { "includeRelates": true, "limit": 10, "page": 0 },
   "analysis": { "groupBy": null, "compute": null }
@@ -149,10 +152,18 @@ wire.model('Country')
         captionKey: 'manual.ex.snapshotRelate',
         code: `{
   "plan": {
-    "start": { "model": "Country", "mode": "rows" },
+    "version": 2,
+    "originModel": "Country",
+    "start": { "kind": "all" },
     "hops": [
-      { "kind": "relate", "forward": "cities", "lateral": false }
-    ]
+      {
+        "relationName": "cities",
+        "source": { "type": "group", "logic": "AND", "children": [] },
+        "target": { "type": "group", "logic": "AND", "children": [] },
+        "recursive": { "maxDepth": 3, "tree": true, "strategy": "dfs" }
+      }
+    ],
+    "trailing": { "type": "group", "logic": "AND", "children": [] }
   },
   "execute": { "includeRelates": true },
   "analysis": { "groupBy": null, "compute": null }

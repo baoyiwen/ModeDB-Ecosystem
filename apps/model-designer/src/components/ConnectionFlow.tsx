@@ -26,6 +26,7 @@ import {
 import {
   ensureLibraryRecord,
   formatLibraryLabel,
+  getLibraryByCode,
   listLibraryRegistry,
   mergeLibraryRegistryWithDbNames,
   updateLibraryMetadata,
@@ -273,6 +274,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
     let client: RemoteModelDBClient | undefined;
     let connectOk = false;
     let catalog: Awaited<ReturnType<typeof readBusinessCatalog>> | undefined;
+    let openedLibraryName: Record<string, string> | null = null;
     const meta = { name: { ...draft.name }, description: { ...draft.description } };
     try {
       client = designerClientRef.current ?? undefined;
@@ -298,8 +300,8 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
               setOpeningDetail(`${p.stepIndex}/${p.stepTotal} ${p.detail}`);
             });
             await seedDefaultWorkspaceRecords(client!, name, meta);
-            const rec = libraries.find((l) => l.code === name);
-            await updateLibraryMetadata(client!, { id: rec?.id ?? '', code: name }, meta);
+            const rec = await getLibraryByCode(client!, name);
+            openedLibraryName = rec?.name ?? null;
             setOpeningDetail(i18n.t('ui', 'asyncOp_openLibraryDetail', { name }));
             catalog = await readBusinessCatalog({
               host: host.trim(),
@@ -329,7 +331,12 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
         persistToken(token.trim());
       }
       setRememberToken(rememberToken);
-      props.onEditorReady(client, name, catalog, { name: meta.name });
+      props.onEditorReady(
+        client,
+        name,
+        catalog,
+        openedLibraryName ? { name: openedLibraryName } : undefined,
+      );
     } catch (e) {
       try {
         client?.close();

@@ -334,7 +334,15 @@ export async function executeDatabaseOperation(
   }
 
   if (op.op === 'registerRelation') {
-    const exists = engine.registry.getRelations().some((r) => r.forward === op.forward);
+    const exists = engine.registry
+      .getRelations()
+      .some(
+        (r) =>
+          r.source === op.source &&
+          r.target === op.target &&
+          r.forward === op.forward &&
+          r.reverse === op.reverse,
+      );
     if (!exists) {
       engine.registerRelation(op.source, op.target, op.forward, op.reverse, op.logic);
     }
@@ -378,7 +386,15 @@ export async function executeDatabaseOperation(
           createdModels.push(r.target);
         }
       }
-      const exists = engine.registry.getRelations().some((x) => x.forward === r.forward);
+      const exists = engine.registry
+        .getRelations()
+        .some(
+          (x) =>
+            x.source === r.source &&
+            x.target === r.target &&
+            x.forward === r.forward &&
+            x.reverse === r.reverse,
+        );
       if (exists) {
         skippedRelations.push(r.forward);
         continue;
@@ -438,8 +454,10 @@ export async function executeDatabaseOperation(
         `bindImportLookup: peerModel "${op.peerModel}" is not an endpoint of relation "${op.forward}".`,
       );
     }
-    if (op.importModel === op.peerModel) {
-      throw new Error('bindImportLookup: importModel and peerModel must differ.');
+    const isSelfRelation = rel.source === rel.target;
+    const importSide = op.importSide ?? 'target';
+    if (isSelfRelation && importSide !== 'source' && importSide !== 'target') {
+      throw new Error('bindImportLookup: importSide must be "source" or "target".');
     }
 
     const peerMatchFieldType = resolvePeerMatchFieldType(
@@ -476,7 +494,10 @@ export async function executeDatabaseOperation(
         skippedCount += 1;
         continue;
       }
-      if (op.importModel === rel.source) {
+      const importedAsSource = isSelfRelation
+        ? importSide === 'source'
+        : op.importModel === rel.source;
+      if (importedAsSource) {
         manualPairs.push([pair.importedId, peerId]);
       } else {
         manualPairs.push([peerId, pair.importedId]);

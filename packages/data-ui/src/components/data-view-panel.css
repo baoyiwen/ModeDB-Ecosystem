@@ -5,3 +5,16 @@
   flex-direction: column;
   overflow: hidden;
 }
+
+.data-view-panel,
+.data-view-panel * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.data-view-panel::-webkit-scrollbar,
+.data-view-panel *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}

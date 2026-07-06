@@ -16,6 +16,7 @@ import { ActiveLibraryPanel } from './ActiveLibraryPanel.js';
 import { NotificationCenter } from './NotificationCenter.js';
 import { LayerTreePanel } from './LayerTreePanel.js';
 import { RelationDetailPanel } from './RelationDetailPanel.js';
+import { DesignerSelect } from './base/designer-select.js';
 import type { LocaleCode } from '../managers/i18n-manager.js';
 import { IconGrid, IconSettings, IconBell } from './designer-icons.js';
 
@@ -52,8 +53,17 @@ export function EditorChrome(props: {
   const [manualPanel, setManualPanel] = useState<ManualPanelKind | null>(null);
 
   useEffect(() => {
+    if (modes.mode === 'page') {
+      return;
+    }
     setManualPanel(null);
-  }, [props.selectedModelId, props.selectedRelationId]);
+  }, [modes.mode, props.selectedModelId, props.selectedRelationId]);
+
+  useEffect(() => {
+    if (modes.mode === 'page') {
+      setManualPanel('hierarchy');
+    }
+  }, [modes.mode]);
 
   const passiveOpen = Boolean(effectiveModelId || showRelationDetail);
   const manualOpen = manualPanel !== null;
@@ -116,7 +126,17 @@ export function EditorChrome(props: {
             <span className="designer-panel-section-title" style={{ margin: 0 }}>
               {i18n.t('ui', 'locale')}
             </span>
+            <DesignerSelect
+              value={i18n.locale}
+              options={[
+                { value: 'en', label: 'English' },
+                { value: 'zh', label: '中文' },
+                { value: 'ja', label: '日本語' },
+              ]}
+              onChange={(value) => i18n.setLocale(value as LocaleCode)}
+            />
             <select
+              style={{ display: 'none' }}
               className="designer-select"
               value={i18n.locale}
               onChange={(e) => i18n.setLocale(e.target.value as LocaleCode)}
@@ -159,7 +179,7 @@ export function EditorChrome(props: {
             </div>
           </div>
 
-          <ActiveLibraryPanel />
+          <ActiveLibraryPanel onLibrarySwitched={props.onRequestClearCanvasSelection} />
 
           <div
             className="designer-settings-row"

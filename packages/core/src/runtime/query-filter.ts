@@ -62,6 +62,62 @@ function num(x: unknown): number | null {
   return null;
 }
 
+function bool(x: unknown): boolean | null {
+  if (typeof x === 'boolean') {
+    return x;
+  }
+  if (typeof x === 'string') {
+    const s = x.trim().toLowerCase();
+    if (s === 'true' || s === '1' || s === 'yes') {
+      return true;
+    }
+    if (s === 'false' || s === '0' || s === 'no') {
+      return false;
+    }
+  }
+  if (typeof x === 'number') {
+    if (x === 1) {
+      return true;
+    }
+    if (x === 0) {
+      return false;
+    }
+  }
+  return null;
+}
+
+function scalarEquals(actual: unknown, expected: unknown, fieldType?: FieldTypeDef): boolean {
+  if (!fieldType) {
+    return actual === expected;
+  }
+
+  switch (fieldType.type) {
+    case 'Number':
+    case 'Int': {
+      const a = num(actual);
+      const b = num(expected);
+      return a !== null && b !== null && a === b;
+    }
+    case 'Boolean': {
+      const a = bool(actual);
+      const b = bool(expected);
+      return a !== null && b !== null && a === b;
+    }
+    case 'String':
+    case 'I18N':
+    case 'DateTime':
+    case 'Color':
+      return String(actual ?? '') === String(expected ?? '');
+    case 'JSON':
+    case 'Unit':
+      return actual === expected;
+    default: {
+      const _ex: never = fieldType.type;
+      return _ex;
+    }
+  }
+}
+
 export function matchesAtomic(
   rec: ModelRecord,
   p: AtomicPredicate,
@@ -69,10 +125,11 @@ export function matchesAtomic(
 ): boolean {
   const row = rec as Record<string, unknown>;
   let actual = row[p.field];
+  const fieldType = ctx?.fieldTypes?.get(p.field);
 
   if (
     ctx?.locale &&
-    ctx.fieldTypes?.get(p.field)?.type === 'I18N' &&
+    fieldType?.type === 'I18N' &&
     actual !== null &&
     actual !== undefined &&
     typeof actual === 'object' &&
@@ -83,9 +140,9 @@ export function matchesAtomic(
 
   switch (p.operator) {
     case 'eq':
-      return actual === p.value;
+      return scalarEquals(actual, p.value, fieldType);
     case 'neq':
-      return actual !== p.value;
+      return !scalarEquals(actual, p.value, fieldType);
     case 'gt': {
       const a = num(actual);
       const b = num(p.value);
@@ -116,7 +173,10 @@ export function matchesAtomic(
       return s.includes(raw);
     }
     case 'in':
-      return Array.isArray(p.value) && (p.value as unknown[]).some((v) => v === actual);
+      return (
+        Array.isArray(p.value) &&
+        (p.value as unknown[]).some((v) => scalarEquals(actual, v, fieldType))
+      );
     case 'between': {
       if (!Array.isArray(p.value) || (p.value as unknown[]).length !== 2) {
         return false;

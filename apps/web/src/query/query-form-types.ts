@@ -41,8 +41,11 @@ export const DEFAULT_QUERY_FORM: QueryFormConfig = {
 
 export const DEFAULT_QUERY_SNAPSHOT = `{
   "plan": {
-    "start": { "model": "<ModelName>", "mode": "rows" },
-    "hops": []
+    "version": 2,
+    "originModel": "<ModelName>",
+    "start": { "kind": "all" },
+    "hops": [],
+    "trailing": { "type": "group", "logic": "AND", "children": [] }
   },
   "execute": {
     "includeRelates": true

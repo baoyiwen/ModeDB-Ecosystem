@@ -1,7 +1,11 @@
 import type { DataManager } from './data-manager.js';
 import { GRAPH_NODE_LINK_KIND } from '../config/graph-edge-kinds.js';
-import { RELATION_CARDINALITY_MANY } from '../config/relation-cardinality.js';
+import {
+  RELATION_CARDINALITY_MANY,
+  RELATION_CARDINALITY_ONE,
+} from '../config/relation-cardinality.js';
 import { makeUniqueName, sanitizeUniqueNameFragment } from '../utils/name-validation.js';
+import { relationNamesUsedInScope } from '../utils/relation-identity.js';
 
 export { GRAPH_NODE_LINK_KIND } from '../config/graph-edge-kinds.js';
 
@@ -38,11 +42,7 @@ export class GraphLinker {
       reverseBase = `${t}-${s}`;
     }
     // 已占用的名字集合（在所有现有关系的 forward / reverse 两侧合并去重）。
-    const used = new Set<string>();
-    for (const r of this.data.relations) {
-      if (r.forward_name) used.add(r.forward_name);
-      if (r.reverse_name) used.add(r.reverse_name);
-    }
+    const used = relationNamesUsedInScope(this.data.relations, sourceModelId, targetModelId);
     const forwardName = makeUniqueName(forwardBase, used);
     used.add(forwardName);
     const reverseName = makeUniqueName(reverseBase, used);
@@ -56,6 +56,8 @@ export class GraphLinker {
       reverse_name: reverseName,
       kind: GRAPH_NODE_LINK_KIND,
       self_cardinality: RELATION_CARDINALITY_MANY,
+      source_cardinality: RELATION_CARDINALITY_ONE,
+      target_cardinality: RELATION_CARDINALITY_MANY,
     });
     return id;
   }

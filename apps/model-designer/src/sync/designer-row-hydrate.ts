@@ -305,6 +305,18 @@ function dedupeModelRowsByEngine(
   return [...byEngine.values()];
 }
 
+function dedupeRowsById(rows: readonly Record<string, unknown>[]): Record<string, unknown>[] {
+  const byId = new Map<string, Record<string, unknown>>();
+  for (const row of rows) {
+    const id = typeof row._id === 'string' ? row._id : '';
+    if (!id || byId.has(id)) {
+      continue;
+    }
+    byId.set(id, row);
+  }
+  return [...byId.values()];
+}
+
 export interface DesignerHydratedGraph {
   readonly models: EngineModelNode[];
   readonly relations: EngineRelationEdge[];
@@ -341,7 +353,7 @@ export async function fetchGraphFromDesignerRows(
   );
 
   const relRowsRaw = await client.model(SYS_RELATION_DEF).query().execute();
-  const relRows = dedupeModelRowsByEngine(
+  const relRows = dedupeRowsById(
     (Array.isArray(relRowsRaw) ? relRowsRaw : [])
       .map((r) => hydrateRow(r))
       .filter((d) => d.library_code === code && typeof d.engine_name === 'string'),
@@ -394,6 +406,7 @@ export async function fetchGraphFromDesignerRows(
     layouts.push(parseLayoutFromModelRow(row, spreadGridPosition(index)));
   });
 
+  const modelIds = new Set(models.map((m) => m.id));
   const relations: EngineRelationEdge[] = [];
   for (const row of relRows) {
     const id = typeof row._id === 'string' ? row._id : '';
@@ -404,6 +417,12 @@ export async function fetchGraphFromDesignerRows(
     let reverse = '';
     let sourceEngine = '';
     let targetEngine = '';
+    let sourceIdFromMeta = '';
+    let targetIdFromMeta = '';
+    let sourceCardinality = '';
+    let targetCardinality = '';
+    let forwardDescriptionRaw: unknown = row.forwardDescription;
+    let reverseDescriptionRaw: unknown = row.reverseDescription;
     if (typeof row.canvas_meta === 'string' && row.canvas_meta.trim() !== '') {
       try {
         const meta = JSON.parse(row.canvas_meta) as Record<string, unknown>;
@@ -419,12 +438,42 @@ export async function fetchGraphFromDesignerRows(
         if (typeof meta.target === 'string') {
           targetEngine = meta.target;
         }
+        if (typeof meta.sourceId === 'string') {
+          sourceIdFromMeta = meta.sourceId;
+        }
+        if (typeof meta.targetId === 'string') {
+          targetIdFromMeta = meta.targetId;
+        }
+        if (typeof meta.sourceCardinality === 'string') {
+          sourceCardinality = meta.sourceCardinality;
+        }
+        if (typeof meta.targetCardinality === 'string') {
+          targetCardinality = meta.targetCardinality;
+        }
+        if (meta.forwardDescription !== undefined) {
+          forwardDescriptionRaw = meta.forwardDescription;
+        }
+        if (meta.reverseDescription !== undefined) {
+          reverseDescriptionRaw = meta.reverseDescription;
+        }
       } catch {
         /* ignore */
       }
     }
-    const sourceId = engineNameToId.get(sourceEngine);
-    const targetId = engineNameToId.get(targetEngine);
+    if (!sourceCardinality && typeof row.sourceCardinality === 'string') {
+      sourceCardinality = row.sourceCardinality;
+    }
+    if (!targetCardinality && typeof row.targetCardinality === 'string') {
+      targetCardinality = row.targetCardinality;
+    }
+    const sourceId =
+      sourceIdFromMeta && modelIds.has(sourceIdFromMeta)
+        ? sourceIdFromMeta
+        : engineNameToId.get(sourceEngine);
+    const targetId =
+      targetIdFromMeta && modelIds.has(targetIdFromMeta)
+        ? targetIdFromMeta
+        : engineNameToId.get(targetEngine);
     if (!sourceId || !targetId) {
       continue;
     }
@@ -436,7 +485,11 @@ export async function fetchGraphFromDesignerRows(
       reverse_name: reverse || `${forward}_rev`,
       forward_name_i18n: parseI18nField(row.name, forward),
       description_i18n: parseI18nField(row.description, ''),
+      forward_description_i18n: parseI18nField(forwardDescriptionRaw ?? row.description, ''),
+      reverse_description_i18n: parseI18nField(reverseDescriptionRaw ?? row.description, ''),
       self_cardinality: typeof row.selfCardinality === 'string' ? row.selfCardinality : undefined,
+      source_cardinality: sourceCardinality || undefined,
+      target_cardinality: targetCardinality || undefined,
       pos_x: typeof row.posX === 'number' ? row.posX : undefined,
       pos_y: typeof row.posY === 'number' ? row.posY : undefined,
       canvas_meta_str: typeof row.canvas_meta === 'string' ? row.canvas_meta : undefined,

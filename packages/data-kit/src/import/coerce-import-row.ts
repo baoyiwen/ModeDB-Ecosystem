@@ -1,5 +1,5 @@
 import type { EngineOperation } from '@mode-db/shared';
-import { coerceImportCell } from '@mode-db/common';
+import { coerceImportCell } from './coerce-import-cell.js';
 
 /** Catalog field name → engine DataType (`String`, `Int`, …). */
 export type ImportFieldTypeMap = Readonly<Record<string, string>>;

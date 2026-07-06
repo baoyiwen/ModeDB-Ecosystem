@@ -162,6 +162,11 @@ export type WireExecuteBody =
       readonly reverse: string;
       readonly importModel: string;
       readonly peerModel: string;
+      /**
+       * Direction hint for self-relations (`source === target`). Defaults to `target`, meaning
+       * the lookup peer is the source row and the freshly imported row is the target row.
+       */
+      readonly importSide?: 'source' | 'target';
       readonly peerMatchField: string;
       /** Peer match field DataType (`String`, `Int`, …) for lookup coercion. */
       readonly peerMatchFieldType?: string;

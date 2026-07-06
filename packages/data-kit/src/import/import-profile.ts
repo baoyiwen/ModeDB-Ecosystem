@@ -25,6 +25,11 @@ export interface RelationBindingRule {
   /** Related model name from catalog. */
   readonly targetModel: string;
   /**
+   * For self-relations, identifies whether imported rows are bound as source or target.
+   * Defaults to `target`, which covers common parent-code -> imported-child imports.
+   */
+  readonly importSide?: 'source' | 'target';
+  /**
    * When true (default if `sourceColumn` is not in column mapping), the CSV value is used only
    * to look up existing peer rows and is **not** stored on the import model.
    */

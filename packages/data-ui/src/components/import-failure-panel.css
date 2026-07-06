@@ -93,3 +93,85 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.import-failure-panel {
+  border-radius: 6px;
+  box-shadow: 0 8px 18px rgba(180, 35, 50, 0.08);
+}
+
+.import-failure-panel-header,
+.import-failure-actions {
+  background: #fff8f8;
+}
+
+.import-failure-table th,
+.import-failure-table td {
+  padding: 8px 10px;
+}
+
+.import-failure-cell-input {
+  border-color: #d6a3a3;
+  border-radius: 4px;
+  color: #162033;
+}
+
+.import-failure-cell-input:focus {
+  outline: none;
+  border-color: #b42332;
+  box-shadow: 0 0 0 3px rgba(180, 35, 50, 0.12);
+}
+
+.import-failure-actions button {
+  border-color: #ccd6e4;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #ffffff 0%, #edf2f7 100%);
+  color: #162033;
+}
+
+.import-failure-actions button.primary {
+  border-color: #24519c;
+  background: linear-gradient(180deg, #2c60b7 0%, #24519c 100%);
+}
+
+.import-failure-panel,
+.import-failure-panel * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.import-failure-panel::-webkit-scrollbar,
+.import-failure-panel *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.import-failure-actions button:hover:not(:disabled) {
+  background: #dce8f7;
+  border-color: #24519c;
+  color: #102a56;
+}
+
+.import-failure-actions button:active:not(:disabled) {
+  transform: translateY(0);
+  background: #24519c;
+  border-color: #193a73;
+  color: #ffffff;
+}
+
+.import-failure-actions button.primary:hover:not(:disabled),
+.import-failure-actions button.primary:active:not(:disabled) {
+  background: linear-gradient(180deg, #2c60b7 0%, #24519c 100%);
+  color: #ffffff;
+}
+
+.import-failure-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: min(280px, 30vh);
+}
+
+.import-failure-panel-scroll {
+  min-height: 0;
+  flex: 1;
+}

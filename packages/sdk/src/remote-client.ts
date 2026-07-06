@@ -15,6 +15,7 @@ import {
   type QueryStartSpec,
   type RemoteExecuteSnapshot,
   type WireBindStrategy,
+  type WireEntityNode,
   type WireExecuteBody,
   type WireExecuteResultJson,
   type WireMatchPredicate,
@@ -230,6 +231,32 @@ export type QuickLinkTuple = readonly [
   reverse: string,
 ];
 
+function reviveWireEntityNode(node: WireEntityNode): RemoteHydratedEntity {
+  const data: Record<string, unknown> = { ...node.data };
+  if (node.relates) {
+    data.relates = Object.fromEntries(
+      Object.entries(node.relates).map(([relation, children]) => [
+        relation,
+        children.map((child) => reviveWireEntityData(child)),
+      ]),
+    );
+  }
+  return new RemoteHydratedEntity(data, node.model);
+}
+
+function reviveWireEntityData(node: WireEntityNode): Record<string, unknown> {
+  const data: Record<string, unknown> = { ...node.data };
+  if (node.relates) {
+    data.relates = Object.fromEntries(
+      Object.entries(node.relates).map(([relation, children]) => [
+        relation,
+        children.map((child) => reviveWireEntityData(child)),
+      ]),
+    );
+  }
+  return data;
+}
+
 function reviveWireResult(json: WireExecuteResultJson): unknown {
   if (json.kind === 'paginated') {
     return {
@@ -241,7 +268,7 @@ function reviveWireResult(json: WireExecuteResultJson): unknown {
     };
   }
   if (json.kind === 'rows') {
-    return json.rows.map((r) => new RemoteHydratedEntity(r.data, r.model));
+    return json.rows.map((r) => reviveWireEntityNode(r));
   }
   if (json.kind === 'previewBind') {
     return {

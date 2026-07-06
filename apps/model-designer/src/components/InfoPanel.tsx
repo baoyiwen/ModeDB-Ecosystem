@@ -6,6 +6,7 @@ import { contrastTextOnHex, normalizeHex } from '../utils/color-utils.js';
 import { collectLayerPages } from '../utils/layer-tree-pages.js';
 import { resolveModelDisplayName } from '../utils/i18n-resolve.js';
 import { isValidUniqueName, filterUniqueNameInput } from '../utils/name-validation.js';
+import { DesignerSelect } from './base/designer-select.js';
 
 export function InfoPanel(props: {
   modelId: string | undefined;
@@ -23,33 +24,28 @@ export function InfoPanel(props: {
     : undefined;
 
   const pages = useMemo(() => collectLayerPages(data.layerTreeRoots), [data.layerTreeRoots]);
-  const [pageFilter, setPageFilter] = useState('');
-  useEffect(() => {
-    setPageFilter('');
-  }, [model?.id]);
-
-  const filteredPages = useMemo(() => {
-    const q = pageFilter.trim().toLowerCase();
-    if (!q) {
-      return pages;
-    }
-    return pages.filter((p) => p.label.toLowerCase().includes(q) || p.id.toLowerCase().includes(q));
-  }, [pages, pageFilter]);
-
   const assignedLayerIds = model ? [...data.getLayersForNode(model.id)] : [];
   const primaryPageId = assignedLayerIds[0] ?? '';
 
   const pageOptions = useMemo(() => {
-    const base = filteredPages;
-    if (primaryPageId && !base.some((p) => p.id === primaryPageId)) {
+    const base = pages.map((page) => ({ value: page.id, label: `${page.label} (${page.id})` }));
+    if (primaryPageId && !base.some((p) => p.value === primaryPageId)) {
       const hit = pages.find((p) => p.id === primaryPageId);
       if (hit) {
-        return [hit, ...base];
+        return [
+          { value: '', label: i18n.t('ui', 'layerPageNone') },
+          { value: hit.id, label: `${hit.label} (${hit.id})` },
+          ...base,
+        ];
       }
-      return [{ id: primaryPageId, label: primaryPageId }, ...base];
+      return [
+        { value: '', label: i18n.t('ui', 'layerPageNone') },
+        { value: primaryPageId, label: primaryPageId },
+        ...base,
+      ];
     }
-    return base;
-  }, [filteredPages, pages, primaryPageId]);
+    return [{ value: '', label: i18n.t('ui', 'layerPageNone') }, ...base];
+  }, [i18n, pages, primaryPageId]);
 
   const colorInputRef = useRef<HTMLInputElement>(null);
   const hex = normalizeHex(model?.color_value, '#2563eb');
@@ -125,36 +121,25 @@ export function InfoPanel(props: {
 
       <div className="designer-field">
         <span className="designer-field-label">{i18n.t('ui', 'sysModelLayerPage')}</span>
-        <input
-          className="designer-input"
-          disabled={!model || readOnly}
-          placeholder={i18n.t('ui', 'layerPageFilter')}
-          value={pageFilter}
-          onChange={(e) => setPageFilter(e.target.value)}
-        />
-        <select
-          className="designer-select"
-          style={{ width: '100%', marginTop: 6, padding: '9px 12px', fontSize: 13 }}
+        <DesignerSelect
+          compact
+          searchable
           disabled={!model || readOnly}
           value={primaryPageId}
-          onChange={(e) => {
+          options={pageOptions}
+          searchPlaceholder={i18n.t('ui', 'layerPageFilter')}
+          emptyLabel={i18n.t('ui', 'layerPageEmpty')}
+          onChange={(value) => {
             if (!model) {
               return;
             }
-            if (!e.target.value) {
+            if (!value) {
               data.assignNodeToLayers(model.id, []);
             } else {
-              data.assignModelToPage(model.id, e.target.value);
+              data.assignModelToPage(model.id, value);
             }
           }}
-        >
-          <option value="">{i18n.t('ui', 'layerPageNone')}</option>
-          {pageOptions.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label} ({p.id})
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
       <label className="designer-field" style={colorFieldStyle}>

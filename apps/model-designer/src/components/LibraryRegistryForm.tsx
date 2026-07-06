@@ -1,6 +1,10 @@
-import type { ReactElement } from 'react';
-import { I18nLocaleRows } from './i18n-locale-rows.js';
+import { forwardRef, useImperativeHandle, useRef, type ReactElement } from 'react';
+import { I18nLocaleRows, type I18nLocaleRowsHandle } from './i18n-locale-rows.js';
 import { filterUniqueNameInput, isValidUniqueName } from '../utils/name-validation.js';
+
+export interface LibraryRegistryFormHandle {
+  flush: () => { name: Record<string, string>; description: Record<string, string> };
+}
 
 export interface LibraryRegistryFormProps {
   readonly code: string;
@@ -8,6 +12,7 @@ export interface LibraryRegistryFormProps {
   readonly name: Record<string, string>;
   readonly description: Record<string, string>;
   readonly disabled?: boolean;
+  readonly showCode?: boolean;
   readonly codeLabel: string;
   readonly codePlaceholder: string;
   readonly codeInvalidHint: string;
@@ -21,65 +26,88 @@ export interface LibraryRegistryFormProps {
 }
 
 /** 逻辑库基本信息：唯一 `code`、i18n 显示名与描述。 */
-export function LibraryRegistryForm(props: LibraryRegistryFormProps): ReactElement {
-  const {
-    code,
-    codeReadOnly,
-    name,
-    description,
-    disabled = false,
-    codeLabel,
-    codePlaceholder,
-    codeInvalidHint,
-    displayNameLabel,
-    descriptionLabel,
-    pickLocaleLabel,
-    addRowHint,
-    onCodeChange,
-    onNameCommit,
-    onDescriptionCommit,
-  } = props;
+export const LibraryRegistryForm = forwardRef<LibraryRegistryFormHandle, LibraryRegistryFormProps>(
+  function LibraryRegistryForm(props, ref): ReactElement {
+    const {
+      code,
+      codeReadOnly,
+      name,
+      description,
+      disabled = false,
+      showCode = true,
+      codeLabel,
+      codePlaceholder,
+      codeInvalidHint,
+      displayNameLabel,
+      descriptionLabel,
+      pickLocaleLabel,
+      addRowHint,
+      onCodeChange,
+      onNameCommit,
+      onDescriptionCommit,
+    } = props;
+    const nameRowsRef = useRef<I18nLocaleRowsHandle>(null);
+    const descriptionRowsRef = useRef<I18nLocaleRowsHandle>(null);
 
-  const codeInvalid = code.length > 0 && !isValidUniqueName(code);
+    const codeInvalid = code.length > 0 && !isValidUniqueName(code);
 
-  return (
-    <div
-      className="designer-library-form"
-      style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
-    >
-      <label className="designer-field">
-        <span className="designer-field-label">{codeLabel}</span>
-        <input
-          className="designer-input"
-          disabled={disabled || codeReadOnly}
-          readOnly={codeReadOnly}
-          value={code}
-          placeholder={codePlaceholder}
-          onChange={(e) => onCodeChange(filterUniqueNameInput(e.target.value))}
-        />
-        {codeInvalid ? (
-          <span style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>{codeInvalidHint}</span>
+    useImperativeHandle(
+      ref,
+      () => ({
+        flush: () => {
+          const nextName = nameRowsRef.current?.flush() ?? name;
+          const nextDescription = descriptionRowsRef.current?.flush() ?? description;
+          return { name: nextName, description: nextDescription };
+        },
+      }),
+      [description, name],
+    );
+
+    return (
+      <div
+        className="designer-library-form"
+        style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+      >
+        {showCode ? (
+          <label className="designer-field">
+            <span className="designer-field-label">{codeLabel}</span>
+            <input
+              className="designer-input"
+              disabled={disabled || codeReadOnly}
+              readOnly={codeReadOnly}
+              value={code}
+              placeholder={codePlaceholder}
+              onChange={(e) => onCodeChange(filterUniqueNameInput(e.target.value))}
+            />
+            {codeInvalid ? (
+              <span style={{ fontSize: 11, color: '#dc2626', marginTop: 4 }}>
+                {codeInvalidHint}
+              </span>
+            ) : null}
+          </label>
         ) : null}
-      </label>
 
-      <I18nLocaleRows
-        disabled={disabled}
-        summary={displayNameLabel}
-        value={name}
-        onCommit={onNameCommit}
-        pickLocaleLabel={pickLocaleLabel}
-        addRowHint={addRowHint}
-      />
+        <I18nLocaleRows
+          ref={nameRowsRef}
+          disabled={disabled}
+          summary={displayNameLabel}
+          value={name}
+          onCommit={onNameCommit}
+          pickLocaleLabel={pickLocaleLabel}
+          addRowHint={addRowHint}
+        />
 
-      <I18nLocaleRows
-        disabled={disabled}
-        multiline
-        summary={descriptionLabel}
-        value={description}
-        onCommit={onDescriptionCommit}
-        pickLocaleLabel={pickLocaleLabel}
-        addRowHint={addRowHint}
-      />
-    </div>
-  );
-}
+        <I18nLocaleRows
+          ref={descriptionRowsRef}
+          disabled={disabled}
+          multiline
+          summary={descriptionLabel}
+          value={description}
+          onCommit={onDescriptionCommit}
+          pickLocaleLabel={pickLocaleLabel}
+          addRowHint={addRowHint}
+        />
+      </div>
+    );
+  },
+);
