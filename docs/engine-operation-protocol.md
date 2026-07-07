@@ -247,6 +247,7 @@ JSON 中 `hops[0].branches` 为嵌套 hop 数组（由 `getRemoteExecuteSnapshot
 | `alterModel`                         | Schema 变更              | `alterModel` / `alterModelPatch`       |
 | `dropModel` / `dropRelation`         | 删除模型/关系定义        | `dropModel` / `dropRelation`           |
 | `bind` / `bindPair` / `unlinkPair`   | 关系绑定                 | `bind` / 手动 pair                     |
+| **`bindImportLookup`**               | **导入后二阶段关系绑定** | 按对端字段 lookup 后 bind              |
 | `previewBind` / `relationStats`      | 只读预览/统计            | —                                      |
 | **`clearModelData`**                 | **清除单模型全部行数据** | `clearModelData(model)`                |
 | **`clearAllData`**                   | **清除库内全部行数据**   | `clearAllData()`                       |
@@ -277,6 +278,30 @@ const { totalDeleted, perModel } = await client.clearAllData();
 const result = await client.apply({ op: 'clearAllData' });
 // { kind: 'mutation', op: 'clearAllData', ok: true, deletedCount: 50, perModel: { Country: 2, City: 48 } }
 ```
+
+### 4.2 导入关系绑定：`bindImportLookup`
+
+`bindImportLookup` 用于 CSV / 批量导入后的二阶段关系绑定：
+
+1. 先执行 `insertMany` 或 upsert `insertMany`。
+2. 从插入结果中读取导入行 `_id`。
+3. 用导入时暂存的 join value 去对端模型字段 lookup。
+4. 将导入行和对端行写入关系索引。
+
+关键字段：
+
+- `forward` / `reverse`：关系正逆向名称。
+- `importModel`：本次导入的模型。
+- `peerModel`：被 lookup 的对端模型。
+- `importSide`：自关联时说明导入行位于 `source` 还是 `target`，默认 `target`。
+- `peerMatchField` / `peerMatchFieldType`：对端匹配字段和类型。
+- `pairs`：`{ importedId, lookupValue }[]`。
+
+注意：
+
+- 关系名是端点局部唯一，执行端必须同时校验 `importModel` 和 `peerModel` 是否为关系端点。
+- 直接自环 `sourceId === targetId` 默认被 `selfLoopPolicy: 'deny'` 跳过；只有关系显式 `allow` 才写入。
+- 修改该 op 时必须同步检查 `@mode-db/data-kit`、`@mode-db/shared`、`@mode-db/core`、`@mode-db/server` 和 `@mode-db/sdk`。
 
 ---
 

@@ -1,5 +1,9 @@
 import type { ManagementCatalogResponse, RemoteModelDBClient } from '@mode-db/sdk';
-import type { DesignerLayerRow, DesignerModelLayout } from '../types/designer-layout.js';
+import type {
+  DesignerLayerRow,
+  DesignerLayout,
+  DesignerModelLayout,
+} from '../types/designer-layout.js';
 import type { LayerTreeNode } from '../types/layer-tree.js';
 import type { EngineModelNode, EngineRelationEdge } from '../types/engine-schema.js';
 import type { MldgDocument } from '../types/mldg-document.js';
@@ -406,9 +410,7 @@ export class DataManager {
   private effectiveRelationLayerIds(relationId: string): Set<string> {
     const layerIds = new Set<string>();
     const addLayer = (layerId: string): void => {
-      if (layerId !== LAYER_DEFAULT_PAGE_ID) {
-        layerIds.add(layerId);
-      }
+      layerIds.add(layerId);
     };
     const manual = this._relationToLayers.get(relationId);
     const automatic = this._autoRelationToLayers.get(relationId);
@@ -961,8 +963,32 @@ export class DataManager {
     for (const [rid, lids] of Object.entries(rl)) {
       this.syncRelationLayerIndex(rid, lids);
     }
+    for (const relation of this._relations) {
+      if (!this._relationToLayers.has(relation.id)) {
+        this.syncRelationLayerIndex(relation.id, [LAYER_DEFAULT_PAGE_ID]);
+        this.syncTreeMembersForRelation(relation.id, [LAYER_DEFAULT_PAGE_ID]);
+      }
+    }
     this.rebuildAutoRelationLayers();
     this.emit();
+  }
+
+  private rebuildLayerMembershipFromTree(): void {
+    this.walkTree((node) => {
+      if (node.kind !== 'page') {
+        return;
+      }
+      for (const modelId of node.memberModelIds) {
+        const set = this._nodeToLayers.get(modelId) ?? new Set<string>();
+        set.add(node.id);
+        this._nodeToLayers.set(modelId, set);
+      }
+      for (const relationId of node.memberRelationIds ?? []) {
+        const set = this._relationToLayers.get(relationId) ?? new Set<string>();
+        set.add(node.id);
+        this._relationToLayers.set(relationId, set);
+      }
+    });
   }
 
   /**
@@ -972,6 +998,7 @@ export class DataManager {
     models: readonly EngineModelNode[],
     relations: readonly EngineRelationEdge[],
     layouts: readonly DesignerModelLayout[],
+    designerLayout?: DesignerLayout,
   ): void {
     this._models = models.map((m) => ({
       ...m,
@@ -982,10 +1009,40 @@ export class DataManager {
     this._nodeToLayers.clear();
     this._relationToLayers.clear();
     this._autoRelationToLayers.clear();
+    if (designerLayout?.layer_tree && designerLayout.layer_tree.length > 0) {
+      this._layerTreeRoots = normalizeLayerTreeRoots(designerLayout.layer_tree);
+      this.resyncLayersFromTree();
+      this.rebuildLayerMembershipFromTree();
+    } else {
+      this._layerTreeRoots = createDefaultLayerTree();
+      this.resyncLayersFromTree();
+    }
     for (const layout of layouts) {
       this._layoutByModelId.set(layout.uuid, { ...layout });
-      this.assignModelToPage(layout.uuid, LAYER_DEFAULT_PAGE_ID);
     }
+    const ml = designerLayout?.model_layers ?? {};
+    for (const [nid, lids] of Object.entries(ml)) {
+      this.syncNodeLayerIndex(nid, lids);
+      this.syncTreeMembersForNode(nid, lids);
+    }
+    const rl = designerLayout?.relation_layers ?? {};
+    for (const [rid, lids] of Object.entries(rl)) {
+      this.syncRelationLayerIndex(rid, lids);
+      this.syncTreeMembersForRelation(rid, lids);
+    }
+    for (const model of this._models) {
+      if (!this._nodeToLayers.has(model.id)) {
+        this.syncNodeLayerIndex(model.id, [LAYER_DEFAULT_PAGE_ID]);
+        this.syncTreeMembersForNode(model.id, [LAYER_DEFAULT_PAGE_ID]);
+      }
+    }
+    for (const relation of this._relations) {
+      if (!this._relationToLayers.has(relation.id)) {
+        this.syncRelationLayerIndex(relation.id, [LAYER_DEFAULT_PAGE_ID]);
+        this.syncTreeMembersForRelation(relation.id, [LAYER_DEFAULT_PAGE_ID]);
+      }
+    }
+    this.rebuildAutoRelationLayers();
     this.emit();
   }
 

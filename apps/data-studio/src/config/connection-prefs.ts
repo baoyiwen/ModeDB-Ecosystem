@@ -10,6 +10,8 @@ export interface RestorableSession {
   readonly library: string;
 }
 
+export type NameDisplayMode = 'display' | 'name';
+
 function safeGet(key: string): string | null {
   if (typeof localStorage === 'undefined') {
     return null;
@@ -84,6 +86,15 @@ export function getStoredModel(fallback: string): string {
 
 export function persistModel(name: string): void {
   safeSet('model', name.trim());
+}
+
+export function getStoredNameDisplayMode(fallback: NameDisplayMode = 'display'): NameDisplayMode {
+  const v = safeGet('nameDisplayMode');
+  return v === 'display' || v === 'name' ? v : fallback;
+}
+
+export function persistNameDisplayMode(mode: NameDisplayMode): void {
+  safeSet('nameDisplayMode', mode);
 }
 
 /** Marks the current connection as an active session with expiry. */

@@ -17,6 +17,7 @@ import {
 } from './tree-builders.js';
 
 const ID_FIELD = '_id';
+type ColumnLabelMap = Readonly<Record<string, string>>;
 
 function inferColumns(rows: readonly Record<string, unknown>[]): ColumnDef[] {
   const keys = new Set<string>();
@@ -48,11 +49,22 @@ function extractRowRef(
   return null;
 }
 
+function applyColumnLabels(columns: readonly ColumnDef[], labels?: ColumnLabelMap): ColumnDef[] {
+  if (!labels) {
+    return [...columns];
+  }
+  return columns.map((col) => {
+    const label = labels[col.key]?.trim();
+    return label ? { ...col, label } : col;
+  });
+}
+
 function adaptRowsResult(
   rows: readonly WireEntityNode[],
   pagination?: ViewPagination,
   propFields?: readonly string[],
   sourceModelHint?: string,
+  columnLabels?: ColumnLabelMap,
 ): ViewDataShape {
   if (rows.length === 0) {
     return { kind: 'empty', reason: 'no_rows' };
@@ -60,7 +72,10 @@ function adaptRowsResult(
 
   if (hasNestedRelates(rows)) {
     const roots = wireEntitiesToTreeNodes(rows);
-    const columns = applyPropFieldColumns(inferTreeColumns(roots), propFields);
+    const columns = applyColumnLabels(
+      applyPropFieldColumns(inferTreeColumns(roots), propFields),
+      columnLabels,
+    );
     const sourceModel = rows[0]?.model ?? sourceModelHint;
     return {
       kind: 'tree',
@@ -74,7 +89,10 @@ function adaptRowsResult(
 
   const sourceModel = rows[0]?.model ?? sourceModelHint;
   const flatRows = rows.map((r) => ({ ...r.data }));
-  const columns = applyPropFieldColumns(inferColumns(flatRows), propFields);
+  const columns = applyColumnLabels(
+    applyPropFieldColumns(inferColumns(flatRows), propFields),
+    columnLabels,
+  );
   const rowRefs = sourceModel ? flatRows.map((row) => extractRowRef(row, sourceModel)) : undefined;
   return {
     kind: 'tabular',
@@ -89,12 +107,13 @@ function adaptRowsResult(
 function metricsFromAnalysisRows(
   dimensionKeys: readonly string[],
   rows: readonly Record<string, unknown>[],
+  columnLabels?: ColumnLabelMap,
 ): MetricDef[] {
   const dimSet = new Set(dimensionKeys);
   return inferColumns(rows)
     .map((c) => c.key)
     .filter((k) => !dimSet.has(k))
-    .map((key) => ({ key }));
+    .map((key) => ({ key, label: columnLabels?.[key] }));
 }
 
 function adaptAnalysisResult(
@@ -103,16 +122,18 @@ function adaptAnalysisResult(
   tree: Record<string, unknown> | undefined,
   pagination?: ViewPagination,
   isLeafGrain = false,
+  columnLabels?: ColumnLabelMap,
 ): ViewDataShape {
   if (rows.length === 0 && (!tree || Object.keys(tree).length === 0)) {
     return { kind: 'empty', reason: 'no_analysis_rows' };
   }
 
-  const metrics = metricsFromAnalysisRows(dimensionKeys, rows);
+  const metrics = metricsFromAnalysisRows(dimensionKeys, rows, columnLabels);
   const dimSet = new Set(dimensionKeys);
   const allKeys = inferColumns(rows).map((c) => c.key);
   const columns: ColumnDef[] = allKeys.map((key) => ({
     key,
+    label: columnLabels?.[key],
     readOnly: !isLeafGrain || dimSet.has(key),
     isMetric: !dimSet.has(key),
   }));
@@ -123,6 +144,7 @@ function adaptAnalysisResult(
     const mergedKeys = new Set([...dimensionKeys, ...treeColumns.map((c) => c.key)]);
     const treeCols: ColumnDef[] = [...mergedKeys].map((key) => ({
       key,
+      label: columnLabels?.[key],
       readOnly: dimSet.has(key) || !isLeafGrain,
       isMetric: !dimSet.has(key),
     }));
@@ -151,24 +173,26 @@ function adaptGroupsResult(
   groups: readonly WireGroupBucket[],
   pagination?: ViewPagination,
   propFields?: readonly string[],
+  columnLabels?: ColumnLabelMap,
 ): ViewDataShape {
   if (groups.length === 0) {
     return { kind: 'empty', reason: 'no_groups' };
   }
   const headerRows = groups.map((g) => g.aggregates);
-  const metrics = metricsFromAnalysisRows(dimensionKeys, headerRows);
+  const metrics = metricsFromAnalysisRows(dimensionKeys, headerRows, columnLabels);
   const dimSet = new Set(dimensionKeys);
   const columns: ColumnDef[] = inferColumns(headerRows).map((col) => ({
     key: col.key,
+    label: columnLabels?.[col.key],
     readOnly: dimSet.has(col.key),
     isMetric: !dimSet.has(col.key),
   }));
 
   const viewGroups: ViewGroupBucket[] = groups.map((g, index) => {
     const members = wireEntitiesToTreeNodes(g.members, { keyPrefix: `group-${index}` });
-    const memberColumns = applyPropFieldColumns(
-      inferTreeColumns(members.length > 0 ? members : []),
-      propFields,
+    const memberColumns = applyColumnLabels(
+      applyPropFieldColumns(inferTreeColumns(members.length > 0 ? members : []), propFields),
+      columnLabels,
     );
     return {
       key: `group-${index}`,
@@ -198,6 +222,8 @@ export interface AdaptQueryResultOptions {
   readonly pivotLeafGrain?: boolean;
   /** Schema prop names from catalog — only these columns are shown in tabular views. */
   readonly propFields?: readonly string[];
+  /** Optional display labels keyed by field/column name. */
+  readonly columnLabels?: ColumnLabelMap;
   /**
    * When false, multi-dim analysis stays as flat pivot (drill-down UX).
    * Default true: prefer nested tree when the wire payload includes `tree`.
@@ -248,7 +274,13 @@ export function adaptQueryResult(
       return inner;
     }
     case 'rows': {
-      return adaptRowsResult(result.rows, undefined, options.propFields, options.sourceModel);
+      return adaptRowsResult(
+        result.rows,
+        undefined,
+        options.propFields,
+        options.sourceModel,
+        options.columnLabels,
+      );
     }
     case 'analysis': {
       const preferTree = options.preferAnalysisTree !== false;
@@ -259,10 +291,17 @@ export function adaptQueryResult(
         tree,
         undefined,
         options.pivotLeafGrain ?? false,
+        options.columnLabels,
       );
     }
     case 'groups':
-      return adaptGroupsResult(result.dimensionKeys, result.groups, undefined, options.propFields);
+      return adaptGroupsResult(
+        result.dimensionKeys,
+        result.groups,
+        undefined,
+        options.propFields,
+        options.columnLabels,
+      );
     case 'mutation':
       return { kind: 'empty', reason: 'mutation_result_not_viewable' };
     case 'previewBind':

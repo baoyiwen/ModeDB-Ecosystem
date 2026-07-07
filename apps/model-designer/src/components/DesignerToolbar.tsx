@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
+import { RemoteModelDBClient } from '@mode-db/sdk';
+import { useAppConfirm, type AppConfirmOptions } from '@mode-db/data-ui';
 import { DesignerComponent } from './base/designer-component.js';
 import { pushLibraryToEngine } from '../sync/designer-push-sync.js';
 import {
@@ -37,6 +39,7 @@ export interface DesignerToolbarProps {
   selectedId: string | undefined;
   onSelect: (id: string | undefined) => void;
   onDisconnected: () => void;
+  requestConfirm: (options: AppConfirmOptions) => Promise<boolean>;
 }
 
 /**
@@ -82,6 +85,23 @@ export class DesignerToolbar extends DesignerComponent<
           )
         : null;
     const remoteBusy = asyncOps.isBusy;
+    const host = getStoredHost('127.0.0.1');
+    const port = getStoredPort(9090);
+    const token = getSessionToken() ?? getStoredToken('');
+
+    const reloadBusinessCatalog = async (): Promise<void> => {
+      if (!client || !libName) {
+        return;
+      }
+      const catalog = await readBusinessCatalog({
+        host,
+        port,
+        token,
+        businessDb: libName,
+      });
+      await importEngineCatalogIntoDesignerDb(client, libName, catalog);
+      await data.loadLibraryCanvas(client, libName, catalog);
+    };
 
     const disconnect = (): void => {
       client?.close();
@@ -218,6 +238,10 @@ export class DesignerToolbar extends DesignerComponent<
               if (!client || !libName || remoteBusy) {
                 return;
               }
+              if (document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+                await new Promise((resolve) => window.setTimeout(resolve, 0));
+              }
               try {
                 await asyncOps.run(
                   'save',
@@ -272,6 +296,177 @@ export class DesignerToolbar extends DesignerComponent<
             }}
           >
             <IconExport />
+          </button>
+          <button
+            type="button"
+            className="designer-fab designer-fab--ghost"
+            title={i18n.t('ui', 'backupCreate')}
+            disabled={!client || !libName || remoteBusy}
+            data-busy={asyncOps.isActive('backupDatabase') ? 'true' : undefined}
+            onClick={async () => {
+              if (!client || !libName || remoteBusy) {
+                return;
+              }
+              try {
+                await asyncOps.run(
+                  'backupDatabase',
+                  async () => {
+                    const backup = await RemoteModelDBClient.createBackup({
+                      host,
+                      port,
+                      token,
+                      database: libName,
+                      reason: 'manual',
+                    });
+                    return backup;
+                  },
+                  { detail: libName },
+                );
+              } catch {
+                /* 失败态由 toast 展示 */
+              }
+            }}
+          >
+            <IconDocument />
+          </button>
+          <button
+            type="button"
+            className="designer-fab designer-fab--ghost"
+            title={i18n.t('ui', 'backupRestore')}
+            disabled={!client || !libName || remoteBusy}
+            data-busy={asyncOps.isActive('restoreDatabase') ? 'true' : undefined}
+            onClick={async () => {
+              if (!client || !libName || remoteBusy) {
+                return;
+              }
+              try {
+                await asyncOps.run(
+                  'restoreDatabase',
+                  async () => {
+                    const backups = await RemoteModelDBClient.listBackups({
+                      host,
+                      port,
+                      token,
+                      database: libName,
+                    });
+                    if (backups.length === 0) {
+                      throw new Error(i18n.t('ui', 'backupEmpty'));
+                    }
+                    const backupFile = window
+                      .prompt(
+                        `${i18n.t('ui', 'backupRestorePrompt')}\n${backups
+                          .map((b) => `${b.fileName} (${new Date(b.createdAt).toLocaleString()})`)
+                          .join('\n')}`,
+                        backups[0]?.fileName ?? '',
+                      )
+                      ?.trim();
+                    if (!backupFile) {
+                      return;
+                    }
+                    if (
+                      !(await this.props.requestConfirm({
+                        title: i18n.t('ui', 'backupRestoreConfirm', { file: backupFile }),
+                        tone: 'danger',
+                      }))
+                    ) {
+                      return;
+                    }
+                    await RemoteModelDBClient.restoreBackup({
+                      host,
+                      port,
+                      token,
+                      database: libName,
+                      backupFile,
+                    });
+                    await reloadBusinessCatalog();
+                  },
+                  { detail: libName },
+                );
+              } catch {
+                /* 失败态由 toast 展示 */
+              }
+            }}
+          >
+            <IconExport />
+          </button>
+          <button
+            type="button"
+            className="designer-fab designer-fab--ghost"
+            title={i18n.t('ui', 'backupClear')}
+            disabled={!client || !libName || remoteBusy}
+            data-busy={asyncOps.isActive('clearDatabaseManaged') ? 'true' : undefined}
+            onClick={async () => {
+              if (!client || !libName || remoteBusy) {
+                return;
+              }
+              if (
+                !(await this.props.requestConfirm({
+                  title: i18n.t('ui', 'backupClearConfirm', { db: libName }),
+                  tone: 'danger',
+                }))
+              ) {
+                return;
+              }
+              try {
+                await asyncOps.run(
+                  'clearDatabaseManaged',
+                  async () => {
+                    await RemoteModelDBClient.clearDatabaseData({
+                      host,
+                      port,
+                      token,
+                      database: libName,
+                    });
+                    await reloadBusinessCatalog();
+                  },
+                  { detail: libName },
+                );
+              } catch {
+                /* 失败态由 toast 展示 */
+              }
+            }}
+          >
+            <IconTrash />
+          </button>
+          <button
+            type="button"
+            className="designer-fab designer-fab--ghost"
+            title={i18n.t('ui', 'backupForceReset')}
+            disabled={!client || !libName || remoteBusy}
+            data-busy={asyncOps.isActive('forceResetDatabase') ? 'true' : undefined}
+            onClick={async () => {
+              if (!client || !libName || remoteBusy) {
+                return;
+              }
+              if (
+                !(await this.props.requestConfirm({
+                  title: i18n.t('ui', 'backupForceResetConfirm', { db: libName }),
+                  tone: 'danger',
+                }))
+              ) {
+                return;
+              }
+              try {
+                await asyncOps.run(
+                  'forceResetDatabase',
+                  async () => {
+                    await RemoteModelDBClient.clearDatabaseData({
+                      host,
+                      port,
+                      token,
+                      database: libName,
+                      forceReset: true,
+                    });
+                    await reloadBusinessCatalog();
+                  },
+                  { detail: libName },
+                );
+              } catch {
+                /* 失败态由 toast 展示 */
+              }
+            }}
+          >
+            <IconForceLayout />
           </button>
           <button
             type="button"
@@ -332,4 +527,11 @@ export class DesignerToolbar extends DesignerComponent<
       </div>
     );
   }
+}
+
+export function DesignerToolbarWithConfirm(
+  props: Omit<DesignerToolbarProps, 'requestConfirm'>,
+): ReactElement {
+  const confirm = useAppConfirm();
+  return <DesignerToolbar {...props} requestConfirm={confirm} />;
 }

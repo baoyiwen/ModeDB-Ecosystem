@@ -238,6 +238,22 @@ const en = {
   'data.confirmClearAll':
     'Clear all row data in library "{db}"? All models and relations stay registered.',
 
+  'backup.title': 'Database backup / recovery',
+  'backup.hint':
+    'Backups are server-side files under workspace/modeldb/backups. Restore and force reset create a safety backup first when possible.',
+  'backup.create': 'Create backup',
+  'backup.restore': 'Restore backup',
+  'backup.clear': 'Clear data (managed)',
+  'backup.forceReset': 'Force reset',
+  'backup.empty': 'No backup files are available for the selected database.',
+  'backup.restorePrompt': 'Enter a backup file name to restore:',
+  'backup.confirmRestore':
+    'Restore from {file}? Current database files will be replaced after a safety backup is created.',
+  'backup.confirmClear':
+    'Clear all data in {db}? Schema stays registered and a safety backup will be created first.',
+  'backup.confirmForceReset':
+    'Force-reset {db}? This is a corruption-recovery backdoor and will recreate the physical database after a safety backup.',
+
   'rel.title': 'Relation · drop',
   'rel.placeholder': 'Relation forward label',
   'rel.drop': 'Drop relation',
@@ -468,6 +484,20 @@ const zhCN: Record<keyof typeof en, string> = {
   'data.clearAll': '清除库内全部数据',
   'data.confirmClearModel': '清除模型「{name}」的全部行数据？模型与关系定义保留。',
   'data.confirmClearAll': '清除逻辑库「{db}」的全部行数据？所有模型与关系定义保留。',
+
+  'backup.title': '数据库备份 / 恢复',
+  'backup.hint':
+    '备份文件会生成在服务端 workspace/modeldb/backups 下。恢复与强制重置会先尽量创建安全备份。',
+  'backup.create': '创建备份',
+  'backup.restore': '恢复备份',
+  'backup.clear': '管理清除数据',
+  'backup.forceReset': '强制重置',
+  'backup.empty': '当前选中的数据库没有可用备份文件。',
+  'backup.restorePrompt': '请输入要恢复的备份文件名：',
+  'backup.confirmRestore': '确定从 {file} 恢复吗？当前数据库文件会在创建安全备份后被替换。',
+  'backup.confirmClear': '确定清除 {db} 的所有数据吗？模型结构会保留，并会先创建安全备份。',
+  'backup.confirmForceReset':
+    '确定强制重置 {db} 吗？这是数据损坏时的后门恢复能力，会先尝试创建安全备份再重建物理库。',
 
   'rel.title': '关系 · 删除',
   'rel.placeholder': '关系正向标签',

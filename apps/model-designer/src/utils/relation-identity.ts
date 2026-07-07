@@ -8,6 +8,19 @@ import {
 
 export type RelationLogicWire = 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many';
 
+export interface RelationEngineNames {
+  readonly forward: string;
+  readonly reverse: string;
+}
+
+export function relationEngineNames(rel: EngineRelationEdge): RelationEngineNames {
+  const forward = rel.engine_forward_name || rel.forward_name || rel.kind;
+  return {
+    forward,
+    reverse: rel.engine_reverse_name || rel.reverse_name || `${forward}_rev`,
+  };
+}
+
 function relationScopeKey(sourceModelId: string, targetModelId: string): string {
   if (sourceModelId === targetModelId) {
     return `self:${sourceModelId}`;

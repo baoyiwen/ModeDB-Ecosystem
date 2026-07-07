@@ -1,8 +1,20 @@
 import type { ModelSchema, ModelRecord, DataReader, PathResolver } from '@mode-db/common';
-import { ModelNotRegisteredError, FileIOError } from '@mode-db/common';
+import { ModelNotRegisteredError, FileIOError, isDeletedRecord } from '@mode-db/common';
 import { AtlasSingleVault } from '../../authoring/atlas-single-vault.js';
 
 const SCHEMA_HEADER_KEY = '__schema__';
+
+function compactModelRecords(records: readonly ModelRecord[]): ModelRecord[] {
+  const byId = new Map<string, ModelRecord>();
+  const order: string[] = [];
+  for (const record of records) {
+    if (!byId.has(record._id)) {
+      order.push(record._id);
+    }
+    byId.set(record._id, record);
+  }
+  return order.map((id) => byId.get(id)!).filter((record) => !isDeletedRecord(record));
+}
 
 /**
  * Read-only model access backed by an in-memory {@link AtlasSingleVault} (runtime `connect`).
@@ -28,7 +40,7 @@ export class VaultModelFileReader implements DataReader {
 
   async getAll(modelName: string): Promise<ModelRecord[]> {
     this.resolveSchema(modelName);
-    return this.parseModelBlob(modelName);
+    return compactModelRecords(this.parseModelBlob(modelName));
   }
 
   async scanModelRecords(

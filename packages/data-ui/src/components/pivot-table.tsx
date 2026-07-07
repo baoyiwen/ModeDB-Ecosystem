@@ -41,6 +41,8 @@ export function PivotTable(): ReactElement {
 
   const drillDim = page.nextDrillDimension;
   const dimSet = new Set(shape.dimensions);
+  const columnLabel = (key: string): string =>
+    shape.columns.find((c) => c.key === key)?.label ?? key;
 
   return (
     <div className="data-pivot-wrap">
@@ -53,7 +55,7 @@ export function PivotTable(): ReactElement {
             <span key={`${step.dimension}-${i}`}>
               <span aria-hidden="true"> › </span>
               <button type="button" onClick={() => void page.drillUp(page.drillPath.length - i)}>
-                {step.dimension}={formatCell(step.value)}
+                {columnLabel(step.dimension)}={formatCell(step.value)}
               </button>
             </span>
           ))}
@@ -104,7 +106,7 @@ export function PivotTable(): ReactElement {
 
       <p className="data-pivot-hint">
         {drillDim
-          ? `Click a ${drillDim} value to drill down. Aggregates are read-only.`
+          ? `Click a ${columnLabel(drillDim)} value to drill down. Aggregates are read-only.`
           : 'Leaf level reached — switch to edit mode on the table view to change row data.'}
       </p>
     </div>

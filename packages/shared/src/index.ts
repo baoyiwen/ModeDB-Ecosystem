@@ -10,9 +10,14 @@ export {
 } from './binary-transport.js';
 export { deriveWireSessionKey, encodeWirePayload, decodeWirePayload } from './wire-codec.js';
 export type {
+  ManagementBackupCreateResponse,
+  ManagementBackupInfo,
+  ManagementBackupRestoreResponse,
+  ManagementBackupsResponse,
   ManagementCatalogModelInfo,
   ManagementCatalogRelationInfo,
   ManagementCatalogResponse,
+  ManagementClearDatabaseResponse,
   ManagementDatabaseInfo,
   ManagementDatabasesResponse,
   ManagementStatusResponse,
@@ -30,6 +35,7 @@ export type {
   WireEntityNode,
   WireGroupBucket,
   WireRelationLogic,
+  WireRelationSelfLoopPolicy,
   WireMatchPredicate,
   WireRowRef,
   WireBindStrategy,

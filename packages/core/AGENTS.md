@@ -19,3 +19,6 @@
 - DDL / CRUD / bind 的真实语义在 core
 - 远程协议改动要和 `shared`、`sdk`、`server` 联动检查
 - 不要破坏 flush、索引和 query 的一致性
+- 关系查询必须同时保护正向和逆向索引语义
+- `bindImportLookup` 必须校验关系端点、`importSide`、字段类型和 `selfLoopPolicy`
+- 不要假设关系 `forward` 名称全局唯一；必要时结合端点模型查找

@@ -36,4 +36,17 @@ This file is installed under **`./modeldb/AGENTS.md`** when **`@mode-db/server`*
 - **`pnpm run test:integration`**: end-to-end **`test/integration/e2e-engine-workflow.ts`** (AuthoringEngine DDL → server → SDK → local update/delete).
 - **`pnpm run test:unit`**: pure **`@mode-db/common`** helpers under **`test/unit/`**.
 
+## Backup and recovery
+
+- Server-side backups are management-plane operations, not normal database RPC.
+- Backup files live under **`<workspace>/modeldb/backups/`**.
+- Manual CLI:
+  - **`modeldb-server backup <db-name>`**
+  - **`modeldb-server backups [db-name]`**
+  - **`modeldb-server restore <db-name> <backup-file> --yes`**
+  - **`modeldb-server clear-data <db-name> --yes`**
+  - **`modeldb-server force-reset <db-name> --yes`**
+- `restore`, `clear-data`, and `force-reset` attempt safety backups first.
+- Automatic backups are disabled unless **`modeldb.config.json`** sets **`autoBackup.enabled: true`**.
+
 When suggesting code, prefer **ESM** (`import`/`export`), **TypeScript strict**, and match existing package boundaries (`@mode-db/core`, `@mode-db/common`, `@mode-db/shared`, `@mode-db/sdk`, `@mode-db/server`).

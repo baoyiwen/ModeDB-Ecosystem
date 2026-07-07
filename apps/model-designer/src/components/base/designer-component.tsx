@@ -1,4 +1,5 @@
 import { Component, type ContextType, type ReactNode } from 'react';
+import { AppConfirmProvider } from '@mode-db/data-ui';
 import { DesignerContext, type DesignerManagers } from '../../context/designer-context.js';
 
 /**
@@ -28,6 +29,10 @@ export abstract class DesignerChromePage<
   S = Record<string, unknown>,
 > extends DesignerComponent<P, S> {
   protected wrapRoot(children: ReactNode): ReactNode {
-    return <div className="designer-app-root">{children}</div>;
+    return (
+      <AppConfirmProvider defaultEyebrow="Model Designer">
+        <div className="designer-app-root">{children}</div>
+      </AppConfirmProvider>
+    );
   }
 }

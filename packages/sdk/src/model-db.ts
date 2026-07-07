@@ -4,7 +4,10 @@ import {
   type EngineApplyOutcome,
   type EngineOperation,
   type EngineOperationResult,
+  type ManagementBackupInfo,
+  type ManagementBackupRestoreResponse,
   type ManagementCatalogResponse,
+  type ManagementClearDatabaseResponse,
 } from '@mode-db/shared';
 
 /**
@@ -56,6 +59,57 @@ export class ModelDB {
       port: this.port,
       token: this.token,
       database,
+    });
+  }
+
+  /** List server-side backups, optionally scoped to one database. */
+  async listBackups(database?: string): Promise<readonly ManagementBackupInfo[]> {
+    return RemoteModelDBClient.listBackups({
+      host: this.host,
+      port: this.port,
+      token: this.token,
+      database,
+    });
+  }
+
+  /** Create a server-side backup file under workspace/modeldb/backups. */
+  async createBackup(database: string, reason?: string): Promise<ManagementBackupInfo> {
+    return RemoteModelDBClient.createBackup({
+      host: this.host,
+      port: this.port,
+      token: this.token,
+      database,
+      reason,
+    });
+  }
+
+  /** Restore a logical database from a server-side backup file. */
+  async restoreBackup(
+    database: string,
+    backupFile: string,
+  ): Promise<ManagementBackupRestoreResponse> {
+    this.releaseClient(database);
+    return RemoteModelDBClient.restoreBackup({
+      host: this.host,
+      port: this.port,
+      token: this.token,
+      database,
+      backupFile,
+    });
+  }
+
+  /** Clear all rows, or force-reset the physical DB files when recovering from corruption. */
+  async clearDatabaseData(
+    database: string,
+    opts?: { readonly forceReset?: boolean },
+  ): Promise<ManagementClearDatabaseResponse> {
+    this.releaseClient(database);
+    return RemoteModelDBClient.clearDatabaseData({
+      host: this.host,
+      port: this.port,
+      token: this.token,
+      database,
+      forceReset: opts?.forceReset,
     });
   }
 

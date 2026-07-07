@@ -9,6 +9,7 @@
   "pushFailed": "Could not push graph to the engine",
   "pullFailed": "Could not pull graph from the engine",
   "clearDataFailed": "Could not clear row data on the engine",
+  "databaseManagementFailed": "Database management operation failed",
   "bootstrapFailed": "Connected but designer catalog bootstrap failed",
   "invalidJson": "Invalid JSON in metadata",
   "libraryDuplicateCode": "A library with this unique code already exists.",

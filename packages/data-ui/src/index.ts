@@ -21,3 +21,15 @@ export type {
   ImportFailurePanelLabels,
   ImportFailurePanelProps,
 } from './components/import-failure-panel.js';
+export { AppDrawer } from './components/app-drawer.js';
+export type { AppDrawerProps } from './components/app-drawer.js';
+export { AppConfirmProvider, useAppConfirm } from './components/app-confirm.js';
+export type { AppConfirmOptions, AppConfirmTone } from './components/app-confirm.js';
+export {
+  AppNotificationCenter,
+  AppNotificationToastStack,
+  type AppActiveToast,
+  type AppNotificationItem,
+  type AppNotificationLabels,
+  type AppNotificationLevel,
+} from './components/app-notifications.js';

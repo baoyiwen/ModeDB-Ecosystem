@@ -1,16 +1,26 @@
-import { useCallback, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import type { ManagementCatalogResponse, RemoteModelDBClient } from '@mode-db/sdk';
 import {
   createSdkBindingExecutor,
   createTabularSnapshot,
+  buildFieldColumnLabels,
+  formatDisplayWithUnique,
+  formatFieldDisplayLabel,
   importFieldTypesForProps,
   propFieldsFromCatalogFields,
   type FieldLabelMap,
   type ImportFieldTypeMap,
   type PivotViewConfig,
+  type ViewDataShape,
 } from '@mode-db/data-kit';
 import { DataPageProvider, DataViewPanel, ImportPanel, useDataPage } from '@mode-db/data-ui';
-import { getStoredModel, persistModel } from '../config/connection-prefs.js';
+import {
+  getStoredModel,
+  getStoredNameDisplayMode,
+  persistModel,
+  persistNameDisplayMode,
+  type NameDisplayMode,
+} from '../config/connection-prefs.js';
 import { buildImportPanelLabels } from '../config/import-panel-labels.js';
 import type { StudioI18n } from '../managers/i18n-manager.js';
 import type { StudioNotificationManager } from '../managers/notification-manager.js';
@@ -22,49 +32,200 @@ export interface DataWorkspaceProps {
   client: RemoteModelDBClient;
   library: string;
   catalog: ManagementCatalogResponse;
+  onCatalogRefresh: () => Promise<ManagementCatalogResponse>;
+  onCreateBackup: () => Promise<void>;
+  onRestoreBackup: () => Promise<void>;
+  onClearDatabase: () => Promise<void>;
+  onForceResetDatabase: () => Promise<void>;
   onDisconnect: () => void;
 }
 
 type StudioView = 'table' | 'pivot' | 'import';
+type CatalogModelInfo = ManagementCatalogResponse['models'][number];
+type I18nDisplayMap = Readonly<Record<string, string>>;
+
+function ownCatalogModelFields(info: CatalogModelInfo | undefined): readonly string[] {
+  if (!info) {
+    return [];
+  }
+  const fromFields = propFieldsFromCatalogFields(info.fields ?? []);
+  if (fromFields.length > 0) {
+    return fromFields;
+  }
+  return propFieldsFromCatalogFields(Object.keys(info.fieldTypes ?? {}));
+}
+
+function uniqueFields(fields: readonly string[]): readonly string[] {
+  return [...new Set(fields)];
+}
+
+function displayNameForLocale(
+  labels: I18nDisplayMap | undefined,
+  locale: string,
+): string | undefined {
+  const label = labels?.[locale]?.trim();
+  return label && label.length > 0 ? label : undefined;
+}
+
+function modelDisplayName(
+  catalog: ManagementCatalogResponse,
+  model: string,
+  locale: string,
+  mode: NameDisplayMode,
+): string {
+  if (mode === 'name') {
+    return model;
+  }
+  const info = catalogModelInfo(catalog, model);
+  return formatDisplayWithUnique(model, displayNameForLocale(info?.displayName, locale));
+}
+
+function databaseDisplayName(
+  catalog: ManagementCatalogResponse,
+  fallback: string,
+  locale: string,
+  mode: NameDisplayMode,
+): string {
+  if (mode === 'name') {
+    return fallback;
+  }
+  return formatDisplayWithUnique(fallback, displayNameForLocale(catalog.displayName, locale));
+}
+
+function fieldDisplayName(
+  fieldLabels: FieldLabelMap | undefined,
+  fieldName: string,
+  locale: string,
+  mode: NameDisplayMode,
+): string {
+  if (mode === 'name') {
+    return fieldName;
+  }
+  return formatFieldDisplayLabel(fieldLabels, fieldName, locale, true);
+}
+
+function columnLabelSignature(labels: Readonly<Record<string, string>> | undefined): string {
+  if (!labels) {
+    return 'none';
+  }
+  return Object.entries(labels)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, label]) => `${key}:${label}`)
+    .join('|');
+}
+
+function catalogModelInfo(
+  catalog: ManagementCatalogResponse,
+  model: string,
+): CatalogModelInfo | undefined {
+  return catalog.models.find((m) => m.name === model);
+}
+
+function catalogModelFields(
+  catalog: ManagementCatalogResponse,
+  model: string,
+  seen = new Set<string>(),
+): readonly string[] {
+  const info = catalogModelInfo(catalog, model);
+  if (!info || seen.has(model)) {
+    return [];
+  }
+  seen.add(model);
+
+  const inherited = info.parentId ? catalogModelFields(catalog, info.parentId, seen) : [];
+  return uniqueFields([...inherited, ...ownCatalogModelFields(info)]);
+}
 
 function modelFields(catalog: ManagementCatalogResponse, model: string): readonly string[] {
-  const info = catalog.models.find((m) => m.name === model);
-  return propFieldsFromCatalogFields(info?.fields ?? []);
+  return catalogModelFields(catalog, model);
 }
 
 function modelFieldLabels(
   catalog: ManagementCatalogResponse,
   model: string,
 ): FieldLabelMap | undefined {
-  const info = catalog.models.find((m) => m.name === model);
-  return info?.fieldLabels;
+  const labels = catalogModelFieldLabels(catalog, model);
+  return Object.keys(labels).length > 0 ? labels : undefined;
 }
 
 function modelFieldTypes(
   catalog: ManagementCatalogResponse,
   model: string,
 ): ImportFieldTypeMap | undefined {
-  const info = catalog.models.find((m) => m.name === model);
-  return info?.fieldTypes;
+  const types = catalogModelFieldTypes(catalog, model);
+  return Object.keys(types).length > 0 ? types : undefined;
+}
+
+function catalogModelFieldLabels(
+  catalog: ManagementCatalogResponse,
+  model: string,
+  seen = new Set<string>(),
+): FieldLabelMap {
+  const info = catalogModelInfo(catalog, model);
+  if (!info || seen.has(model)) {
+    return {};
+  }
+  seen.add(model);
+
+  return {
+    ...(info.parentId ? catalogModelFieldLabels(catalog, info.parentId, seen) : {}),
+    ...(info.fieldLabels ?? {}),
+  };
+}
+
+function catalogModelFieldTypes(
+  catalog: ManagementCatalogResponse,
+  model: string,
+  seen = new Set<string>(),
+): ImportFieldTypeMap {
+  const info = catalogModelInfo(catalog, model);
+  if (!info || seen.has(model)) {
+    return {};
+  }
+  seen.add(model);
+
+  return {
+    ...(info.parentId ? catalogModelFieldTypes(catalog, info.parentId, seen) : {}),
+    ...(info.fieldTypes ?? {}),
+  };
 }
 
 function catalogModelsForImport(catalog: ManagementCatalogResponse): readonly {
   name: string;
+  displayName?: I18nDisplayMap;
   fields: readonly string[];
   fieldLabels?: FieldLabelMap;
   fieldTypes?: ImportFieldTypeMap;
 }[] {
   return catalog.models.map((m) => ({
     name: m.name,
-    fields: m.fields,
-    fieldLabels: m.fieldLabels,
-    fieldTypes: m.fieldTypes,
+    displayName: m.displayName,
+    fields: catalogModelFields(catalog, m.name),
+    fieldLabels: modelFieldLabels(catalog, m.name),
+    fieldTypes: modelFieldTypes(catalog, m.name),
   }));
+}
+
+function fieldsFromViewData(shape: ViewDataShape | null | undefined): readonly string[] {
+  if (!shape || shape.kind === 'empty') {
+    return [];
+  }
+  return propFieldsFromCatalogFields(shape.columns.map((c) => c.key));
 }
 
 /** Connected workspace: table / pivot / import with batch binding. */
 export function DataWorkspace(props: DataWorkspaceProps): ReactElement {
-  const { client, library, catalog, onDisconnect } = props;
+  const {
+    client,
+    library,
+    catalog,
+    onCatalogRefresh,
+    onCreateBackup,
+    onRestoreBackup,
+    onClearDatabase,
+    onForceResetDatabase,
+    onDisconnect,
+  } = props;
   const { i18n, notify } = useStudio();
   useStudioLocale();
 
@@ -72,6 +233,15 @@ export function DataWorkspace(props: DataWorkspaceProps): ReactElement {
   const initialModel = models.includes(getStoredModel('')) ? getStoredModel('') : (models[0] ?? '');
   const [selectedModel, setSelectedModel] = useState(initialModel);
   const [view, setView] = useState<StudioView>('table');
+  const [nameDisplayMode, setNameDisplayMode] = useState<NameDisplayMode>(() =>
+    getStoredNameDisplayMode('display'),
+  );
+  const [catalogRefreshing, setCatalogRefreshing] = useState(false);
+  const autoRefreshKeyRef = useRef('');
+  const libraryLabel = useMemo(
+    () => databaseDisplayName(catalog, library, i18n.locale, nameDisplayMode),
+    [catalog, i18n.locale, library, nameDisplayMode],
+  );
 
   const fields = useMemo(() => modelFields(catalog, selectedModel), [catalog, selectedModel]);
   const fieldLabels = useMemo(
@@ -82,6 +252,10 @@ export function DataWorkspace(props: DataWorkspaceProps): ReactElement {
   const importFieldTypes = useMemo(
     () => importFieldTypesForProps(fields, modelFieldTypes(catalog, selectedModel)),
     [fields, catalog, selectedModel],
+  );
+  const columnLabels = useMemo(
+    () => buildFieldColumnLabels(fields, fieldLabels, i18n.locale, nameDisplayMode === 'display'),
+    [fieldLabels, fields, i18n.locale, nameDisplayMode],
   );
   const importLabels = useMemo(() => buildImportPanelLabels(i18n), [i18n, i18n.locale]);
   const [dimA, setDimA] = useState('');
@@ -121,8 +295,48 @@ export function DataWorkspace(props: DataWorkspaceProps): ReactElement {
     setDimB('');
   }, []);
 
+  const toggleNameDisplayMode = useCallback(() => {
+    setNameDisplayMode((prev) => {
+      const next: NameDisplayMode = prev === 'display' ? 'name' : 'display';
+      persistNameDisplayMode(next);
+      return next;
+    });
+  }, []);
+
+  const refreshCatalog = useCallback(
+    async (silent = false): Promise<void> => {
+      setCatalogRefreshing(true);
+      try {
+        await onCatalogRefresh();
+        if (!silent) {
+          notify.success(i18n.t('refresh'), library);
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        notify.error(i18n.t('refresh'), msg);
+      } finally {
+        setCatalogRefreshing(false);
+      }
+    },
+    [i18n, library, notify, onCatalogRefresh],
+  );
+
+  useEffect(() => {
+    if (view !== 'import' || !selectedModel) {
+      return;
+    }
+    const key = `${library}\0${selectedModel}`;
+    if (autoRefreshKeyRef.current === key) {
+      return;
+    }
+    autoRefreshKeyRef.current = key;
+    void refreshCatalog(true);
+  }, [library, refreshCatalog, selectedModel, view]);
+
   const providerKey =
-    view === 'pivot' ? `${selectedModel}:pivot:${effectiveDimA}:${effectiveDimB}` : selectedModel;
+    view === 'pivot'
+      ? `${selectedModel}:pivot:${effectiveDimA}:${effectiveDimB}:${i18n.locale}:${nameDisplayMode}:${columnLabelSignature(columnLabels)}`
+      : `${selectedModel}:${i18n.locale}:${nameDisplayMode}:${columnLabelSignature(columnLabels)}`;
 
   if (!selectedModel) {
     return (
@@ -138,7 +352,7 @@ export function DataWorkspace(props: DataWorkspaceProps): ReactElement {
   return (
     <div className="studio-shell">
       <header className="studio-topbar">
-        <span className="studio-topbar-title">{library}</span>
+        <span className="studio-topbar-title">{libraryLabel}</span>
         <label className="studio-topbar-field">
           {i18n.t('model')}
           <select
@@ -148,7 +362,7 @@ export function DataWorkspace(props: DataWorkspaceProps): ReactElement {
           >
             {models.map((m) => (
               <option key={m} value={m}>
-                {m}
+                {modelDisplayName(catalog, m, i18n.locale, nameDisplayMode)}
               </option>
             ))}
           </select>
@@ -166,8 +380,51 @@ export function DataWorkspace(props: DataWorkspaceProps): ReactElement {
           </select>
         </label>
         <span className="studio-topbar-spacer" />
+        <button
+          type="button"
+          className="studio-btn studio-btn--ghost"
+          onClick={toggleNameDisplayMode}
+        >
+          {i18n.t(nameDisplayMode === 'display' ? 'nameModeDisplay' : 'nameModeUnique')}
+        </button>
+        <button
+          type="button"
+          className="studio-btn studio-btn--ghost"
+          disabled={catalogRefreshing}
+          onClick={() => void refreshCatalog(false)}
+        >
+          {catalogRefreshing ? i18n.t('loading') : i18n.t('refresh')}
+        </button>
         <button type="button" className="studio-btn studio-btn--ghost" onClick={onDisconnect}>
           {i18n.t('disconnect')}
+        </button>
+        <button
+          type="button"
+          className="studio-btn studio-btn--ghost"
+          onClick={() => void onCreateBackup()}
+        >
+          {i18n.t('backupCreate')}
+        </button>
+        <button
+          type="button"
+          className="studio-btn studio-btn--ghost"
+          onClick={() => void onRestoreBackup()}
+        >
+          {i18n.t('backupRestore')}
+        </button>
+        <button
+          type="button"
+          className="studio-btn studio-btn--ghost"
+          onClick={() => void onClearDatabase()}
+        >
+          {i18n.t('backupClear')}
+        </button>
+        <button
+          type="button"
+          className="studio-btn studio-btn--ghost"
+          onClick={() => void onForceResetDatabase()}
+        >
+          {i18n.t('backupForceReset')}
         </button>
       </header>
 
@@ -177,12 +434,14 @@ export function DataWorkspace(props: DataWorkspaceProps): ReactElement {
         querySnapshot={view !== 'pivot' ? querySnapshot : undefined}
         pivotConfig={pivotConfig}
         propFields={fields}
+        columnLabels={columnLabels}
       >
         <WorkspaceBody
           view={view}
           onViewChange={setView}
           fields={fields}
           fieldLabels={fieldLabels}
+          nameDisplayMode={nameDisplayMode}
           importCatalogModels={importCatalogModels}
           importLabels={importLabels}
           importFieldTypes={importFieldTypes}
@@ -205,10 +464,13 @@ function WorkspaceBody(props: {
   readonly onViewChange: (v: StudioView) => void;
   readonly fields: readonly string[];
   readonly fieldLabels: FieldLabelMap | undefined;
+  readonly nameDisplayMode: NameDisplayMode;
   readonly importCatalogModels: readonly {
     name: string;
     fields: readonly string[];
     fieldLabels?: FieldLabelMap;
+    displayName?: I18nDisplayMap;
+    fieldTypes?: ImportFieldTypeMap;
   }[];
   readonly importLabels: ReturnType<typeof buildImportPanelLabels>;
   readonly importFieldTypes: ImportFieldTypeMap;
@@ -226,6 +488,7 @@ function WorkspaceBody(props: {
     onViewChange,
     fields,
     fieldLabels,
+    nameDisplayMode,
     importCatalogModels,
     importLabels,
     importFieldTypes,
@@ -240,6 +503,20 @@ function WorkspaceBody(props: {
   } = props;
 
   const dataPage = useDataPage();
+  const effectiveFields = useMemo(() => {
+    if (fields.length > 0) {
+      return fields;
+    }
+    return fieldsFromViewData(dataPage.viewData);
+  }, [dataPage.viewData, fields]);
+  const effectiveImportCatalogModels = useMemo(() => {
+    if (fields.length > 0 || effectiveFields.length === 0) {
+      return importCatalogModels;
+    }
+    return importCatalogModels.map((m) =>
+      m.name === selectedModel ? { ...m, fields: effectiveFields } : m,
+    );
+  }, [effectiveFields, fields.length, importCatalogModels, selectedModel]);
 
   const handleImportCommitResult = useCallback(
     (result: Parameters<typeof notifyImportCommitResult>[0]) => {
@@ -297,7 +574,7 @@ function WorkspaceBody(props: {
               >
                 {fields.map((f) => (
                   <option key={f} value={f}>
-                    {f}
+                    {fieldDisplayName(fieldLabels, f, i18n.locale, nameDisplayMode)}
                   </option>
                 ))}
               </select>
@@ -312,7 +589,7 @@ function WorkspaceBody(props: {
                 >
                   {fields.map((f) => (
                     <option key={f} value={f}>
-                      {f}
+                      {fieldDisplayName(fieldLabels, f, i18n.locale, nameDisplayMode)}
                     </option>
                   ))}
                 </select>
@@ -328,12 +605,13 @@ function WorkspaceBody(props: {
         {view === 'import' ? (
           <ImportPanel
             targetModel={selectedModel}
-            propFields={fields}
+            propFields={effectiveFields}
             catalogRelations={catalog.relations}
-            catalogModels={importCatalogModels}
+            catalogModels={effectiveImportCatalogModels}
             labels={importLabels}
             locale={i18n.locale}
             fieldLabels={fieldLabels}
+            nameDisplayMode={nameDisplayMode}
             fieldTypes={importFieldTypes}
             onImportCommitResult={handleImportCommitResult}
           />

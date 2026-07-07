@@ -96,6 +96,26 @@ function pickPreferredLibraryRecord(
   return best;
 }
 
+async function pruneDuplicateLibraryRecords(
+  client: RemoteModelDBClient,
+  code: string,
+  preferredId: string,
+): Promise<void> {
+  if (!preferredId) {
+    return;
+  }
+  const duplicates = (await listLibraryRegistry(client))
+    .filter((r) => r.code === code && r.id && r.id !== preferredId)
+    .map((r) => ({ model: SYS_DATA_ASSET_MAP, id: r.id }));
+  if (duplicates.length === 0) {
+    return;
+  }
+  const { failureCount } = await client.batchDelete(duplicates, { sync: true });
+  if (failureCount > 0) {
+    throw new Error('LIBRARY_REGISTRY_DEDUPE_FAILED');
+  }
+}
+
 /** 选择列表展示：`显示名[唯一 code]`。 */
 export function formatLibraryLabel(
   record: Pick<LibraryRegistryRecord, 'code' | 'name'>,
@@ -192,6 +212,7 @@ export async function ensureLibraryRecord(
   const existing = await getLibraryByCode(client, code);
   if (existing) {
     if (existing.id) {
+      await pruneDuplicateLibraryRecords(client, code, existing.id);
       return existing;
     }
   }
@@ -216,6 +237,9 @@ export async function ensureLibraryRecord(
   const created = await getLibraryByCode(client, code);
   if (!created) {
     throw new Error('LIBRARY_REGISTRY_INSERT_FAILED');
+  }
+  if (created.id) {
+    await pruneDuplicateLibraryRecords(client, code, created.id);
   }
   return created;
 }
@@ -268,6 +292,9 @@ export async function updateLibraryMetadata(
   const next = await getLibraryByCode(client, code);
   if (!next) {
     throw new Error('LIBRARY_REGISTRY_UPDATE_FAILED');
+  }
+  if (next.id) {
+    await pruneDuplicateLibraryRecords(client, code, next.id);
   }
   if (!sameI18nMap(next.name, patch.name) || !sameI18nMap(next.description, patch.description)) {
     throw new Error('LIBRARY_REGISTRY_UPDATE_NOT_PERSISTED');

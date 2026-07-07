@@ -19,8 +19,19 @@ function hydrateRowData(row: unknown): Record<string, unknown> {
   throw new Error('DESIGNER_SYNC_BAD_ROW');
 }
 
+function rowId(row: Record<string, unknown>): string {
+  return typeof row._id === 'string' ? row._id : '';
+}
+
+function rowUpdatedAt(row: Record<string, unknown>): string {
+  return typeof row.updated_at === 'string' ? row.updated_at : '';
+}
+
 /**
- * 将 UTF-8 图谱字节经 base64url 嵌入写行，经 SDK `insertMany` 走 WebSocket 加密载荷。
+ * 将 UTF-8 图谱字节经 base64url 嵌入写行。
+ *
+ * 以 `library_code` 作为业务唯一键：已有快照则原地更新，只有首次保存才新增。
+ * 这避免用户每次点击“保存到引擎”都产生一条新的 `sys_designer_graph` 行。
  * 必须传入业务库的 `library_code`，用以在共享元数据库内隔离多业务库快照。
  */
 export async function pushDesignerSnapshot(
@@ -34,12 +45,47 @@ export async function pushDesignerSnapshot(
   }
   const graph_b64 = bytesToBase64Url(wireBytes);
   const updated_at = new Date().toISOString();
-  const _id = crypto.randomUUID();
   const m = client.model(DESIGNER_SNAPSHOT_MODEL);
+  const raw = await m.query().execute();
+  const existing = (Array.isArray(raw) ? raw : [])
+    .map((r) => hydrateRowData(r))
+    .filter((row) => row.library_code === code)
+    .map((row) => ({ id: rowId(row), updatedAt: rowUpdatedAt(row) }))
+    .filter((row) => row.id.length > 0)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+  if (existing.length > 0) {
+    const keep = existing[0]!;
+    const { failureCount } = await client.batchUpdate(
+      [
+        {
+          model: DESIGNER_SNAPSHOT_MODEL,
+          id: keep.id,
+          partial: { graph_b64, updated_at, library_code: code },
+        },
+      ],
+      { sync: true },
+    );
+    if (failureCount > 0) {
+      throw new Error('DESIGNER_SYNC_UPDATE_FAILED');
+    }
+    const duplicates = existing.slice(1).map((row) => ({
+      model: DESIGNER_SNAPSHOT_MODEL,
+      id: row.id,
+    }));
+    if (duplicates.length > 0) {
+      const deleteResult = await client.batchDelete(duplicates, { sync: true });
+      if (deleteResult.failureCount > 0) {
+        throw new Error('DESIGNER_SYNC_DEDUPE_FAILED');
+      }
+    }
+    return;
+  }
+
   const { failureCount } = await m.insertMany(
     [
       {
-        _id,
+        _id: crypto.randomUUID(),
         graph_b64,
         updated_at,
         library_code: code,

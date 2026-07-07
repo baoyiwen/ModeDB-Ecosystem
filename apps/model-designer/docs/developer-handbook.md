@@ -185,6 +185,27 @@
 2. 序列化为 `Uint8Array`
 3. 写入 `sys_designer_graph`
 
+### 4.5 近期同步与身份规则
+
+以下规则是当前设计器最容易被后续改动破坏的部分：
+
+- **模型身份**：模型的业务唯一名是全局唯一，但画布内部仍以稳定 `id` 追踪对象。修改模型名时，不应让已有关系失去端点。
+- **关系身份**：关系是 first-class entity，画布、层级页和保存链路都应优先用 `relation.id` 追踪；`forward/reverse` 名称只是可修改属性。
+- **关系命名范围**：关系名只在端点模型对内局部唯一，自关联按单模型形成独立范围。相关工具在 `src/utils/relation-identity.ts`。
+- **关系基数**：正向侧和逆向侧通过 `source_cardinality` / `target_cardinality` 推导 `one-to-one`、`one-to-many`、`many-to-one`、`many-to-many`。
+- **自绑定策略**：`self_loop_policy` 默认 `deny`，只有高级业务需要直接 `sourceId === targetId` 时才允许 `allow`。
+- **显示名**：模型、字段、关系和库信息的 i18n 显示名可以为空；不要在 hydrate 时把唯一名强行写成显示名。
+- **保存语义**：写入 `sys_model`、`sys_props`、`sys_relation`、`sys_data_asset_map` 时应先找已有记录再更新，不能每次保存都新增。
+
+相关入口：
+
+- 关系命名 / 基数：`src/utils/relation-identity.ts`
+- push 到设计器库和业务库：`src/sync/designer-push-sync.ts`
+- 从 `sys_*` 行重建画布：`src/sync/designer-row-hydrate.ts`
+- 业务库 catalog 导入：`src/sync/engine-catalog-import.ts`
+- 库信息登记与去重：`src/sync/library-registry.ts`
+- 层级页和显隐权重：`src/managers/data-manager.ts`、`src/components/LayerTreePanel.tsx`、`src/components/CanvasContainer.tsx`
+
 ## 5. 关键 UI 入口
 
 ### 5.1 EditorChrome

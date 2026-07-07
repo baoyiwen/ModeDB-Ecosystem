@@ -7,16 +7,70 @@ import {
   type WireExecuteResultJson,
   type WireServerMessage,
 } from '@mode-db/shared';
-import {
-  executeDatabaseOperation,
-  EngineLogger,
-  type AuthoringEngine,
-  type ModelDBClient,
-} from '@mode-db/core';
+import { executeDatabaseOperation, EngineLogger, type AuthoringEngine } from '@mode-db/core';
 import type { WriteSerializationGate } from './write-serialization-gate.js';
 
 function sendJson(ws: WebSocket, msg: WireServerMessage): void {
   ws.send(JSON.stringify(msg));
+}
+
+function summarizeWireBody(body: WireExecuteBody): Record<string, unknown> {
+  const raw = body as unknown as Record<string, unknown>;
+  if (body.op === 'executeQuery') {
+    const snapshot = raw.snapshot as Record<string, unknown> | undefined;
+    const plan = snapshot?.plan as Record<string, unknown> | undefined;
+    return {
+      op: body.op,
+      model: plan?.originModel,
+      page: (snapshot?.page as Record<string, unknown> | undefined)?.page,
+      limit: (snapshot?.page as Record<string, unknown> | undefined)?.limit,
+    };
+  }
+  return {
+    op: body.op,
+    model: raw.model,
+    relation: raw.forward ?? raw.relation,
+    strategy: raw.strategy,
+    batchSize: Array.isArray(raw.updates)
+      ? raw.updates.length
+      : Array.isArray(raw.deletes)
+        ? raw.deletes.length
+        : Array.isArray(raw.records)
+          ? raw.records.length
+          : undefined,
+  };
+}
+
+function summarizeWireResult(result: WireExecuteResultJson): Record<string, unknown> {
+  const raw = result as unknown as Record<string, unknown>;
+  if (result.kind === 'rows') {
+    return { kind: result.kind, rows: result.rows.length };
+  }
+  if (result.kind === 'paginated') {
+    return {
+      kind: result.kind,
+      total: result.total,
+      page: result.page,
+      pageCount: result.pageCount,
+    };
+  }
+  if (result.kind === 'analysis') {
+    return { kind: result.kind, rows: result.rows.length, dimensions: result.dimensionKeys };
+  }
+  if (result.kind === 'groups') {
+    return { kind: result.kind, groups: result.groups.length, dimensions: result.dimensionKeys };
+  }
+  if (result.kind === 'mutation') {
+    return {
+      kind: result.kind,
+      op: raw.op,
+      ok: raw.ok,
+      successCount: raw.successCount,
+      failureCount: raw.failureCount,
+      pairsCount: raw.pairsCount,
+    };
+  }
+  return { kind: result.kind };
 }
 
 export type RpcCipherReply =
@@ -34,7 +88,6 @@ export class WireRequestDispatcher {
   constructor(
     private readonly opts: {
       readonly dev: boolean;
-      readonly getClient: (atlas: string) => Promise<ModelDBClient>;
       readonly getEngine: (atlas: string) => Promise<AuthoringEngine>;
       readonly writeGate: WriteSerializationGate;
     },
@@ -62,12 +115,39 @@ export class WireRequestDispatcher {
     id: string,
   ): Promise<RpcCipherReply> {
     const t0 = performance.now();
+    const requestSummary = summarizeWireBody(body);
+    EngineLogger.instance.info('RPC request received', { atlas, id, ...requestSummary }, 'WireRPC');
+    // eslint-disable-next-line no-console
+    console.info(`[modeldb-server][rpc] START ${body.op} db=${atlas} id=${id}`, requestSummary);
     try {
       const result = await this.executeBody(atlas, body);
       const cipher = encodeWirePayload(JSON.stringify(result), sessionKey);
+      const ms = Number((performance.now() - t0).toFixed(2));
+      const resultSummary = summarizeWireResult(result);
+      EngineLogger.instance.info(
+        'RPC request completed',
+        { atlas, id, ms, ...requestSummary, result: resultSummary },
+        'WireRPC',
+      );
+      // eslint-disable-next-line no-console
+      console.info(
+        `[modeldb-server][rpc] OK ${body.op} db=${atlas} id=${id} ${ms}ms`,
+        resultSummary,
+      );
       return { type: 'rpc.ok', id, cipher };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
+      const ms = Number((performance.now() - t0).toFixed(2));
+      EngineLogger.instance.error(
+        'RPC request failed',
+        { atlas, id, ms, ...requestSummary, message },
+        'WireRPC',
+      );
+
+      console.error(`[modeldb-server][rpc] ERROR ${body.op} db=${atlas} id=${id} ${ms}ms`, {
+        ...requestSummary,
+        message,
+      });
       return { type: 'rpc.err', id, error: message };
     } finally {
       EngineLogger.instance.recordHandledRequest(performance.now() - t0);
@@ -83,9 +163,9 @@ export class WireRequestDispatcher {
           JSON.stringify(body.snapshot).slice(0, 2000),
         );
       }
-      const client = await this.opts.getClient(atlas);
+      const engine = await this.opts.getEngine(atlas);
       const result = await executeDatabaseOperation(
-        { runtime: client.getRuntimeContext(), atlas, dev: this.opts.dev },
+        { runtime: engine.createRuntime(), atlas, dev: this.opts.dev },
         body,
       );
       if (this.opts.dev) {

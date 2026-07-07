@@ -166,6 +166,9 @@ export class RelationIndexer implements IndexReader {
 
     for (const src of sourceRecords) {
       for (const tgt of targetRecords) {
+        if (!this.canWritePair(rel, src._id, tgt._id)) {
+          continue;
+        }
         this.applyBidirectionalPair(index, src._id, tgt._id);
       }
     }
@@ -195,6 +198,9 @@ export class RelationIndexer implements IndexReader {
       for (const tgt of targetRecords) {
         const tgtVal = (tgt as Record<string, unknown>)[predicate.targetField];
         if (srcVal === tgtVal) {
+          if (!this.canWritePair(rel, src._id, tgt._id)) {
+            continue;
+          }
           this.applyBidirectionalPair(index, src._id, tgt._id);
         }
       }
@@ -232,6 +238,9 @@ export class RelationIndexer implements IndexReader {
       for (const tgt of targetRecords) {
         const tgtVal = (tgt as Record<string, unknown>)[predicate.targetField];
         if (srcVal === tgtVal && conditionFn(src, tgt)) {
+          if (!this.canWritePair(rel, src._id, tgt._id)) {
+            continue;
+          }
           this.applyBidirectionalPair(index, src._id, tgt._id);
         }
       }
@@ -247,6 +256,9 @@ export class RelationIndexer implements IndexReader {
 
     const index = await this.loadIndex(rel);
     for (const [srcId, targetId] of options.pairs) {
+      if (!this.canWritePair(rel, srcId, targetId)) {
+        continue;
+      }
       this.applyBidirectionalPair(index, srcId, targetId);
     }
   }
@@ -348,6 +360,9 @@ export class RelationIndexer implements IndexReader {
    * All index construction must go through this or {@link RelationIndexer.writePairIndex}.
    */
   async writePairIndex(rel: RelationDefinition, sourceId: string, targetId: string): Promise<void> {
+    if (!this.canWritePair(rel, sourceId, targetId)) {
+      return;
+    }
     const index = await this.loadIndex(rel);
     this.applyBidirectionalPair(index, sourceId, targetId);
   }
@@ -367,6 +382,10 @@ export class RelationIndexer implements IndexReader {
   /**
    * Same as {@link writePairIndex} but reuses an already-loaded in-memory index (batch strategies).
    */
+  private canWritePair(rel: RelationDefinition, sourceId: string, targetId: string): boolean {
+    return sourceId !== targetId || rel.selfLoopPolicy === 'allow';
+  }
+
   private applyBidirectionalPair(index: LiveIndex, sourceId: string, targetId: string): void {
     let fwdSet = index.fwd.get(sourceId);
     if (!fwdSet) {

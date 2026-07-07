@@ -8,7 +8,12 @@ import websocket from '@fastify/websocket';
 import WS, { type WebSocket, type RawData } from 'ws';
 import {
   deriveWireSessionKey,
+  type ManagementBackupCreateResponse,
+  type ManagementBackupRestoreResponse,
+  type ManagementBackupsResponse,
+  type ManagementClearDatabaseResponse,
   type ManagementCatalogResponse,
+  type ManagementDatabaseInfo,
   type ManagementDatabasesResponse,
   type ManagementStatusResponse,
   type WireClientMessage,
@@ -17,15 +22,22 @@ import {
   type WireServerMessage,
 } from '@mode-db/shared';
 import { assertFlatGraphSegment, configureModelDBStorageRoot, EngineLogger } from '@mode-db/common';
-import { ModelDBClient } from '@mode-db/core';
+import { ModelDBClient, type AuthoringEngine } from '@mode-db/core';
 import { BinaryInterceptor, TransportAuthError } from './binary-interceptor.js';
 import type { ResolvedModelDBServerConfig } from './config-loader.js';
 import { AuthoringBridge } from './authoring-bridge.js';
+import { startAutoBackupScheduler } from './auto-backup-scheduler.js';
 import { WriteSerializationGate } from './write-serialization-gate.js';
 import { WireRequestDispatcher, decodeExecuteBody } from './request-dispatcher.js';
 import { atlasCatalogSignature } from './atlas-catalog-signature.js';
 import { assertLogicalDatabaseExists } from './logical-database-guard.js';
 import { scanWorkspaceDatabases } from './management-api.js';
+import {
+  createDatabaseBackup,
+  forceResetDatabase,
+  listDatabaseBackups,
+  restoreDatabaseBackup,
+} from './backup-manager.js';
 import {
   getConnectedWebSocketClients,
   getProcessUptimeSeconds,
@@ -68,6 +80,419 @@ function readConnectTokenFromHttpRequest(request: FastifyRequest): string {
 type SocketState =
   | { readonly phase: 'guest' }
   | { readonly phase: 'ready'; readonly sessionKey: string; readonly atlas: string };
+
+type CatalogModelDefinition = {
+  readonly name: string;
+  readonly parentId: string | null;
+  readonly fields: ReadonlySet<string>;
+  readonly fieldTypes: ReadonlyMap<string, { readonly type: string }>;
+};
+
+interface RowDataLike {
+  getData?: (deep?: boolean) => Record<string, unknown>;
+}
+
+function hydrateRow(row: unknown): Record<string, unknown> {
+  if (row && typeof row === 'object' && typeof (row as RowDataLike).getData === 'function') {
+    return (row as Required<RowDataLike>).getData(true);
+  }
+  if (row && typeof row === 'object') {
+    return row as Record<string, unknown>;
+  }
+  return {};
+}
+
+function parseI18nDisplay(
+  value: unknown,
+  fallbackUniqueName?: string,
+): Readonly<Record<string, string>> | undefined {
+  let parsed: unknown = value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+    if (trimmed.startsWith('{')) {
+      try {
+        parsed = JSON.parse(trimmed) as unknown;
+      } catch {
+        return { en: trimmed, zh: trimmed, ja: trimmed };
+      }
+    } else {
+      return { en: trimmed, zh: trimmed, ja: trimmed };
+    }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return undefined;
+  }
+  const out: Record<string, string> = {};
+  const fallback = fallbackUniqueName?.trim();
+  for (const [key, raw] of Object.entries(parsed as Record<string, unknown>)) {
+    if (typeof raw !== 'string') {
+      continue;
+    }
+    const label = raw.trim();
+    if (label.length > 0 && (!fallback || label !== fallback)) {
+      out[key] = label;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function relatedRows(row: Record<string, unknown>, relation: string): Record<string, unknown>[] {
+  const relates = row.relates as Record<string, unknown> | undefined;
+  const slot = relates?.[relation];
+  return Array.isArray(slot) ? slot.map((item) => hydrateRow(item)) : [];
+}
+
+function setFieldLabel(
+  labelsByModel: Map<string, Record<string, Readonly<Record<string, string>>>>,
+  modelName: string,
+  fieldName: string,
+  label: Readonly<Record<string, string>>,
+): void {
+  const bucket = labelsByModel.get(modelName) ?? {};
+  bucket[fieldName] = label;
+  labelsByModel.set(modelName, bucket);
+}
+
+function countFieldLabels(
+  labelsByModel: ReadonlyMap<string, Readonly<Record<string, Readonly<Record<string, string>>>>>,
+): number {
+  let total = 0;
+  for (const labels of labelsByModel.values()) {
+    total += Object.keys(labels).length;
+  }
+  return total;
+}
+
+function mergeCatalogFieldLabels(
+  fields: readonly string[],
+  exactLabels: Readonly<Record<string, Readonly<Record<string, string>>>> | undefined,
+  fallbackLabels: ReadonlyMap<string, Readonly<Record<string, string>>>,
+): Readonly<Record<string, Readonly<Record<string, string>>>> {
+  const out: Record<string, Readonly<Record<string, string>>> = { ...(exactLabels ?? {}) };
+  for (const field of fields) {
+    const fallback = fallbackLabels.get(field);
+    if (!fallback) {
+      continue;
+    }
+    out[field] = { ...fallback, ...(out[field] ?? {}) };
+  }
+  return out;
+}
+
+type CatalogDisplayMetadata = {
+  readonly databaseDisplayName?: Readonly<Record<string, string>>;
+  readonly modelDisplayNames: ReadonlyMap<string, Readonly<Record<string, string>>>;
+  readonly modelFieldLabels: ReadonlyMap<
+    string,
+    Readonly<Record<string, Readonly<Record<string, string>>>>
+  >;
+  readonly fieldLabelsByName: ReadonlyMap<string, Readonly<Record<string, string>>>;
+};
+
+function hasCatalogDisplayMetadata(metadata: CatalogDisplayMetadata): boolean {
+  return (
+    Boolean(metadata.databaseDisplayName) ||
+    metadata.modelDisplayNames.size > 0 ||
+    countFieldLabels(metadata.modelFieldLabels) > 0 ||
+    metadata.fieldLabelsByName.size > 0
+  );
+}
+
+function catalogDisplayMetadataScore(metadata: CatalogDisplayMetadata): number {
+  return (
+    countFieldLabels(metadata.modelFieldLabels) * 1000 +
+    metadata.fieldLabelsByName.size * 100 +
+    metadata.modelDisplayNames.size * 10 +
+    (metadata.databaseDisplayName ? 1 : 0)
+  );
+}
+
+async function readCatalogDisplayMetadata(
+  engine: AuthoringEngine,
+  database: string,
+  metadataSource = database,
+): Promise<CatalogDisplayMetadata> {
+  const modelDisplayNames = new Map<string, Readonly<Record<string, string>>>();
+  const modelFieldLabels = new Map<string, Record<string, Readonly<Record<string, string>>>>();
+  const fieldLabelsByName = new Map<string, Readonly<Record<string, string>>>();
+  let databaseDisplayName: Readonly<Record<string, string>> | undefined;
+
+  let modelRowsScanned = 0;
+  let propRowsScanned = 0;
+  let directFieldLabels = 0;
+  let forwardFieldLabels = 0;
+  let reverseFieldLabels = 0;
+
+  try {
+    if (engine.registry.getModel('sys_data_asset_map')) {
+      const rows = await engine.persistence.getMergedReader().getAll('sys_data_asset_map');
+      for (const row of rows) {
+        const data = hydrateRow(row);
+        if (data.code === database) {
+          databaseDisplayName = parseI18nDisplay(data.name, database);
+          break;
+        }
+      }
+    }
+  } catch (e) {
+    EngineLogger.instance.warn(
+      'Catalog display metadata: failed to read sys_data_asset_map',
+      { database, metadataSource, message: e instanceof Error ? e.message : String(e) },
+      'ManagementCatalog',
+    );
+  }
+
+  try {
+    if (engine.registry.getModel('sys_model')) {
+      const rows = await engine.model('sys_model').query().group('modelOwnsProps').execute({
+        includeRelates: true,
+      });
+      for (const row of Array.isArray(rows) ? rows : []) {
+        const data = hydrateRow(row);
+        if (data.library_code !== database || typeof data.engine_name !== 'string') {
+          continue;
+        }
+        modelRowsScanned += 1;
+        const displayName = parseI18nDisplay(data.name, data.engine_name);
+        if (displayName) {
+          modelDisplayNames.set(data.engine_name, displayName);
+        }
+        for (const propData of relatedRows(data, 'modelOwnsProps')) {
+          if (propData.library_code !== database || typeof propData.engine_name !== 'string') {
+            continue;
+          }
+          const label = parseI18nDisplay(propData.name, propData.engine_name);
+          if (label) {
+            setFieldLabel(modelFieldLabels, data.engine_name, propData.engine_name, label);
+            forwardFieldLabels += 1;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    EngineLogger.instance.warn(
+      'Catalog display metadata: failed to read sys_model/modelOwnsProps',
+      { database, metadataSource, message: e instanceof Error ? e.message : String(e) },
+      'ManagementCatalog',
+    );
+  }
+
+  try {
+    if (engine.registry.getModel('sys_props')) {
+      const propRows = await engine.persistence.getMergedReader().getAll('sys_props');
+      for (const row of propRows) {
+        const data = hydrateRow(row);
+        if (data.library_code !== database || typeof data.engine_name !== 'string') {
+          continue;
+        }
+        const label = parseI18nDisplay(data.name, data.engine_name);
+        if (label) {
+          fieldLabelsByName.set(data.engine_name, label);
+          if (typeof data.model_engine_name === 'string' && data.model_engine_name.trim()) {
+            setFieldLabel(modelFieldLabels, data.model_engine_name, data.engine_name, label);
+            directFieldLabels += 1;
+          }
+        }
+      }
+
+      const rows = await engine.model('sys_props').query().group('propOwnedByModel').execute({
+        includeRelates: true,
+      });
+      for (const row of Array.isArray(rows) ? rows : []) {
+        const data = hydrateRow(row);
+        if (data.library_code !== database || typeof data.engine_name !== 'string') {
+          continue;
+        }
+        propRowsScanned += 1;
+        const label = parseI18nDisplay(data.name, data.engine_name);
+        if (!label) {
+          continue;
+        }
+        for (const modelData of relatedRows(data, 'propOwnedByModel')) {
+          if (modelData.library_code !== database || typeof modelData.engine_name !== 'string') {
+            continue;
+          }
+          setFieldLabel(modelFieldLabels, modelData.engine_name, data.engine_name, label);
+          reverseFieldLabels += 1;
+        }
+      }
+    }
+  } catch (e) {
+    EngineLogger.instance.warn(
+      'Catalog display metadata: failed to read sys_props/propOwnedByModel',
+      { database, metadataSource, message: e instanceof Error ? e.message : String(e) },
+      'ManagementCatalog',
+    );
+  }
+
+  const fieldLabelCount = countFieldLabels(modelFieldLabels);
+  EngineLogger.instance.info(
+    'Catalog display metadata loaded',
+    {
+      database,
+      metadataSource,
+      hasDatabaseDisplayName: Boolean(databaseDisplayName),
+      modelRowsScanned,
+      modelDisplayNames: modelDisplayNames.size,
+      propRowsScanned,
+      fieldLabelModels: modelFieldLabels.size,
+      fieldLabels: fieldLabelCount,
+      fallbackFieldLabels: fieldLabelsByName.size,
+      directFieldLabels,
+      forwardFieldLabels,
+      reverseFieldLabels,
+    },
+    'ManagementCatalog',
+  );
+  // eslint-disable-next-line no-console
+  console.info(
+    `[modeldb-server][catalog] ${database}: metadataSource=${metadataSource} displayName=${Boolean(databaseDisplayName)} modelLabels=${modelDisplayNames.size} fieldLabels=${fieldLabelCount} directFieldLabels=${directFieldLabels} fallbackFieldLabels=${fieldLabelsByName.size} props=${propRowsScanned}`,
+  );
+
+  return { databaseDisplayName, modelDisplayNames, modelFieldLabels, fieldLabelsByName };
+}
+
+async function readCatalogDisplayMetadataForDatabase(
+  authoring: AuthoringBridge,
+  dataRoot: string,
+  database: string,
+  businessEngine: AuthoringEngine,
+  designerWorkspace: string,
+): Promise<Awaited<ReturnType<typeof readCatalogDisplayMetadata>>> {
+  const candidateNames = new Set<string>();
+  const configuredDesignerDb = designerWorkspace.trim();
+  if (configuredDesignerDb && configuredDesignerDb !== database) {
+    candidateNames.add(configuredDesignerDb);
+  }
+  if ('model_designer_workspace' !== database) {
+    candidateNames.add('model_designer_workspace');
+  }
+  for (const info of scanWorkspaceDatabases(dataRoot)) {
+    if (info.name !== database && !candidateNames.has(info.name)) {
+      candidateNames.add(info.name);
+    }
+  }
+
+  let best:
+    | {
+        readonly source: string;
+        readonly metadata: Awaited<ReturnType<typeof readCatalogDisplayMetadata>>;
+        readonly score: number;
+      }
+    | undefined;
+
+  for (const designerDb of candidateNames) {
+    try {
+      assertLogicalDatabaseExists(dataRoot, designerDb);
+      const designerEngine = await authoring.getEngine(designerDb);
+      const metadata = await readCatalogDisplayMetadata(designerEngine, database, designerDb);
+      if (hasCatalogDisplayMetadata(metadata)) {
+        const score = catalogDisplayMetadataScore(metadata);
+        if (!best || score > best.score) {
+          best = { source: designerDb, metadata, score };
+        }
+        continue;
+      }
+      EngineLogger.instance.info(
+        'Designer metadata workspace had no labels for database; trying next candidate',
+        { database, designerWorkspace: designerDb },
+        'ManagementCatalog',
+      );
+    } catch (e) {
+      EngineLogger.instance.warn(
+        'Designer metadata workspace unavailable; falling back to business catalog metadata',
+        {
+          database,
+          designerWorkspace: designerDb,
+          message: e instanceof Error ? e.message : String(e),
+        },
+        'ManagementCatalog',
+      );
+    }
+  }
+
+  const businessMetadata = await readCatalogDisplayMetadata(businessEngine, database, database);
+  if (hasCatalogDisplayMetadata(businessMetadata)) {
+    const score = catalogDisplayMetadataScore(businessMetadata);
+    if (!best || score > best.score) {
+      best = { source: database, metadata: businessMetadata, score };
+    }
+  }
+  if (best) {
+    EngineLogger.instance.info(
+      'Catalog display metadata source selected',
+      { database, metadataSource: best.source, score: best.score },
+      'ManagementCatalog',
+    );
+    return best.metadata;
+  }
+
+  return businessMetadata;
+}
+
+async function enrichWorkspaceDatabases(
+  databases: readonly ManagementDatabaseInfo[],
+  authoring: AuthoringBridge,
+  dataRoot: string,
+  designerWorkspace: string,
+): Promise<readonly ManagementDatabaseInfo[]> {
+  return Promise.all(
+    databases.map(async (database) => {
+      try {
+        const engine = await authoring.getEngine(database.name);
+        const metadata = await readCatalogDisplayMetadataForDatabase(
+          authoring,
+          dataRoot,
+          database.name,
+          engine,
+          designerWorkspace,
+        );
+        return metadata.databaseDisplayName
+          ? { ...database, displayName: metadata.databaseDisplayName }
+          : database;
+      } catch {
+        return database;
+      }
+    }),
+  );
+}
+
+function effectiveCatalogFields(
+  defsByName: ReadonlyMap<string, CatalogModelDefinition>,
+  modelName: string,
+  seen = new Set<string>(),
+): readonly string[] {
+  const def = defsByName.get(modelName);
+  if (!def || seen.has(modelName)) {
+    return [];
+  }
+  seen.add(modelName);
+
+  const inherited = def.parentId ? effectiveCatalogFields(defsByName, def.parentId, seen) : [];
+  return [...new Set([...inherited, ...def.fields])];
+}
+
+function effectiveCatalogFieldTypes(
+  defsByName: ReadonlyMap<string, CatalogModelDefinition>,
+  modelName: string,
+  seen = new Set<string>(),
+): Readonly<Record<string, string>> {
+  const def = defsByName.get(modelName);
+  if (!def || seen.has(modelName)) {
+    return {};
+  }
+  seen.add(modelName);
+
+  return {
+    ...(def.parentId ? effectiveCatalogFieldTypes(defsByName, def.parentId, seen) : {}),
+    ...Object.fromEntries(
+      [...def.fieldTypes.entries()].map(([field, typeDef]) => [field, typeDef.type]),
+    ),
+  };
+}
 
 function sendJsonWs(ws: WebSocket, msg: WireServerMessage): void {
   ws.send(JSON.stringify(msg));
@@ -292,6 +717,7 @@ export async function buildDualTrackFastify(
       port: cfg.port,
       dev: cfg.dev,
       storageRootSha256: rootPrint,
+      designerWorkspace: cfg.designerWorkspace,
     },
     'ModelDBServer',
   );
@@ -315,15 +741,21 @@ export async function buildDualTrackFastify(
   }
 
   const authoring = new AuthoringBridge(dataRoot, cfg.connectToken, cfg.bufferFlushRowThreshold);
+  const autoBackup = startAutoBackupScheduler(dataRoot, cfg.autoBackup, authoring);
   const writeGate = new WriteSerializationGate();
   const dispatcher = new WireRequestDispatcher({
     dev: cfg.dev,
-    getClient,
     getEngine: (atlas) => authoring.getEngine(atlas),
     writeGate,
   });
 
   const app = Fastify({ logger: false, bodyLimit: 128 * 1024 * 1024 });
+  if (autoBackup) {
+    app.addHook('onClose', (_instance, done) => {
+      autoBackup.stop();
+      done();
+    });
+  }
 
   await app.register(cors, {
     origin: true,
@@ -362,7 +794,12 @@ export async function buildDualTrackFastify(
     try {
       const token = readConnectTokenFromHttpRequest(request);
       interceptor.validateConnectToken(token);
-      const databases = scanWorkspaceDatabases(dataRoot);
+      const databases = await enrichWorkspaceDatabases(
+        scanWorkspaceDatabases(dataRoot),
+        authoring,
+        dataRoot,
+        cfg.designerWorkspace,
+      );
       const body: ManagementDatabasesResponse = { databases };
       return reply.send(body);
     } catch (e) {
@@ -379,7 +816,12 @@ export async function buildDualTrackFastify(
     try {
       const token = readConnectTokenFromHttpRequest(request);
       interceptor.validateConnectToken(token);
-      const databases = scanWorkspaceDatabases(dataRoot);
+      const databases = await enrichWorkspaceDatabases(
+        scanWorkspaceDatabases(dataRoot),
+        authoring,
+        dataRoot,
+        cfg.designerWorkspace,
+      );
       const port = getServerListeningPort(app);
       const body: ManagementStatusResponse = {
         engine: 'ModelDB',
@@ -417,23 +859,202 @@ export async function buildDualTrackFastify(
         assertLogicalDatabaseExists(dataRoot, dbName);
         const engine = await authoring.getEngine(dbName);
         const defs = engine.registry.getModelDefinitions();
+        const defsByName = new Map(defs.map((d) => [d.name, d] as const));
+        const displayMetadata = await readCatalogDisplayMetadataForDatabase(
+          authoring,
+          dataRoot,
+          dbName,
+          engine,
+          cfg.designerWorkspace,
+        );
         const rels = engine.registry.getRelations();
         const body: ManagementCatalogResponse = {
           database: dbName,
-          models: defs.map((d) => ({
-            name: d.name,
-            parentId: d.parentId,
-            fields: [...d.fields],
-            fieldTypes: Object.fromEntries(
-              [...d.fieldTypes.entries()].map(([field, def]) => [field, def.type]),
-            ),
-          })),
+          displayName: displayMetadata.databaseDisplayName,
+          models: defs.map((d) => {
+            const fields = effectiveCatalogFields(defsByName, d.name);
+            return {
+              name: d.name,
+              parentId: d.parentId,
+              displayName: displayMetadata.modelDisplayNames.get(d.name),
+              fields,
+              fieldLabels: mergeCatalogFieldLabels(
+                fields,
+                displayMetadata.modelFieldLabels.get(d.name),
+                displayMetadata.fieldLabelsByName,
+              ),
+              fieldTypes: effectiveCatalogFieldTypes(defsByName, d.name),
+            };
+          }),
           relations: rels.map((r) => ({
             forward: r.forward,
             reverse: r.reverse,
             source: r.source,
+            selfLoopPolicy: r.selfLoopPolicy ?? 'deny',
             target: r.target,
           })),
+        };
+        return reply.send(body);
+      } catch (e) {
+        if (e instanceof TransportAuthError) {
+          return reply.code(401).send({ error: e.message });
+        }
+        const message = e instanceof Error ? e.message : String(e);
+        return reply.code(500).send({ error: message });
+      }
+    },
+  );
+
+  app.get('/api/v1/management/backups', async (request: FastifyRequest, reply: FastifyReply) => {
+    const interceptor = new BinaryInterceptor(cfg.connectToken);
+    try {
+      const token = readConnectTokenFromHttpRequest(request);
+      interceptor.validateConnectToken(token);
+      const query = request.query as { database?: string };
+      const database = typeof query.database === 'string' ? query.database.trim() : '';
+      if (database) {
+        assertFlatGraphSegment(database, 'database name');
+      }
+      const body: ManagementBackupsResponse = {
+        backups: listDatabaseBackups(dataRoot, database || undefined),
+      };
+      return reply.send(body);
+    } catch (e) {
+      if (e instanceof TransportAuthError) {
+        return reply.code(401).send({ error: e.message });
+      }
+      const message = e instanceof Error ? e.message : String(e);
+      return reply.code(500).send({ error: message });
+    }
+  });
+
+  app.post(
+    '/api/v1/management/databases/:dbName/backup',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const interceptor = new BinaryInterceptor(cfg.connectToken);
+      try {
+        const token = readConnectTokenFromHttpRequest(request);
+        interceptor.validateConnectToken(token);
+        const params = request.params as { dbName?: string };
+        const dbName = decodeURIComponent(String(params.dbName ?? '').trim());
+        assertFlatGraphSegment(dbName, 'database name');
+        assertLogicalDatabaseExists(dataRoot, dbName);
+        try {
+          const engine = await authoring.getEngine(dbName);
+          await engine.flushAll();
+        } catch (e) {
+          EngineLogger.instance.warn(
+            'Backup proceeding without engine flush',
+            { database: dbName, message: e instanceof Error ? e.message : String(e) },
+            'ManagementBackup',
+          );
+        }
+        const raw = request.body as { reason?: string } | undefined;
+        const reason = String(raw?.reason ?? 'manual').replace(/[^A-Za-z0-9_-]/g, '_');
+        const backup = createDatabaseBackup(dataRoot, dbName, reason || 'manual');
+        const body: ManagementBackupCreateResponse = { ok: true, backup };
+        return reply.send(body);
+      } catch (e) {
+        if (e instanceof TransportAuthError) {
+          return reply.code(401).send({ error: e.message });
+        }
+        const message = e instanceof Error ? e.message : String(e);
+        return reply.code(500).send({ error: message });
+      }
+    },
+  );
+
+  app.post(
+    '/api/v1/management/databases/:dbName/restore',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const interceptor = new BinaryInterceptor(cfg.connectToken);
+      try {
+        const token = readConnectTokenFromHttpRequest(request);
+        interceptor.validateConnectToken(token);
+        const params = request.params as { dbName?: string };
+        const dbName = decodeURIComponent(String(params.dbName ?? '').trim());
+        assertFlatGraphSegment(dbName, 'database name');
+        const raw = request.body as { backupFile?: string };
+        const backupFile = String(raw?.backupFile ?? '').trim();
+        if (!backupFile) {
+          return reply.code(400).send({ error: 'Missing backupFile.' });
+        }
+        let safetyBackup: ReturnType<typeof createDatabaseBackup> | undefined;
+        try {
+          safetyBackup = createDatabaseBackup(dataRoot, dbName, 'pre-restore');
+        } catch {
+          safetyBackup = undefined;
+        }
+        authoring.evict(dbName);
+        atlasClients.delete(dbName);
+        const restored = restoreDatabaseBackup(dataRoot, dbName, backupFile);
+        authoring.evict(dbName);
+        atlasClients.delete(dbName);
+        await authoring.getEngine(dbName);
+        const body: ManagementBackupRestoreResponse = {
+          ok: true,
+          restored,
+          ...(safetyBackup ? { safetyBackup } : {}),
+        };
+        return reply.send(body);
+      } catch (e) {
+        if (e instanceof TransportAuthError) {
+          return reply.code(401).send({ error: e.message });
+        }
+        const message = e instanceof Error ? e.message : String(e);
+        return reply.code(500).send({ error: message });
+      }
+    },
+  );
+
+  app.post(
+    '/api/v1/management/databases/:dbName/clear',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const interceptor = new BinaryInterceptor(cfg.connectToken);
+      try {
+        const token = readConnectTokenFromHttpRequest(request);
+        interceptor.validateConnectToken(token);
+        const params = request.params as { dbName?: string };
+        const dbName = decodeURIComponent(String(params.dbName ?? '').trim());
+        assertFlatGraphSegment(dbName, 'database name');
+        const raw = request.body as { forceReset?: boolean } | undefined;
+        const forceReset = raw?.forceReset === true;
+        if (!forceReset) {
+          assertLogicalDatabaseExists(dataRoot, dbName);
+        }
+        let safetyBackup: ReturnType<typeof createDatabaseBackup> | undefined;
+        try {
+          safetyBackup = createDatabaseBackup(
+            dataRoot,
+            dbName,
+            forceReset ? 'pre-reset' : 'pre-clear',
+          );
+        } catch {
+          safetyBackup = undefined;
+        }
+        if (forceReset) {
+          authoring.evict(dbName);
+          atlasClients.delete(dbName);
+          forceResetDatabase(dataRoot, dbName);
+          await authoring.getEngine(dbName);
+          const body: ManagementClearDatabaseResponse = {
+            ok: true,
+            database: dbName,
+            mode: 'forceReset',
+            ...(safetyBackup ? { safetyBackup } : {}),
+          };
+          return reply.send(body);
+        }
+        const engine = await authoring.getEngine(dbName);
+        const result = await engine.clearAllData({ sync: true });
+        atlasClients.delete(dbName);
+        const body: ManagementClearDatabaseResponse = {
+          ok: true,
+          database: dbName,
+          mode: 'clearAllData',
+          deletedCount: result.totalDeleted,
+          perModel: result.perModel,
+          ...(safetyBackup ? { safetyBackup } : {}),
         };
         return reply.send(body);
       } catch (e) {

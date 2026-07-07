@@ -1,5 +1,5 @@
 import type { FieldLabelMap, IngestAmbiguity } from '@mode-db/data-kit';
-import { fieldDisplayNameForLocale, formatFieldOptionLabel } from '@mode-db/data-kit';
+import { formatFieldDisplayLabel } from '@mode-db/data-kit';
 
 /** User-visible strings for {@link ImportPanel} (supplied by the host app). */
 export interface ImportPanelLabels {
@@ -15,6 +15,10 @@ export interface ImportPanelLabels {
   readonly relationBindings: string;
   readonly relationHint: string;
   readonly relationEmpty: string;
+  readonly duplicateHandling: string;
+  readonly upsertMatchField: string;
+  readonly upsertAppendOnly: string;
+  readonly upsertHelp: string;
   readonly relation: string;
   readonly relatedModel: string;
   readonly matchField: string;
@@ -75,9 +79,12 @@ export function formatImportAmbiguity(
 export function createFieldLabelFormatter(
   fieldLabels: FieldLabelMap | undefined,
   locale: string,
+  useDisplayName = true,
 ): (fieldName: string) => string {
   return (fieldName: string): string => {
-    const display = fieldDisplayNameForLocale(fieldLabels, fieldName, locale);
-    return formatFieldOptionLabel(fieldName, display);
+    if (!useDisplayName) {
+      return fieldName;
+    }
+    return formatFieldDisplayLabel(fieldLabels, fieldName, locale, true);
   };
 }

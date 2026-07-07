@@ -23,8 +23,40 @@ export interface ModelDBServerFileConfig {
   readonly cacheSize?: string;
   /** When **`production`**, enables **`access.log`** HTTP / query / decode / write-gate lines. */
   readonly mode?: string;
+  /**
+   * Logical database that stores Model Designer metadata (`sys_model`, `sys_props`,
+   * `sys_data_asset_map`). Defaults to `model_designer_workspace`.
+   */
+  readonly designerWorkspace?: string;
   readonly connectToken?: string;
   readonly dev?: boolean;
+  /**
+   * Optional automatic backup scheduler. Omit this block, or set `enabled: false`, to disable
+   * automatic backups.
+   */
+  readonly autoBackup?: ModelDBServerAutoBackupFileConfig;
+}
+
+export interface ModelDBServerAutoBackupFileConfig {
+  readonly enabled?: boolean;
+  /** Backup interval in milliseconds. */
+  readonly intervalMs?: number;
+  /** Backup interval in minutes; used when `intervalMs` is not provided. */
+  readonly intervalMinutes?: number;
+  /** Optional database allow-list. Empty / omitted means every logical database. */
+  readonly databases?: readonly string[];
+  /** Whether to run one backup pass immediately after server start. Defaults to false. */
+  readonly runOnStart?: boolean;
+  /** Suffix reason in backup filenames. Defaults to `auto`. */
+  readonly reason?: string;
+}
+
+export interface ResolvedModelDBServerAutoBackupConfig {
+  readonly enabled: boolean;
+  readonly intervalMs: number;
+  readonly databases?: readonly string[];
+  readonly runOnStart: boolean;
+  readonly reason: string;
 }
 
 export interface ResolvedModelDBServerConfig {
@@ -44,8 +76,11 @@ export interface ResolvedModelDBServerConfig {
   readonly bufferFlushRowThreshold?: number;
   readonly cacheSizeHint?: string;
   readonly mode?: string;
+  /** Logical database used as Model Designer metadata source for management catalog labels. */
+  readonly designerWorkspace: string;
   readonly connectToken: string;
   readonly dev: boolean;
+  readonly autoBackup?: ResolvedModelDBServerAutoBackupConfig;
   /** When true, **`access.log`** profiling is enabled (see **`loadModelDBServerConfig`**). */
   readonly accessLog?: boolean;
   /** Absolute path of the loaded **`modeldb.config.json`** (implicit default or **`-c`**). */
@@ -78,6 +113,37 @@ function boolEnv(name: string): boolean | undefined {
     return false;
   }
   return undefined;
+}
+
+function resolveAutoBackupConfig(
+  raw: ModelDBServerAutoBackupFileConfig | undefined,
+): ResolvedModelDBServerAutoBackupConfig | undefined {
+  if (!raw?.enabled) {
+    return undefined;
+  }
+  const intervalMs =
+    raw.intervalMs !== undefined && Number.isFinite(raw.intervalMs)
+      ? Math.floor(raw.intervalMs)
+      : raw.intervalMinutes !== undefined && Number.isFinite(raw.intervalMinutes)
+        ? Math.floor(raw.intervalMinutes * 60_000)
+        : undefined;
+  if (intervalMs === undefined || intervalMs < 60_000) {
+    throw new Error('ModelDB server: autoBackup interval must be at least 60000 ms.');
+  }
+  const databases = Array.isArray(raw.databases)
+    ? raw.databases.map((d) => String(d).trim()).filter((d) => d.length > 0)
+    : [];
+  const reason =
+    String(raw.reason ?? 'auto')
+      .trim()
+      .replace(/[^A-Za-z0-9_.-]/g, '_') || 'auto';
+  return {
+    enabled: true,
+    intervalMs,
+    ...(databases.length > 0 ? { databases } : {}),
+    runOnStart: raw.runOnStart === true,
+    reason,
+  };
 }
 
 /**
@@ -174,6 +240,12 @@ export async function loadModelDBServerConfig(
 
   const mode = file.mode?.trim().toLowerCase();
   const accessLog = mode === 'production' || boolEnv('MODEL_DB_ACCESS_LOG') === true;
+  const designerWorkspace =
+    file.designerWorkspace?.trim() ??
+    strEnv('MODEL_DB_DESIGNER_WORKSPACE') ??
+    strEnv('VITE_MODE_DB_WORKSPACE') ??
+    'model_designer_workspace';
+  const autoBackup = resolveAutoBackupConfig(file.autoBackup);
 
   if (!connectToken) {
     throw new Error(
@@ -197,8 +269,10 @@ export async function loadModelDBServerConfig(
         : undefined,
     cacheSizeHint: file.cacheSize,
     mode: file.mode,
+    designerWorkspace,
     connectToken,
     dev,
+    ...(autoBackup ? { autoBackup } : {}),
     configFilePath: path,
     ...(accessLog ? { accessLog: true as const } : {}),
   };

@@ -22,6 +22,10 @@
 - 批量编辑、导入、提交逻辑优先复用 `@mode-db/data-kit`
 - UI 组件尽量只做展示、交互与装配
 - 新文案同步 `zh/en/ja`
+- 显示名模式统一展示为 `显示名[唯一名]`，无显示名时展示唯一名。
+- 字段标签必须来自 catalog 的 `fieldLabels`，并与表格、Pivot、导入面板保持一致。
+- 导入关系绑定必须按 `forward + importModel + peerModel` 定位关系，不能只按关系名。
+- 管理类备份 / 恢复 / 清除只能通过 SDK management API，不要绕过到本地文件。
 
 ## 4. 常见任务入口
 
@@ -34,6 +38,8 @@
 
 - `src/components/DataWorkspace.tsx`
 - `src/components/StudioToolbar.tsx`
+- `@mode-db/data-kit/src/view-data/field-display-label.ts`
+- `@mode-db/data-ui/src/components/import-panel.tsx`
 
 ### 改通知或语言
 

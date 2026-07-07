@@ -26,7 +26,65 @@ body {
   overflow: hidden;
 }
 
+.web-shell {
+  min-height: 100vh;
+  --mode-ui-drawer-accent: var(--web-accent);
+  --mode-ui-drawer-radius: 8px;
+  --mode-ui-toast-top: 18px;
+}
+
+.web-mobile-panel-actions {
+  display: none;
+}
+
+.web-app-drawer {
+  --mode-ui-drawer-offset: 12px;
+  --mode-ui-drawer-radius: 8px;
+}
+
+.web-app-drawer-body {
+  padding: 12px;
+}
+
+.result--drawer {
+  height: 100%;
+  background: transparent;
+}
+
+.result--drawer .result-header {
+  display: none;
+}
+
+.result--drawer .result-body {
+  padding: 0;
+}
+
+.web-drawer-summary .tree {
+  max-height: none;
+}
+
 @media (max-width: 1100px) {
+  .web-mobile-panel-actions {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px 0;
+  }
+
+  .web-mobile-panel-actions button {
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.88);
+    color: #1e293b;
+    font-size: 12px;
+    font-weight: 800;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  }
+
   .app-grid {
     grid-template-columns: 1fr;
     height: auto;

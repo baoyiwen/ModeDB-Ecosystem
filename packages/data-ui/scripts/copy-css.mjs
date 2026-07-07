@@ -8,6 +8,7 @@ const pairs = [
   ['src/components/pivot-table.css', 'dist/components/pivot-table.css'],
   ['src/components/import-panel.css', 'dist/components/import-panel.css'],
   ['src/components/data-view-panel.css', 'dist/components/data-view-panel.css'],
+  ['src/components/app-shell.css', 'dist/components/app-shell.css'],
 ];
 
 for (const [fromRel, toRel] of pairs) {

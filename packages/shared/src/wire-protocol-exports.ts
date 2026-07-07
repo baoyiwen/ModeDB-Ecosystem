@@ -25,6 +25,9 @@ export interface WireRpcEnvelope {
 /** Cardinality logic for relation registration / update (mirror of `@mode-db/common` **`RelationLogic`**). */
 export type WireRelationLogic = 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many';
 
+/** Whether a relation can write direct `sourceId === targetId` self-loop edges. */
+export type WireRelationSelfLoopPolicy = 'deny' | 'allow';
+
 /** Field-equality predicate used for PROTOCOL / CONDITIONAL `bind` (mirror of `@mode-db/common` **`MatchPredicate`**). */
 export interface WireMatchPredicate {
   readonly sourceField: string;
@@ -65,6 +68,14 @@ export type WireExecuteBody =
       readonly sync?: boolean;
       /** When true, server echoes each successfully-staged row (with `_id`) back on the wire. */
       readonly returning?: boolean;
+      /**
+       * Optional import-safe upsert mode: matching rows update existing records; missing rows insert.
+       * Without this block, `insertMany` remains append-only.
+       */
+      readonly upsert?: {
+        readonly matchFields: readonly string[];
+        readonly updateExisting?: boolean;
+      };
     }
   | {
       readonly op: 'batchUpdate';
@@ -96,6 +107,9 @@ export type WireExecuteBody =
   | {
       readonly op: 'dropRelation';
       readonly relation: string;
+      readonly reverse?: string;
+      readonly source?: string;
+      readonly target?: string;
     }
   | {
       readonly op: 'alterModel';
@@ -116,6 +130,7 @@ export type WireExecuteBody =
       readonly forward: string;
       readonly reverse: string;
       readonly logic: WireRelationLogic;
+      readonly selfLoopPolicy?: WireRelationSelfLoopPolicy;
     }
   /**
    * Batch authoring DDL: register any missing **models** and **relations** in one gated write.
@@ -137,6 +152,7 @@ export type WireExecuteBody =
         readonly reverse: string;
         readonly logic?: WireRelationLogic;
         readonly matchOn?: WireMatchPredicate;
+        readonly selfLoopPolicy?: WireRelationSelfLoopPolicy;
       }[];
       readonly quickLink?: boolean;
     }
@@ -216,8 +232,12 @@ export type WireExecuteBody =
   | {
       readonly op: 'updateRelationLogic';
       readonly forward: string;
+      readonly reverse?: string;
+      readonly source?: string;
+      readonly target?: string;
       readonly logic: WireRelationLogic;
       readonly matchOn?: WireMatchPredicate;
+      readonly selfLoopPolicy?: WireRelationSelfLoopPolicy;
     }
   /** Truncate one model: tombstone all of its rows and clear relation indexes touching it (schema kept). */
   | {
@@ -337,6 +357,8 @@ export type WireExecuteResultJson =
       readonly records?: readonly Record<string, unknown>[];
       readonly successCount?: number;
       readonly failureCount?: number;
+      readonly insertedCount?: number;
+      readonly updatedCount?: number;
       /** Populated when `failureCount > 0` — maps to indices in the request `rows` array. */
       readonly rowFailures?: readonly WireInsertManyRowFailure[];
       readonly relation?: string;

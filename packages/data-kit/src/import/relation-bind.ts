@@ -25,11 +25,13 @@ export interface CatalogRelationRef {
   readonly reverse: string;
   readonly source: string;
   readonly target: string;
+  readonly selfLoopPolicy?: 'deny' | 'allow';
 }
 
 /** Catalog model row for field pickers / suggestions. */
 export interface CatalogModelRef {
   readonly name: string;
+  readonly displayName?: Readonly<Record<string, string>>;
   readonly fields: readonly string[];
   readonly fieldLabels?: FieldLabelMap;
   readonly fieldTypes?: Readonly<Record<string, string>>;
@@ -63,6 +65,23 @@ export function relatedModelForImport(
     return relation.source;
   }
   return null;
+}
+
+/** Finds the exact catalog relation for a binding rule when relation labels are only pair-local. */
+export function relationForImportBinding(
+  relations: readonly CatalogRelationRef[],
+  importModel: string,
+  rule: RelationBindingRule,
+): CatalogRelationRef | undefined {
+  return relations.find((r) => {
+    if (r.forward !== rule.relation) {
+      return false;
+    }
+    if (r.source !== importModel && r.target !== importModel) {
+      return false;
+    }
+    return r.source === rule.targetModel || r.target === rule.targetModel;
+  });
 }
 
 /**
@@ -122,7 +141,7 @@ export function buildRelationBindOps(
     if (isBindOnlyRelationRule(rule, profile.columnMapping)) {
       continue;
     }
-    const relation = relations.find((r) => r.forward === rule.relation);
+    const relation = relationForImportBinding(relations, profile.targetModel, rule);
     if (!relation) {
       continue;
     }
@@ -204,7 +223,7 @@ export function mergeRelationBindings(
 }
 
 function relationBindingKey(rule: RelationBindingRule): string {
-  return `${rule.relation}\0${rule.sourceColumn}`;
+  return `${rule.relation}\0${rule.targetModel}\0${rule.sourceColumn}`;
 }
 
 function dedupeRelationBindings(rules: readonly RelationBindingRule[]): RelationBindingRule[] {

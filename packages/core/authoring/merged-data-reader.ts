@@ -16,8 +16,10 @@ function mergeRecordLists(
   const byId = new Map<string, ModelRecord>();
   const order: string[] = [];
   for (const r of disk) {
+    if (!byId.has(r._id)) {
+      order.push(r._id);
+    }
     byId.set(r._id, r);
-    order.push(r._id);
   }
   for (const r of pending) {
     if (!byId.has(r._id)) {

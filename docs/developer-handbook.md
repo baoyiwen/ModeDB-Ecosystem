@@ -351,7 +351,44 @@ SDK **不得**依赖 **`@mode-db/core`** 的磁盘实现；仓库 **`pnpm run ch
 
 ---
 
-## 17. 构建与调试命令
+## 17. `modeldb-server` 备份与恢复 CLI
+
+`@mode-db/server` 还提供数据库备份、恢复和清除命令：
+
+| 子命令                                      | 说明                                                                          |
+| ------------------------------------------- | ----------------------------------------------------------------------------- |
+| **`backup <db-name>`**                      | 创建逻辑库备份，可加 `--reason manual`。                                      |
+| **`backups [db-name]`**                     | 列出所有备份，或只列出指定逻辑库备份。                                        |
+| **`restore <db-name> <backup-file> --yes`** | 从备份恢复逻辑库；执行前尽量创建 `pre-restore` 安全备份。                     |
+| **`clear-data <db-name> --yes`**            | 清除库内行数据，保留 schema / relation；执行前尽量创建 `pre-clear` 安全备份。 |
+| **`force-reset <db-name> --yes`**           | 数据损坏恢复后门，重建物理库；执行前尽量创建 `pre-reset` 安全备份。           |
+
+实现文件：
+
+- **`packages/server/src/backup-manager.ts`**
+- **`packages/server/src/cli-backup.ts`**
+- **`packages/server/src/auto-backup-scheduler.ts`**
+- **`packages/server/src/dual-track-app.ts`**
+
+自动备份由 **`modeldb.config.json`** 的 **`autoBackup`** 控制；默认不启用。
+
+---
+
+## 18. 近期一致性规则
+
+这些规则横跨 designer、data-studio、data-kit、data-ui、shared、core、server、sdk，后续改动时需要整体检查：
+
+- **关系身份**：关系是实体，不是字符串别名；关系名只在端点模型对内局部唯一，重命名不能导致解绑。
+- **正逆向查询**：任何 bind / unlink / index / query 改动都要同时验证正向和逆向关系。
+- **自关联策略**：直接 `sourceId === targetId` 自环默认禁止，只有 `selfLoopPolicy: 'allow'` 才允许。
+- **显示名链路**：designer 写入 i18n 显示名，server catalog 返回 `displayName` / `fieldLabels`，sdk 透传，data-kit/data-ui 展示为 `显示名[唯一名]`。
+- **保存语义**：`sys_data_asset_map`、`sys_model`、`sys_props`、`sys_relation` 必须 update-first / upsert，不能每次保存都新增重复行。
+- **导入绑定**：`bindImportLookup` 必须结合关系名、导入模型、对端模型、字段类型和 `importSide` 解析。
+- **管理面边界**：备份、恢复、清除、强制重置属于 server management plane，不属于普通 `EngineOperation`。
+
+---
+
+## 19. 构建与调试命令
 
 ```bash
 pnpm install
@@ -364,7 +401,7 @@ pnpm run check
 
 ---
 
-## 18. 源码索引（精选）
+## 20. 源码索引（精选）
 
 | 能力                                 | 路径                                                          |
 | ------------------------------------ | ------------------------------------------------------------- |

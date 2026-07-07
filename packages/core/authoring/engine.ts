@@ -24,6 +24,8 @@ import {
   type ModelRecord,
   type RelationDefinition,
   type RelationLogic,
+  type RelationSelfLoopPolicy,
+  ValidationReport,
 } from '@mode-db/common';
 import { ModelStorage } from './storage.js';
 import { RelationIndexer } from './indexer.js';
@@ -83,6 +85,7 @@ function hydrateAuthoringFromManifest(
       rel.reverse,
       rel.logic,
       rel.matchOn,
+      rel.selfLoopPolicy ?? 'deny',
     );
   }
 }
@@ -127,6 +130,21 @@ export interface AuthoringEngineOptions {
    * to open **`${storageRoot}/${atlas}/atlas.mld`**. Omit to use **`process.env.MODEL_DB_CONNECT_TOKEN`**.
    */
   connectToken?: string;
+}
+
+function importRowMatchKey(
+  row: Readonly<Record<string, unknown>>,
+  fields: readonly string[],
+): string | null {
+  const parts: unknown[] = [];
+  for (const field of fields) {
+    const value = row[field];
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+    parts.push(value);
+  }
+  return JSON.stringify(parts);
 }
 
 /**
@@ -373,6 +391,7 @@ export class AuthoringEngine {
     reverse: string,
     logic?: RelationLogic | null,
     matchOn?: MatchPredicate | null,
+    selfLoopPolicy?: RelationSelfLoopPolicy,
   ): RelationDefinition {
     return this.registry.registerRelation(
       source,
@@ -381,6 +400,7 @@ export class AuthoringEngine {
       reverse,
       logic ?? null,
       matchOn ?? null,
+      selfLoopPolicy ?? 'deny',
     );
   }
 
@@ -397,8 +417,13 @@ export class AuthoringEngine {
     }
   }
 
-  updateRelationLogic(forwardName: string, logic: RelationLogic, matchOn?: MatchPredicate): void {
-    this.registry.updateRelationLogic(forwardName, logic, matchOn);
+  updateRelationLogic(
+    forwardName: string,
+    logic: RelationLogic,
+    matchOn?: MatchPredicate,
+    selfLoopPolicy?: RelationSelfLoopPolicy,
+  ): void {
+    this.registry.updateRelationLogic(forwardName, logic, matchOn, selfLoopPolicy);
   }
 
   quickLink(source: string, target: string, forward: string, reverse: string): RelationDefinition {
@@ -438,6 +463,93 @@ export class AuthoringEngine {
       await this.persistence.flushModelToDisk(modelName);
     }
     return merged;
+  }
+
+  /**
+   * Batch import upsert by business fields. Existing rows are matched by all `matchFields`;
+   * matches are updated in place, missing keys are inserted as new rows.
+   */
+  async upsertMany(
+    modelName: string,
+    rows: ReadonlyArray<Record<string, unknown>>,
+    matchFields: readonly string[],
+    options?: UpdateOptions & { readonly updateExisting?: boolean },
+  ): Promise<{
+    readonly report: ValidationReport<ModelRecord>;
+    readonly insertedCount: number;
+    readonly updatedCount: number;
+  }> {
+    const fields = [...new Set(matchFields.filter((f) => f.trim().length > 0))];
+    if (fields.length === 0) {
+      throw new EngineError('upsertMany: at least one match field is required.');
+    }
+
+    const report = new ValidationReport<ModelRecord>();
+    const existingRows = await this.persistence.getMergedReader().getAll(modelName);
+    const byKey = new Map<string, ModelRecord>();
+    for (const row of existingRows) {
+      const key = importRowMatchKey(row, fields);
+      if (key !== null && !byKey.has(key)) {
+        byKey.set(key, row);
+      }
+    }
+
+    let insertedCount = 0;
+    let updatedCount = 0;
+    const updateExisting = options?.updateExisting ?? true;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]!;
+      const diagnostics: Diagnostic[] = [];
+      try {
+        const key = importRowMatchKey(row, fields);
+        const existing = key === null ? undefined : byKey.get(key);
+        if (existing && updateExisting) {
+          const merged = await this.persistence.update(modelName, existing._id, row);
+          if (!merged) {
+            const inserted = await this.persistence.insert(modelName, row);
+            if (key !== null) {
+              byKey.set(key, inserted);
+            }
+            insertedCount++;
+            report.addRow({ index: i, success: true, data: inserted, diagnostics });
+            continue;
+          }
+          if (key !== null) {
+            byKey.set(key, merged);
+          }
+          updatedCount++;
+          report.addRow({ index: i, success: true, data: merged, diagnostics });
+          continue;
+        }
+
+        if (existing && !updateExisting) {
+          report.addRow({ index: i, success: true, data: existing, diagnostics });
+          continue;
+        }
+
+        const inserted = await this.persistence.insert(modelName, row);
+        if (key !== null) {
+          byKey.set(key, inserted);
+        }
+        insertedCount++;
+        report.addRow({ index: i, success: true, data: inserted, diagnostics });
+      } catch (err) {
+        const d = DiagnosticCenter.create('E1010', {
+          index: i,
+          model: modelName,
+          detail: err instanceof Error ? err.message : String(err),
+        });
+        diagnostics.push(d);
+        report.addRow({ index: i, success: false, diagnostics });
+      }
+    }
+
+    if (report.successCount > 0 && options?.sync) {
+      await this.persistence.flushModelToDisk(modelName);
+    }
+
+    return { report, insertedCount, updatedCount };
   }
 
   /**
@@ -659,6 +771,14 @@ export class AuthoringEngine {
     if (!rel) {
       throw new RegistryError(`dropRelation: relation "${relationName}" not found.`);
     }
+    await this.dropRelationDefinition(rel);
+  }
+
+  /**
+   * Remove one exact relation definition. Prefer this when relation labels are only pair-local.
+   */
+  async dropRelationDefinition(rel: RelationDefinition): Promise<void> {
+    await this.persistence.flushPendingToDisk();
     await this.indexer.dropRelationIndex(rel);
     this.registry.unregisterRelation(rel);
     this.smartCacheRef?.invalidateModel(rel.source);

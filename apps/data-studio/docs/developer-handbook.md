@@ -30,6 +30,15 @@
 - 创建 query snapshot 或 pivot config
 - 把这些数据注入 `DataPageProvider`
 
+显示名与字段标签链路：
+
+- `catalog.displayName` 用于数据库名称。
+- `catalog.models[].displayName` 用于模型名称。
+- `catalog.models[].fieldLabels` 用于字段、表格列、Pivot 列和导入字段。
+- 继承模型需要通过 `parentId` 递归合并字段、字段类型和字段标签。
+- 显示名模式统一使用 `@mode-db/data-kit` 的 `formatDisplayWithUnique` / `formatFieldDisplayLabel`，展示为 `显示名[唯一名]`。
+- 唯一名模式必须绕过显示名，只展示稳定 name。
+
 ### 2.3 提交阶段
 
 真正的批量提交由 `@mode-db/data-kit` 的 `BindingSession` 管理；`data-studio` 主要负责：
@@ -71,6 +80,9 @@
 - 不要在 `data-studio` 中直接引入本地 `AuthoringEngine`
 - 不要复制 `data-kit` 中已有的 binding / import 规则
 - 新增长期文案要同步 `zh/en/ja`
+- 不要在 `DataWorkspace`、Pivot 和 ImportPanel 各写一套字段显示名逻辑；应复用 `data-kit` 格式器，避免显示名不稳定。
+- 导入关系绑定不要只用 `forward` 名称定位关系；关系名是端点局部唯一，必须同时考虑导入模型和对端模型。
+- 恢复、清除、强制重置后必须重新打开当前逻辑库并刷新 catalog。
 
 ## 5. 验证命令
 

@@ -5,6 +5,7 @@ import { Command } from 'commander/esm.mjs';
 import { loadModelDBServerConfig } from './config-loader.js';
 import { startModelDBWebSocketServer } from './modeldb-server.js';
 import { getModelDbCliSettingsDir, setPersistedModelDbHomePath } from './modeldb-persisted-home.js';
+import { runBackup, runBackups, runClearData, runForceReset, runRestore } from './cli-backup.js';
 import { runCreateDb } from './cli-create-db.js';
 import { runInfo, runLs } from './cli-mgmt.js';
 
@@ -114,10 +115,96 @@ if (argv[0] === 'create-db') {
   process.exit(0);
 }
 
+if (argv[0] === 'backup') {
+  const dbName = argv[1]?.trim();
+  if (!dbName) {
+    console.error(
+      'Usage: modeldb-server backup <db-name> [--reason manual] [-c <session-root|modeldb.config.json>] [-t <connectToken>]',
+    );
+    process.exit(1);
+  }
+  try {
+    await runBackup(dbName, argv.slice(2));
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[ModelDB] backup failed: ${msg}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
+if (argv[0] === 'backups') {
+  const maybeDb = argv[1]?.startsWith('-') ? undefined : argv[1]?.trim();
+  const rest = maybeDb ? argv.slice(2) : argv.slice(1);
+  try {
+    await runBackups(maybeDb || undefined, rest);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[ModelDB] backups failed: ${msg}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
+if (argv[0] === 'restore') {
+  const dbName = argv[1]?.trim();
+  const backupFile = argv[2]?.trim();
+  if (!dbName || !backupFile) {
+    console.error(
+      'Usage: modeldb-server restore <db-name> <backup-file> --yes [-c <session-root|modeldb.config.json>] [-t <connectToken>]',
+    );
+    process.exit(1);
+  }
+  try {
+    await runRestore(dbName, backupFile, argv.slice(3));
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[ModelDB] restore failed: ${msg}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
+if (argv[0] === 'clear-data') {
+  const dbName = argv[1]?.trim();
+  if (!dbName) {
+    console.error(
+      'Usage: modeldb-server clear-data <db-name> --yes [-c <session-root|modeldb.config.json>] [-t <connectToken>]',
+    );
+    process.exit(1);
+  }
+  try {
+    await runClearData(dbName, argv.slice(2));
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[ModelDB] clear-data failed: ${msg}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
+if (argv[0] === 'force-reset') {
+  const dbName = argv[1]?.trim();
+  if (!dbName) {
+    console.error(
+      'Usage: modeldb-server force-reset <db-name> --yes [-c <session-root|modeldb.config.json>] [-t <connectToken>]',
+    );
+    process.exit(1);
+  }
+  try {
+    await runForceReset(dbName, argv.slice(2));
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[ModelDB] force-reset failed: ${msg}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
 const program = new Command()
   .name('modeldb-server')
   .description(
-    'ModelDB 2.0 daemon. Subcommands: start (default), info|status, ls|list, set <dir>, export-token, create-db <name>. Without -c, data root is MODELDB_HOME, ~/.modeldb/home (from "set"), or OS default; auto-creates layout on start.',
+    'ModelDB 2.0 daemon. Subcommands: start (default), info|status, ls|list, set <dir>, export-token, create-db <name>, backup, backups, restore, clear-data, force-reset.',
   )
   .option(
     '-c, --config <path>',

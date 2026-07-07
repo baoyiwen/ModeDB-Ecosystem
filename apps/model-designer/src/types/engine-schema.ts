@@ -29,11 +29,15 @@ export interface EngineRelationEdge {
    * **新建关系一定写入**；标记 optional 仅为兼容旧 mldg 序列化（缺省时回退到 `kind`）。
    */
   forward_name?: string;
+  /** Stable business-engine forward label. UI renames must not rewrite this, otherwise relation indexes are lost. */
+  engine_forward_name?: string;
   /**
    * 逆向（target → source）唯一名；自关联默认 `parent`，非自关联默认 `<target>-<source>`。
    * **新建关系一定写入**；标记 optional 仅为兼容旧 mldg 序列化（缺省时回退到 `kind`）。
    */
   reverse_name?: string;
+  /** Stable business-engine reverse label. UI renames must not rewrite this, otherwise relation indexes are lost. */
+  engine_reverse_name?: string;
   /** 正向展示名（I18N），优先于 `forward_name` 显示。 */
   forward_name_i18n?: Record<string, string>;
   /** 逆向展示名（I18N），优先于 `reverse_name` 显示。 */
@@ -58,6 +62,8 @@ export interface EngineRelationEdge {
   source_cardinality?: string;
   /** Target-side cardinality: `one` | `many`. */
   target_cardinality?: string;
+  /** Advanced relation policy: whether direct `sourceId === targetId` self-loop edges are allowed. */
+  self_loop_policy?: 'deny' | 'allow';
   /** `sys_relation.posX` / `posY`（标签锚点等） */
   pos_x?: number;
   pos_y?: number;

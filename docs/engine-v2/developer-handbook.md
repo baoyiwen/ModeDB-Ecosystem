@@ -84,8 +84,36 @@
 - 不要让 `shared` 引入 sibling workspace 依赖
 - 写请求不要绕过 `WriteSerializationGate`
 - 不要混淆 workspace-scope 和 database-scope
+- 备份 / 恢复 / 清除是 server management-plane 能力，不要塞入普通 database RPC
+- 关系名不是全局唯一，端点局部同名关系必须可共存
+- 关系重命名不等于解绑；底层索引和查询必须保留关系实体语义
+- catalog 的 `displayName` / `fieldLabels` 必须完整透传，供 web、data-studio 和 designer 统一展示 `显示名[唯一名]`
+- 自关联直接自环默认禁止，只有 `selfLoopPolicy: 'allow'` 才允许
 
-## 5. 推荐验证
+## 5. 近期跨模块链路
+
+### 5.1 显示名链路
+
+1. `model-designer` 写入模型、字段、关系、库的 i18n 显示名。
+2. `server` management catalog 返回 `displayName` / `fieldLabels`。
+3. `sdk` 原样透传 catalog。
+4. `data-studio` 和 `data-ui` 使用 `data-kit` 格式化为 `显示名[唯一名]`。
+
+如果 Pivot 或导入面板显示默认字段名，优先检查 catalog 是否返回了正确 `fieldLabels`，再检查 UI 格式器。
+
+### 5.2 导入关系绑定链路
+
+1. `data-ui` 收集导入配置和关系绑定规则。
+2. `data-kit` 生成 `insertMany` / upsert，并在提交后生成 `bindImportLookup`。
+3. `shared` 定义 op 形状。
+4. `core` 的 `executeDatabaseOperation` 校验端点、`importSide`、字段类型和 `selfLoopPolicy`。
+5. 查询运行时必须支持正向和逆向读取同一条关系边。
+
+### 5.3 备份管理链路
+
+备份、恢复、清除和强制重置只在 `server` management plane 实现；前端经 `sdk` 调用，不进入 `EngineOperation`。
+
+## 6. 推荐验证
 
 ```bash
 pnpm run build

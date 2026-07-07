@@ -279,7 +279,42 @@ modeldb-server start
 
 ---
 
-## 9. 延伸阅读
+## 9. 自动备份配置
+
+`autoBackup` 是可选配置。不写该字段，或设置 `enabled: false`，server 不会自动创建备份。
+
+```json
+{
+  "autoBackup": {
+    "enabled": true,
+    "intervalMinutes": 60,
+    "runOnStart": false,
+    "reason": "auto",
+    "databases": ["Test_DB"]
+  }
+}
+```
+
+字段说明：
+
+| 字段                  | 说明                                              |
+| --------------------- | ------------------------------------------------- |
+| **`enabled`**         | 是否启用自动备份。只有 `true` 才启动调度器。      |
+| **`intervalMinutes`** | 备份间隔，单位分钟。                              |
+| **`intervalMs`**      | 备份间隔，单位毫秒；优先于 `intervalMinutes`。    |
+| **`runOnStart`**      | server 启动后是否立即执行一次备份。默认 `false`。 |
+| **`reason`**          | 备份文件名中的 reason 后缀，默认 `auto`。         |
+| **`databases`**       | 要备份的逻辑库列表；空数组或省略表示所有逻辑库。  |
+
+限制：
+
+- 最小间隔为 `60000` ms。
+- 备份文件写入 `<workspace>/modeldb/backups/`。
+- 自动备份依赖 `modeldb-server` 进程存活；进程停止后不会继续调度。
+
+---
+
+## 10. 延伸阅读
 
 - 使用手册（安装、构建、启动、FAQ）：**[user-handbook.md](./user-handbook.md)**
 - 仓库根 **[README.md](../README.md)** —「运行与配置」整节

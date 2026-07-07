@@ -86,7 +86,10 @@ export {
 } from './view-data/prop-fields.js';
 export type { FieldLabelMap } from './view-data/field-display-label.js';
 export {
+  buildFieldColumnLabels,
   fieldDisplayNameForLocale,
+  formatDisplayWithUnique,
+  formatFieldDisplayLabel,
   formatFieldOptionLabel,
 } from './view-data/field-display-label.js';
 

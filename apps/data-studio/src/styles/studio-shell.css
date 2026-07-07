@@ -155,80 +155,6 @@
   min-height: min-content;
 }
 
-.studio-toast-stack {
-  position: fixed;
-  top: 16px;
-  right: 16px;
-  z-index: 10000;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: min(420px, calc(100vw - 32px));
-  pointer-events: none;
-}
-
-.studio-toast {
-  pointer-events: auto;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: #fff;
-  border: 1px solid rgba(15, 23, 42, 0.1);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-  animation: studio-toast-in 0.25s ease;
-}
-
-.studio-toast--success {
-  border-left: 3px solid #059669;
-}
-
-.studio-toast--error {
-  border-left: 3px solid #dc2626;
-}
-
-.studio-toast--warning {
-  border-left: 3px solid #d97706;
-}
-
-.studio-toast--info {
-  border-left: 3px solid #6366f1;
-}
-
-.studio-toast-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
-  color: #334155;
-}
-
-.studio-toast-body strong {
-  font-weight: 600;
-}
-
-.studio-toast-close {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
-  color: #94a3b8;
-  padding: 0 2px;
-}
-
-@keyframes studio-toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .studio-connect-card {
   width: min(420px, 100%);
   padding: 24px;
@@ -340,8 +266,7 @@ body::before {
 
 .studio-topbar,
 .studio-data-toolbar,
-.studio-connect-card,
-.studio-toast {
+.studio-connect-card {
   border: 1px solid var(--studio-border);
   box-shadow: var(--studio-shadow-soft);
 }
@@ -437,11 +362,6 @@ body::before {
   background: transparent;
 }
 
-.studio-toast {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.94) 100%);
-  backdrop-filter: blur(18px) saturate(150%);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .studio-input,
   .studio-select,
@@ -506,8 +426,7 @@ body::before {
 
 .studio-topbar,
 .studio-data-toolbar,
-.studio-connect-card,
-.studio-toast {
+.studio-connect-card {
   border: 1px solid var(--studio-line);
   border-radius: var(--studio-radius-panel);
   background: linear-gradient(180deg, var(--studio-card) 0%, var(--studio-card-soft) 100%);
@@ -673,10 +592,6 @@ body::before {
 .studio-toolbar-error,
 .studio-error-text {
   color: var(--studio-danger);
-}
-
-.studio-toast {
-  background: #ffffff;
 }
 
 @media (max-width: 760px) {

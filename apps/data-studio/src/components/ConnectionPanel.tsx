@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
-import { ModelDB, type ManagementCatalogResponse, type RemoteModelDBClient } from '@mode-db/sdk';
+import {
+  RemoteModelDBClient,
+  type ManagementCatalogResponse,
+  type ManagementDatabaseInfo,
+} from '@mode-db/sdk';
+import { formatDisplayWithUnique } from '@mode-db/data-kit';
 import {
   getStoredHost,
   getStoredLibrary,
+  getStoredNameDisplayMode,
   getStoredPort,
   getStoredToken,
   persistConnection,
   persistLibrary,
+  persistNameDisplayMode,
+  type NameDisplayMode,
 } from '../config/connection-prefs.js';
 import { openLibrarySession } from '../config/open-library-session.js';
 import { useStudio, useStudioLocale, type StudioLocale } from '../context/studio-context.js';
@@ -17,6 +25,25 @@ export interface ConnectionPanelProps {
     library: string,
     catalog: ManagementCatalogResponse,
   ) => void;
+}
+
+function displayNameForLocale(
+  labels: Readonly<Record<string, string>> | undefined,
+  locale: string,
+): string | undefined {
+  const label = labels?.[locale]?.trim();
+  return label && label.length > 0 ? label : undefined;
+}
+
+function databaseOptionLabel(
+  info: ManagementDatabaseInfo,
+  locale: string,
+  mode: NameDisplayMode,
+): string {
+  if (mode === 'name') {
+    return info.name;
+  }
+  return formatDisplayWithUnique(info.name, displayNameForLocale(info.displayName, locale));
 }
 
 /** Minimal Engine connection gate for Data Studio. */
@@ -34,22 +61,36 @@ export function ConnectionPanel(props: ConnectionPanelProps): ReactElement {
   const [token, setToken] = useState(() =>
     getStoredToken(import.meta.env.VITE_MODE_DB_TOKEN ?? ''),
   );
-  const [libraries, setLibraries] = useState<readonly string[]>([]);
+  const [libraries, setLibraries] = useState<readonly ManagementDatabaseInfo[]>([]);
   const [library, setLibrary] = useState(() => getStoredLibrary(''));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [step, setStep] = useState<'credentials' | 'library'>('credentials');
+  const [nameDisplayMode, setNameDisplayMode] = useState<NameDisplayMode>(() =>
+    getStoredNameDisplayMode('display'),
+  );
+
+  const toggleNameDisplayMode = useCallback(() => {
+    setNameDisplayMode((prev) => {
+      const next: NameDisplayMode = prev === 'display' ? 'name' : 'display';
+      persistNameDisplayMode(next);
+      return next;
+    });
+  }, []);
 
   const listLibraries = useCallback(async (): Promise<void> => {
     setBusy(true);
     setErr(null);
     try {
       persistConnection(host, port, token);
-      const db = new ModelDB({ host: host.trim(), port, token: token.trim() });
-      const names = await db.listDatabases();
-      setLibraries(names);
-      if (names.length > 0 && !names.includes(library)) {
-        setLibrary(names[0]!);
+      const infos = await RemoteModelDBClient.listDatabases({
+        host: host.trim(),
+        port,
+        token: token.trim(),
+      });
+      setLibraries(infos);
+      if (infos.length > 0 && !infos.some((info) => info.name === library)) {
+        setLibrary(infos[0]!.name);
       }
       setStep('library');
     } catch (e) {
@@ -117,6 +158,14 @@ export function ConnectionPanel(props: ConnectionPanelProps): ReactElement {
             <option value="zh">中文</option>
             <option value="ja">JA</option>
           </select>
+          <button
+            type="button"
+            className="studio-btn studio-btn--ghost"
+            aria-pressed={nameDisplayMode === 'display'}
+            onClick={toggleNameDisplayMode}
+          >
+            {i18n.t(nameDisplayMode === 'display' ? 'nameModeDisplay' : 'nameModeUnique')}
+          </button>
         </div>
         <p style={{ margin: '0 0 20px', color: '#64748b', fontSize: 13 }}>
           {i18n.t('appSubtitle')}
@@ -170,9 +219,9 @@ export function ConnectionPanel(props: ConnectionPanelProps): ReactElement {
                 value={library}
                 onChange={(e) => setLibrary(e.target.value)}
               >
-                {libraries.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
+                {libraries.map((info) => (
+                  <option key={info.name} value={info.name}>
+                    {databaseOptionLabel(info, i18n.locale, nameDisplayMode)}
                   </option>
                 ))}
               </select>

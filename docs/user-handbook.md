@@ -151,7 +151,39 @@ pnpm test         # test:unit + test:integration（会先 build shared/common/co
 
 ---
 
-## 8. 延伸阅读
+## 8. 数据备份与恢复
+
+`modeldb-server` 支持主动备份、恢复、清除数据与强制重置。备份文件生成在当前 `workspace` 下的 **`modeldb/backups/`**。
+
+```bash
+modeldb-server backup <db-name> --reason manual
+modeldb-server backups [db-name]
+modeldb-server restore <db-name> <backup-file> --yes
+modeldb-server clear-data <db-name> --yes
+modeldb-server force-reset <db-name> --yes
+```
+
+- `restore`、`clear-data`、`force-reset` 会先尽量创建安全备份。
+- `force-reset` 是数据库文件损坏时的后门恢复命令，会重建物理库。
+- 自动备份默认关闭；只有配置 `autoBackup.enabled: true` 时才会按配置定时执行。
+
+自动备份配置示例：
+
+```json
+{
+  "autoBackup": {
+    "enabled": true,
+    "intervalMinutes": 60,
+    "runOnStart": false,
+    "reason": "auto",
+    "databases": ["Test_DB"]
+  }
+}
+```
+
+---
+
+## 9. 延伸阅读
 
 - 根 README：**「运行与配置」**、**「网络服务与远程客户端 SDK」**、**「快速开始」**
 - **[logical-workspace-and-single-file.md](./logical-workspace-and-single-file.md)**：逻辑库与单文件 Vault

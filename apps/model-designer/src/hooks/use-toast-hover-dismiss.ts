@@ -65,7 +65,7 @@ export function useToastHoverDismiss(options: ToastHoverDismissOptions): ToastHo
         return;
       }
       const consumed = Math.min(durationMs, Math.max(0, consumedMsRef.current));
-      el.style.animationName = 'designer-notify-progress-shrink';
+      el.style.animationName = 'mode-ui-toast-progress';
       el.style.animationTimingFunction = 'linear';
       el.style.animationFillMode = 'forwards';
       el.style.animationDuration = `${durationMs}ms`;

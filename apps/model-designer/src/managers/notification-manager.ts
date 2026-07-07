@@ -28,8 +28,8 @@ export interface ActiveToast {
 export type NotificationListener = () => void;
 
 export const TOAST_DURATION_MS = 5200;
-/** Toast 滑出动画时长（与 CSS `designer-notify-toast-out` 一致）。 */
-export const TOAST_EXIT_ANIM_MS = 340;
+/** Matches the shared `mode-ui-toast-out` animation duration. */
+export const TOAST_EXIT_ANIM_MS = 190;
 const MAX_ITEMS = 80;
 
 /**

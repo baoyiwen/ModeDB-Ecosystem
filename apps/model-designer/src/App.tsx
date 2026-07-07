@@ -5,7 +5,7 @@ import { CanvasContainer } from './components/CanvasContainer.js';
 import { NotificationToasts } from './components/NotificationToasts.js';
 import { ConnectionFlow } from './components/ConnectionFlow.js';
 import { EditorChrome } from './components/EditorChrome.js';
-import { DesignerToolbar } from './components/DesignerToolbar.js';
+import { DesignerToolbarWithConfirm } from './components/DesignerToolbar.js';
 import { DesignerChromePage } from './components/base/designer-component.js';
 import { ensureDesignerCatalog } from './bootstrap/designer-storage-init.js';
 import { seedDefaultWorkspaceRecords } from './bootstrap/seed-workspace-rows.js';
@@ -278,7 +278,7 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
                 onSelectModel={this.handleSelectModel}
                 onSelectRelation={this.handleSelectRelation}
               />
-              <DesignerToolbar
+              <DesignerToolbarWithConfirm
                 selectedId={selectedModelId}
                 onSelect={this.handleSelectModel}
                 onDisconnected={this.handleDisconnected}

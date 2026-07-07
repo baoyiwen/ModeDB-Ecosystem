@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from 'react';
+import { useAppConfirm } from '@mode-db/data-ui';
 import { useDesigner } from '../context/designer-context.js';
 import { withBusinessLibrarySession } from '../engine/business-library-session.js';
 import { I18nLocaleRows } from './i18n-locale-rows.js';
@@ -13,6 +14,7 @@ export function InfoPanel(props: {
   readOnly?: boolean;
 }): ReactElement {
   const { i18n, data, config, asyncOps } = useDesigner();
+  const confirm = useAppConfirm();
   const readOnly = props.readOnly ?? false;
   const [, bump] = useState(0);
   useEffect(() => data.subscribe(() => bump((n) => n + 1)), [data]);
@@ -222,7 +224,10 @@ export function InfoPanel(props: {
               return;
             }
             if (
-              !globalThis.confirm(i18n.t('ui', 'dataConfirmClearModel', { name: model.model_name }))
+              !(await confirm({
+                title: i18n.t('ui', 'dataConfirmClearModel', { name: model.model_name }),
+                tone: 'danger',
+              }))
             ) {
               return;
             }

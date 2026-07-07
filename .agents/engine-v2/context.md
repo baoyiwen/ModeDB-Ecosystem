@@ -11,6 +11,12 @@
 3. `shared` 不能依赖 sibling workspace 包。
 4. `sdk` 不能依赖 `core` 或 `server`。
 5. 写请求在 server 侧要经过 `WriteSerializationGate`。
+6. 备份 / 恢复 / 清除是 server management-plane 能力，不属于普通 `EngineOperation`。
+7. 关系名是端点局部唯一，不能作为全局身份。
+8. 关系重命名不应解绑；保存和查询都应保留关系实体语义。
+9. `fieldLabels` / `displayName` 由 designer 写入、server catalog 返回、sdk 透传、data-kit/data-ui 展示。
+10. 显示名模式统一为 `显示名[唯一名]`。
+11. `bindImportLookup` 是导入二阶段关系绑定 op，自关联时需要 `importSide`，直接自环受 `selfLoopPolicy` 控制。
 
 ## AI 首选入口
 
@@ -18,3 +24,6 @@
 - `packages/sdk/src/remote-client.ts`
 - `packages/server/src/request-dispatcher.ts`
 - `packages/core/authoring/engine.ts`
+- `packages/core/src/network/operation-executor.ts`
+- `packages/server/src/backup-manager.ts`
+- `packages/server/src/auto-backup-scheduler.ts`

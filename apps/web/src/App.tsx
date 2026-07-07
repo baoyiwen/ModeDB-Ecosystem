@@ -6,6 +6,7 @@ import {
   type ManagementCatalogResponse,
   type RemoteModelDBClient,
 } from '@mode-db/sdk';
+import { AppConfirmProvider, AppDrawer, useAppConfirm } from '@mode-db/data-ui';
 import { LOCALE_LABEL, type LocaleId } from './i18n/messages';
 import { useI18n } from './i18n/I18nContext';
 import { QueryPanel } from './components/QueryPanel.js';
@@ -74,6 +75,36 @@ function serializeRows(rows: unknown): unknown {
   return rows;
 }
 
+function displayNameForLocale(
+  labels: Readonly<Record<string, string>> | undefined,
+  locale: string,
+): string | undefined {
+  const label = labels?.[locale]?.trim();
+  return label && label.length > 0 ? label : undefined;
+}
+
+function displayWithUnique(uniqueName: string, displayName: string | undefined): string {
+  const label = displayName?.trim();
+  return label && label !== uniqueName ? `${label}[${uniqueName}]` : uniqueName;
+}
+
+function databaseDisplayName(
+  catalog: ManagementCatalogResponse | undefined,
+  database: string,
+  locale: string,
+): string {
+  return displayWithUnique(database, displayNameForLocale(catalog?.displayName, locale));
+}
+
+function modelDisplayName(
+  catalog: ManagementCatalogResponse | undefined,
+  model: string,
+  locale: string,
+): string {
+  const info = catalog?.models.find((m) => m.name === model);
+  return displayWithUnique(model, displayNameForLocale(info?.displayName, locale));
+}
+
 const DEFAULT_INSERT = '[\n  { "_id": "row-1", "name": "Example" }\n]';
 const DEFAULT_ALTER_PATCH = '{\n  "note": { "type": "String", "required": false }\n}';
 
@@ -82,7 +113,9 @@ export function App(): ReactElement {
 
   return (
     <>
-      <PlaygroundApp />
+      <AppConfirmProvider defaultEyebrow="ModeDB Web">
+        <PlaygroundApp />
+      </AppConfirmProvider>
       {route === 'query-manual' ? <QueryManualPage /> : null}
     </>
   );
@@ -90,6 +123,7 @@ export function App(): ReactElement {
 
 function PlaygroundApp(): ReactElement {
   const { t, locale, setLocale } = useI18n();
+  const confirm = useAppConfirm();
 
   const webGpuLabel = (raw: string): string => {
     switch (raw) {
@@ -133,6 +167,7 @@ function PlaygroundApp(): ReactElement {
   const [dropRelationForward, setDropRelationForward] = useState('');
   const [queryReloadToken, setQueryReloadToken] = useState(0);
   const [sessionRestoring, setSessionRestoring] = useState(false);
+  const [mobileDrawer, setMobileDrawer] = useState<'sidebar' | 'result' | null>(null);
   const autoConnectStarted = useRef(false);
 
   useEffect(() => {
@@ -305,7 +340,12 @@ function PlaygroundApp(): ReactElement {
     if (!modelDb || !selectedDb) {
       return;
     }
-    if (!globalThis.confirm(t('db.confirmDelete', { name: selectedDb }))) {
+    if (
+      !(await confirm({
+        title: t('db.confirmDelete', { name: selectedDb }),
+        tone: 'danger',
+      }))
+    ) {
       return;
     }
     setBusy(true);
@@ -322,7 +362,7 @@ function PlaygroundApp(): ReactElement {
     } finally {
       setBusy(false);
     }
-  }, [loadTrees, modelDb, selectedDb, t]);
+  }, [confirm, loadTrees, modelDb, selectedDb, t]);
 
   const runInsert = useCallback(async (): Promise<void> => {
     if (!wire || !selectedModel) {
@@ -372,7 +412,12 @@ function PlaygroundApp(): ReactElement {
     if (!wire || !selectedModel) {
       return;
     }
-    if (!globalThis.confirm(t('schema.confirmDrop', { name: selectedModel }))) {
+    if (
+      !(await confirm({
+        title: t('schema.confirmDrop', { name: selectedModel }),
+        tone: 'danger',
+      }))
+    ) {
       return;
     }
     setBusy(true);
@@ -391,7 +436,7 @@ function PlaygroundApp(): ReactElement {
     } finally {
       setBusy(false);
     }
-  }, [loadTrees, modelDb, selectedDb, selectedModel, t, wire]);
+  }, [confirm, loadTrees, modelDb, selectedDb, selectedModel, t, wire]);
 
   const runDropRelation = useCallback(async (): Promise<void> => {
     if (!wire) {
@@ -423,7 +468,12 @@ function PlaygroundApp(): ReactElement {
       setError(t('error.selectDbModel'));
       return;
     }
-    if (!globalThis.confirm(t('data.confirmClearModel', { name: selectedModel }))) {
+    if (
+      !(await confirm({
+        title: t('data.confirmClearModel', { name: selectedModel }),
+        tone: 'danger',
+      }))
+    ) {
       return;
     }
     setBusy(true);
@@ -437,14 +487,19 @@ function PlaygroundApp(): ReactElement {
     } finally {
       setBusy(false);
     }
-  }, [selectedModel, t, wire]);
+  }, [confirm, selectedModel, t, wire]);
 
   const runClearAllData = useCallback(async (): Promise<void> => {
     if (!wire || !selectedDb) {
       setError(t('ops.selectDb'));
       return;
     }
-    if (!globalThis.confirm(t('data.confirmClearAll', { db: selectedDb }))) {
+    if (
+      !(await confirm({
+        title: t('data.confirmClearAll', { db: selectedDb }),
+        tone: 'danger',
+      }))
+    ) {
       return;
     }
     setBusy(true);
@@ -458,284 +513,520 @@ function PlaygroundApp(): ReactElement {
     } finally {
       setBusy(false);
     }
-  }, [selectedDb, t, wire]);
+  }, [confirm, selectedDb, t, wire]);
+
+  const runCreateBackup = useCallback(async (): Promise<void> => {
+    if (!modelDb || !selectedDb) {
+      setError(t('ops.selectDb'));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      const backup = await modelDb.createBackup(selectedDb, 'manual');
+      setResult({ ok: true, op: 'createBackup', backup });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [modelDb, selectedDb, t]);
+
+  const runRestoreBackup = useCallback(async (): Promise<void> => {
+    if (!modelDb || !selectedDb) {
+      setError(t('ops.selectDb'));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      const backups = await modelDb.listBackups(selectedDb);
+      if (backups.length === 0) {
+        setError(t('backup.empty'));
+        return;
+      }
+      const backupFile = globalThis
+        .prompt(
+          `${t('backup.restorePrompt')}\n${backups
+            .map((b) => `${b.fileName} (${new Date(b.createdAt).toLocaleString()})`)
+            .join('\n')}`,
+          backups[0]?.fileName ?? '',
+        )
+        ?.trim();
+      if (!backupFile) {
+        return;
+      }
+      if (
+        !(await confirm({
+          title: t('backup.confirmRestore', { file: backupFile }),
+          tone: 'danger',
+        }))
+      ) {
+        return;
+      }
+      const out = await modelDb.restoreBackup(selectedDb, backupFile);
+      await loadTrees(modelDb);
+      const nextWire = await modelDb.use(selectedDb);
+      setWire(nextWire);
+      setResult({ op: 'restoreBackup', ...out });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, [confirm, loadTrees, modelDb, selectedDb, t]);
+
+  const runManagementClear = useCallback(
+    async (forceReset: boolean): Promise<void> => {
+      if (!modelDb || !selectedDb) {
+        setError(t('ops.selectDb'));
+        return;
+      }
+      const key = forceReset ? 'backup.confirmForceReset' : 'backup.confirmClear';
+      if (
+        !(await confirm({
+          title: t(key, { db: selectedDb }),
+          tone: 'danger',
+        }))
+      ) {
+        return;
+      }
+      setBusy(true);
+      setError(null);
+      setResult(null);
+      try {
+        const out = await modelDb.clearDatabaseData(selectedDb, { forceReset });
+        await loadTrees(modelDb);
+        const nextWire = await modelDb.use(selectedDb);
+        setWire(nextWire);
+        setResult({ op: forceReset ? 'forceResetDatabase' : 'clearDatabaseData', ...out });
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [confirm, loadTrees, modelDb, selectedDb, t],
+  );
 
   const dbNames = useMemo(() => Object.keys(catalogs).sort(), [catalogs]);
+  const renderResultContent = (): ReactElement => (
+    <>
+      <h2 className="result-header">{t('result.title')}</h2>
+      <div className="result-body">
+        {error && <pre className="err">{error}</pre>}
+        {!error && result !== null && <pre>{JSON.stringify(result, null, 2)}</pre>}
+        {!error && result === null && !busy && <p className="meta">{t('result.empty')}</p>}
+        {busy && <p className="meta">{t('result.loading')}</p>}
+      </div>
+    </>
+  );
 
   return (
-    <div className="app-grid">
-      <aside className="panel sidebar">
-        <h1>{t('app.title')}</h1>
-        <div className="lang-switch">
-          <label htmlFor="locale">{t('app.lang')}</label>
-          <select
-            id="locale"
-            value={locale}
-            onChange={(e) => setLocale(e.target.value as LocaleId)}
-            aria-label={t('app.lang')}
-          >
-            {(Object.keys(LOCALE_LABEL) as LocaleId[]).map((id) => (
-              <option key={id} value={id}>
-                {LOCALE_LABEL[id]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <p className="meta">{t('meta.endpoint', { endpoint, webGpu: webGpuLabel(webGpu) })}</p>
-        {sessionRestoring && !modelDb && <p className="meta">{t('session.restoring')}</p>}
-        {!modelDb && !sessionRestoring && (
-          <>
-            <label htmlFor="host">{t('connect.host')}</label>
-            <input
-              id="host"
-              value={host}
-              onChange={(e) => setHost(e.target.value)}
-              autoComplete="off"
-            />
-            <label htmlFor="port">{t('connect.port')}</label>
-            <input
-              id="port"
-              value={port}
-              onChange={(e) => setPort(e.target.value)}
-              autoComplete="off"
-            />
-            <label htmlFor="token">{t('connect.token')}</label>
-            <input
-              id="token"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              autoComplete="off"
-              type="password"
-            />
-            <div className="actions">
-              <button type="button" disabled={busy} onClick={() => void connect()}>
-                {t('connect.button')}
-              </button>
-            </div>
-          </>
-        )}
-        {modelDb && (
-          <>
-            <p className="meta">{t('session.connected')}</p>
-            <div className="actions">
-              <button type="button" disabled={busy} onClick={() => void loadTrees(modelDb)}>
-                {t('session.refreshTree')}
-              </button>
-              <button type="button" disabled={busy} onClick={disconnect}>
-                {t('session.disconnect')}
-              </button>
-            </div>
-            <div className="tree">
-              {dbNames.length === 0 && <p className="meta">{t('session.noDatabases')}</p>}
-              {dbNames.map((db) => {
-                const cat = catalogs[db];
-                return (
-                  <div key={db} className="tree-db">
-                    <button
-                      type="button"
-                      className="tree-db-head"
-                      onClick={() => {
-                        setSelectedDb(db);
-                        setSelectedModel(null);
-                      }}
-                    >
-                      <strong>{db}</strong>
-                    </button>
-                    <ul className="model-list">
-                      <li className="meta">{t('tree.models')}</li>
-                      {(cat?.models ?? []).map((m: ManagementCatalogModelInfo) => (
-                        <li key={m.name}>
-                          <button
-                            type="button"
-                            className={selectedModel === m.name && selectedDb === db ? 'sel' : ''}
-                            onClick={() => {
-                              setSelectedDb(db);
-                              setSelectedModel(m.name);
-                            }}
-                          >
-                            {m.name}
-                            {m.parentId ? (
-                              <span className="meta">
-                                {t('tree.extends')}
-                                {m.parentId}
-                              </span>
-                            ) : null}
-                          </button>
-                        </li>
-                      ))}
-                      <li className="meta">{t('tree.relations')}</li>
-                      {(cat?.relations ?? []).map((r: ManagementCatalogRelationInfo) => (
-                        <li key={`${r.forward}-${r.source}-${r.target}`}>
-                          <button
-                            type="button"
-                            className="model-list-relation"
-                            onClick={() => {
-                              setSelectedDb(db);
-                              if (selectedModel) {
-                                try {
-                                  const key = `${QUERY_FORM_LS_PREFIX}${selectedModel}`;
-                                  const raw = localStorage.getItem(key);
-                                  const prev = raw
-                                    ? ({
-                                        ...DEFAULT_QUERY_FORM,
-                                        ...JSON.parse(raw),
-                                      } as typeof DEFAULT_QUERY_FORM)
-                                    : { ...DEFAULT_QUERY_FORM };
-                                  localStorage.setItem(
-                                    key,
-                                    JSON.stringify({
-                                      ...prev,
-                                      relationForward: r.forward,
-                                      hopKind: 'relate',
-                                    }),
-                                  );
-                                  setQueryReloadToken((n) => n + 1);
-                                } catch {
-                                  /* ignore */
+    <div className="web-shell">
+      <div className="web-mobile-panel-actions" aria-label="Panel shortcuts">
+        <button type="button" onClick={() => setMobileDrawer('sidebar')}>
+          {t('app.title')}
+        </button>
+        <button type="button" onClick={() => setMobileDrawer('result')}>
+          {t('result.title')}
+        </button>
+      </div>
+      <div className="app-grid">
+        <aside className="panel sidebar">
+          <h1>{t('app.title')}</h1>
+          <div className="lang-switch">
+            <label htmlFor="locale">{t('app.lang')}</label>
+            <select
+              id="locale"
+              value={locale}
+              onChange={(e) => setLocale(e.target.value as LocaleId)}
+              aria-label={t('app.lang')}
+            >
+              {(Object.keys(LOCALE_LABEL) as LocaleId[]).map((id) => (
+                <option key={id} value={id}>
+                  {LOCALE_LABEL[id]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="meta">{t('meta.endpoint', { endpoint, webGpu: webGpuLabel(webGpu) })}</p>
+          {sessionRestoring && !modelDb && <p className="meta">{t('session.restoring')}</p>}
+          {!modelDb && !sessionRestoring && (
+            <>
+              <label htmlFor="host">{t('connect.host')}</label>
+              <input
+                id="host"
+                value={host}
+                onChange={(e) => setHost(e.target.value)}
+                autoComplete="off"
+              />
+              <label htmlFor="port">{t('connect.port')}</label>
+              <input
+                id="port"
+                value={port}
+                onChange={(e) => setPort(e.target.value)}
+                autoComplete="off"
+              />
+              <label htmlFor="token">{t('connect.token')}</label>
+              <input
+                id="token"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                autoComplete="off"
+                type="password"
+              />
+              <div className="actions">
+                <button type="button" disabled={busy} onClick={() => void connect()}>
+                  {t('connect.button')}
+                </button>
+              </div>
+            </>
+          )}
+          {modelDb && (
+            <>
+              <p className="meta">{t('session.connected')}</p>
+              <div className="actions">
+                <button type="button" disabled={busy} onClick={() => void loadTrees(modelDb)}>
+                  {t('session.refreshTree')}
+                </button>
+                <button type="button" disabled={busy} onClick={disconnect}>
+                  {t('session.disconnect')}
+                </button>
+              </div>
+              <div className="tree">
+                {dbNames.length === 0 && <p className="meta">{t('session.noDatabases')}</p>}
+                {dbNames.map((db) => {
+                  const cat = catalogs[db];
+                  const dbLabel = databaseDisplayName(cat, db, locale);
+                  return (
+                    <div key={db} className="tree-db">
+                      <button
+                        type="button"
+                        className="tree-db-head"
+                        onClick={() => {
+                          setSelectedDb(db);
+                          setSelectedModel(null);
+                        }}
+                      >
+                        <strong>{dbLabel}</strong>
+                      </button>
+                      <ul className="model-list">
+                        <li className="meta">{t('tree.models')}</li>
+                        {(cat?.models ?? []).map((m: ManagementCatalogModelInfo) => (
+                          <li key={m.name}>
+                            <button
+                              type="button"
+                              className={selectedModel === m.name && selectedDb === db ? 'sel' : ''}
+                              onClick={() => {
+                                setSelectedDb(db);
+                                setSelectedModel(m.name);
+                              }}
+                            >
+                              {modelDisplayName(cat, m.name, locale)}
+                              {m.parentId ? (
+                                <span className="meta">
+                                  {t('tree.extends')}
+                                  {modelDisplayName(cat, m.parentId, locale)}
+                                </span>
+                              ) : null}
+                            </button>
+                          </li>
+                        ))}
+                        <li className="meta">{t('tree.relations')}</li>
+                        {(cat?.relations ?? []).map((r: ManagementCatalogRelationInfo) => (
+                          <li key={`${r.forward}-${r.source}-${r.target}`}>
+                            <button
+                              type="button"
+                              className="model-list-relation"
+                              onClick={() => {
+                                setSelectedDb(db);
+                                if (selectedModel) {
+                                  try {
+                                    const key = `${QUERY_FORM_LS_PREFIX}${selectedModel}`;
+                                    const raw = localStorage.getItem(key);
+                                    const prev = raw
+                                      ? ({
+                                          ...DEFAULT_QUERY_FORM,
+                                          ...JSON.parse(raw),
+                                        } as typeof DEFAULT_QUERY_FORM)
+                                      : { ...DEFAULT_QUERY_FORM };
+                                    localStorage.setItem(
+                                      key,
+                                      JSON.stringify({
+                                        ...prev,
+                                        relationForward: r.forward,
+                                        hopKind: 'relate',
+                                      }),
+                                    );
+                                    setQueryReloadToken((n) => n + 1);
+                                  } catch {
+                                    /* ignore */
+                                  }
                                 }
-                              }
-                            }}
-                          >
-                            <code>
-                              {r.forward}: {r.source} → {r.target}
-                            </code>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-            <label htmlFor="newdb">{t('db.newName')}</label>
-            <input
-              id="newdb"
-              value={newDbName}
-              onChange={(e) => setNewDbName(e.target.value)}
-              placeholder="my-db"
-            />
-            <div className="actions">
-              <button type="button" disabled={busy} onClick={() => void createDb()}>
-                {t('db.create')}
-              </button>
-              <button type="button" disabled={busy || !selectedDb} onClick={() => void removeDb()}>
-                {t('db.deleteSelected')}
-              </button>
-            </div>
-          </>
-        )}
-      </aside>
+                              }}
+                            >
+                              <code>
+                                {r.forward}: {modelDisplayName(cat, r.source, locale)} {'->'}{' '}
+                                {modelDisplayName(cat, r.target, locale)}
+                              </code>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+              <label htmlFor="newdb">{t('db.newName')}</label>
+              <input
+                id="newdb"
+                value={newDbName}
+                onChange={(e) => setNewDbName(e.target.value)}
+                placeholder="my-db"
+              />
+              <div className="actions">
+                <button type="button" disabled={busy} onClick={() => void createDb()}>
+                  {t('db.create')}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || !selectedDb}
+                  onClick={() => void removeDb()}
+                >
+                  {t('db.deleteSelected')}
+                </button>
+              </div>
+            </>
+          )}
+        </aside>
 
-      <section className="panel center">
-        <h2>{t('ops.title')}</h2>
-        {!modelDb && <p className="meta">{t('ops.connectFirst')}</p>}
-        {modelDb && (
-          <>
-            <p className="meta">
-              {selectedDb
-                ? selectedModel
-                  ? t('ops.selectionDbModel', { db: selectedDb, model: selectedModel })
-                  : t('ops.selectionDb', { db: selectedDb })
-                : t('ops.selectDb')}
-            </p>
-            <p className="hint">{t('ops.hint')}</p>
+        <section className="panel center">
+          <h2>{t('ops.title')}</h2>
+          {!modelDb && <p className="meta">{t('ops.connectFirst')}</p>}
+          {modelDb && (
+            <>
+              <p className="meta">
+                {selectedDb
+                  ? selectedModel
+                    ? t('ops.selectionDbModel', {
+                        db: databaseDisplayName(catalogs[selectedDb], selectedDb, locale),
+                        model: modelDisplayName(catalogs[selectedDb], selectedModel, locale),
+                      })
+                    : t('ops.selectionDb', {
+                        db: databaseDisplayName(catalogs[selectedDb], selectedDb, locale),
+                      })
+                  : t('ops.selectDb')}
+              </p>
+              <p className="hint">{t('ops.hint')}</p>
 
-            <QueryPanel
-              wire={wire}
-              selectedModel={selectedModel}
-              busy={busy}
-              serializeRows={serializeRows}
-              onRunResult={setResult}
-              onError={setError}
-              onBusy={setBusy}
-              queryReloadToken={queryReloadToken}
-            />
+              <QueryPanel
+                wire={wire}
+                selectedModel={selectedModel}
+                busy={busy}
+                serializeRows={serializeRows}
+                onRunResult={setResult}
+                onError={setError}
+                onBusy={setBusy}
+                queryReloadToken={queryReloadToken}
+              />
 
-            <h3>{t('insert.title')}</h3>
-            <textarea
-              className="code"
-              value={insertJson}
-              onChange={(e) => setInsertJson(e.target.value)}
-              rows={6}
-              spellCheck={false}
-            />
-            <div className="actions">
-              <button
-                type="button"
-                disabled={busy || !wire || !selectedModel}
-                onClick={() => void runInsert()}
-              >
-                {t('insert.button')}
-              </button>
-            </div>
+              <h3>{t('insert.title')}</h3>
+              <textarea
+                className="code"
+                value={insertJson}
+                onChange={(e) => setInsertJson(e.target.value)}
+                rows={6}
+                spellCheck={false}
+              />
+              <div className="actions">
+                <button
+                  type="button"
+                  disabled={busy || !wire || !selectedModel}
+                  onClick={() => void runInsert()}
+                >
+                  {t('insert.button')}
+                </button>
+              </div>
 
-            <h3>{t('schema.title')}</h3>
-            <textarea
-              className="code"
-              value={alterPatchJson}
-              onChange={(e) => setAlterPatchJson(e.target.value)}
-              rows={5}
-              spellCheck={false}
-            />
-            <div className="actions">
-              <button
-                type="button"
-                disabled={busy || !wire || !selectedModel}
-                onClick={() => void runAlterPatch()}
-              >
-                {t('schema.applyPatch')}
-              </button>
-              <button
-                type="button"
-                disabled={busy || !wire || !selectedModel}
-                onClick={() => void runDropModel()}
-              >
-                {t('schema.dropModel')}
-              </button>
-            </div>
+              <h3>{t('schema.title')}</h3>
+              <textarea
+                className="code"
+                value={alterPatchJson}
+                onChange={(e) => setAlterPatchJson(e.target.value)}
+                rows={5}
+                spellCheck={false}
+              />
+              <div className="actions">
+                <button
+                  type="button"
+                  disabled={busy || !wire || !selectedModel}
+                  onClick={() => void runAlterPatch()}
+                >
+                  {t('schema.applyPatch')}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || !wire || !selectedModel}
+                  onClick={() => void runDropModel()}
+                >
+                  {t('schema.dropModel')}
+                </button>
+              </div>
 
-            <h3>{t('rel.title')}</h3>
-            <input
-              value={dropRelationForward}
-              onChange={(e) => setDropRelationForward(e.target.value)}
-              placeholder={t('rel.placeholder')}
-            />
-            <div className="actions">
-              <button type="button" disabled={busy || !wire} onClick={() => void runDropRelation()}>
-                {t('rel.drop')}
-              </button>
-            </div>
+              <h3>{t('rel.title')}</h3>
+              <input
+                value={dropRelationForward}
+                onChange={(e) => setDropRelationForward(e.target.value)}
+                placeholder={t('rel.placeholder')}
+              />
+              <div className="actions">
+                <button
+                  type="button"
+                  disabled={busy || !wire}
+                  onClick={() => void runDropRelation()}
+                >
+                  {t('rel.drop')}
+                </button>
+              </div>
 
-            <h3>{t('data.title')}</h3>
-            <div className="actions">
-              <button
-                type="button"
-                disabled={busy || !wire || !selectedModel}
-                onClick={() => void runClearModelData()}
-              >
-                {t('data.clearModel')}
-              </button>
-              <button
-                type="button"
-                disabled={busy || !wire || !selectedDb}
-                onClick={() => void runClearAllData()}
-              >
-                {t('data.clearAll')}
-              </button>
-            </div>
-          </>
-        )}
-      </section>
+              <h3>{t('data.title')}</h3>
+              <div className="actions">
+                <button
+                  type="button"
+                  disabled={busy || !wire || !selectedModel}
+                  onClick={() => void runClearModelData()}
+                >
+                  {t('data.clearModel')}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || !wire || !selectedDb}
+                  onClick={() => void runClearAllData()}
+                >
+                  {t('data.clearAll')}
+                </button>
+              </div>
 
-      <main className="result">
-        <h2 className="result-header">{t('result.title')}</h2>
-        <div className="result-body">
-          {error && <pre className="err">{error}</pre>}
-          {!error && result !== null && <pre>{JSON.stringify(result, null, 2)}</pre>}
-          {!error && result === null && !busy && <p className="meta">{t('result.empty')}</p>}
-          {busy && <p className="meta">{t('result.loading')}</p>}
+              <h3>{t('backup.title')}</h3>
+              <p className="hint">{t('backup.hint')}</p>
+              <div className="actions">
+                <button
+                  type="button"
+                  disabled={busy || !modelDb || !selectedDb}
+                  onClick={() => void runCreateBackup()}
+                >
+                  {t('backup.create')}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || !modelDb || !selectedDb}
+                  onClick={() => void runRestoreBackup()}
+                >
+                  {t('backup.restore')}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || !modelDb || !selectedDb}
+                  onClick={() => void runManagementClear(false)}
+                >
+                  {t('backup.clear')}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || !modelDb || !selectedDb}
+                  onClick={() => void runManagementClear(true)}
+                >
+                  {t('backup.forceReset')}
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+
+        <main className="result">{renderResultContent()}</main>
+      </div>
+
+      <AppDrawer
+        open={mobileDrawer === 'sidebar'}
+        title={t('app.title')}
+        eyebrow="ModeDB Web"
+        side="left"
+        width={360}
+        closeLabel="Close"
+        onClose={() => setMobileDrawer(null)}
+        className="web-app-drawer"
+        bodyClassName="web-app-drawer-body"
+        labelledById="web-sidebar-drawer-title"
+        unmountOnClose
+      >
+        <div className="web-drawer-summary">
+          <p className="meta">{t('meta.endpoint', { endpoint, webGpu: webGpuLabel(webGpu) })}</p>
+          {!modelDb ? <p className="meta">{t('ops.connectFirst')}</p> : null}
+          {modelDb ? (
+            <>
+              <p className="meta">{t('session.connected')}</p>
+              <div className="tree">
+                {dbNames.length === 0 && <p className="meta">{t('session.noDatabases')}</p>}
+                {dbNames.map((db) => {
+                  const cat = catalogs[db];
+                  return (
+                    <div key={db} className="tree-db">
+                      <button
+                        type="button"
+                        className="tree-db-head"
+                        onClick={() => {
+                          setSelectedDb(db);
+                          setSelectedModel(null);
+                          setMobileDrawer(null);
+                        }}
+                      >
+                        <strong>{databaseDisplayName(cat, db, locale)}</strong>
+                      </button>
+                      <ul className="model-list">
+                        <li className="meta">{t('tree.models')}</li>
+                        {(cat?.models ?? []).map((m: ManagementCatalogModelInfo) => (
+                          <li key={m.name}>
+                            <button
+                              type="button"
+                              className={selectedModel === m.name && selectedDb === db ? 'sel' : ''}
+                              onClick={() => {
+                                setSelectedDb(db);
+                                setSelectedModel(m.name);
+                                setMobileDrawer(null);
+                              }}
+                            >
+                              {modelDisplayName(cat, m.name, locale)}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
         </div>
-      </main>
+      </AppDrawer>
+
+      <AppDrawer
+        open={mobileDrawer === 'result'}
+        title={t('result.title')}
+        eyebrow="ModeDB Web"
+        side="right"
+        width={520}
+        closeLabel="Close"
+        onClose={() => setMobileDrawer(null)}
+        className="web-app-drawer"
+        bodyClassName="web-app-drawer-body"
+        labelledById="web-result-drawer-title"
+        unmountOnClose
+      >
+        <div className="result result--drawer">{renderResultContent()}</div>
+      </AppDrawer>
     </div>
   );
 }

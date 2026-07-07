@@ -9,6 +9,7 @@
   "pushFailed": "エンジンへグラフをプッシュできませんでした",
   "pullFailed": "エンジンからグラフをプルできませんでした",
   "clearDataFailed": "エンジン上の行データを消去できませんでした",
+  "databaseManagementFailed": "データベース管理操作に失敗しました",
   "bootstrapFailed": "接続済みですがデザイナーカタログの初期化に失敗しました",
   "invalidJson": "metadata の JSON が無効です",
   "libraryDuplicateCode": "同じ一意 code のライブラリが既に存在します。",

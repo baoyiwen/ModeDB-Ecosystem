@@ -104,3 +104,20 @@ pnpm run build:server
 - 进程内脚本统一走 core
 - 协议类自动化尽量走 `EngineOperation`
 - 每次改动协议后同步验证 `shared + server + sdk`
+- 展示名称统一看当前语言 `displayName` / `fieldLabels`，显示为 `显示名[唯一名]`
+- 关系查询要同时验证正向和逆向
+- 自关联直接自环默认关闭，需要显式开启 `selfLoopPolicy: 'allow'`
+
+## 8. 服务端备份与恢复
+
+备份、恢复、清除数据、强制重置是 `@mode-db/server` 的 management-plane 能力，不属于普通 `EngineOperation`。
+
+```bash
+modeldb-server backup <db-name>
+modeldb-server backups [db-name]
+modeldb-server restore <db-name> <backup-file> --yes
+modeldb-server clear-data <db-name> --yes
+modeldb-server force-reset <db-name> --yes
+```
+
+自动备份通过 `modeldb.config.json` 的 `autoBackup` 配置启用；默认关闭。备份文件位于 `<workspace>/modeldb/backups/`。

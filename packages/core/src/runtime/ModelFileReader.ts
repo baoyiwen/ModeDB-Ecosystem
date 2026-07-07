@@ -1,7 +1,24 @@
 import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
 import type { ModelSchema, ModelRecord, DataReader, PathResolver } from '@mode-db/common';
-import { ModelNotRegisteredError, FileIOError, parseMldLine } from '@mode-db/common';
+import {
+  ModelNotRegisteredError,
+  FileIOError,
+  isDeletedRecord,
+  parseMldLine,
+} from '@mode-db/common';
+
+function compactModelRecords(records: readonly ModelRecord[]): ModelRecord[] {
+  const byId = new Map<string, ModelRecord>();
+  const order: string[] = [];
+  for (const record of records) {
+    if (!byId.has(record._id)) {
+      order.push(record._id);
+    }
+    byId.set(record._id, record);
+  }
+  return order.map((id) => byId.get(id)!).filter((record) => !isDeletedRecord(record));
+}
 
 /**
  * Read-only `.mld` access for the client runtime (no writes, no mkdir).
@@ -48,7 +65,7 @@ export class ModelFileReader implements DataReader {
       throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, { cause: err });
     }
 
-    return results;
+    return compactModelRecords(results);
   }
 
   async scanModelRecords(
@@ -56,31 +73,9 @@ export class ModelFileReader implements DataReader {
     visitor: (record: ModelRecord) => void | Promise<void>,
   ): Promise<void> {
     this.resolveSchema(modelName);
-    const filePath = this.paths.modelDataPath(modelName);
-
-    let stream: ReturnType<typeof createReadStream> | undefined;
-    try {
-      stream = createReadStream(filePath, 'utf-8');
-    } catch (err) {
-      throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
-    }
-
-    const rl = createInterface({ input: stream, crlfDelay: Infinity });
-
-    try {
-      for await (const line of rl) {
-        const trimmed = line.trim();
-        const parsed = parseMldLine(trimmed);
-        if (!parsed || parsed.kind === 'header') {
-          continue;
-        }
-        await visitor(parsed.record);
-      }
-    } catch (err) {
-      if (isNodeError(err) && err.code === 'ENOENT') {
-        return;
-      }
-      throw new FileIOError(`Failed to scan records from "${modelName}"`, filePath, { cause: err });
+    const rows = await this.getAll(modelName);
+    for (const row of rows) {
+      await visitor(row);
     }
   }
 
@@ -91,45 +86,10 @@ export class ModelFileReader implements DataReader {
       return [];
     }
 
-    const target = new Set(ids);
-    const results: ModelRecord[] = [];
-    const filePath = this.paths.modelDataPath(modelName);
-
-    let stream: ReturnType<typeof createReadStream> | undefined;
-    try {
-      stream = createReadStream(filePath, 'utf-8');
-    } catch (err) {
-      throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
-    }
-
-    const rl = createInterface({ input: stream, crlfDelay: Infinity });
-
-    try {
-      for await (const line of rl) {
-        if (target.size === 0) {
-          break;
-        }
-
-        const trimmed = line.trim();
-        const parsed = parseMldLine(trimmed);
-        if (!parsed || parsed.kind === 'header') {
-          continue;
-        }
-
-        const record = parsed.record;
-        if (target.has(record._id)) {
-          results.push(record);
-          target.delete(record._id);
-        }
-      }
-    } catch (err) {
-      if (isNodeError(err) && err.code === 'ENOENT') {
-        return [];
-      }
-      throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, { cause: err });
-    }
-
-    return results;
+    const byId = new Map((await this.getAll(modelName)).map((record) => [record._id, record]));
+    return ids
+      .map((id) => byId.get(id))
+      .filter((record): record is ModelRecord => record !== undefined);
   }
 
   async findFirstByFieldEq(
@@ -138,38 +98,9 @@ export class ModelFileReader implements DataReader {
     value: unknown,
   ): Promise<ModelRecord | undefined> {
     this.resolveSchema(modelName);
-    const filePath = this.paths.modelDataPath(modelName);
-
-    let stream: ReturnType<typeof createReadStream> | undefined;
-    try {
-      stream = createReadStream(filePath, 'utf-8');
-    } catch (err) {
-      throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
-    }
-
-    const rl = createInterface({ input: stream, crlfDelay: Infinity });
-
-    try {
-      for await (const line of rl) {
-        const trimmed = line.trim();
-        const parsed = parseMldLine(trimmed);
-        if (!parsed || parsed.kind === 'header') {
-          continue;
-        }
-        const record = parsed.record;
-        const v = (record as Record<string, unknown>)[field];
-        if (v === value) {
-          return record;
-        }
-      }
-    } catch (err) {
-      if (isNodeError(err) && err.code === 'ENOENT') {
-        return undefined;
-      }
-      throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, { cause: err });
-    }
-
-    return undefined;
+    return (await this.getAll(modelName)).find(
+      (record) => (record as Record<string, unknown>)[field] === value,
+    );
   }
 
   private resolveSchema(modelName: string): ModelSchema {

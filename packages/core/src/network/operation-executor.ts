@@ -83,6 +83,30 @@ function findRelationByLabels(
   return rel;
 }
 
+function findRelationByLabelsAndEndpoints(
+  engine: AuthoringEngine,
+  forward: string,
+  reverse: string,
+  modelA: string,
+  modelB: string,
+): RelationDefinition {
+  const rel = engine.registry
+    .getRelations()
+    .find(
+      (r) =>
+        r.forward === forward &&
+        r.reverse === reverse &&
+        (r.source === modelA || r.target === modelA) &&
+        (r.source === modelB || r.target === modelB),
+    );
+  if (!rel) {
+    throw new Error(
+      `Relation { forward: "${forward}", reverse: "${reverse}" } for endpoints "${modelA}" and "${modelB}" not found.`,
+    );
+  }
+  return rel;
+}
+
 function assertRegistrationOrder(
   rel: RelationDefinition,
   srcModel: string,
@@ -95,6 +119,10 @@ function assertRegistrationOrder(
         `(got ${srcModel} -> ${tgtModel}).`,
     );
   }
+}
+
+function relationAllowsPair(rel: RelationDefinition, sourceId: string, targetId: string): boolean {
+  return sourceId !== targetId || rel.selfLoopPolicy === 'allow';
 }
 
 async function executeQueryOperation(
@@ -174,6 +202,44 @@ export async function executeDatabaseOperation(
   if (op.op === 'insertMany') {
     if (op.rows.length > MAX_INSERT_MANY_ROWS) {
       throw new Error(`insertMany: at most ${MAX_INSERT_MANY_ROWS} rows per operation.`);
+    }
+    if (op.upsert?.matchFields?.length) {
+      const result = await engine.upsertMany(op.model, op.rows, op.upsert.matchFields, {
+        sync: op.sync ?? true,
+        updateExisting: op.upsert.updateExisting ?? true,
+      });
+      await flush();
+      const report = result.report;
+      const records =
+        op.returning === true
+          ? report.succeeded
+              .map((r) => r.data)
+              .filter((d): d is ModelRecord => d !== undefined)
+              .map((d) => d as unknown as Record<string, unknown>)
+          : undefined;
+      const rowFailures =
+        report.failureCount > 0
+          ? report.failed.map((r) => ({
+              index: r.index,
+              diagnostics: r.diagnostics.map((d) => ({
+                code: d.code,
+                severity: d.severity,
+                message: d.message,
+              })),
+            }))
+          : undefined;
+      return {
+        kind: 'mutation',
+        op: 'insertMany',
+        model: op.model,
+        record: null,
+        ...(records ? { records } : {}),
+        successCount: report.successCount,
+        failureCount: report.failureCount,
+        insertedCount: result.insertedCount,
+        updatedCount: result.updatedCount,
+        ...(rowFailures ? { rowFailures } : {}),
+      };
     }
     const report = await engine.model(op.model).insertMany(op.rows);
     await flush();
@@ -289,7 +355,24 @@ export async function executeDatabaseOperation(
   }
 
   if (op.op === 'dropRelation') {
-    await engine.dropRelation(op.relation);
+    const rel =
+      op.source && op.target && op.reverse
+        ? findRelationByLabelsAndEndpoints(engine, op.relation, op.reverse, op.source, op.target)
+        : undefined;
+    if (rel) {
+      assertRegistrationOrder(rel, op.source!, op.target!, 'dropRelation');
+      await engine.dropRelationDefinition(rel);
+    } else {
+      const matches = engine.registry
+        .getRelations()
+        .filter((r) => r.forward === op.relation || r.reverse === op.relation);
+      if (matches.length > 1) {
+        throw new Error(
+          `dropRelation: relation label "${op.relation}" is ambiguous; provide source, target and reverse.`,
+        );
+      }
+      await engine.dropRelation(op.relation);
+    }
     EngineLogger.instance.info(
       `[OP][META] dropRelation atlas=${atlas} relation=${op.relation}`,
       undefined,
@@ -344,7 +427,15 @@ export async function executeDatabaseOperation(
           r.reverse === op.reverse,
       );
     if (!exists) {
-      engine.registerRelation(op.source, op.target, op.forward, op.reverse, op.logic);
+      engine.registerRelation(
+        op.source,
+        op.target,
+        op.forward,
+        op.reverse,
+        op.logic,
+        null,
+        op.selfLoopPolicy ?? 'deny',
+      );
     }
     await flush();
     EngineLogger.instance.info(
@@ -406,6 +497,7 @@ export async function executeDatabaseOperation(
         r.reverse,
         r.logic ?? null,
         r.matchOn ? (r.matchOn as MatchPredicate) : null,
+        r.selfLoopPolicy ?? 'deny',
       );
       createdRelations.push(r.forward);
     }
@@ -443,7 +535,13 @@ export async function executeDatabaseOperation(
   }
 
   if (op.op === 'bindImportLookup') {
-    const rel = findRelationByLabels(engine, op.forward, op.reverse);
+    const rel = findRelationByLabelsAndEndpoints(
+      engine,
+      op.forward,
+      op.reverse,
+      op.importModel,
+      op.peerModel,
+    );
     if (op.importModel !== rel.source && op.importModel !== rel.target) {
       throw new Error(
         `bindImportLookup: importModel "${op.importModel}" is not an endpoint of relation "${op.forward}".`,
@@ -494,6 +592,10 @@ export async function executeDatabaseOperation(
         skippedCount += 1;
         continue;
       }
+      if (isSelfRelation && peerId === pair.importedId && rel.selfLoopPolicy !== 'allow') {
+        skippedCount += 1;
+        continue;
+      }
       const importedAsSource = isSelfRelation
         ? importSide === 'source'
         : op.importModel === rel.source;
@@ -507,7 +609,7 @@ export async function executeDatabaseOperation(
     let pairsCount = 0;
     if (manualPairs.length > 0) {
       const before = await engine.indexer.getStats(rel);
-      await engine.bind(op.forward, 'MANUAL', { pairs: manualPairs });
+      await engine.indexer.bind(rel, 'MANUAL', [], [], { pairs: manualPairs });
       await flush();
       const after = await engine.indexer.getStats(rel);
       pairsCount = Math.max(0, after.totalLinks - before.totalLinks);
@@ -606,6 +708,9 @@ export async function executeDatabaseOperation(
       pairsCount = srcAll.length * tgtAll.length;
       outer: for (const s of srcAll) {
         for (const t of tgtAll) {
+          if (!relationAllowsPair(rel, s._id, t._id)) {
+            continue;
+          }
           if (sample.length >= cap) {
             break outer;
           }
@@ -622,12 +727,18 @@ export async function executeDatabaseOperation(
         for (const t of tgtAll) {
           const tv = (t as Record<string, unknown>)[pred.targetField];
           if (sv === tv) {
+            if (!relationAllowsPair(rel, s._id, t._id)) {
+              continue;
+            }
             push(s._id, t._id);
           }
         }
       }
     } else {
       for (const [s, t] of op.pairs ?? []) {
+        if (!relationAllowsPair(rel, s, t)) {
+          continue;
+        }
         push(s, t);
       }
     }
@@ -647,11 +758,30 @@ export async function executeDatabaseOperation(
   }
 
   if (op.op === 'updateRelationLogic') {
-    engine.updateRelationLogic(
-      op.forward,
-      op.logic as RelationLogic,
-      op.matchOn ? (op.matchOn as MatchPredicate) : undefined,
-    );
+    if (op.source && op.target && op.reverse) {
+      const rel = findRelationByLabelsAndEndpoints(
+        engine,
+        op.forward,
+        op.reverse,
+        op.source,
+        op.target,
+      );
+      assertRegistrationOrder(rel, op.source, op.target, 'updateRelationLogic');
+      rel.logic = op.logic as RelationLogic;
+      if (op.matchOn !== undefined) {
+        rel.matchOn = op.matchOn as MatchPredicate;
+      }
+      if (op.selfLoopPolicy !== undefined) {
+        rel.selfLoopPolicy = op.selfLoopPolicy;
+      }
+    } else {
+      engine.updateRelationLogic(
+        op.forward,
+        op.logic as RelationLogic,
+        op.matchOn ? (op.matchOn as MatchPredicate) : undefined,
+        op.selfLoopPolicy,
+      );
+    }
     await flush();
     EngineLogger.instance.info(
       `[OP][META] updateRelationLogic atlas=${atlas} forward=${op.forward} logic=${op.logic}`,

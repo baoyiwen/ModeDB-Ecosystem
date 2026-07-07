@@ -99,6 +99,9 @@ importers:
 
   apps/model-designer:
     dependencies:
+      '@mode-db/data-ui':
+        specifier: workspace:*
+        version: link:../../packages/data-ui
       '@mode-db/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -127,6 +130,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@mode-db/data-ui':
+        specifier: workspace:*
+        version: link:../../packages/data-ui
       '@mode-db/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk

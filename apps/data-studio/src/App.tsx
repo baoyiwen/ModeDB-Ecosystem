@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
-import type { ManagementCatalogResponse, RemoteModelDBClient } from '@mode-db/sdk';
+import {
+  ModelDB,
+  RemoteModelDBClient,
+  type ManagementBackupInfo,
+  type ManagementCatalogResponse,
+} from '@mode-db/sdk';
+import { AppConfirmProvider, useAppConfirm } from '@mode-db/data-ui';
 import { ConnectionPanel } from './components/ConnectionPanel.js';
 import { DataWorkspace } from './components/DataWorkspace.js';
 import { StudioToasts } from './components/StudioToasts.js';
@@ -18,6 +24,14 @@ type BootPhase = 'restoring' | 'ready';
  * Data Studio — component library playground with live Engine connection.
  */
 export function App(): ReactElement {
+  return (
+    <AppConfirmProvider defaultEyebrow="Data Studio">
+      <StudioApp />
+    </AppConfirmProvider>
+  );
+}
+
+function StudioApp(): ReactElement {
   const clientRef = useRef<RemoteModelDBClient | null>(null);
   const [boot, setBoot] = useState<BootPhase>('restoring');
   const [client, setClient] = useState<RemoteModelDBClient | null>(null);
@@ -26,6 +40,7 @@ export function App(): ReactElement {
     catalog: ManagementCatalogResponse;
   } | null>(null);
   const { i18n, notify } = useStudio();
+  const confirm = useAppConfirm();
   useStudioLocale();
   const i18nRef = useRef(i18n);
   const notifyRef = useRef(notify);
@@ -126,6 +141,164 @@ export function App(): ReactElement {
     clearActiveSession();
   }, []);
 
+  const handleCatalogRefresh = useCallback(async (): Promise<ManagementCatalogResponse> => {
+    if (!session) {
+      throw new Error('No active library session.');
+    }
+    const stored = getRestorableSession();
+    if (!stored) {
+      throw new Error('No stored connection for catalog refresh.');
+    }
+    const db = new ModelDB({
+      host: stored.host.trim(),
+      port: stored.port,
+      token: stored.token.trim(),
+    });
+    const [catalog, databases] = await Promise.all([
+      db.getDatabaseCatalog(session.library),
+      RemoteModelDBClient.listDatabases({
+        host: stored.host.trim(),
+        port: stored.port,
+        token: stored.token.trim(),
+      }),
+    ]);
+    const databaseInfo = databases.find((info) => info.name === session.library);
+    const nextCatalog = {
+      ...catalog,
+      displayName: catalog.displayName ?? databaseInfo?.displayName,
+    };
+    setSession((prev) => (prev ? { ...prev, catalog: nextCatalog } : prev));
+    persistActiveSession();
+    return nextCatalog;
+  }, [session]);
+
+  const reopenCurrentSession = useCallback(async (): Promise<void> => {
+    const stored = getRestorableSession();
+    if (!stored) {
+      throw new Error('No stored connection for management operation.');
+    }
+    try {
+      clientRef.current?.close();
+    } catch {
+      /* ignore */
+    }
+    const opened = await openLibrarySession(stored);
+    clientRef.current = opened.client;
+    setClient(opened.client);
+    setSession({ library: opened.library, catalog: opened.catalog });
+    persistActiveSession();
+  }, []);
+
+  const requireManagementSession = useCallback(() => {
+    if (!session) {
+      throw new Error('No active library session.');
+    }
+    const stored = getRestorableSession();
+    if (!stored) {
+      throw new Error('No stored connection for management operation.');
+    }
+    return { stored, library: session.library };
+  }, [session]);
+
+  const formatBackup = useCallback((backup: ManagementBackupInfo): string => {
+    return `${backup.fileName} (${new Date(backup.createdAt).toLocaleString()})`;
+  }, []);
+
+  const handleCreateBackup = useCallback(async (): Promise<void> => {
+    try {
+      const { stored, library } = requireManagementSession();
+      const backup = await RemoteModelDBClient.createBackup({
+        host: stored.host.trim(),
+        port: stored.port,
+        token: stored.token.trim(),
+        database: library,
+        reason: 'manual',
+      });
+      notify.success(i18n.t('backupCreateSuccess'), backup.fileName);
+    } catch (e) {
+      notify.error(i18n.t('backupOperationFailed'), e instanceof Error ? e.message : String(e));
+    }
+  }, [i18n, notify, requireManagementSession]);
+
+  const handleRestoreBackup = useCallback(async (): Promise<void> => {
+    try {
+      const { stored, library } = requireManagementSession();
+      const backups = await RemoteModelDBClient.listBackups({
+        host: stored.host.trim(),
+        port: stored.port,
+        token: stored.token.trim(),
+        database: library,
+      });
+      if (backups.length === 0) {
+        notify.warning(i18n.t('backupRestore'), i18n.t('backupEmpty'));
+        return;
+      }
+      const backupFile = globalThis
+        .prompt(
+          `${i18n.t('backupRestorePrompt')}\n${backups.map(formatBackup).join('\n')}`,
+          backups[0]?.fileName ?? '',
+        )
+        ?.trim();
+      if (!backupFile) {
+        return;
+      }
+      if (
+        !(await confirm({
+          title: i18n.t('backupRestoreConfirm', { file: backupFile }),
+          tone: 'danger',
+        }))
+      ) {
+        return;
+      }
+      const result = await RemoteModelDBClient.restoreBackup({
+        host: stored.host.trim(),
+        port: stored.port,
+        token: stored.token.trim(),
+        database: library,
+        backupFile,
+      });
+      await reopenCurrentSession();
+      notify.success(i18n.t('backupRestoreSuccess'), result.restored.fileName);
+    } catch (e) {
+      notify.error(i18n.t('backupOperationFailed'), e instanceof Error ? e.message : String(e));
+    }
+  }, [confirm, formatBackup, i18n, notify, reopenCurrentSession, requireManagementSession]);
+
+  const handleClearDatabase = useCallback(
+    async (forceReset = false): Promise<void> => {
+      try {
+        const { stored, library } = requireManagementSession();
+        const confirmKey = forceReset ? 'backupForceResetConfirm' : 'backupClearConfirm';
+        if (
+          !(await confirm({
+            title: i18n.t(confirmKey, { db: library }),
+            tone: 'danger',
+          }))
+        ) {
+          return;
+        }
+        const result = await RemoteModelDBClient.clearDatabaseData({
+          host: stored.host.trim(),
+          port: stored.port,
+          token: stored.token.trim(),
+          database: library,
+          forceReset,
+        });
+        await reopenCurrentSession();
+        notify.success(
+          i18n.t(forceReset ? 'backupForceResetSuccess' : 'backupClearSuccess'),
+          {
+            clearAllData: String(result.deletedCount ?? 0),
+            forceReset: library,
+          }[result.mode] ?? library,
+        );
+      } catch (e) {
+        notify.error(i18n.t('backupOperationFailed'), e instanceof Error ? e.message : String(e));
+      }
+    },
+    [confirm, i18n, notify, reopenCurrentSession, requireManagementSession],
+  );
+
   if (boot === 'restoring') {
     return (
       <>
@@ -147,6 +320,11 @@ export function App(): ReactElement {
           client={client}
           library={session.library}
           catalog={session.catalog}
+          onCatalogRefresh={handleCatalogRefresh}
+          onCreateBackup={handleCreateBackup}
+          onRestoreBackup={handleRestoreBackup}
+          onClearDatabase={() => handleClearDatabase(false)}
+          onForceResetDatabase={() => handleClearDatabase(true)}
           onDisconnect={handleDisconnect}
         />
       )}

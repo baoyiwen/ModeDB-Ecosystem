@@ -6,6 +6,8 @@
 export interface ManagementDatabaseInfo {
   readonly name: string;
   readonly status: 'active';
+  /** Optional database display names keyed by locale (`en` / `zh` / `ja`). */
+  readonly displayName?: Readonly<Record<string, string>>;
   /** **`atlas.mld`**（或 flat **`.mld`**）的 mtime ISO-8601 */
   readonly createTime?: string;
   /** 单文件 Vault 字节数（近似「占用」） */
@@ -28,10 +30,44 @@ export interface ManagementDatabasesResponse {
   readonly databases: readonly ManagementDatabaseInfo[];
 }
 
+export interface ManagementBackupInfo {
+  readonly fileName: string;
+  readonly database: string;
+  readonly createdAt: string;
+  readonly bytes: number;
+  readonly path?: string;
+}
+
+export interface ManagementBackupsResponse {
+  readonly backups: readonly ManagementBackupInfo[];
+}
+
+export interface ManagementBackupCreateResponse {
+  readonly ok: true;
+  readonly backup: ManagementBackupInfo;
+}
+
+export interface ManagementBackupRestoreResponse {
+  readonly ok: true;
+  readonly restored: ManagementBackupInfo;
+  readonly safetyBackup?: ManagementBackupInfo;
+}
+
+export interface ManagementClearDatabaseResponse {
+  readonly ok: true;
+  readonly database: string;
+  readonly mode: 'clearAllData' | 'forceReset';
+  readonly deletedCount?: number;
+  readonly perModel?: Readonly<Record<string, number>>;
+  readonly safetyBackup?: ManagementBackupInfo;
+}
+
 /** Per-model row in **`GET /api/v1/management/databases/:name/catalog`**. */
 export interface ManagementCatalogModelInfo {
   readonly name: string;
   readonly parentId: string | null;
+  /** Optional model display names keyed by locale (`en` / `zh` / `ja`). */
+  readonly displayName?: Readonly<Record<string, string>>;
   readonly fields: readonly string[];
   /** Optional prop display names keyed by field name, then locale (`en` / `zh` / `ja`). */
   readonly fieldLabels?: Readonly<Record<string, Readonly<Record<string, string>>>>;
@@ -44,10 +80,13 @@ export interface ManagementCatalogRelationInfo {
   readonly reverse: string;
   readonly source: string;
   readonly target: string;
+  readonly selfLoopPolicy?: 'deny' | 'allow';
 }
 
 export interface ManagementCatalogResponse {
   readonly database: string;
+  /** Optional database display names keyed by locale (`en` / `zh` / `ja`). */
+  readonly displayName?: Readonly<Record<string, string>>;
   readonly models: readonly ManagementCatalogModelInfo[];
   readonly relations: readonly ManagementCatalogRelationInfo[];
 }

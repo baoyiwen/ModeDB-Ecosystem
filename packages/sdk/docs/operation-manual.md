@@ -7,6 +7,10 @@
 - `ModelDB.listDatabases`
 - `client.model('X').query().execute()`
 - `client.apply(op)`
+- `ModelDB.listBackups(database?)`
+- `ModelDB.createBackup(database, reason?)`
+- `ModelDB.restoreBackup(database, backupFile)`
+- `ModelDB.clearDatabaseData(database, { forceReset? })`
 
 ## 2. 常见流程
 
@@ -20,3 +24,5 @@
 - `connectToken` 必须与 server 一致
 - `dbName` 是逻辑库名，不是物理路径
 - 协议层问题优先检查 `shared`
+- 备份 / 恢复 / 清除属于 management API，不走 `client.apply`
+- catalog 中的 `displayName` / `fieldLabels` 应原样暴露给前端，不能只返回当前语言字符串

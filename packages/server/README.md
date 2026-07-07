@@ -115,3 +115,33 @@ const db = await connectRemote({
 | [user-handbook.md](../../docs/user-handbook.md)                         | 安装、构建、启动、排障 |
 | [operations-manual.md](../../docs/operations-manual.md)                 | 生产部署               |
 | [engine-operation-protocol.md](../../docs/engine-operation-protocol.md) | RPC 操作列表           |
+
+## 数据备份与恢复
+
+`@mode-db/server` 支持手动备份、恢复、清除数据、强制重置以及可选自动备份。备份文件写入当前逻辑库 workspace 下的 `modeldb/backups/`。
+
+CLI：
+
+```bash
+modeldb-server backup <db-name> [--reason manual]
+modeldb-server backups [db-name]
+modeldb-server restore <db-name> <backup-file> --yes
+modeldb-server clear-data <db-name> --yes
+modeldb-server force-reset <db-name> --yes
+```
+
+配置自动备份：
+
+```json
+{
+  "autoBackup": {
+    "enabled": true,
+    "intervalMinutes": 60,
+    "runOnStart": false,
+    "reason": "auto",
+    "databases": ["Test_DB"]
+  }
+}
+```
+
+不配置 `autoBackup` 或设置 `enabled: false` 时不会自动备份。`restore`、`clear-data`、`force-reset` 会先尽量创建安全备份，分别使用 `pre-restore`、`pre-clear`、`pre-reset` 作为 reason。

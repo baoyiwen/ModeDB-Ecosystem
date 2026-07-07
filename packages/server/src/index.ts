@@ -12,7 +12,9 @@ export {
 } from './stream-backpressure.js';
 export {
   loadModelDBServerConfig,
+  type ModelDBServerAutoBackupFileConfig,
   type ModelDBServerFileConfig,
+  type ResolvedModelDBServerAutoBackupConfig,
   type ResolvedModelDBServerConfig,
   type CliConfigOverrides,
 } from './config-loader.js';

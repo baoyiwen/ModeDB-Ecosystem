@@ -276,7 +276,61 @@ sequenceDiagram
 
 ---
 
-## 9. 延伸阅读
+## 9. 备份、恢复与自动备份
+
+生产部署建议把 `workspace` 所在磁盘纳入系统级快照或异地备份；ModelDB Server 也提供逻辑库级备份文件，用于日常回滚和损坏恢复。
+
+### 9.1 主动备份
+
+```bash
+modeldb-server backup <db-name> --reason manual -c <session-root|modeldb.config.json>
+modeldb-server backups [db-name] -c <session-root|modeldb.config.json>
+```
+
+备份文件位于：
+
+```text
+<workspace>/modeldb/backups/*.modeldb-backup.json
+```
+
+### 9.2 恢复与清除
+
+```bash
+modeldb-server restore <db-name> <backup-file> --yes
+modeldb-server clear-data <db-name> --yes
+modeldb-server force-reset <db-name> --yes
+```
+
+- `restore`：从备份文件恢复当前库，恢复前尽量创建 `pre-restore` 安全备份。
+- `clear-data`：清除所有行数据但保留 schema / relation，执行前尽量创建 `pre-clear` 安全备份。
+- `force-reset`：后门恢复命令，适合库文件损坏或无法正常打开时重建物理库，执行前尽量创建 `pre-reset` 安全备份。
+
+### 9.3 自动备份
+
+`modeldb.config.json` 不配置 `autoBackup`，或设置 `enabled: false` 时，不会自动备份。
+
+```json
+{
+  "autoBackup": {
+    "enabled": true,
+    "intervalMinutes": 60,
+    "runOnStart": false,
+    "reason": "auto",
+    "databases": ["Test_DB"]
+  }
+}
+```
+
+注意：
+
+- `databases` 为空或省略时备份所有逻辑库。
+- `intervalMs` 优先于 `intervalMinutes`。
+- 最小间隔为 `60000` ms。
+- 自动备份仅在 `modeldb-server` 进程运行期间生效。
+
+---
+
+## 10. 延伸阅读
 
 - 开发者手册（引擎与 SDK API）：**[developer-handbook.md](./developer-handbook.md)**
 - 使用手册（安装、构建、启动、FAQ）：**[user-handbook.md](./user-handbook.md)**

@@ -2,6 +2,7 @@ import type {
   ModelDefinition,
   RelationDefinition,
   RelationLogic,
+  RelationSelfLoopPolicy,
   MatchPredicate,
 } from './types.js';
 import type { FieldTypeDef } from './data-types.js';
@@ -95,6 +96,7 @@ export class ModelRegistry {
     reverse: string,
     logic: RelationLogic | null = null,
     matchOn: MatchPredicate | null = null,
+    selfLoopPolicy: RelationSelfLoopPolicy = 'deny',
   ): RelationDefinition {
     assertFlatGraphSegment(source, 'relation source model');
     assertFlatGraphSegment(target, 'relation target model');
@@ -134,7 +136,15 @@ export class ModelRegistry {
     existing.add(reverse);
     this.pairLabels.set(key, existing);
 
-    const definition: RelationDefinition = { source, target, forward, reverse, logic, matchOn };
+    const definition: RelationDefinition = {
+      source,
+      target,
+      forward,
+      reverse,
+      logic,
+      matchOn,
+      selfLoopPolicy,
+    };
     this.relations.push(definition);
     return definition;
   }
@@ -170,7 +180,12 @@ export class ModelRegistry {
    * @param matchOn - Optional new match predicate.
    * @throws {RegistryError} If no relation with the given forward label exists.
    */
-  updateRelationLogic(forwardName: string, logic: RelationLogic, matchOn?: MatchPredicate): void {
+  updateRelationLogic(
+    forwardName: string,
+    logic: RelationLogic,
+    matchOn?: MatchPredicate,
+    selfLoopPolicy?: RelationSelfLoopPolicy,
+  ): void {
     const rel = this.findRelationByForward(forwardName);
     if (!rel) {
       throw new RegistryError(
@@ -180,6 +195,9 @@ export class ModelRegistry {
     rel.logic = logic;
     if (matchOn !== undefined) {
       rel.matchOn = matchOn;
+    }
+    if (selfLoopPolicy !== undefined) {
+      rel.selfLoopPolicy = selfLoopPolicy;
     }
   }
 

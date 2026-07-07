@@ -16,14 +16,13 @@ export function mergeDiskRowsWithAuthoringBuffer(
   diskRows: readonly ModelRecord[],
   pendingById: ReadonlyMap<string, ModelRecord>,
 ): ModelRecord[] {
-  if (pendingById.size === 0) {
-    return [...diskRows];
-  }
   const byId = new Map<string, ModelRecord>();
   const order: string[] = [];
   for (const r of diskRows) {
+    if (!byId.has(r._id)) {
+      order.push(r._id);
+    }
     byId.set(r._id, r);
-    order.push(r._id);
   }
   for (const r of pendingById.values()) {
     if (!byId.has(r._id)) {

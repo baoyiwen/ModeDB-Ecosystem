@@ -57,3 +57,14 @@
 - 是否破坏 SDK / server / core 的协议一致性
 - 是否破坏写串行化
 - 是否需要同步更新文档与 `.agents/engine-v2`
+- 是否把关系名误当成全局唯一
+- 是否同时验证关系正向和逆向查询
+- catalog 是否完整返回显示名、字段标签和自环策略
+- Data Studio / Web 的显示名模式是否仍为 `显示名[唯一名]`
+
+## 5. 备份 / 恢复特别规则
+
+- 备份、恢复、清除数据、强制重置属于 `@mode-db/server` management plane，不属于普通 `EngineOperation`。
+- 修改相关逻辑优先看 `packages/server/src/backup-manager.ts`、`auto-backup-scheduler.ts`、`cli-backup.ts`、`dual-track-app.ts`。
+- 恢复和强制重置后必须考虑 server 侧缓存失效。
+- 自动备份默认关闭，只有 `autoBackup.enabled === true` 才启动。

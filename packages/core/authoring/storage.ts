@@ -19,11 +19,24 @@ import {
   parseMldLine,
   DiskAdapter,
   EngineLogger,
+  isDeletedRecord,
 } from '@mode-db/common';
 import type { FieldMatchContext } from '../src/runtime/query-filter.js';
 import { AtlasSingleVault } from './atlas-single-vault.js';
 
 const SCHEMA_HEADER_KEY = '__schema__';
+
+function compactModelRecords(records: readonly ModelRecord[]): ModelRecord[] {
+  const byId = new Map<string, ModelRecord>();
+  const order: string[] = [];
+  for (const record of records) {
+    if (!byId.has(record._id)) {
+      order.push(record._id);
+    }
+    byId.set(record._id, record);
+  }
+  return order.map((id) => byId.get(id)!).filter((record) => !isDeletedRecord(record));
+}
 
 export interface ModelStorageVaultOptions {
   readonly vault: AtlasSingleVault;
@@ -329,7 +342,7 @@ export class ModelStorage implements DataReader {
     this.resolveSchema(modelName);
     if (this.vault) {
       try {
-        return this.parseVaultModelLines(modelName);
+        return compactModelRecords(this.parseVaultModelLines(modelName));
       } catch (err) {
         throw new FileIOError(
           `Failed to read vault model "${modelName}"`,
@@ -383,7 +396,7 @@ export class ModelStorage implements DataReader {
         op: 'getAll',
         rows: results.length,
       });
-      return results;
+      return compactModelRecords(results);
     });
   }
 
@@ -393,7 +406,7 @@ export class ModelStorage implements DataReader {
   ): Promise<void> {
     this.resolveSchema(modelName);
     if (this.vault) {
-      const rows = this.parseVaultModelLines(modelName);
+      const rows = compactModelRecords(this.parseVaultModelLines(modelName));
       for (const r of rows) {
         await visitor(r);
       }
@@ -403,6 +416,7 @@ export class ModelStorage implements DataReader {
     const filePath = this.filePath(modelName);
     await DiskAdapter.timedStreamRead(`ModelStorage.scanModelRecords:${modelName}`, async () => {
       const seekT0 = performance.now();
+      const results: ModelRecord[] = [];
       let stream: ReturnType<typeof createReadStream> | undefined;
       try {
         stream = createReadStream(filePath, 'utf-8');
@@ -419,7 +433,7 @@ export class ModelStorage implements DataReader {
           if (!parsed || parsed.kind === 'header') {
             continue;
           }
-          await visitor(this.materializeRowForCurrentSchema(modelName, parsed.record));
+          results.push(this.materializeRowForCurrentSchema(modelName, parsed.record));
         }
       } catch (err) {
         if (isNodeError(err) && err.code === 'ENOENT') {
@@ -436,6 +450,9 @@ export class ModelStorage implements DataReader {
           cause: err,
         });
       }
+      for (const record of compactModelRecords(results)) {
+        await visitor(record);
+      }
       EngineLogger.instance.recordSeekScan(performance.now() - seekT0, `splitfile:${modelName}`, {
         op: 'scanModelRecords',
       });
@@ -451,63 +468,15 @@ export class ModelStorage implements DataReader {
 
     if (this.vault) {
       const target = new Set(ids);
-      return this.parseVaultModelLines(modelName).filter((r) => target.has(r._id));
+      return compactModelRecords(this.parseVaultModelLines(modelName)).filter((r) =>
+        target.has(r._id),
+      );
     }
 
-    const target = new Set(ids);
-    const filePath = this.filePath(modelName);
-    return DiskAdapter.timedStreamRead(`ModelStorage.getByIds:${modelName}`, async () => {
-      const seekT0 = performance.now();
-      const results: ModelRecord[] = [];
-      let stream: ReturnType<typeof createReadStream> | undefined;
-      try {
-        stream = createReadStream(filePath, 'utf-8');
-      } catch (err) {
-        throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
-      }
-
-      const rl = createInterface({ input: stream, crlfDelay: Infinity });
-
-      try {
-        for await (const line of rl) {
-          if (target.size === 0) {
-            break;
-          }
-
-          const trimmed = line.trim();
-          const parsed = parseMldLine(trimmed);
-          if (!parsed || parsed.kind === 'header') {
-            continue;
-          }
-
-          const record = this.materializeRowForCurrentSchema(modelName, parsed.record);
-          if (target.has(record._id)) {
-            results.push(record);
-            target.delete(record._id);
-          }
-        }
-      } catch (err) {
-        if (isNodeError(err) && err.code === 'ENOENT') {
-          EngineLogger.instance.recordSeekScan(
-            performance.now() - seekT0,
-            `splitfile:${modelName}`,
-            {
-              op: 'getByIds',
-            },
-          );
-          return [];
-        }
-        throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, {
-          cause: err,
-        });
-      }
-
-      EngineLogger.instance.recordSeekScan(performance.now() - seekT0, `splitfile:${modelName}`, {
-        op: 'getByIds',
-        rows: results.length,
-      });
-      return results;
-    });
+    const byId = new Map((await this.getAll(modelName)).map((record) => [record._id, record]));
+    return ids
+      .map((id) => byId.get(id))
+      .filter((record): record is ModelRecord => record !== undefined);
   }
 
   async findFirstByFieldEq(
@@ -517,7 +486,7 @@ export class ModelStorage implements DataReader {
   ): Promise<ModelRecord | undefined> {
     this.resolveSchema(modelName);
     if (this.vault) {
-      for (const record of this.parseVaultModelLines(modelName)) {
+      for (const record of compactModelRecords(this.parseVaultModelLines(modelName))) {
         const v = (record as Record<string, unknown>)[field];
         if (v === value) {
           return record;
@@ -526,61 +495,9 @@ export class ModelStorage implements DataReader {
       return undefined;
     }
 
-    const filePath = this.filePath(modelName);
-    return DiskAdapter.timedStreamRead(`ModelStorage.findFirstByFieldEq:${modelName}`, async () => {
-      const seekT0 = performance.now();
-      let stream: ReturnType<typeof createReadStream> | undefined;
-      try {
-        stream = createReadStream(filePath, 'utf-8');
-      } catch (err) {
-        throw new FileIOError(`Failed to open "${modelName}" data file`, filePath, { cause: err });
-      }
-
-      const rl = createInterface({ input: stream, crlfDelay: Infinity });
-
-      try {
-        for await (const line of rl) {
-          const trimmed = line.trim();
-          const parsed = parseMldLine(trimmed);
-          if (!parsed || parsed.kind === 'header') {
-            continue;
-          }
-          const record = this.materializeRowForCurrentSchema(modelName, parsed.record);
-          const v = (record as Record<string, unknown>)[field];
-          if (v === value) {
-            EngineLogger.instance.recordSeekScan(
-              performance.now() - seekT0,
-              `splitfile:${modelName}`,
-              {
-                op: 'findFirstByFieldEq',
-                hit: true,
-              },
-            );
-            return record;
-          }
-        }
-      } catch (err) {
-        if (isNodeError(err) && err.code === 'ENOENT') {
-          EngineLogger.instance.recordSeekScan(
-            performance.now() - seekT0,
-            `splitfile:${modelName}`,
-            {
-              op: 'findFirstByFieldEq',
-            },
-          );
-          return undefined;
-        }
-        throw new FileIOError(`Failed to read records from "${modelName}"`, filePath, {
-          cause: err,
-        });
-      }
-
-      EngineLogger.instance.recordSeekScan(performance.now() - seekT0, `splitfile:${modelName}`, {
-        op: 'findFirstByFieldEq',
-        hit: false,
-      });
-      return undefined;
-    });
+    return (await this.getAll(modelName)).find(
+      (record) => (record as Record<string, unknown>)[field] === value,
+    );
   }
 
   // ---------------------------------------------------------------------------

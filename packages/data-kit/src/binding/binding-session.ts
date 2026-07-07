@@ -27,6 +27,8 @@ export interface BindingSessionOptions {
   readonly initialViewData?: ViewDataShape;
   /** Schema prop columns to display (from catalog). */
   readonly propFields?: readonly string[];
+  /** Optional display labels keyed by field/column name. */
+  readonly columnLabels?: Readonly<Record<string, string>>;
 }
 
 /** Headless batch binding session — all writes staged until {@link BindingSession.commit}. */
@@ -72,6 +74,7 @@ export interface BindingSession {
 export function createBindingSession(options: BindingSessionOptions): BindingSession {
   let querySnapshot = options.querySnapshot;
   const propFields = options.propFields;
+  const columnLabels = options.columnLabels;
   let pendingOps: EngineOperation[] = [];
   let revision = 0;
   let viewData: ViewDataShape | null = options.initialViewData ?? null;
@@ -79,6 +82,7 @@ export function createBindingSession(options: BindingSessionOptions): BindingSes
   let lastError: string | null = null;
   let importFailures: ImportRowFailure[] | null = null;
   let importBindOnlyStaging: ImportBindOnlyStaging | null = null;
+  let importPendingOps = new WeakSet<EngineOperation>();
   const listeners = new Set<BindingListener>();
 
   const notify = (): void => {
@@ -97,7 +101,12 @@ export function createBindingSession(options: BindingSessionOptions): BindingSes
     try {
       const raw = await options.executor.executeQuery(querySnapshot);
       const sourceModel = startModelFromSnapshot(querySnapshot.plan);
-      viewData = adaptUnknownQueryResult(raw, { sourceModel, pivotLeafGrain, propFields });
+      viewData = adaptUnknownQueryResult(raw, {
+        sourceModel,
+        pivotLeafGrain,
+        propFields,
+        columnLabels,
+      });
       return viewData;
     } catch (e) {
       lastError = e instanceof Error ? e.message : String(e);
@@ -128,8 +137,19 @@ export function createBindingSession(options: BindingSessionOptions): BindingSes
     bindOnlyStaging: ImportBindOnlyStaging | null | undefined,
     mode: DataPageMutationMode,
   ): void => {
-    stageMany(ops, mode);
+    for (const op of ops) {
+      assertOpAllowedForMode(op, mode);
+    }
+    // Keep one active import batch so repeated staging cannot duplicate pending inserts.
+    pendingOps = pendingOps.filter((op) => !importPendingOps.has(op));
+    importPendingOps = new WeakSet<EngineOperation>();
+    for (const op of ops) {
+      importPendingOps.add(op);
+    }
+    pendingOps = [...pendingOps, ...ops];
     importBindOnlyStaging = bindOnlyStaging ?? null;
+    importFailures = null;
+    notify();
   };
 
   const stageCellUpdate = (
@@ -166,11 +186,21 @@ export function createBindingSession(options: BindingSessionOptions): BindingSes
     lastError = null;
     importFailures = null;
     importBindOnlyStaging = null;
+    importPendingOps = new WeakSet<EngineOperation>();
     notify();
   };
 
   const replacePendingOps = (ops: readonly EngineOperation[]): void => {
+    const hadImportPending = pendingOps.some((op) => importPendingOps.has(op));
     pendingOps = [...ops];
+    importPendingOps = new WeakSet<EngineOperation>();
+    if (hadImportPending) {
+      for (const op of pendingOps) {
+        if (op.op === 'insertMany' || op.op === 'bind') {
+          importPendingOps.add(op);
+        }
+      }
+    }
     notify();
   };
 
@@ -185,7 +215,11 @@ export function createBindingSession(options: BindingSessionOptions): BindingSes
         return op;
       }
       const rows = op.rows.map((row, ri) => (ri === rowIndex ? { ...row, [field]: value } : row));
-      return { ...op, rows };
+      const next = { ...op, rows };
+      if (importPendingOps.has(op)) {
+        importPendingOps.add(next);
+      }
+      return next;
     });
     if (importFailures) {
       importFailures = importFailures.map((f) =>
@@ -223,10 +257,28 @@ export function createBindingSession(options: BindingSessionOptions): BindingSes
         const failures = extractInsertManyFailures(batch, outcomes);
         const inserted = countInsertManySuccesses(outcomes);
         importFailures = failures.length > 0 ? failures : null;
+        const previousImportPendingOps = importPendingOps;
         pendingOps =
           failures.length > 0
             ? stripRelationBindOps(rebuildPendingAfterInsertManyFailures(batch, outcomes))
             : batch;
+        importPendingOps = new WeakSet<EngineOperation>();
+        if (failures.length > 0) {
+          for (const op of pendingOps) {
+            if (op.op === 'insertMany') {
+              importPendingOps.add(op);
+            }
+          }
+        } else {
+          for (const op of pendingOps) {
+            const wasImportOp = batch.some(
+              (original) => original === op && previousImportPendingOps.has(original),
+            );
+            if (wasImportOp) {
+              importPendingOps.add(op);
+            }
+          }
+        }
         lastError = mutationError;
         if (inserted > 0) {
           await refresh();
@@ -245,6 +297,7 @@ export function createBindingSession(options: BindingSessionOptions): BindingSes
       lastError = null;
       importFailures = null;
       importBindOnlyStaging = null;
+      importPendingOps = new WeakSet<EngineOperation>();
       await refresh();
       notify();
       return { ok: true, outcomes, committedCount: batch.length };

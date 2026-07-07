@@ -7,7 +7,12 @@ import {
   type EngineApplyOutcome,
   type EngineOperation,
   type EngineOperationResult,
+  type ManagementBackupCreateResponse,
+  type ManagementBackupInfo,
+  type ManagementBackupRestoreResponse,
+  type ManagementBackupsResponse,
   type ManagementCatalogResponse,
+  type ManagementClearDatabaseResponse,
   type ManagementDatabaseInfo,
   type ManagementDatabasesResponse,
   type ManagementStatusResponse,
@@ -20,6 +25,7 @@ import {
   type WireExecuteResultJson,
   type WireMatchPredicate,
   type WireRelationLogic,
+  type WireRelationSelfLoopPolicy,
   type WireRelationStats,
   type WireRowRef,
 } from '@mode-db/shared';
@@ -34,6 +40,231 @@ function nextRpcId(): string {
     return c.randomUUID();
   }
   return `rpc-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+interface InteractionTrace {
+  readonly id: string;
+  readonly scope: string;
+  readonly action: string;
+  readonly startedAt: number;
+}
+
+function nowMs(): number {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+}
+
+function interactionLoggingEnabled(): boolean {
+  const flags = globalThis as unknown as {
+    __MODEDB_SILENCE_INTERACTION_LOGS?: boolean;
+    MODEDB_INTERACTION_LOGS?: boolean;
+    localStorage?: { getItem(key: string): string | null };
+  };
+  if (flags.__MODEDB_SILENCE_INTERACTION_LOGS === true || flags.MODEDB_INTERACTION_LOGS === false) {
+    return false;
+  }
+  try {
+    return flags.localStorage?.getItem('mode-db:interaction-logs') !== 'off';
+  } catch {
+    return true;
+  }
+}
+
+function compactForLog(value: unknown, depth = 0): unknown {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    if (depth > 1) {
+      return `[Array(${value.length})]`;
+    }
+    return value.slice(0, 8).map((item) => compactForLog(item, depth + 1));
+  }
+  if (typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, raw] of Object.entries(value as Record<string, unknown>).slice(0, 16)) {
+      if (/token|cipher|secret|password/i.test(key)) {
+        out[key] = '[redacted]';
+      } else {
+        out[key] = depth > 1 ? `[${typeof raw}]` : compactForLog(raw, depth + 1);
+      }
+    }
+    return out;
+  }
+  return String(value);
+}
+
+function explainInteraction(scope: string): string {
+  if (scope === 'Management API') {
+    return '前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。';
+  }
+  if (scope === 'WebSocket RPC') {
+    return '前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。';
+  }
+  if (scope === 'HTTP RPC') {
+    return '前端正在通过 HTTP short mode 调用引擎数据库操作。';
+  }
+  if (scope === 'Connection') {
+    return '前端正在建立与 ModelDB Engine 的连接或握手。';
+  }
+  return 'ModelDB 前端与引擎之间的一次交互。';
+}
+
+function logInteractionStart(
+  scope: string,
+  action: string,
+  detail?: Record<string, unknown>,
+): InteractionTrace {
+  const trace: InteractionTrace = {
+    id: nextRpcId().slice(0, 8),
+    scope,
+    action,
+    startedAt: nowMs(),
+  };
+  if (interactionLoggingEnabled()) {
+    // eslint-disable-next-line no-console
+    console.groupCollapsed(`[ModeDB] START ${scope}: ${action} trace=${trace.id}`);
+    // eslint-disable-next-line no-console
+    console.info('说明:', explainInteraction(scope));
+    if (detail) {
+      // eslint-disable-next-line no-console
+      console.info('请求摘要:', compactForLog(detail));
+    }
+    // eslint-disable-next-line no-console
+    console.groupEnd();
+  }
+  return trace;
+}
+
+function logInteractionSuccess(trace: InteractionTrace, detail?: Record<string, unknown>): void {
+  if (!interactionLoggingEnabled()) {
+    return;
+  }
+  const ms = Number((nowMs() - trace.startedAt).toFixed(2));
+  // eslint-disable-next-line no-console
+  console.groupCollapsed(`[ModeDB] OK ${trace.scope}: ${trace.action} trace=${trace.id} ${ms}ms`);
+  // eslint-disable-next-line no-console
+  console.info('结果:', compactForLog({ ms, ...detail }));
+  // eslint-disable-next-line no-console
+  console.groupEnd();
+}
+
+function logInteractionError(trace: InteractionTrace, error: unknown): void {
+  if (!interactionLoggingEnabled()) {
+    return;
+  }
+  const ms = Number((nowMs() - trace.startedAt).toFixed(2));
+  // eslint-disable-next-line no-console
+  console.groupCollapsed(
+    `[ModeDB] ERROR ${trace.scope}: ${trace.action} trace=${trace.id} ${ms}ms`,
+  );
+
+  console.error('错误:', {
+    ms,
+    message: error instanceof Error ? error.message : String(error),
+  });
+  // eslint-disable-next-line no-console
+  console.groupEnd();
+}
+
+function summarizeWireBody(body: WireExecuteBody): Record<string, unknown> {
+  const raw = body as unknown as Record<string, unknown>;
+  if (body.op === 'executeQuery') {
+    const snapshot = raw.snapshot as Record<string, unknown> | undefined;
+    const plan = snapshot?.plan as Record<string, unknown> | undefined;
+    const page = snapshot?.page as Record<string, unknown> | undefined;
+    return {
+      op: body.op,
+      model: plan?.originModel,
+      page: page?.page,
+      limit: page?.limit,
+    };
+  }
+  return {
+    op: body.op,
+    model: raw.model,
+    relation: raw.forward ?? raw.relation,
+    strategy: raw.strategy,
+    batchSize: Array.isArray(raw.updates)
+      ? raw.updates.length
+      : Array.isArray(raw.deletes)
+        ? raw.deletes.length
+        : Array.isArray(raw.records)
+          ? raw.records.length
+          : undefined,
+  };
+}
+
+function summarizeWireResult(result: WireExecuteResultJson): Record<string, unknown> {
+  const raw = result as unknown as Record<string, unknown>;
+  if (result.kind === 'rows') {
+    return { kind: result.kind, rows: result.rows.length };
+  }
+  if (result.kind === 'paginated') {
+    return {
+      kind: result.kind,
+      total: result.total,
+      page: result.page,
+      pageCount: result.pageCount,
+    };
+  }
+  if (result.kind === 'analysis') {
+    return { kind: result.kind, rows: result.rows.length, dimensions: result.dimensionKeys };
+  }
+  if (result.kind === 'groups') {
+    return { kind: result.kind, groups: result.groups.length, dimensions: result.dimensionKeys };
+  }
+  if (result.kind === 'mutation') {
+    return {
+      kind: result.kind,
+      op: raw.op,
+      ok: raw.ok,
+      successCount: raw.successCount,
+      failureCount: raw.failureCount,
+      pairsCount: raw.pairsCount,
+    };
+  }
+  return { kind: result.kind };
+}
+
+function summarizeManagementResult(path: string, json: unknown): Record<string, unknown> {
+  if (isRecord(json) && Array.isArray(json.databases)) {
+    return { path, databases: json.databases.length };
+  }
+  if (isRecord(json) && Array.isArray(json.models) && Array.isArray(json.relations)) {
+    let fieldLabels = 0;
+    for (const model of json.models) {
+      if (isRecord(model) && isRecord(model.fieldLabels)) {
+        fieldLabels += Object.keys(model.fieldLabels).length;
+      }
+    }
+    return {
+      path,
+      database: json.database,
+      models: json.models.length,
+      relations: json.relations.length,
+      hasDatabaseDisplayName: isRecord(json.displayName),
+      modelDisplayNames: json.models.filter(
+        (model) => isRecord(model) && isRecord(model.displayName),
+      ).length,
+      fieldLabels,
+    };
+  }
+  if (isRecord(json) && json.engine === 'ModelDB') {
+    return {
+      path,
+      state: json.state,
+      databases: Array.isArray(json.databases) ? json.databases.length : 0,
+    };
+  }
+  return { path, resultType: typeof json };
 }
 
 /**
@@ -184,6 +415,8 @@ function toWireRowRef(x: RowRef | RemoteHydratedEntity): WireRowRef {
 export interface InsertManyResult {
   readonly successCount: number;
   readonly failureCount: number;
+  readonly insertedCount?: number;
+  readonly updatedCount?: number;
   readonly records?: readonly RemoteHydratedEntity[];
 }
 
@@ -209,6 +442,7 @@ export interface BatchRegisterInput {
     readonly reverse: string;
     readonly logic?: WireRelationLogic;
     readonly matchOn?: WireMatchPredicate;
+    readonly selfLoopPolicy?: WireRelationSelfLoopPolicy;
   }[];
   /** Auto-create any source/target model referenced by `relations[*]` when absent (quickLink semantics). */
   readonly quickLink?: boolean;
@@ -407,53 +641,60 @@ export function toWsStreamUrl(url: string): string {
 }
 
 async function openWebSocket(url: string, WebSocketCtor?: WebSocketCtor): Promise<WsEmitter> {
+  const trace = logInteractionStart('Connection', 'open websocket', { url });
   let W: WebSocketCtor | undefined = WebSocketCtor;
-  if (!W) {
-    /** Node 可能提供与 `ws` 服务器不兼容的全局 `WebSocket`；在 Node 中强制使用 `ws` 包。 */
-    const isNode =
-      typeof process !== 'undefined' &&
-      process.versions !== undefined &&
-      typeof process.versions.node === 'string';
-    if (isNode) {
-      const mod = (await import('ws')) as unknown as {
-        WebSocket?: WebSocketCtor;
-        default?: WebSocketCtor;
-      };
-      W = mod.WebSocket ?? mod.default;
-    } else if (typeof globalThis.WebSocket === 'function') {
-      W = globalThis.WebSocket as unknown as WebSocketCtor;
-    } else {
-      const mod = (await import('ws')) as unknown as {
-        WebSocket?: WebSocketCtor;
-        default?: WebSocketCtor;
-      };
-      W = mod.WebSocket ?? mod.default;
+  try {
+    if (!W) {
+      /** Node 可能提供与 `ws` 服务器不兼容的全局 `WebSocket`；在 Node 中强制使用 `ws` 包。 */
+      const isNode =
+        typeof process !== 'undefined' &&
+        process.versions !== undefined &&
+        typeof process.versions.node === 'string';
+      if (isNode) {
+        const mod = (await import('ws')) as unknown as {
+          WebSocket?: WebSocketCtor;
+          default?: WebSocketCtor;
+        };
+        W = mod.WebSocket ?? mod.default;
+      } else if (typeof globalThis.WebSocket === 'function') {
+        W = globalThis.WebSocket as unknown as WebSocketCtor;
+      } else {
+        const mod = (await import('ws')) as unknown as {
+          WebSocket?: WebSocketCtor;
+          default?: WebSocketCtor;
+        };
+        W = mod.WebSocket ?? mod.default;
+      }
     }
-  }
-  if (!W) {
-    throw new Error(
-      'No WebSocket: pass ConnectRemoteOptions.webSocketCtor, install optional dependency "ws", or use a runtime with globalThis.WebSocket.',
-    );
-  }
-  const ws = new W(url) as unknown as WsEmitter;
-  await new Promise<void>((resolve, reject) => {
-    if (typeof ws.once === 'function') {
-      ws.once('open', () => resolve());
-      ws.once('error', (e) => reject(e instanceof Error ? e : new Error(String(e))));
-    } else if (typeof ws.addEventListener === 'function') {
-      (ws as unknown as globalThis.WebSocket).addEventListener('open', () => resolve(), {
-        once: true,
-      });
-      (ws as unknown as globalThis.WebSocket).addEventListener(
-        'error',
-        () => reject(new Error('WebSocket error')),
-        { once: true },
+    if (!W) {
+      throw new Error(
+        'No WebSocket: pass ConnectRemoteOptions.webSocketCtor, install optional dependency "ws", or use a runtime with globalThis.WebSocket.',
       );
-    } else {
-      reject(new Error('WebSocket instance has neither once() nor addEventListener().'));
     }
-  });
-  return ws;
+    const ws = new W(url) as unknown as WsEmitter;
+    await new Promise<void>((resolve, reject) => {
+      if (typeof ws.once === 'function') {
+        ws.once('open', () => resolve());
+        ws.once('error', (e) => reject(e instanceof Error ? e : new Error(String(e))));
+      } else if (typeof ws.addEventListener === 'function') {
+        (ws as unknown as globalThis.WebSocket).addEventListener('open', () => resolve(), {
+          once: true,
+        });
+        (ws as unknown as globalThis.WebSocket).addEventListener(
+          'error',
+          () => reject(new Error('WebSocket error')),
+          { once: true },
+        );
+      } else {
+        reject(new Error('WebSocket instance has neither once() nor addEventListener().'));
+      }
+    });
+    logInteractionSuccess(trace, { url });
+    return ws;
+  } catch (e) {
+    logInteractionError(trace, e);
+    throw e;
+  }
 }
 
 function bindSocketMessage(ws: WsEmitter, onMessage: (raw: unknown) => void): void {
@@ -561,51 +802,73 @@ class ShortRemoteSession implements QuerySession {
   ) {}
 
   async connectHandshake(): Promise<void> {
-    const r = await fetch(`${this.httpOrigin}/health`);
-    if (!r.ok) {
-      throw new Error(`Short mode: health check failed (HTTP ${r.status}).`);
-    }
-    const j = (await r.json()) as { ok?: boolean };
-    if (!j?.ok) {
-      throw new Error('Short mode: server /health did not return { ok: true }.');
+    const trace = logInteractionStart('HTTP RPC', 'health handshake', {
+      origin: this.httpOrigin,
+      database: this.atlas,
+    });
+    try {
+      const r = await fetch(`${this.httpOrigin}/health`);
+      if (!r.ok) {
+        throw new Error(`Short mode: health check failed (HTTP ${r.status}).`);
+      }
+      const j = (await r.json()) as { ok?: boolean };
+      if (!j?.ok) {
+        throw new Error('Short mode: server /health did not return { ok: true }.');
+      }
+      logInteractionSuccess(trace, { status: r.status, ok: j.ok });
+    } catch (e) {
+      logInteractionError(trace, e);
+      throw e;
     }
   }
 
   async executeWireBodyRaw(body: WireExecuteBody): Promise<WireExecuteResultJson> {
     const id = nextRpcId();
+    const trace = logInteractionStart('HTTP RPC', body.op, {
+      id,
+      database: this.atlas,
+      ...summarizeWireBody(body),
+    });
     const sessionKey = deriveWireSessionKey(this.connectToken, this.atlas);
     const cipher = encodeWirePayload(JSON.stringify(body), sessionKey);
-    const r = await fetch(`${this.httpOrigin}/v2/action`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-modeldb-db-name': this.atlas,
-        'x-modeldb-atlas': this.atlas,
-        'x-modeldb-connect-token': this.connectToken,
-      },
-      body: JSON.stringify({ cipher, id }),
-    });
-    const text = await r.text();
-    if (!r.ok) {
-      throw new Error(`Short mode: HTTP ${r.status} ${text.slice(0, 500)}`);
-    }
-    let msg: unknown;
     try {
-      msg = JSON.parse(text) as unknown;
-    } catch {
-      throw new Error('Short mode: response is not JSON.');
+      const r = await fetch(`${this.httpOrigin}/v2/action`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-modeldb-db-name': this.atlas,
+          'x-modeldb-atlas': this.atlas,
+          'x-modeldb-connect-token': this.connectToken,
+        },
+        body: JSON.stringify({ cipher, id }),
+      });
+      const text = await r.text();
+      if (!r.ok) {
+        throw new Error(`Short mode: HTTP ${r.status} ${text.slice(0, 500)}`);
+      }
+      let msg: unknown;
+      try {
+        msg = JSON.parse(text) as unknown;
+      } catch {
+        throw new Error('Short mode: response is not JSON.');
+      }
+      if (!isRecord(msg)) {
+        throw new Error('Short mode: response JSON is not an object.');
+      }
+      if (msg.type === 'rpc.err') {
+        throw new Error(String(msg.error ?? 'RPC error'));
+      }
+      if (msg.type !== 'rpc.ok' || typeof msg.cipher !== 'string') {
+        throw new Error('Short mode: expected { type: "rpc.ok", cipher }.');
+      }
+      const plain = decodeWirePayload(msg.cipher, sessionKey);
+      const result = JSON.parse(plain) as WireExecuteResultJson;
+      logInteractionSuccess(trace, summarizeWireResult(result));
+      return result;
+    } catch (e) {
+      logInteractionError(trace, e);
+      throw e;
     }
-    if (!isRecord(msg)) {
-      throw new Error('Short mode: response JSON is not an object.');
-    }
-    if (msg.type === 'rpc.err') {
-      throw new Error(String(msg.error ?? 'RPC error'));
-    }
-    if (msg.type !== 'rpc.ok' || typeof msg.cipher !== 'string') {
-      throw new Error('Short mode: expected { type: "rpc.ok", cipher }.');
-    }
-    const plain = decodeWirePayload(msg.cipher, sessionKey);
-    return JSON.parse(plain) as WireExecuteResultJson;
   }
 
   async executeWireBody(body: WireExecuteBody): Promise<unknown> {
@@ -720,8 +983,18 @@ class RemoteSession implements QuerySession {
   }
 
   connectHandshake(): Promise<void> {
+    const trace = logInteractionStart('WebSocket RPC', 'handshake', { database: this.atlas });
     return new Promise<void>((resolve, reject) => {
-      this.handshakeWait = { resolve, reject };
+      this.handshakeWait = {
+        resolve: () => {
+          logInteractionSuccess(trace, { database: this.atlas });
+          resolve();
+        },
+        reject: (e) => {
+          logInteractionError(trace, e);
+          reject(e);
+        },
+      };
       this.ws.send(
         JSON.stringify({
           type: 'handshake',
@@ -735,10 +1008,24 @@ class RemoteSession implements QuerySession {
 
   executeWireBodyRaw(body: WireExecuteBody): Promise<WireExecuteResultJson> {
     const id = nextRpcId();
+    const trace = logInteractionStart('WebSocket RPC', body.op, {
+      id,
+      database: this.atlas,
+      ...summarizeWireBody(body),
+    });
     const cipher = encodeWirePayload(JSON.stringify(body), this.sessionKey);
     const payload = JSON.stringify({ type: 'rpc', id, cipher });
     const p = new Promise<WireExecuteResultJson>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      this.pending.set(id, {
+        resolve: (result) => {
+          logInteractionSuccess(trace, summarizeWireResult(result));
+          resolve(result);
+        },
+        reject: (e) => {
+          logInteractionError(trace, e);
+          reject(e);
+        },
+      });
     });
     this.ws.send(payload);
     return p;
@@ -825,7 +1112,11 @@ export class RemoteRuntimeModel {
    */
   async insertMany(
     rows: readonly Record<string, unknown>[],
-    opts?: { sync?: boolean; returning?: boolean },
+    opts?: {
+      sync?: boolean;
+      returning?: boolean;
+      upsert?: { readonly matchFields: readonly string[]; readonly updateExisting?: boolean };
+    },
   ): Promise<InsertManyResult> {
     const session = await this.getSession();
     const out = await session.executeWireBody({
@@ -834,6 +1125,7 @@ export class RemoteRuntimeModel {
       rows: [...rows],
       sync: opts?.sync,
       returning: opts?.returning,
+      upsert: opts?.upsert,
     });
     if (
       !isRecord(out) ||
@@ -851,6 +1143,8 @@ export class RemoteRuntimeModel {
     return {
       successCount: out.successCount,
       failureCount: out.failureCount,
+      ...(typeof out.insertedCount === 'number' ? { insertedCount: out.insertedCount } : {}),
+      ...(typeof out.updatedCount === 'number' ? { updatedCount: out.updatedCount } : {}),
       ...(records ? { records } : {}),
     };
   }
@@ -859,14 +1153,25 @@ export class RemoteRuntimeModel {
 async function fetchManagementJson<T>(origin: string, token: string, path: string): Promise<T> {
   const base = origin.replace(/\/$/, '');
   const url = `${base}${path}`;
-  const res = await fetch(url, {
-    headers: { 'X-ModelDB-Connect-Token': token },
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+  const trace = logInteractionStart('Management API', `GET ${path}`, { url });
+  try {
+    const res = await fetch(url, {
+      headers: { 'X-ModelDB-Connect-Token': token },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+    }
+    const json = (await res.json()) as T;
+    logInteractionSuccess(trace, {
+      status: res.status,
+      ...summarizeManagementResult(path, json),
+    });
+    return json;
+  } catch (e) {
+    logInteractionError(trace, e);
+    throw e;
   }
-  return (await res.json()) as T;
 }
 
 async function fetchManagementPostJson<T>(
@@ -877,31 +1182,49 @@ async function fetchManagementPostJson<T>(
 ): Promise<T> {
   const base = origin.replace(/\/$/, '');
   const url = `${base}${path}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-ModelDB-Connect-Token': token,
-    },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+  const trace = logInteractionStart('Management API', `POST ${path}`, { url, body });
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-ModelDB-Connect-Token': token,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+    }
+    const json = (await res.json()) as T;
+    logInteractionSuccess(trace, {
+      status: res.status,
+      ...summarizeManagementResult(path, json),
+    });
+    return json;
+  } catch (e) {
+    logInteractionError(trace, e);
+    throw e;
   }
-  return (await res.json()) as T;
 }
 
 async function fetchManagementDelete(origin: string, token: string, path: string): Promise<void> {
   const base = origin.replace(/\/$/, '');
   const url = `${base}${path}`;
-  const res = await fetch(url, {
-    method: 'DELETE',
-    headers: { 'X-ModelDB-Connect-Token': token },
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+  const trace = logInteractionStart('Management API', `DELETE ${path}`, { url });
+  try {
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: { 'X-ModelDB-Connect-Token': token },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+    }
+    logInteractionSuccess(trace, { status: res.status });
+  } catch (e) {
+    logInteractionError(trace, e);
+    throw e;
   }
 }
 
@@ -1005,6 +1328,82 @@ export class RemoteModelDBClient {
       origin,
       options.token,
       `/api/v1/management/databases/${enc}/catalog`,
+    );
+  }
+
+  /** Server-side backup files under workspace/modeldb/backups. */
+  static async listBackups(options: {
+    readonly host: string;
+    readonly port: number;
+    readonly token: string;
+    readonly database?: string;
+  }): Promise<readonly ManagementBackupInfo[]> {
+    const origin = `http://${options.host}:${options.port}`;
+    const database = options.database?.trim();
+    const query = database ? `?database=${encodeURIComponent(database)}` : '';
+    const json = await fetchManagementJson<ManagementBackupsResponse>(
+      origin,
+      options.token,
+      `/api/v1/management/backups${query}`,
+    );
+    if (!json || !Array.isArray(json.backups)) {
+      throw new Error('listBackups: invalid response shape.');
+    }
+    return json.backups;
+  }
+
+  /** Create a safety/manual backup for one logical DB. */
+  static async createBackup(options: {
+    readonly host: string;
+    readonly port: number;
+    readonly token: string;
+    readonly database: string;
+    readonly reason?: string;
+  }): Promise<ManagementBackupInfo> {
+    const origin = `http://${options.host}:${options.port}`;
+    const enc = encodeURIComponent(options.database.trim());
+    const json = await fetchManagementPostJson<ManagementBackupCreateResponse>(
+      origin,
+      options.token,
+      `/api/v1/management/databases/${enc}/backup`,
+      { reason: options.reason ?? 'manual' },
+    );
+    return json.backup;
+  }
+
+  /** Restore one logical DB from a server-side backup file. */
+  static async restoreBackup(options: {
+    readonly host: string;
+    readonly port: number;
+    readonly token: string;
+    readonly database: string;
+    readonly backupFile: string;
+  }): Promise<ManagementBackupRestoreResponse> {
+    const origin = `http://${options.host}:${options.port}`;
+    const enc = encodeURIComponent(options.database.trim());
+    return fetchManagementPostJson<ManagementBackupRestoreResponse>(
+      origin,
+      options.token,
+      `/api/v1/management/databases/${enc}/restore`,
+      { backupFile: options.backupFile.trim() },
+    );
+  }
+
+  /** Clear all rows, or force-reset corrupted physical DB files when requested. */
+  static async clearDatabaseData(options: {
+    readonly host: string;
+    readonly port: number;
+    readonly token: string;
+    readonly database: string;
+    readonly forceReset?: boolean;
+  }): Promise<ManagementClearDatabaseResponse> {
+    const origin = `http://${options.host}:${options.port}`;
+    const enc = encodeURIComponent(options.database.trim());
+    return fetchManagementPostJson<ManagementClearDatabaseResponse>(
+      origin,
+      options.token,
+      `/api/v1/management/databases/${enc}/clear`,
+      { forceReset: options.forceReset === true },
     );
   }
 
@@ -1149,9 +1548,16 @@ export class RemoteModelDBClient {
   }
 
   /** Meta: drop relation index and registry entry (server-side {@link AuthoringEngine.dropRelation}). */
-  async dropRelation(relation: string): Promise<void> {
+  async dropRelation(
+    relation: string,
+    scope?: { readonly source: string; readonly target: string; readonly reverse: string },
+  ): Promise<void> {
     const session = await this.ensureSession();
-    const out = await session.executeWireBody({ op: 'dropRelation', relation });
+    const out = await session.executeWireBody({
+      op: 'dropRelation',
+      relation,
+      ...(scope ? { source: scope.source, target: scope.target, reverse: scope.reverse } : {}),
+    });
     if (!isRecord(out) || out.op !== 'dropRelation' || out.ok !== true) {
       throw new Error('dropRelation: unexpected remote response.');
     }
@@ -1193,6 +1599,7 @@ export class RemoteModelDBClient {
     forward: string,
     reverse: string,
     logic: 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many',
+    selfLoopPolicy?: WireRelationSelfLoopPolicy,
   ): Promise<void> {
     const session = await this.ensureSession();
     const out = await session.executeWireBody({
@@ -1202,6 +1609,7 @@ export class RemoteModelDBClient {
       forward,
       reverse,
       logic,
+      ...(selfLoopPolicy ? { selfLoopPolicy } : {}),
     });
     if (!isRecord(out) || out.op !== 'registerRelation' || out.ok !== true) {
       throw new Error('registerRelation: unexpected remote response.');
@@ -1432,13 +1840,17 @@ export class RemoteModelDBClient {
     forward: string,
     logic: WireRelationLogic,
     matchOn?: WireMatchPredicate,
+    selfLoopPolicy?: WireRelationSelfLoopPolicy,
+    scope?: { readonly source: string; readonly target: string; readonly reverse: string },
   ): Promise<void> {
     const session = await this.ensureSession();
     const body: WireExecuteBody = {
       op: 'updateRelationLogic',
       forward,
+      ...(scope ? { source: scope.source, target: scope.target, reverse: scope.reverse } : {}),
       logic,
       ...(matchOn ? { matchOn } : {}),
+      ...(selfLoopPolicy ? { selfLoopPolicy } : {}),
     };
     const out = await session.executeWireBody(body);
     if (!isRecord(out) || out.op !== 'updateRelationLogic' || out.ok !== true) {

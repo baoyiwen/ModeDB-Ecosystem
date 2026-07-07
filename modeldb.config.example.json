@@ -7,5 +7,12 @@
   "cacheSize": "2GB",
   "mode": "development",
   "connectToken": "replace-with-long-random-secret",
+  "autoBackup": {
+    "enabled": false,
+    "intervalMinutes": 60,
+    "runOnStart": false,
+    "reason": "auto",
+    "databases": []
+  },
   "dev": false
 }

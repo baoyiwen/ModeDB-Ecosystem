@@ -62,6 +62,16 @@
 - 新增长期文案必须同步更新 `zh/en/ja`。
 - 不要把长期 UI 文案硬编码在 JSX 中。
 
+### 4.5 关系、层级与保存红线
+
+- 关系是实体，不是字符串别名；保存、层级归属、画布选择都应优先使用 `relation.id`。
+- 修改模型名或关系名不能导致关系解绑；端点关系必须随对象身份保留。
+- 关系唯一名只在端点模型对内局部唯一，自关联按单个模型形成局部范围。
+- `Main` 是默认页，所有模型和关系默认属于 `Main`；页模式和层级面板关闭时，不应触发层级高亮 / 置灰逻辑。
+- 页面自动关系归属由两个端点模型共同决定，不要在 UI 中维护另一套独立规则。
+- `sys_data_asset_map`、`sys_model`、`sys_props`、`sys_relation` 保存必须是 upsert / update-first，禁止无修改也追加重复行。
+- i18n 显示名为空时应保持为空；不要把唯一名自动写回显示名字段。
+
 ## 5. 典型任务路径
 
 ### 改字段编辑体验
@@ -89,6 +99,9 @@
 - `src/managers/graph-sync-manager.ts`
 - `src/sync/sdk-designer-sync.ts`
 - `src/sync/engine-catalog-import.ts`
+- `src/sync/designer-push-sync.ts`
+- `src/sync/designer-row-hydrate.ts`
+- `src/sync/library-registry.ts`
 
 ## 6. AI 修改前后检查
 

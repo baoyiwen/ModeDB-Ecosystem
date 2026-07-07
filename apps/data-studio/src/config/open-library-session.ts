@@ -1,4 +1,4 @@
-import { ModelDB, type ManagementCatalogResponse, type RemoteModelDBClient } from '@mode-db/sdk';
+import { ModelDB, RemoteModelDBClient, type ManagementCatalogResponse } from '@mode-db/sdk';
 import type { RestorableSession } from '../config/connection-prefs.js';
 
 export interface OpenLibraryResult {
@@ -16,6 +16,21 @@ export async function openLibrarySession(session: RestorableSession): Promise<Op
   });
   const library = session.library.trim();
   const client = await db.use(library);
-  const catalog = await db.getDatabaseCatalog(library);
-  return { client, library, catalog };
+  const [catalog, databases] = await Promise.all([
+    db.getDatabaseCatalog(library),
+    RemoteModelDBClient.listDatabases({
+      host: session.host.trim(),
+      port: session.port,
+      token: session.token.trim(),
+    }),
+  ]);
+  const databaseInfo = databases.find((info) => info.name === library);
+  return {
+    client,
+    library,
+    catalog: {
+      ...catalog,
+      displayName: catalog.displayName ?? databaseInfo?.displayName,
+    },
+  };
 }

@@ -30,6 +30,10 @@ function hydrateRow(row: unknown): Record<string, unknown> {
 }
 
 function parseI18nField(value: unknown, fallback: string): Record<string, string> {
+  return parseOptionalI18nField(value) ?? { en: fallback, zh: fallback, ja: fallback };
+}
+
+function parseOptionalI18nField(value: unknown): Record<string, string> | undefined {
   let parsed: unknown = value;
   if (typeof value === 'string') {
     const trimmed = value.trim();
@@ -40,9 +44,12 @@ function parseI18nField(value: unknown, fallback: string): Record<string, string
         if (trimmed !== '') {
           return { en: trimmed, zh: trimmed, ja: trimmed };
         }
+        return undefined;
       }
     } else if (trimmed !== '') {
       return { en: trimmed, zh: trimmed, ja: trimmed };
+    } else {
+      return undefined;
     }
   }
   if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
@@ -56,7 +63,26 @@ function parseI18nField(value: unknown, fallback: string): Record<string, string
       return out;
     }
   }
-  return { en: fallback, zh: fallback, ja: fallback };
+  return undefined;
+}
+
+function parseRelationDisplayI18n(
+  value: unknown,
+  fallback: string,
+): Record<string, string> | undefined {
+  const parsed = parseOptionalI18nField(value);
+  if (!parsed) {
+    return undefined;
+  }
+  const entries = Object.entries(parsed).filter(([, v]) => v.trim() !== '');
+  if (
+    entries.length > 0 &&
+    entries.every(([, v]) => v.trim() === fallback) &&
+    entries.every(([k]) => k === 'en' || k === 'zh' || k === 'ja')
+  ) {
+    return undefined;
+  }
+  return parsed;
 }
 
 function parseLayoutFromModelRow(
@@ -342,7 +368,9 @@ export async function fetchGraphFromDesignerRows(
   const catalogParentByModel = new Map(
     (catalog?.models ?? []).filter((m) => m.parentId).map((m) => [m.name, m.parentId!] as const),
   );
-
+  const catalogRelationKeys = new Set(
+    (catalog?.relations ?? []).map((r) => `${r.source}\0${r.target}\0${r.forward}\0${r.reverse}`),
+  );
   const propsByModelEngine = await loadPropsByModelEngine(client, code);
 
   const modelRowsRaw = await client.model(SYS_MODEL).query().execute();
@@ -413,7 +441,9 @@ export async function fetchGraphFromDesignerRows(
     if (!id) {
       continue;
     }
-    let forward = String(row.engine_name);
+    let engineForward = String(row.engine_name);
+    let forward = engineForward;
+    let engineReverse = '';
     let reverse = '';
     let sourceEngine = '';
     let targetEngine = '';
@@ -421,16 +451,35 @@ export async function fetchGraphFromDesignerRows(
     let targetIdFromMeta = '';
     let sourceCardinality = '';
     let targetCardinality = '';
+    let selfLoopPolicy: 'deny' | 'allow' | undefined =
+      row.selfLoopPolicy === 'allow' ? 'allow' : row.selfLoopPolicy === 'deny' ? 'deny' : undefined;
+    let forwardNameI18nRaw: unknown = row.name;
+    let reverseNameI18nRaw: unknown;
     let forwardDescriptionRaw: unknown = row.forwardDescription;
     let reverseDescriptionRaw: unknown = row.reverseDescription;
     if (typeof row.canvas_meta === 'string' && row.canvas_meta.trim() !== '') {
       try {
         const meta = JSON.parse(row.canvas_meta) as Record<string, unknown>;
+        if (typeof meta.engineForward === 'string') {
+          engineForward = meta.engineForward;
+        }
         if (typeof meta.forward === 'string') {
           forward = meta.forward;
         }
+        if (typeof meta.engineReverse === 'string') {
+          engineReverse = meta.engineReverse;
+        }
         if (typeof meta.reverse === 'string') {
           reverse = meta.reverse;
+          if (!engineReverse) {
+            engineReverse = meta.reverse;
+          }
+        }
+        if (meta.forwardNameI18n !== undefined) {
+          forwardNameI18nRaw = meta.forwardNameI18n;
+        }
+        if (meta.reverseNameI18n !== undefined) {
+          reverseNameI18nRaw = meta.reverseNameI18n;
         }
         if (typeof meta.source === 'string') {
           sourceEngine = meta.source;
@@ -449,6 +498,9 @@ export async function fetchGraphFromDesignerRows(
         }
         if (typeof meta.targetCardinality === 'string') {
           targetCardinality = meta.targetCardinality;
+        }
+        if (meta.selfLoopPolicy === 'allow' || meta.selfLoopPolicy === 'deny') {
+          selfLoopPolicy = meta.selfLoopPolicy;
         }
         if (meta.forwardDescription !== undefined) {
           forwardDescriptionRaw = meta.forwardDescription;
@@ -477,19 +529,30 @@ export async function fetchGraphFromDesignerRows(
     if (!sourceId || !targetId) {
       continue;
     }
+    if (!engineReverse) {
+      engineReverse = reverse || `${engineForward}_rev`;
+    }
+    const catalogRelationKey = `${sourceEngine}\0${targetEngine}\0${engineForward}\0${engineReverse}`;
+    if (catalog && !catalogRelationKeys.has(catalogRelationKey)) {
+      continue;
+    }
     relations.push({
       id,
       source_model_id: sourceId,
       target_model_id: targetId,
       forward_name: forward,
       reverse_name: reverse || `${forward}_rev`,
-      forward_name_i18n: parseI18nField(row.name, forward),
+      engine_forward_name: engineForward,
+      engine_reverse_name: engineReverse,
+      forward_name_i18n: parseRelationDisplayI18n(forwardNameI18nRaw, forward),
+      reverse_name_i18n: parseRelationDisplayI18n(reverseNameI18nRaw, reverse || `${forward}_rev`),
       description_i18n: parseI18nField(row.description, ''),
       forward_description_i18n: parseI18nField(forwardDescriptionRaw ?? row.description, ''),
       reverse_description_i18n: parseI18nField(reverseDescriptionRaw ?? row.description, ''),
       self_cardinality: typeof row.selfCardinality === 'string' ? row.selfCardinality : undefined,
       source_cardinality: sourceCardinality || undefined,
       target_cardinality: targetCardinality || undefined,
+      self_loop_policy: selfLoopPolicy,
       pos_x: typeof row.posX === 'number' ? row.posX : undefined,
       pos_y: typeof row.posY === 'number' ? row.posY : undefined,
       canvas_meta_str: typeof row.canvas_meta === 'string' ? row.canvas_meta : undefined,
@@ -554,38 +617,117 @@ function overlayLayoutsFromMldg(
 }
 
 /** 从 mldg 快照恢复继承边的展示名 / 描述 / 画布元数据（catalog 行不存继承边）。 */
-function overlayInheritRelationsFromMldg(
+function overlayModelsFromMldg(
+  models: readonly EngineModelNode[],
+  doc: MldgDocument,
+): EngineModelNode[] {
+  const overlayById = new Map(doc.engine_schema.models.map((m) => [m.id, m] as const));
+  const overlayByEngineName = new Map(
+    doc.engine_schema.models.map((m) => [m.model_name, m] as const),
+  );
+  return models.map((model) => {
+    const overlay = overlayById.get(model.id) ?? overlayByEngineName.get(model.model_name);
+    if (!overlay) {
+      return model;
+    }
+    const propsById = new Map(overlay.props_objects_array.map((p) => [p.id, p] as const));
+    const propsByName = new Map(overlay.props_objects_array.map((p) => [p.name, p] as const));
+    const seenPropIds = new Set<string>();
+    const seenPropNames = new Set<string>();
+    const props = model.props_objects_array.map((prop) => {
+      const propOverlay = propsById.get(prop.id) ?? propsByName.get(prop.name);
+      if (!propOverlay) {
+        seenPropIds.add(prop.id);
+        seenPropNames.add(prop.name);
+        return prop;
+      }
+      seenPropIds.add(propOverlay.id);
+      seenPropNames.add(propOverlay.name);
+      return {
+        ...prop,
+        ...propOverlay,
+        name_i18n: propOverlay.name_i18n ? { ...propOverlay.name_i18n } : prop.name_i18n,
+        description_i18n: propOverlay.description_i18n
+          ? { ...propOverlay.description_i18n }
+          : prop.description_i18n,
+        metadata: { ...prop.metadata, ...propOverlay.metadata },
+      };
+    });
+    for (const propOverlay of overlay.props_objects_array) {
+      if (seenPropIds.has(propOverlay.id) || seenPropNames.has(propOverlay.name)) {
+        continue;
+      }
+      props.push({
+        ...propOverlay,
+        name_i18n: propOverlay.name_i18n ? { ...propOverlay.name_i18n } : undefined,
+        description_i18n: propOverlay.description_i18n
+          ? { ...propOverlay.description_i18n }
+          : undefined,
+        metadata: { ...propOverlay.metadata },
+      });
+    }
+    return {
+      ...model,
+      props_objects_array: props,
+      name_i18n: overlay.name_i18n ? { ...overlay.name_i18n } : model.name_i18n,
+      description_i18n: overlay.description_i18n
+        ? { ...overlay.description_i18n }
+        : model.description_i18n,
+      color_value: overlay.color_value ?? model.color_value,
+    };
+  });
+}
+
+function overlayRelationsFromMldg(
   relations: readonly EngineRelationEdge[],
   doc: MldgDocument,
 ): EngineRelationEdge[] {
+  const overlayById = new Map<string, EngineRelationEdge>();
   const inheritByPair = new Map<string, EngineRelationEdge>();
-  for (const rel of doc.engine_schema.relations) {
-    if (rel.kind !== GRAPH_INHERIT_KIND) {
-      continue;
+  for (const overlay of doc.engine_schema.relations) {
+    overlayById.set(overlay.id, overlay);
+    if (overlay.kind === GRAPH_INHERIT_KIND) {
+      inheritByPair.set(`${overlay.source_model_id}:${overlay.target_model_id}`, overlay);
     }
-    inheritByPair.set(`${rel.source_model_id}:${rel.target_model_id}`, rel);
   }
-  if (inheritByPair.size === 0) {
+  if (overlayById.size === 0 && inheritByPair.size === 0) {
     return [...relations];
   }
 
   return relations.map((rel) => {
-    if (rel.kind !== GRAPH_INHERIT_KIND) {
-      return rel;
-    }
-    const overlay = inheritByPair.get(`${rel.source_model_id}:${rel.target_model_id}`);
+    const overlay =
+      overlayById.get(rel.id) ??
+      (rel.kind === GRAPH_INHERIT_KIND
+        ? inheritByPair.get(`${rel.source_model_id}:${rel.target_model_id}`)
+        : undefined);
     if (!overlay) {
       return rel;
     }
     return {
       ...rel,
       forward_name: overlay.forward_name ?? rel.forward_name,
+      reverse_name: overlay.reverse_name ?? rel.reverse_name,
+      engine_forward_name: overlay.engine_forward_name ?? rel.engine_forward_name,
+      engine_reverse_name: overlay.engine_reverse_name ?? rel.engine_reverse_name,
       forward_name_i18n: overlay.forward_name_i18n
         ? { ...overlay.forward_name_i18n }
         : rel.forward_name_i18n,
+      reverse_name_i18n: overlay.reverse_name_i18n
+        ? { ...overlay.reverse_name_i18n }
+        : rel.reverse_name_i18n,
       description_i18n: overlay.description_i18n
         ? { ...overlay.description_i18n }
         : rel.description_i18n,
+      forward_description_i18n: overlay.forward_description_i18n
+        ? { ...overlay.forward_description_i18n }
+        : rel.forward_description_i18n,
+      reverse_description_i18n: overlay.reverse_description_i18n
+        ? { ...overlay.reverse_description_i18n }
+        : rel.reverse_description_i18n,
+      self_cardinality: overlay.self_cardinality ?? rel.self_cardinality,
+      source_cardinality: overlay.source_cardinality ?? rel.source_cardinality,
+      target_cardinality: overlay.target_cardinality ?? rel.target_cardinality,
+      self_loop_policy: overlay.self_loop_policy ?? rel.self_loop_policy,
       canvas_meta_str: overlay.canvas_meta_str ?? rel.canvas_meta_str,
       pos_x: overlay.pos_x ?? rel.pos_x,
       pos_y: overlay.pos_y ?? rel.pos_y,
@@ -620,14 +762,18 @@ export async function loadLibraryCanvas(
     throw new Error('DESIGNER_HYDRATE_NO_MODELS');
   }
 
+  let models = hydrated.models;
   let layouts = hydrated.layouts;
   let relations = hydrated.relations;
+  let designerLayout: MldgDocument['designer_layout'] | undefined;
   try {
     const bytes = await pullLatestDesignerSnapshot(client, libraryCode);
     const doc = parseMldgDocumentFromUint8Array(bytes);
     if (doc.engine_schema.models.length > 0) {
+      models = overlayModelsFromMldg(models, doc);
       layouts = overlayLayoutsFromMldg(hydrated, doc);
-      relations = overlayInheritRelationsFromMldg(relations, doc);
+      relations = overlayRelationsFromMldg(relations, doc);
+      designerLayout = doc.designer_layout;
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -640,5 +786,5 @@ export async function loadLibraryCanvas(
     }
   }
 
-  data.loadHydratedGraph(hydrated.models, relations, layouts);
+  data.loadHydratedGraph(models, relations, layouts, designerLayout);
 }

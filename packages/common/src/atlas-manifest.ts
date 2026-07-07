@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { MatchPredicate, RelationLogic } from './types.js';
+import type { MatchPredicate, RelationLogic, RelationSelfLoopPolicy } from './types.js';
 import { ModelRegistry } from './registry.js';
 import { AtlasManifestError } from './errors.js';
 import type { FieldTypeDef } from './data-types.js';
@@ -31,6 +31,7 @@ export interface AtlasManifestRelationJson {
   readonly reverse: string;
   readonly logic: RelationLogic | null;
   readonly matchOn: MatchPredicate | null;
+  readonly selfLoopPolicy?: RelationSelfLoopPolicy;
 }
 
 export interface AtlasManifestFileJson {
@@ -76,14 +77,19 @@ function normalizeRelationsForChecksum(
   relations: readonly AtlasManifestRelationJson[],
 ): AtlasManifestRelationJson[] {
   return [...relations]
-    .map((r) => ({
-      forward: r.forward,
-      logic: r.logic,
-      matchOn: r.matchOn,
-      reverse: r.reverse,
-      source: r.source,
-      target: r.target,
-    }))
+    .map((r) => {
+      const normalized: AtlasManifestRelationJson = {
+        forward: r.forward,
+        logic: r.logic,
+        matchOn: r.matchOn,
+        reverse: r.reverse,
+        source: r.source,
+        target: r.target,
+      };
+      return r.selfLoopPolicy !== undefined
+        ? { ...normalized, selfLoopPolicy: r.selfLoopPolicy }
+        : normalized;
+    })
     .sort(
       (a, b) =>
         a.source.localeCompare(b.source) ||
@@ -170,7 +176,15 @@ function hydrateRegistryFromManifest(data: {
   }
 
   for (const r of data.relations) {
-    registry.registerRelation(r.source, r.target, r.forward, r.reverse, r.logic, r.matchOn);
+    registry.registerRelation(
+      r.source,
+      r.target,
+      r.forward,
+      r.reverse,
+      r.logic,
+      r.matchOn,
+      r.selfLoopPolicy ?? 'deny',
+    );
   }
 
   return registry;
@@ -275,6 +289,7 @@ export function buildAtlasManifestFileJson(
       reverse: r.reverse,
       source: r.source,
       target: r.target,
+      ...(r.selfLoopPolicy === 'allow' ? { selfLoopPolicy: r.selfLoopPolicy } : {}),
     }))
     .sort(
       (a, b) =>

@@ -54,6 +54,8 @@ export class GraphLinker {
       target_model_id: targetModelId,
       forward_name: forwardName,
       reverse_name: reverseName,
+      engine_forward_name: forwardName,
+      engine_reverse_name: reverseName,
       kind: GRAPH_NODE_LINK_KIND,
       self_cardinality: RELATION_CARDINALITY_MANY,
       source_cardinality: RELATION_CARDINALITY_ONE,

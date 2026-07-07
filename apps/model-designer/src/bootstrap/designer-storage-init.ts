@@ -94,6 +94,7 @@ export async function ensureDesignerCatalog(
         vaultKey: 'String',
         /** 业务库模型上的字段名（与 sys_model.engine_name 共同定位）。 */
         engine_name: 'String',
+        model_engine_name: 'String',
         library_code: 'String',
       },
     },
@@ -106,6 +107,7 @@ export async function ensureDesignerCatalog(
         selfCardinality: 'String',
         sourceCardinality: 'String',
         targetCardinality: 'String',
+        selfLoopPolicy: 'String',
         posX: 'Number',
         posY: 'Number',
         canvas_meta: 'String',
@@ -259,9 +261,11 @@ export async function ensureDesignerCatalog(
     { model: SYS_RELATION_DEF, fields: { reverseDescription: 'I18N' } },
     { model: SYS_RELATION_DEF, fields: { sourceCardinality: 'String' } },
     { model: SYS_RELATION_DEF, fields: { targetCardinality: 'String' } },
+    { model: SYS_RELATION_DEF, fields: { selfLoopPolicy: 'String' } },
     { model: SYS_RELATION_DEF, fields: { engine_name: 'String' } },
     { model: SYS_RELATION_DEF, fields: { library_code: 'String' } },
     { model: SYS_PROPS, fields: { engine_name: 'String' } },
+    { model: SYS_PROPS, fields: { model_engine_name: 'String' } },
     { model: SYS_PROPS, fields: { library_code: 'String' } },
     { model: SYS_DESIGNER_GRAPH, fields: { library_code: 'String' } },
   ];

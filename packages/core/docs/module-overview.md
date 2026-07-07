@@ -8,6 +8,8 @@
 - `ModelDBClient` 只读运行时
 - `QueryChain` 查询链与查询执行
 - 落盘、索引、flush、bind、drop、truncate 等核心行为
+- `bindImportLookup` 二阶段导入关系绑定
+- 关系 `selfLoopPolicy` 与自环写入保护
 
 ## 2. 模块结构
 
@@ -27,6 +29,13 @@
 - `QueryChain`
 - `RelationIndexer`
 - `PersistenceManager`
+
+## 5. Recent semantics
+
+- `registerRelation` / `alterRelation` 需要保留 `selfLoopPolicy`，默认 `deny`。
+- `RelationIndexer` 和 database operation executor 都必须阻止未授权的 `sourceId === targetId` 自环。
+- `bindImportLookup` 通过关系端点、`importModel`、`peerModel` 和 `importSide` 解析导入记录应该写入 source 还是 target。
+- 关系查询正向 / 逆向都依赖同一份双向索引；修改 bind / unlink / index clear 时必须同时验证两个方向。
 
 ## 4. 典型使用场景
 

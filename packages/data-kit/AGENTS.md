@@ -9,8 +9,18 @@
 
 - `src/binding/binding-session.ts`
 - `src/view-data/query-result-adapter.ts`
+- `src/view-data/field-display-label.ts`
 - `src/import/build-import-ops.ts`
 - `src/import/relation-bind.ts`
+- `src/import/import-lookup-bind.ts`
+
+## Critical rules
+
+- 保持 headless：不要引入 React、DOM、浏览器 UI 状态。
+- 字段显示名格式统一为 `显示名[唯一名]`；缺失显示名时返回唯一名。
+- 导入关系绑定必须用 `forward + importModel + peerModel` 解析关系，不能只按关系名。
+- 自关联导入要保留 `importSide` 和 `selfLoopPolicy` 语义。
+- upsert 导入应交给 EngineOperation / SDK 提交链路，不要在 data-kit 写 UI 专属查询补丁。
 
 ## After changes
 

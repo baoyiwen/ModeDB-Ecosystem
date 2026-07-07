@@ -102,6 +102,8 @@ export function RelationPanel(props: {
             target_model_id: target.id,
             forward_name,
             reverse_name,
+            engine_forward_name: forward_name,
+            engine_reverse_name: reverse_name,
             kind: GRAPH_NODE_LINK_KIND,
             self_cardinality: RELATION_CARDINALITY_MANY,
             source_cardinality: RELATION_CARDINALITY_ONE,

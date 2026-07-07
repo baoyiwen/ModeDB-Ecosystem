@@ -70,6 +70,49 @@ const emptyI18n = (): Record<string, string> => ({ en: '', zh: '', ja: '' });
 
 const labelI18n = (s: string): Record<string, string> => ({ en: s, zh: s, ja: s });
 
+function relationCatalogKey(input: {
+  readonly source: string;
+  readonly target: string;
+  readonly forward: string;
+  readonly reverse: string;
+}): string {
+  return `${input.source}\0${input.target}\0${input.forward}\0${input.reverse}`;
+}
+
+function relationRowKey(row: Record<string, unknown>): string | null {
+  let forward = typeof row.engine_name === 'string' ? row.engine_name : '';
+  let reverse = '';
+  let source = '';
+  let target = '';
+  if (typeof row.canvas_meta === 'string' && row.canvas_meta.trim() !== '') {
+    try {
+      const meta = JSON.parse(row.canvas_meta) as Record<string, unknown>;
+      if (typeof meta.engineForward === 'string') {
+        forward = meta.engineForward;
+      } else if (typeof meta.forward === 'string') {
+        forward = meta.forward;
+      }
+      if (typeof meta.engineReverse === 'string') {
+        reverse = meta.engineReverse;
+      } else if (typeof meta.reverse === 'string') {
+        reverse = meta.reverse;
+      }
+      if (typeof meta.source === 'string') {
+        source = meta.source;
+      }
+      if (typeof meta.target === 'string') {
+        target = meta.target;
+      }
+    } catch {
+      /* ignore malformed relation metadata */
+    }
+  }
+  if (!forward || !source || !target) {
+    return null;
+  }
+  return relationCatalogKey({ source, target, forward, reverse });
+}
+
 export interface EngineCatalogImportReport {
   readonly insertedModels: number;
   readonly insertedRelations: number;
@@ -113,13 +156,14 @@ export async function importEngineCatalogIntoDesignerDb(
   }
 
   const existingRelRows = await designerClient.model(SYS_RELATION_DEF).query().execute();
-  const relIdByEngineName = new Map<string, string>();
+  const relIdByCatalogKey = new Map<string, string>();
   for (const r of Array.isArray(existingRelRows) ? existingRelRows : []) {
     const d = hydrate(r);
     if (d.library_code === code && typeof d.engine_name === 'string' && d.engine_name !== '') {
       const id = typeof d._id === 'string' ? d._id : '';
-      if (id !== '') {
-        relIdByEngineName.set(d.engine_name, id);
+      const key = relationRowKey(d);
+      if (id !== '' && key && !relIdByCatalogKey.has(key)) {
+        relIdByCatalogKey.set(key, id);
       }
     }
   }
@@ -207,6 +251,8 @@ export async function importEngineCatalogIntoDesignerDb(
 
   // 3b. 为业务库模型字段写入 sys_props（按 catalog.fields；已绑定到模型的字段跳过）。
   const propsByModelEngine = new Map<string, Set<string>>();
+  const propIdByModelField = new Map<string, Map<string, string>>();
+  const boundPropIds = new Set<string>();
   const modelRowsWithProps = await designerClient
     .model(SYS_MODEL)
     .query()
@@ -219,19 +265,46 @@ export async function importEngineCatalogIntoDesignerDb(
     }
     const engineModel = String(d.engine_name);
     const set = propsByModelEngine.get(engineModel) ?? new Set<string>();
+    const idMap = propIdByModelField.get(engineModel) ?? new Map<string, string>();
     const rel = d.relates as Record<string, unknown> | undefined;
     const slot = rel?.modelOwnsProps;
     if (Array.isArray(slot)) {
       for (const p of slot as Record<string, unknown>[]) {
         if (typeof p.engine_name === 'string') {
           set.add(p.engine_name);
+          if (typeof p._id === 'string') {
+            idMap.set(p.engine_name, p._id);
+            boundPropIds.add(p._id);
+          }
         }
       }
     }
     propsByModelEngine.set(engineModel, set);
+    propIdByModelField.set(engineModel, idMap);
+  }
+
+  const existingPropRows = await designerClient.model(SYS_PROPS).query().execute();
+  const reusablePropIdsByField = new Map<string, string[]>();
+  for (const r of Array.isArray(existingPropRows) ? existingPropRows : []) {
+    const d = hydrate(r);
+    if (d.library_code !== code || typeof d.engine_name !== 'string') {
+      continue;
+    }
+    const id = typeof d._id === 'string' ? d._id : '';
+    if (!id) {
+      continue;
+    }
+    if (boundPropIds.has(id)) {
+      continue;
+    }
+    reusablePropIdsByField.set(d.engine_name, [
+      ...(reusablePropIdsByField.get(d.engine_name) ?? []),
+      id,
+    ]);
   }
 
   const newPropRows: Array<Record<string, unknown>> = [];
+  const propUpdates: Array<{ model: string; id: string; partial: Record<string, unknown> }> = [];
   const propBindings: Array<{ modelId: string; propId: string }> = [];
   for (const m of userModels) {
     const modelId = modelIdByEngineName.get(m.name);
@@ -239,15 +312,16 @@ export async function importEngineCatalogIntoDesignerDb(
       continue;
     }
     const existingFields = propsByModelEngine.get(m.name) ?? new Set<string>();
+    const existingFieldIds = propIdByModelField.get(m.name) ?? new Map<string, string>();
     const fields = m.fields ?? [];
     for (let sort = 0; sort < fields.length; sort++) {
       const fieldName = fields[sort]!;
       if (existingFields.has(fieldName)) {
         continue;
       }
-      const propId = crypto.randomUUID();
-      newPropRows.push({
-        _id: propId,
+      const reusable = reusablePropIdsByField.get(fieldName)?.shift();
+      const propId = reusable ?? crypto.randomUUID();
+      const partial = {
         engine_name: fieldName,
         library_code: code,
         name: labelI18n(fieldName),
@@ -257,11 +331,27 @@ export async function importEngineCatalogIntoDesignerDb(
         isRequired: false,
         isPrimary: fieldName === 'id' || fieldName === '_id',
         vaultKey: '',
-      });
+      };
+      if (reusable) {
+        propUpdates.push({ model: SYS_PROPS, id: propId, partial });
+      } else {
+        newPropRows.push({
+          _id: propId,
+          ...partial,
+        });
+      }
       propBindings.push({ modelId, propId });
       existingFields.add(fieldName);
+      existingFieldIds.set(fieldName, propId);
     }
     propsByModelEngine.set(m.name, existingFields);
+    propIdByModelField.set(m.name, existingFieldIds);
+  }
+  if (propUpdates.length > 0) {
+    const { failureCount } = await designerClient.batchUpdate(propUpdates, { sync: true });
+    if (failureCount > 0) {
+      throw new Error('ENGINE_CATALOG_IMPORT_UPDATE_PROP_FAILED');
+    }
   }
   if (newPropRows.length > 0) {
     const { failureCount } = await designerClient
@@ -270,6 +360,8 @@ export async function importEngineCatalogIntoDesignerDb(
     if (failureCount > 0) {
       throw new Error('ENGINE_CATALOG_IMPORT_INSERT_PROP_FAILED');
     }
+  }
+  if (propBindings.length > 0) {
     for (const { modelId, propId } of propBindings) {
       try {
         await designerClient.bindRelation(
@@ -284,11 +376,12 @@ export async function importEngineCatalogIntoDesignerDb(
     }
   }
 
-  // 4. 缺失的 sys_relation 行批量插入；engine_name 取 forward label（业务库内 forward 全局唯一）。
+  // 4. 缺失的 sys_relation 行批量插入；关系名只在端点模型对内局部唯一。
   const newRelRows: Array<Record<string, unknown>> = [];
-  const newRelEngineNames: string[] = [];
+  const newRelationIds: string[] = [];
   for (const r of userRelations) {
-    if (relIdByEngineName.has(r.forward)) {
+    const relationKey = relationCatalogKey(r);
+    if (relIdByCatalogKey.has(relationKey)) {
       continue;
     }
     const _id = crypto.randomUUID();
@@ -299,6 +392,7 @@ export async function importEngineCatalogIntoDesignerDb(
       name: labelI18n(r.forward),
       description: emptyI18n(),
       selfCardinality: '',
+      selfLoopPolicy: r.selfLoopPolicy ?? 'deny',
       posX: 0,
       posY: 0,
       // 把端点信息嵌在 canvas_meta JSON 里，避免新增字段；后续若需要专用关系绑定再迁移。
@@ -307,10 +401,11 @@ export async function importEngineCatalogIntoDesignerDb(
         reverse: r.reverse,
         source: r.source,
         target: r.target,
+        selfLoopPolicy: r.selfLoopPolicy ?? 'deny',
       }),
     });
-    newRelEngineNames.push(r.forward);
-    relIdByEngineName.set(r.forward, _id);
+    newRelationIds.push(_id);
+    relIdByCatalogKey.set(relationKey, _id);
   }
   if (newRelRows.length > 0) {
     const { failureCount } = await designerClient
@@ -337,9 +432,7 @@ export async function importEngineCatalogIntoDesignerDb(
         /* idempotent */
       }
     }
-    for (const engineName of newRelEngineNames) {
-      const targetId = relIdByEngineName.get(engineName);
-      if (!targetId) continue;
+    for (const targetId of newRelationIds) {
       try {
         await designerClient.bindRelation(
           { model: SYS_DATA_ASSET_MAP, id: assetMapId },

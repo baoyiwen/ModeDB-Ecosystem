@@ -192,6 +192,26 @@
   gap: 12px;
 }
 
+.designer-switch-row__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.designer-switch-row__copy small {
+  color: var(--designer-text-soft);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.designer-relation-policy-row {
+  padding: 8px 9px;
+  border: 1px solid var(--designer-border);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
 .designer-switch {
   appearance: none;
   width: 36px;
@@ -1593,50 +1613,6 @@
   letter-spacing: -0.02em;
 }
 
-/* ========= Slide panel ========= */
-
-.designer-slide-shell {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.16s ease, visibility 0s linear 0.18s;
-}
-
-.designer-slide-shell--open {
-  pointer-events: none;
-  opacity: 1;
-  visibility: visible;
-  transition: opacity 0.16s ease, visibility 0s linear 0s;
-}
-
-.designer-slide-panel {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  bottom: 16px;
-  width: min(380px, 92vw);
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  border-radius: var(--designer-radius-lg);
-  overflow: hidden;
-  transform: translateX(calc(100% + 20px));
-  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: auto;
-  background: var(--designer-glass);
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  border: 1px solid var(--designer-border);
-  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.12);
-}
-
-.designer-slide-shell--open .designer-slide-panel {
-  transform: translateX(0);
-}
-
 .designer-passive-panels {
   display: flex;
   flex-direction: column;
@@ -1645,32 +1621,6 @@
 
 .designer-passive-section {
   margin: 0;
-}
-
-.designer-slide-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--designer-border);
-  gap: 8px;
-}
-
-.designer-slide-close {
-  width: 36px;
-  height: 36px;
-  border: 1px solid var(--designer-border);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--designer-text-soft);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.designer-slide-close:hover {
-  background: #ffffff;
 }
 
 .designer-settings-row {
@@ -2561,9 +2511,7 @@ body::before {
 
 .designer-glass-panel,
 .designer-side-panel,
-.designer-slide-panel,
 .designer-connection-card,
-.designer-notify-toast,
 .designer-prop-card,
 .designer-tree-editor,
 .designer-layer-row {
@@ -2627,10 +2575,6 @@ body::before {
   box-shadow: 0 12px 28px rgba(99, 102, 241, 0.2);
 }
 
-.designer-notify-toast {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.92) 100%);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .designer-input,
   .designer-select,
@@ -2659,52 +2603,4 @@ body::before {
   .designer-relation-cardinality__controls {
     grid-template-columns: 1fr;
   }
-}
-
-.designer-slide-panel:has(.designer-notify-center) {
-  min-height: 0;
-}
-
-.designer-slide-panel:has(.designer-notify-center) .designer-panel-body {
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.designer-notify-center {
-  min-height: 0;
-  flex: 1 1 auto;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 14px;
-}
-
-.designer-notify-list {
-  min-height: 0;
-  max-height: none;
-  overflow-y: auto;
-  align-content: start;
-  padding: 2px 0 10px;
-}
-
-.designer-notify-item {
-  background: rgba(244, 247, 251, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow:
-    0 10px 26px rgba(15, 23, 42, 0.055),
-    inset 0 1px 0 rgba(255, 255, 255, 0.68);
-}
-
-.designer-notify-item:hover {
-  background: rgba(248, 250, 252, 0.98);
-  border-color: rgba(100, 116, 139, 0.22);
-  box-shadow:
-    0 14px 30px rgba(15, 23, 42, 0.075),
-    inset 0 1px 0 rgba(255, 255, 255, 0.76);
-}
-
-.designer-notify-item--unread {
-  background: rgba(241, 245, 249, 0.96);
-  border-color: rgba(100, 116, 139, 0.2);
 }

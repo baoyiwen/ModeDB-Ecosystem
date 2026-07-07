@@ -10,6 +10,10 @@ const SUCCESS_UI_KEYS: Record<AsyncOperationKey, string> = {
   loadCanvas: 'notifyLibraryReady',
   clearAllData: 'dataClearAllDone',
   clearModelData: 'dataClearModelDone',
+  backupDatabase: 'backupCreateSuccess',
+  restoreDatabase: 'backupRestoreSuccess',
+  clearDatabaseManaged: 'backupClearSuccess',
+  forceResetDatabase: 'backupForceResetSuccess',
   openLibrary: 'notifyLibraryReady',
   reconnect: 'asyncOpDone_reconnect',
 };
@@ -20,6 +24,10 @@ const ERROR_KEYS: Record<AsyncOperationKey, { ns: 'ui' | 'errors'; key: string }
   loadCanvas: { ns: 'ui', key: 'notifyLoadCanvasFailed' },
   clearAllData: { ns: 'errors', key: 'clearDataFailed' },
   clearModelData: { ns: 'errors', key: 'clearDataFailed' },
+  backupDatabase: { ns: 'errors', key: 'databaseManagementFailed' },
+  restoreDatabase: { ns: 'errors', key: 'databaseManagementFailed' },
+  clearDatabaseManaged: { ns: 'errors', key: 'databaseManagementFailed' },
+  forceResetDatabase: { ns: 'errors', key: 'databaseManagementFailed' },
   openLibrary: { ns: 'errors', key: 'bootstrapFailed' },
   reconnect: { ns: 'errors', key: 'connectFailed' },
 };
@@ -28,6 +36,10 @@ const NAME_IN_TITLE_KEYS = new Set<AsyncOperationKey>([
   'loadCanvas',
   'clearAllData',
   'clearModelData',
+  'backupDatabase',
+  'restoreDatabase',
+  'clearDatabaseManaged',
+  'forceResetDatabase',
   'openLibrary',
 ]);
 

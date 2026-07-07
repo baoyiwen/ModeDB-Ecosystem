@@ -66,6 +66,12 @@ export function ensureModelDbLayoutAtRoot(home: string): string {
       cacheSize: '2GB',
       mode: 'development',
       connectToken,
+      autoBackup: {
+        enabled: false,
+        intervalMinutes: 60,
+        runOnStart: false,
+        reason: 'auto',
+      },
       dev: false,
     };
     writeFileSync(cfgPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf-8');

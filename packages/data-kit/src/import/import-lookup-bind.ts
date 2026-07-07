@@ -2,6 +2,7 @@ import type { EngineOperation } from '@mode-db/shared';
 
 import type { CatalogModelRef, CatalogRelationRef } from './relation-bind.js';
 import type { RelationBindingRule } from './import-profile.js';
+import { relationForImportBinding } from './relation-bind.js';
 import { importLookupCanonicalKey } from './coerce-import-cell.js';
 import { coerceImportValue } from './coerce-import-row.js';
 
@@ -91,7 +92,7 @@ export function buildBindImportLookupOps(
 
     for (const joinChunk of chunk.joinValues) {
       const rule = joinChunk.rule;
-      const relation = staging.relations.find((r) => r.forward === rule.relation);
+      const relation = relationForImportBinding(staging.relations, staging.targetModel, rule);
       if (!relation) {
         continue;
       }

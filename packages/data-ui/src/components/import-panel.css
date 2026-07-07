@@ -189,6 +189,19 @@
   margin-top: 8px;
 }
 
+.import-dedupe-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.import-dedupe-field {
+  display: grid;
+  gap: 6px;
+  max-width: 360px;
+  color: #334155;
+  font-weight: 600;
+}
+
 .import-relation-actions button {
   padding: 4px 10px;
   font-size: 12px;

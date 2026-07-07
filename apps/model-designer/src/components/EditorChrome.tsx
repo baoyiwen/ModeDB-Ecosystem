@@ -6,6 +6,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
+import { AppDrawer, useAppConfirm } from '@mode-db/data-ui';
 import { useDesigner } from '../context/designer-context.js';
 import { withBusinessLibrarySession } from '../engine/business-library-session.js';
 import { isInheritRelation } from '../config/graph-edge-kinds.js';
@@ -25,11 +26,11 @@ export type ManualPanelKind = 'hierarchy' | 'settings' | 'notifications';
 export function EditorChrome(props: {
   selectedModelId: string | undefined;
   selectedRelationId: string | undefined;
-  /** 关闭仅由画布选择打开的被动侧栏（清除选择）。 */
   onRequestClearCanvasSelection: () => void;
   children: ReactNode;
 }): ReactElement {
   const { i18n, appearance, modes, data, config, notifications, asyncOps } = useDesigner();
+  const confirm = useAppConfirm();
   const [, bump] = useState(0);
   const [notifyBump, setNotifyBump] = useState(0);
   useEffect(() => i18n.subscribe(() => bump((n) => n + 1)), [i18n]);
@@ -130,21 +131,11 @@ export function EditorChrome(props: {
               value={i18n.locale}
               options={[
                 { value: 'en', label: 'English' },
-                { value: 'zh', label: '中文' },
-                { value: 'ja', label: '日本語' },
+                { value: 'zh', label: 'Chinese' },
+                { value: 'ja', label: 'Japanese' },
               ]}
               onChange={(value) => i18n.setLocale(value as LocaleCode)}
             />
-            <select
-              style={{ display: 'none' }}
-              className="designer-select"
-              value={i18n.locale}
-              onChange={(e) => i18n.setLocale(e.target.value as LocaleCode)}
-            >
-              <option value="en">English</option>
-              <option value="zh">中文</option>
-              <option value="ja">日本語</option>
-            </select>
           </label>
 
           <div className="designer-settings-row">
@@ -200,7 +191,12 @@ export function EditorChrome(props: {
                 if (!config.remoteClient || !lib) {
                   return;
                 }
-                if (!globalThis.confirm(i18n.t('ui', 'dataConfirmClearAll', { name: lib }))) {
+                if (
+                  !(await confirm({
+                    title: i18n.t('ui', 'dataConfirmClearAll', { name: lib }),
+                    tone: 'danger',
+                  }))
+                ) {
                   return;
                 }
                 try {
@@ -213,7 +209,7 @@ export function EditorChrome(props: {
                     { detail: lib },
                   );
                 } catch {
-                  /* 失败态由右侧 toast 展示 */
+                  // The async operation manager displays the failure toast.
                 }
               }}
             >
@@ -290,26 +286,20 @@ export function EditorChrome(props: {
         </button>
       </div>
 
-      <div
-        className={`designer-slide-shell${shellOpen ? ' designer-slide-shell--open' : ''}`}
-        aria-hidden={!shellOpen}
+      <AppDrawer
+        open={shellOpen}
+        title={shellOpen ? title() : ''}
+        eyebrow="ModeDB"
+        side="right"
+        width={430}
+        closeLabel={i18n.t('ui', 'notifyDismiss')}
+        onClose={closeAll}
+        bodyClassName="designer-panel-body designer-scrollbar-hide"
+        labelledById="designer-drawer-title"
+        withScrim={false}
       >
-        <aside
-          className="designer-slide-panel"
-          role="dialog"
-          aria-labelledby="designer-slide-title"
-        >
-          <header className="designer-slide-panel-header">
-            <h2 id="designer-slide-title" className="designer-panel-title">
-              {shellOpen ? title() : ''}
-            </h2>
-            <button type="button" className="designer-slide-close" onClick={closeAll}>
-              ×
-            </button>
-          </header>
-          <div className="designer-panel-body designer-scrollbar-hide">{body}</div>
-        </aside>
-      </div>
+        {body}
+      </AppDrawer>
     </>
   );
 }

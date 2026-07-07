@@ -12,6 +12,12 @@
 
 它不直接承载 AuthoringEngine、RPC 或浏览器 SDK 逻辑。
 
+近期新增的底层语义：
+
+- `RelationDefinition.selfLoopPolicy` 控制关系是否允许直接自环 `sourceId === targetId`，默认 `deny`。
+- `atlas-manifest` 会持久化关系的 `selfLoopPolicy`，只有显式 `allow` 时才写入精简字段。
+- `coerce-import-cell` 提供导入匹配值规范化，供 `data-kit` 和 server-side `bindImportLookup` 共同使用。
+
 ## 2. 模块边界
 
 - 可以被 `core`、`server`、底层工具依赖

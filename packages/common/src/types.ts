@@ -51,6 +51,7 @@ export interface RelationDefinition {
   readonly reverse: string;
   logic: RelationLogic | null;
   matchOn: MatchPredicate | null;
+  selfLoopPolicy?: RelationSelfLoopPolicy;
 }
 
 /**
@@ -69,6 +70,14 @@ export interface MatchPredicate {
  * Cardinality logic for a relation.
  */
 export type RelationLogic = 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many';
+
+/**
+ * Controls whether a relation may contain a direct self-loop (`sourceId === targetId`).
+ *
+ * Default is `deny`, which prevents accidental rows like "department is its own parent".
+ * Advanced business scenarios can explicitly opt in with `allow`.
+ */
+export type RelationSelfLoopPolicy = 'deny' | 'allow';
 
 /**
  * Serialized form of a single relation's bidirectional index.

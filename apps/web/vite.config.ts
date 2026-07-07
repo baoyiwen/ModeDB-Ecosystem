@@ -1,7 +1,11 @@
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+
+const appDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(appDir, '../..');
 
 // When a dependency resolves to `../../packages/...`, Vite can mis-resolve
 // `vite-plugin-node-polyfills/shims/*` relative to the importer (ENOENT under `apps/web/`).
@@ -33,6 +37,11 @@ export default defineConfig({
       },
     }),
   ],
+  resolve: {
+    alias: {
+      '@mode-db/data-ui': path.resolve(repoRoot, 'packages/data-ui/src/index.ts'),
+    },
+  },
   server: {
     port: 5174,
     fs: { allow: ['..', '../..'] },

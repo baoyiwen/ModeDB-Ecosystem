@@ -4,6 +4,10 @@ export type AsyncOperationKey =
   | 'loadCanvas'
   | 'clearAllData'
   | 'clearModelData'
+  | 'backupDatabase'
+  | 'restoreDatabase'
+  | 'clearDatabaseManaged'
+  | 'forceResetDatabase'
   | 'openLibrary'
   | 'reconnect';
 

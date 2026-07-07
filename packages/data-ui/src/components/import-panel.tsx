@@ -1,4 +1,11 @@
-import { useCallback, useMemo, useState, type ChangeEvent, type ReactElement } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type ReactElement,
+} from 'react';
 import type {
   ApplyBatchResult,
   CatalogModelRef,
@@ -15,6 +22,7 @@ import {
   collectImportOpsFromHandle,
   createImportProfile,
   csvIngestAdapter,
+  formatDisplayWithUnique,
   mapIngestRow,
   mergeColumnMapping,
   mergeRelationBindings,
@@ -43,6 +51,8 @@ export interface ImportPanelProps {
   readonly locale: string;
   /** Field name → locale → display label (current locale only is shown). */
   readonly fieldLabels?: FieldLabelMap;
+  /** `display` shows localized display names when present; `name` shows stable unique names. */
+  readonly nameDisplayMode?: 'display' | 'name';
   /** Target model field types for pre-submit coercion. */
   readonly fieldTypes?: ImportFieldTypeMap;
   readonly onImportCommitResult?: (result: ApplyBatchResult) => void;
@@ -67,6 +77,63 @@ function formatCell(value: unknown): string {
   return String(value);
 }
 
+function uniqueFields(fields: readonly string[]): readonly string[] {
+  return [...new Set(fields)];
+}
+
+function preferredUpsertField(fields: readonly string[]): string {
+  const normalized = new Map(fields.map((field) => [field.toLowerCase(), field]));
+  return normalized.get('id') ?? normalized.get('code') ?? normalized.get('key') ?? '';
+}
+
+function catalogModelFields(model: CatalogModelRef | undefined): readonly string[] {
+  if (!model) {
+    return [];
+  }
+  const fromFields = propFieldsFromCatalogFields(model.fields ?? []);
+  if (fromFields.length > 0) {
+    return fromFields;
+  }
+  return propFieldsFromCatalogFields(Object.keys(model.fieldTypes ?? {}));
+}
+
+function displayNameForLocale(
+  labels: Readonly<Record<string, string>> | undefined,
+  locale: string,
+): string | undefined {
+  const label = labels?.[locale]?.trim();
+  return label && label.length > 0 ? label : undefined;
+}
+
+function relationOptionKey(relation: CatalogRelationRef): string {
+  return `${relation.forward}\0${relation.source}\0${relation.target}`;
+}
+
+function relationForRule(
+  rule: RelationBindingRule,
+  relations: readonly CatalogRelationRef[],
+  importModel: string,
+): CatalogRelationRef | undefined {
+  return relations.find((r) => {
+    if (r.forward !== rule.relation) {
+      return false;
+    }
+    if (r.source !== importModel && r.target !== importModel) {
+      return false;
+    }
+    return r.source === rule.targetModel || r.target === rule.targetModel;
+  });
+}
+
+function relationKeyForRule(
+  rule: RelationBindingRule,
+  relations: readonly CatalogRelationRef[],
+  importModel: string,
+): string {
+  const relation = relationForRule(rule, relations, importModel);
+  return relation ? relationOptionKey(relation) : rule.relation;
+}
+
 /** CSV upload, AutoMap, relation binding, preview, and batch import via DataBinding. */
 export function ImportPanel(props: ImportPanelProps): ReactElement {
   const {
@@ -77,6 +144,7 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
     labels,
     locale,
     fieldLabels,
+    nameDisplayMode = 'display',
     fieldTypes,
     onImportCommitResult,
   } = props;
@@ -84,8 +152,18 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
   const importFailures = page.importFailures;
 
   const formatField = useMemo(
-    () => createFieldLabelFormatter(fieldLabels, locale),
-    [fieldLabels, locale],
+    () => createFieldLabelFormatter(fieldLabels, locale, nameDisplayMode === 'display'),
+    [fieldLabels, locale, nameDisplayMode],
+  );
+  const formatModel = useCallback(
+    (modelName: string): string => {
+      if (nameDisplayMode === 'name') {
+        return modelName;
+      }
+      const model = catalogModels.find((m) => m.name === modelName);
+      return formatDisplayWithUnique(modelName, displayNameForLocale(model?.displayName, locale));
+    },
+    [catalogModels, locale, nameDisplayMode],
   );
 
   const [fileName, setFileName] = useState<string | null>(null);
@@ -98,6 +176,7 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
   const [busy, setBusy] = useState(false);
   const [csvFingerprint, setCsvFingerprint] = useState('');
   const [csvTextCache, setCsvTextCache] = useState('');
+  const [upsertMatchField, setUpsertMatchField] = useState('');
 
   const applicableRelations = useMemo(
     () => relationsForImportModel(targetModel, catalogRelations),
@@ -123,6 +202,15 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
     [effectiveMapping],
   );
 
+  useEffect(() => {
+    setUpsertMatchField((prev) => {
+      if (prev.length > 0 && mappedTargetFields.includes(prev)) {
+        return prev;
+      }
+      return preferredUpsertField(mappedTargetFields);
+    });
+  }, [mappedTargetFields]);
+
   const activeRelationBindings = useMemo(
     () =>
       relationBindings.filter(
@@ -132,42 +220,37 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
   );
 
   const peerFields = useCallback(
-    (relationForward: string): readonly string[] => {
-      const rel = catalogRelations.find((r) => r.forward === relationForward);
-      if (!rel) {
-        return [];
+    (rule: Pick<RelationBindingRule, 'targetModel'>): readonly string[] => {
+      const model = catalogModels.find((m) => m.name === rule.targetModel);
+      const fromCatalog = catalogModelFields(model);
+      if (rule.targetModel !== targetModel) {
+        return fromCatalog;
       }
-      const peer = relatedModelForImport(rel, targetModel);
-      if (!peer) {
-        return [];
-      }
-      const model = catalogModels.find((m) => m.name === peer);
-      return propFieldsFromCatalogFields(model?.fields ?? []);
+      return uniqueFields([...fromCatalog, ...propFieldsFromCatalogFields(propFields)]);
     },
-    [catalogModels, catalogRelations, targetModel],
+    [catalogModels, propFields, targetModel],
   );
 
   const peerFieldLabels = useCallback(
-    (relationForward: string): FieldLabelMap | undefined => {
-      const rel = catalogRelations.find((r) => r.forward === relationForward);
-      if (!rel) {
-        return undefined;
+    (targetPeerModel: string): FieldLabelMap | undefined => {
+      const model = catalogModels.find((m) => m.name === targetPeerModel);
+      if (targetPeerModel === targetModel) {
+        return { ...(fieldLabels ?? {}), ...(model?.fieldLabels ?? {}) };
       }
-      const peer = relatedModelForImport(rel, targetModel);
-      if (!peer) {
-        return undefined;
-      }
-      const model = catalogModels.find((m) => m.name === peer);
       return model?.fieldLabels;
     },
-    [catalogModels, catalogRelations, targetModel],
+    [catalogModels, fieldLabels, targetModel],
   );
 
   const formatPeerField = useCallback(
-    (relationForward: string, fieldName: string): string => {
-      return createFieldLabelFormatter(peerFieldLabels(relationForward), locale)(fieldName);
+    (targetPeerModel: string, fieldName: string): string => {
+      return createFieldLabelFormatter(
+        peerFieldLabels(targetPeerModel),
+        locale,
+        nameDisplayMode === 'display',
+      )(fieldName);
     },
-    [locale, peerFieldLabels],
+    [locale, nameDisplayMode, peerFieldLabels],
   );
 
   const resetImportState = useCallback((): void => {
@@ -179,6 +262,7 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
     setError(null);
     setCsvFingerprint('');
     setCsvTextCache('');
+    setUpsertMatchField('');
   }, []);
 
   const handleFileChange = useCallback(
@@ -254,7 +338,10 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
 
   const addRelationBinding = useCallback((): void => {
     const unused = applicableRelations.find(
-      (r) => !relationBindings.some((b) => b.relation === r.forward),
+      (r) =>
+        !relationBindings.some(
+          (b) => relationKeyForRule(b, applicableRelations, targetModel) === relationOptionKey(r),
+        ),
     );
     const relation = unused ?? applicableRelations[0];
     if (!relation) {
@@ -270,7 +357,7 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
           relation: relation.forward,
           sourceColumn: schema?.columns[0]?.name ?? '',
           targetModel: peer,
-          targetMatchColumn: peerFields(relation.forward)[0] ?? '',
+          targetMatchColumn: peerFields({ targetModel: peer })[0] ?? '',
         },
       ]),
     );
@@ -309,6 +396,7 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
         targetFields: propFields,
         fieldTypes,
         catalogModels,
+        upsertMatchFields: upsertMatchField ? [upsertMatchField] : undefined,
       });
       handle.close();
 
@@ -351,6 +439,7 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
     fieldTypes,
     labels,
     catalogModels,
+    upsertMatchField,
   ]);
 
   const previewMappedRows = useMemo(() => {
@@ -396,7 +485,7 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
         </label>
         {fileName ? <span className="import-panel-meta">{fileName}</span> : null}
         <span className="import-panel-meta">
-          {labels.targetModel.replace('{{model}}', targetModel)}
+          {labels.targetModel.replace('{{model}}', formatModel(targetModel))}
         </span>
       </div>
 
@@ -451,6 +540,28 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
             </div>
           </div>
 
+          <div className="import-panel-section">
+            <h3>{labels.duplicateHandling}</h3>
+            <div className="import-panel-body import-dedupe-panel">
+              <label className="import-dedupe-field">
+                {labels.upsertMatchField}
+                <select
+                  className="import-field-select"
+                  value={upsertMatchField}
+                  onChange={(e) => setUpsertMatchField(e.target.value)}
+                >
+                  <option value="">{labels.upsertAppendOnly}</option>
+                  {mappedTargetFields.map((f) => (
+                    <option key={f} value={f}>
+                      {formatField(f)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="import-relation-hint">{labels.upsertHelp}</p>
+            </div>
+          </div>
+
           {applicableRelations.length > 0 ? (
             <div className="import-panel-section">
               <h3>{labels.relationBindings}</h3>
@@ -476,28 +587,30 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
                       </thead>
                       <tbody>
                         {relationBindings.map((rule, index) => (
-                          <tr key={`${rule.relation}-${index}`}>
+                          <tr key={`${rule.relation}-${rule.targetModel}-${index}`}>
                             <td>
                               <select
                                 className="import-field-select"
-                                value={rule.relation}
+                                value={relationKeyForRule(rule, applicableRelations, targetModel)}
                                 aria-label={labels.relation}
                                 onChange={(e) => {
-                                  const forward = e.target.value;
                                   const rel = applicableRelations.find(
-                                    (r) => r.forward === forward,
+                                    (r) => relationOptionKey(r) === e.target.value,
                                   );
+                                  const forward = rel?.forward ?? '';
                                   const peer = rel ? relatedModelForImport(rel, targetModel) : null;
                                   updateRelationBinding(index, {
                                     relation: forward,
                                     targetModel: peer ?? rule.targetModel,
-                                    targetMatchColumn: peer ? (peerFields(forward)[0] ?? '') : '',
+                                    targetMatchColumn: peer
+                                      ? (peerFields({ targetModel: peer })[0] ?? '')
+                                      : '',
                                   });
                                 }}
                               >
                                 {applicableRelations.map((r) => (
-                                  <option key={r.forward} value={r.forward}>
-                                    {r.forward} ({r.source} → {r.target})
+                                  <option key={relationOptionKey(r)} value={relationOptionKey(r)}>
+                                    {r.forward} ({formatModel(r.source)} → {formatModel(r.target)})
                                   </option>
                                 ))}
                               </select>
@@ -519,7 +632,7 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
                                 ))}
                               </select>
                             </td>
-                            <td className="import-cell-text">{rule.targetModel}</td>
+                            <td className="import-cell-text">{formatModel(rule.targetModel)}</td>
                             <td>
                               <select
                                 className="import-field-select"
@@ -532,9 +645,9 @@ export function ImportPanel(props: ImportPanelProps): ReactElement {
                                 }
                               >
                                 <option value="">{labels.selectOption}</option>
-                                {peerFields(rule.relation).map((f) => (
+                                {peerFields(rule).map((f) => (
                                   <option key={f} value={f}>
-                                    {formatPeerField(rule.relation, f)}
+                                    {formatPeerField(rule.targetModel, f)}
                                   </option>
                                 ))}
                               </select>

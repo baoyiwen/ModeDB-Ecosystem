@@ -1516,8 +1516,12 @@ export class QueryChain<
             list = mapped;
           }
         }
+        const parentKey = idKey(e);
         for (const c of list) {
-          childIds.add(idKey(c));
+          const childKey = idKey(c);
+          if (childKey !== parentKey) {
+            childIds.add(childKey);
+          }
         }
         for (const c of list) {
           walk(c);

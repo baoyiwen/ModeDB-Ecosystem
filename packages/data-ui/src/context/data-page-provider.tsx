@@ -32,6 +32,7 @@ export interface DataPageProviderProps {
   readonly querySnapshot?: RemoteExecuteSnapshot;
   readonly pivotConfig?: PivotViewConfig | null;
   readonly propFields?: readonly string[];
+  readonly columnLabels?: Readonly<Record<string, string>>;
   readonly allowedModes?: readonly DataPageMode[];
   readonly initialMode?: DataPageMode;
   readonly children: ReactNode;
@@ -45,6 +46,7 @@ export function DataPageProvider(props: DataPageProviderProps): ReactElement {
     querySnapshot,
     pivotConfig = null,
     propFields,
+    columnLabels,
     allowedModes = DEFAULT_ALLOWED_MODES,
     initialMode = 'view',
     children,
@@ -74,8 +76,9 @@ export function DataPageProvider(props: DataPageProviderProps): ReactElement {
         executor,
         pivotLeafGrain: built.isLeafGrain,
         propFields,
+        columnLabels,
       }),
-    [built.snapshot, built.isLeafGrain, executor, propFields],
+    [built.snapshot, built.isLeafGrain, executor, propFields, columnLabels],
   );
 
   const safeInitial = canEnterMode(initialMode, allowedModes) ? initialMode : 'view';

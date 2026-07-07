@@ -235,6 +235,22 @@ export function RelationDetailPanel(props: {
         />
       </div>
 
+      <label className="designer-switch-row designer-relation-policy-row">
+        <span className="designer-switch-row__copy">
+          <span className="designer-field-label">{i18n.t('ui', 'relationSelfLoopPolicy')}</span>
+          <small>{i18n.t('ui', 'relationSelfLoopPolicyHint')}</small>
+        </span>
+        <input
+          type="checkbox"
+          className="designer-switch"
+          disabled={readOnly}
+          checked={rel.self_loop_policy === 'allow'}
+          onChange={(e) =>
+            data.updateRelation(rel.id, { self_loop_policy: e.target.checked ? 'allow' : 'deny' })
+          }
+        />
+      </label>
+
       <div className="designer-relation-basic-stack">
         <fieldset className="designer-relation-side designer-glass-inset">
           <legend>{i18n.t('ui', 'relationForwardSection')}</legend>

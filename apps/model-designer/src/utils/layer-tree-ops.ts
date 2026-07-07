@@ -193,6 +193,7 @@ export function normalizeLayerTreeRoots(roots: readonly LayerTreeNode[]): LayerT
       description_i18n: n.description_i18n ? { ...n.description_i18n } : undefined,
       children: n.kind === 'group' ? clone(n.children) : [],
       memberModelIds: n.kind === 'page' ? [...n.memberModelIds] : [],
+      memberRelationIds: n.kind === 'page' ? [...(n.memberRelationIds ?? [])] : undefined,
     }));
 
   const cloned = clone(roots);

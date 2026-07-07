@@ -46,6 +46,8 @@ export interface BuildImportOpsOptions {
   readonly fieldTypes?: ImportFieldTypeMap;
   /** Catalog models for peer lookup field types (bind-only relation binding). */
   readonly catalogModels?: readonly CatalogModelRef[];
+  /** When set, import rows update existing records matched by these fields instead of duplicating. */
+  readonly upsertMatchFields?: readonly string[];
 }
 
 interface PreparedImportRow {
@@ -142,6 +144,14 @@ export function buildImportInsertOps(
       model: profile.targetModel,
       rows: batch,
       ...(needsLookupBind ? { returning: true } : {}),
+      ...(options.upsertMatchFields?.length
+        ? {
+            upsert: {
+              matchFields: [...new Set(options.upsertMatchFields)],
+              updateExisting: true,
+            },
+          }
+        : {}),
     });
 
     if (needsLookupBind) {

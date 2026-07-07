@@ -22,6 +22,7 @@ const engine = await AuthoringEngine.open({ atlasPath: '...' });
 - `update`
 - `delete`
 - `bind`
+- `bindImportLookup`（通过 `apply` / `applyAll`）
 - `dropModel`
 - `dropRelation`
 - `clearModelData`
@@ -40,3 +41,6 @@ const engine = await AuthoringEngine.open({ atlasPath: '...' });
 - 不适合直接在浏览器中使用
 - schema 变更要区分 destructive / non-destructive
 - relation 相关改动要同步关注索引与查询行为
+- 自关联关系默认不允许直接自环；需要在关系定义中显式设置 `selfLoopPolicy: 'allow'`
+- 修改或排查关系查询时必须同时验证正向和逆向，例如 `children` 与 `parent`
+- `bindImportLookup` 用于导入后按对端匹配字段补关系，错误通常来自端点模型、`importSide` 或字段类型不一致
