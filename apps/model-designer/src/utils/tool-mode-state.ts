@@ -15,6 +15,10 @@ export function interactionStateForToolMode(mode: DesignerToolMode): Interaction
     case 'inherit':
       return 'INHERITING';
     case 'page':
+    case 'query-select':
+    case 'query-create':
+    case 'query-inspect':
+    case 'query-preview':
       return 'SELECT';
   }
 }

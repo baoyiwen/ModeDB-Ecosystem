@@ -139,6 +139,25 @@ function parseI18nDisplay(
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function decodeBase64UrlUtf8(encoded: string): string {
+  const b64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
+  return Buffer.from(padded, 'base64').toString('utf-8');
+}
+
+function parseDesignerSnapshotPayload(graphB64: string): Record<string, unknown> | undefined {
+  try {
+    const parsed = JSON.parse(decodeBase64UrlUtf8(graphB64).trim()) as unknown;
+    return isRecord(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function relatedRows(row: Record<string, unknown>, relation: string): Record<string, unknown>[] {
   const relates = row.relates as Record<string, unknown> | undefined;
   const slot = relates?.[relation];
@@ -154,6 +173,14 @@ function setFieldLabel(
   const bucket = labelsByModel.get(modelName) ?? {};
   bucket[fieldName] = label;
   labelsByModel.set(modelName, bucket);
+}
+
+function hasFieldLabel(
+  labelsByModel: ReadonlyMap<string, Readonly<Record<string, Readonly<Record<string, string>>>>>,
+  modelName: string,
+  fieldName: string,
+): boolean {
+  return Boolean(labelsByModel.get(modelName)?.[fieldName]);
 }
 
 function countFieldLabels(
@@ -192,6 +219,12 @@ type CatalogDisplayMetadata = {
   readonly fieldLabelsByName: ReadonlyMap<string, Readonly<Record<string, string>>>;
 };
 
+type SnapshotDisplayMetadataStats = {
+  readonly modelLabels: number;
+  readonly fieldLabels: number;
+  readonly fallbackFieldLabels: number;
+};
+
 function hasCatalogDisplayMetadata(metadata: CatalogDisplayMetadata): boolean {
   return (
     Boolean(metadata.databaseDisplayName) ||
@@ -199,6 +232,88 @@ function hasCatalogDisplayMetadata(metadata: CatalogDisplayMetadata): boolean {
     countFieldLabels(metadata.modelFieldLabels) > 0 ||
     metadata.fieldLabelsByName.size > 0
   );
+}
+
+async function mergeDesignerSnapshotDisplayMetadata(
+  engine: AuthoringEngine,
+  database: string,
+  metadataSource: string,
+  modelDisplayNames: Map<string, Readonly<Record<string, string>>>,
+  modelFieldLabels: Map<string, Record<string, Readonly<Record<string, string>>>>,
+  fieldLabelsByName: Map<string, Readonly<Record<string, string>>>,
+): Promise<SnapshotDisplayMetadataStats> {
+  if (!engine.registry.getModel('sys_designer_graph')) {
+    return { modelLabels: 0, fieldLabels: 0, fallbackFieldLabels: 0 };
+  }
+
+  const rows = await engine.persistence.getMergedReader().getAll('sys_designer_graph');
+  const scoped = rows
+    .map((row) => hydrateRow(row))
+    .filter(
+      (row) =>
+        row.library_code === database &&
+        typeof row.graph_b64 === 'string' &&
+        row.graph_b64.trim().length > 0,
+    )
+    .sort((a, b) => String(b.updated_at ?? '').localeCompare(String(a.updated_at ?? '')));
+  const latest = scoped[0];
+  if (!latest || typeof latest.graph_b64 !== 'string') {
+    return { modelLabels: 0, fieldLabels: 0, fallbackFieldLabels: 0 };
+  }
+
+  const doc = parseDesignerSnapshotPayload(latest.graph_b64);
+  const schema = isRecord(doc?.engine_schema) ? doc.engine_schema : undefined;
+  const models = Array.isArray(schema?.models) ? schema.models : [];
+  let modelLabels = 0;
+  let fieldLabels = 0;
+  let fallbackFieldLabels = 0;
+
+  for (const rawModel of models) {
+    if (!isRecord(rawModel) || typeof rawModel.model_name !== 'string') {
+      continue;
+    }
+    const modelName = rawModel.model_name;
+    const modelLabel = parseI18nDisplay(rawModel.name_i18n, modelName);
+    if (modelLabel && !modelDisplayNames.has(modelName)) {
+      modelDisplayNames.set(modelName, modelLabel);
+      modelLabels += 1;
+    }
+
+    const props = Array.isArray(rawModel.props_objects_array) ? rawModel.props_objects_array : [];
+    for (const rawProp of props) {
+      if (!isRecord(rawProp) || typeof rawProp.name !== 'string') {
+        continue;
+      }
+      const fieldName = rawProp.name;
+      const label = parseI18nDisplay(rawProp.name_i18n, fieldName);
+      if (!label) {
+        continue;
+      }
+      if (!fieldLabelsByName.has(fieldName)) {
+        fieldLabelsByName.set(fieldName, label);
+        fallbackFieldLabels += 1;
+      }
+      if (!hasFieldLabel(modelFieldLabels, modelName, fieldName)) {
+        setFieldLabel(modelFieldLabels, modelName, fieldName, label);
+        fieldLabels += 1;
+      }
+    }
+  }
+
+  EngineLogger.instance.info(
+    'Catalog display metadata snapshot fallback loaded',
+    {
+      database,
+      metadataSource,
+      snapshotRows: scoped.length,
+      modelLabels,
+      fieldLabels,
+      fallbackFieldLabels,
+    },
+    'ManagementCatalog',
+  );
+
+  return { modelLabels, fieldLabels, fallbackFieldLabels };
 }
 
 function catalogDisplayMetadataScore(metadata: CatalogDisplayMetadata): number {
@@ -225,6 +340,9 @@ async function readCatalogDisplayMetadata(
   let directFieldLabels = 0;
   let forwardFieldLabels = 0;
   let reverseFieldLabels = 0;
+  let snapshotModelLabels = 0;
+  let snapshotFieldLabels = 0;
+  let snapshotFallbackFieldLabels = 0;
 
   try {
     if (engine.registry.getModel('sys_data_asset_map')) {
@@ -328,6 +446,26 @@ async function readCatalogDisplayMetadata(
     );
   }
 
+  try {
+    const snapshotStats = await mergeDesignerSnapshotDisplayMetadata(
+      engine,
+      database,
+      metadataSource,
+      modelDisplayNames,
+      modelFieldLabels,
+      fieldLabelsByName,
+    );
+    snapshotModelLabels = snapshotStats.modelLabels;
+    snapshotFieldLabels = snapshotStats.fieldLabels;
+    snapshotFallbackFieldLabels = snapshotStats.fallbackFieldLabels;
+  } catch (e) {
+    EngineLogger.instance.warn(
+      'Catalog display metadata: failed to read sys_designer_graph snapshot',
+      { database, metadataSource, message: e instanceof Error ? e.message : String(e) },
+      'ManagementCatalog',
+    );
+  }
+
   const fieldLabelCount = countFieldLabels(modelFieldLabels);
   EngineLogger.instance.info(
     'Catalog display metadata loaded',
@@ -344,12 +482,15 @@ async function readCatalogDisplayMetadata(
       directFieldLabels,
       forwardFieldLabels,
       reverseFieldLabels,
+      snapshotModelLabels,
+      snapshotFieldLabels,
+      snapshotFallbackFieldLabels,
     },
     'ManagementCatalog',
   );
   // eslint-disable-next-line no-console
   console.info(
-    `[modeldb-server][catalog] ${database}: metadataSource=${metadataSource} displayName=${Boolean(databaseDisplayName)} modelLabels=${modelDisplayNames.size} fieldLabels=${fieldLabelCount} directFieldLabels=${directFieldLabels} fallbackFieldLabels=${fieldLabelsByName.size} props=${propRowsScanned}`,
+    `[modeldb-server][catalog] ${database}: metadataSource=${metadataSource} displayName=${Boolean(databaseDisplayName)} modelLabels=${modelDisplayNames.size} fieldLabels=${fieldLabelCount} directFieldLabels=${directFieldLabels} fallbackFieldLabels=${fieldLabelsByName.size} snapshotFieldLabels=${snapshotFieldLabels} props=${propRowsScanned}`,
   );
 
   return { databaseDisplayName, modelDisplayNames, modelFieldLabels, fieldLabelsByName };

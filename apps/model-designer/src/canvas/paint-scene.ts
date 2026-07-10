@@ -45,6 +45,7 @@ export interface PaintSceneParams {
   mutedRelationIds?: ReadonlySet<string>;
   highlightNodeIds?: ReadonlySet<string>;
   highlightRelationIds?: ReadonlySet<string>;
+  constraintRelationIds?: ReadonlySet<string>;
   linkPreview: DirectedSegment | null;
   inheritPreview?: DirectedSegment | null;
   /** 界面语言（`en` | `zh` | `ja`），用于节点标题与正/逆向关系标签按 i18n 解析 */
@@ -114,6 +115,7 @@ export function paintScene(params: PaintSceneParams): void {
     mutedRelationIds,
     highlightNodeIds,
     highlightRelationIds,
+    constraintRelationIds,
     linkPreview,
     inheritPreview,
     uiLocale,
@@ -164,7 +166,7 @@ export function paintScene(params: PaintSceneParams): void {
   const empLw = vis.strokeSelectedPx / zoom;
   const arrow = vis.arrowPx / zoom;
 
-  type EdgeDrawKind = 'normal' | 'hover' | 'selected' | 'muted' | 'highlight';
+  type EdgeDrawKind = 'normal' | 'hover' | 'selected' | 'muted' | 'highlight' | 'constraint';
   const relationColor = (r: EngineRelationEdge, kind: EdgeDrawKind): string => {
     const inherit = isInheritRelation(r.kind);
     if (kind === 'selected') {
@@ -175,6 +177,9 @@ export function paintScene(params: PaintSceneParams): void {
     }
     if (kind === 'highlight') {
       return '#f59e0b';
+    }
+    if (kind === 'constraint') {
+      return '#0891b2';
     }
     if (kind === 'muted') {
       return '#cbd5e1';
@@ -217,6 +222,11 @@ export function paintScene(params: PaintSceneParams): void {
     const color = relationColor(r, drawKind);
     const lw = relationWidth(drawKind);
     const isInherit = isInheritRelation(r.kind);
+    if (drawKind === 'constraint') {
+      ctx.setLineDash([10 / zoom, 6 / zoom]);
+    } else {
+      ctx.setLineDash([]);
+    }
     if (r.source_model_id === r.target_model_id) {
       const slot = loopSlotMap.get(r.id) ?? 0;
       const loop = selfLoopGeometry(a, slot);
@@ -276,6 +286,7 @@ export function paintScene(params: PaintSceneParams): void {
   const edgeDrawKind = (relId: string): EdgeDrawKind => {
     if (relId === selRel) return 'selected';
     if (relId === hovRel) return 'hover';
+    if (constraintRelationIds?.has(relId)) return 'constraint';
     if (highlightRelationIds?.has(relId)) return 'highlight';
     if (mutedRelationIds?.has(relId)) return 'muted';
     return 'normal';

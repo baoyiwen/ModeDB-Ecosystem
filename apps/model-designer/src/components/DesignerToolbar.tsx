@@ -16,6 +16,7 @@ import {
 import { formatInteractionState } from '../utils/interaction-state-i18n.js';
 import { interactionStateForToolMode } from '../utils/tool-mode-state.js';
 import { formatLibraryLabel } from '../sync/library-registry.js';
+import { isQueryDesignerMode, type DesignerToolMode } from '../managers/mode-manager.js';
 import {
   IconCheckSquare,
   IconDocument,
@@ -76,6 +77,7 @@ export class DesignerToolbar extends DesignerComponent<
     const st = state.state;
     const client = config.remoteClient;
     const mode = modes.mode;
+    const queryDesignerActive = isQueryDesignerMode(mode);
     const libName = config.activeLibraryName;
     const libTag =
       libName !== null
@@ -112,87 +114,167 @@ export class DesignerToolbar extends DesignerComponent<
     return (
       <div className="designer-float-layer" aria-hidden={false}>
         <div className="designer-float-top">
-          <button type="button" className="designer-mode-pill designer-mode-pill--active" disabled>
+          <button
+            type="button"
+            className={`designer-mode-pill ${
+              queryDesignerActive ? 'designer-mode-pill--inactive' : 'designer-mode-pill--active'
+            }`}
+            onClick={() => {
+              modes.setMode('select');
+              state.transition(interactionStateForToolMode('select'));
+            }}
+          >
             {i18n.t('ui', 'modeModelDesigner')}
             {libTag ? <span className="designer-library-tag"> · {libTag}</span> : null}
           </button>
           <button
             type="button"
-            className="designer-mode-pill designer-mode-pill--inactive"
-            disabled
+            className={`designer-mode-pill ${
+              queryDesignerActive ? 'designer-mode-pill--active' : 'designer-mode-pill--inactive'
+            }`}
             title={i18n.t('ui', 'modeQueryDesignerHint')}
+            onClick={() => {
+              const nextMode: DesignerToolMode = queryDesignerActive ? 'select' : 'query-select';
+              modes.setMode(nextMode);
+              state.transition(interactionStateForToolMode(nextMode));
+            }}
           >
             {i18n.t('ui', 'modeQueryDesigner')}
           </button>
         </div>
 
         <div className="designer-float-left">
-          <button
-            type="button"
-            className="designer-fab"
-            data-active={mode === 'select' ? 'true' : 'false'}
-            title={i18n.t('ui', 'toolSelect')}
-            onClick={() => {
-              modes.setMode('select');
-              state.transition(interactionStateForToolMode('select'));
-            }}
-          >
-            <IconHand />
-          </button>
-          <button
-            type="button"
-            className="designer-fab"
-            data-active={mode === 'add' ? 'true' : 'false'}
-            title={i18n.t('ui', 'toolCreate')}
-            onClick={() => {
-              modes.setMode('add');
-              state.transition(interactionStateForToolMode('add'));
-            }}
-          >
-            <IconPlus />
-          </button>
-          <button type="button" className="designer-fab" title={i18n.t('ui', 'toolEdit')} disabled>
-            <IconDocument />
-          </button>
-          <button
-            type="button"
-            className="designer-fab"
-            data-active={mode === 'delete' ? 'true' : 'false'}
-            title={i18n.t('ui', 'toolDelete')}
-            onClick={() => {
-              modes.setMode('delete');
-              state.transition(interactionStateForToolMode('delete'));
-            }}
-          >
-            <IconTrash />
-          </button>
-          <button type="button" className="designer-fab" title={i18n.t('ui', 'toolMulti')} disabled>
-            <IconCheckSquare />
-          </button>
-          <button
-            type="button"
-            className="designer-fab"
-            data-active={mode === 'page' ? 'true' : 'false'}
-            title={i18n.t('ui', 'toolPageMode')}
-            onClick={() => {
-              modes.setMode('page');
-              state.transition(interactionStateForToolMode('page'));
-            }}
-          >
-            <IconLayers />
-          </button>
-          <button
-            type="button"
-            className="designer-fab"
-            data-active={mode === 'link' ? 'true' : 'false'}
-            title={i18n.t('ui', 'toolLinkHint')}
-            onClick={() => {
-              modes.setMode('link');
-              state.transition(interactionStateForToolMode('link'));
-            }}
-          >
-            <IconLink />
-          </button>
+          {queryDesignerActive ? (
+            <>
+              <button
+                type="button"
+                className="designer-fab"
+                data-active={mode === 'query-select' ? 'true' : 'false'}
+                title={i18n.t('ui', 'queryToolSelect')}
+                onClick={() => {
+                  modes.setMode('query-select');
+                  state.transition(interactionStateForToolMode('query-select'));
+                }}
+              >
+                <IconHand />
+              </button>
+              <button
+                type="button"
+                className="designer-fab"
+                data-active={mode === 'query-create' ? 'true' : 'false'}
+                title={i18n.t('ui', 'queryToolCreate')}
+                onClick={() => {
+                  modes.setMode('query-create');
+                  state.transition(interactionStateForToolMode('query-create'));
+                }}
+              >
+                <IconPlus />
+              </button>
+              <button
+                type="button"
+                className="designer-fab"
+                data-active={mode === 'query-inspect' ? 'true' : 'false'}
+                title={i18n.t('ui', 'queryToolInspect')}
+                onClick={() => {
+                  modes.setMode('query-inspect');
+                  state.transition(interactionStateForToolMode('query-inspect'));
+                }}
+              >
+                <IconDocument />
+              </button>
+              <button
+                type="button"
+                className="designer-fab"
+                data-active={mode === 'query-preview' ? 'true' : 'false'}
+                title={i18n.t('ui', 'queryToolPreview')}
+                onClick={() => {
+                  modes.setMode('query-preview');
+                  state.transition(interactionStateForToolMode('query-preview'));
+                }}
+              >
+                <IconSearch />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="designer-fab"
+                data-active={mode === 'select' ? 'true' : 'false'}
+                title={i18n.t('ui', 'toolSelect')}
+                onClick={() => {
+                  modes.setMode('select');
+                  state.transition(interactionStateForToolMode('select'));
+                }}
+              >
+                <IconHand />
+              </button>
+              <button
+                type="button"
+                className="designer-fab"
+                data-active={mode === 'add' ? 'true' : 'false'}
+                title={i18n.t('ui', 'toolCreate')}
+                onClick={() => {
+                  modes.setMode('add');
+                  state.transition(interactionStateForToolMode('add'));
+                }}
+              >
+                <IconPlus />
+              </button>
+              <button
+                type="button"
+                className="designer-fab"
+                title={i18n.t('ui', 'toolEdit')}
+                disabled
+              >
+                <IconDocument />
+              </button>
+              <button
+                type="button"
+                className="designer-fab"
+                data-active={mode === 'delete' ? 'true' : 'false'}
+                title={i18n.t('ui', 'toolDelete')}
+                onClick={() => {
+                  modes.setMode('delete');
+                  state.transition(interactionStateForToolMode('delete'));
+                }}
+              >
+                <IconTrash />
+              </button>
+              <button
+                type="button"
+                className="designer-fab"
+                title={i18n.t('ui', 'toolMulti')}
+                disabled
+              >
+                <IconCheckSquare />
+              </button>
+              <button
+                type="button"
+                className="designer-fab"
+                data-active={mode === 'page' ? 'true' : 'false'}
+                title={i18n.t('ui', 'toolPageMode')}
+                onClick={() => {
+                  modes.setMode('page');
+                  state.transition(interactionStateForToolMode('page'));
+                }}
+              >
+                <IconLayers />
+              </button>
+              <button
+                type="button"
+                className="designer-fab"
+                data-active={mode === 'link' ? 'true' : 'false'}
+                title={i18n.t('ui', 'toolLinkHint')}
+                onClick={() => {
+                  modes.setMode('link');
+                  state.transition(interactionStateForToolMode('link'));
+                }}
+              >
+                <IconLink />
+              </button>
+            </>
+          )}
         </div>
 
         <div className="designer-float-bottom">

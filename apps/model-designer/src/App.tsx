@@ -22,10 +22,21 @@ import {
 } from './config/connection-prefs.js';
 import { FIXED_MODEL_DESIGNER_DATABASE } from './config/fixed-database.js';
 import { isInheritRelation } from './config/graph-edge-kinds.js';
+import { isQueryDesignerMode } from './managers/mode-manager.js';
 import { withTimeout } from './engine/async-timeout.js';
 import { ensureDesignerWorkspaceSession } from './engine/workspace-session.js';
 import { interactionStateForToolMode } from './utils/tool-mode-state.js';
 import { getLibraryByCode } from './sync/library-registry.js';
+import {
+  EMPTY_QUERY_CHAIN_STATE,
+  nextQueryChainFromModelPick,
+  nextQueryChainFromRelationPick,
+  queryChainAllRelationIds,
+  queryChainCandidateRelationIds,
+  queryChainEdgeStates,
+  queryChainModelIds,
+  type QueryChainState,
+} from './query-designer/index.js';
 
 const RECONNECT_TIMEOUT_MS = 20_000;
 const RECONNECT_BOOTSTRAP_MS = 60_000;
@@ -36,12 +47,15 @@ interface AppState {
   sessionEpoch: number;
   connected: boolean;
   reconnecting: boolean;
+  queryChain: QueryChainState;
 }
 
 /**
  * 根页面：未连接时 {@link ConnectionFlow}；连接并选择逻辑库后进入画布（当前库名见 {@link ConfigManager#activeLibraryName}）。
  */
 export default class App extends DesignerChromePage<Record<string, never>, AppState> {
+  private modeUnsub: (() => void) | undefined;
+
   constructor(props: Record<string, never>) {
     super(props);
     // 若在 sessionStorage / localStorage 里能凑齐凭据 + 上次逻辑库，则尝试静默重连，
@@ -53,13 +67,19 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
       sessionEpoch: 0,
       connected: false,
       reconnecting: canReconnect,
+      queryChain: EMPTY_QUERY_CHAIN_STATE,
     };
   }
 
   override componentDidMount(): void {
+    this.modeUnsub = this.managers.modes.subscribe(() => this.forceUpdate());
     if (this.state.reconnecting) {
       void this.attemptSilentReconnect();
     }
+  }
+
+  override componentWillUnmount(): void {
+    this.modeUnsub?.();
   }
 
   private collectReconnectCredentials(): {
@@ -187,6 +207,7 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
       reconnecting: false,
       selectedModelId: undefined,
       selectedRelationId: undefined,
+      queryChain: EMPTY_QUERY_CHAIN_STATE,
       sessionEpoch: s.sessionEpoch + 1,
     }));
   }
@@ -204,14 +225,31 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
       selectedModelId: undefined,
       selectedRelationId: undefined,
       sessionEpoch: s.sessionEpoch + 1,
+      queryChain: EMPTY_QUERY_CHAIN_STATE,
     }));
   };
 
   private handleSelectModel = (id: string | undefined): void => {
+    if (isQueryDesignerMode(this.managers.modes.mode) && id) {
+      this.setState((s) => ({
+        selectedModelId: id,
+        selectedRelationId: undefined,
+        queryChain: nextQueryChainFromModelPick(s.queryChain, id, this.managers.data.relations),
+      }));
+      return;
+    }
     this.setState({ selectedModelId: id, selectedRelationId: undefined });
   };
 
   private handleSelectRelation = (id: string | undefined): void => {
+    if (isQueryDesignerMode(this.managers.modes.mode) && id) {
+      this.setState((s) => ({
+        selectedModelId: undefined,
+        selectedRelationId: id,
+        queryChain: nextQueryChainFromRelationPick(s.queryChain, id, this.managers.data.relations),
+      }));
+      return;
+    }
     if (!id) {
       this.setState({ selectedRelationId: undefined, selectedModelId: undefined });
       return;
@@ -228,9 +266,33 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
     this.setState({ selectedModelId: undefined, selectedRelationId: undefined });
   };
 
+  private handleQueryChainChange = (queryChain: QueryChainState): void => {
+    this.setState({
+      queryChain,
+      selectedModelId: queryChain.activeModelId,
+      selectedRelationId: queryChainAllRelationIds(queryChain).at(-1),
+    });
+  };
+
   override render(): ReactNode {
-    const { selectedModelId, selectedRelationId, connected, reconnecting, sessionEpoch } =
-      this.state;
+    const {
+      selectedModelId,
+      selectedRelationId,
+      connected,
+      reconnecting,
+      sessionEpoch,
+      queryChain,
+    } = this.state;
+    const queryModelIds = new Set(queryChainModelIds(queryChain, this.managers.data.relations));
+    const queryRelationIds = new Set(queryChainAllRelationIds(queryChain));
+    const queryConstraintRelationIds = new Set(
+      queryChainEdgeStates(queryChain)
+        .filter((edge) => edge.role === 'constraint')
+        .map((edge) => edge.relationId),
+    );
+    const queryCandidateRelationIds = new Set(
+      queryChainCandidateRelationIds(queryChain, this.managers.data.relations),
+    );
 
     if (reconnecting) {
       return this.wrapRoot(
@@ -268,6 +330,8 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
           key={sessionEpoch}
           selectedModelId={selectedModelId}
           selectedRelationId={selectedRelationId}
+          queryChain={queryChain}
+          onQueryChainChange={this.handleQueryChainChange}
           onRequestClearCanvasSelection={this.handleClearCanvasSelection}
         >
           <div className="designer-editor-root">
@@ -275,6 +339,11 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
               <CanvasContainer
                 selectedModelId={selectedModelId}
                 selectedRelationId={selectedRelationId}
+                queryMode={isQueryDesignerMode(this.managers.modes.mode)}
+                queryModelIds={queryModelIds}
+                queryRelationIds={queryRelationIds}
+                queryConstraintRelationIds={queryConstraintRelationIds}
+                queryCandidateRelationIds={queryCandidateRelationIds}
                 onSelectModel={this.handleSelectModel}
                 onSelectRelation={this.handleSelectRelation}
               />

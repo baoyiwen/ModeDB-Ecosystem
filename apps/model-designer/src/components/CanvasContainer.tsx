@@ -24,7 +24,7 @@ import { paintScene } from '../canvas/paint-scene.js';
 import { CANVAS_VISUAL } from '../config/canvas-visual.js';
 import { LAYER_DEFAULT_PAGE_ID } from '../config/layer-tree-defaults.js';
 import { isInheritRelation } from '../config/graph-edge-kinds.js';
-import { isCanvasStructureLocked } from '../managers/mode-manager.js';
+import { isCanvasStructureLocked, isQueryDesignerMode } from '../managers/mode-manager.js';
 import { pickNewModelColor } from '../utils/model-color-pick.js';
 import type { GestureKind } from '../managers/event-manager.js';
 import type { InteractionState } from '../managers/state-manager.js';
@@ -62,6 +62,11 @@ const DRAG_THRESHOLD_CANVAS = 14;
 export function CanvasContainer(props: {
   selectedModelId: string | undefined;
   selectedRelationId: string | undefined;
+  queryMode?: boolean;
+  queryModelIds?: ReadonlySet<string>;
+  queryRelationIds?: ReadonlySet<string>;
+  queryConstraintRelationIds?: ReadonlySet<string>;
+  queryCandidateRelationIds?: ReadonlySet<string>;
   onSelectModel: (id: string | undefined) => void;
   onSelectRelation: (id: string | undefined) => void;
 }): ReactElement {
@@ -74,7 +79,17 @@ export function CanvasContainer(props: {
   const [hoveredModelId, setHoveredModelId] = useState<string | undefined>(undefined);
   const [hoveredRelationId, setHoveredRelationId] = useState<string | undefined>(undefined);
   const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
-  const { selectedModelId, selectedRelationId, onSelectModel, onSelectRelation } = props;
+  const {
+    selectedModelId,
+    selectedRelationId,
+    queryMode = false,
+    queryModelIds,
+    queryRelationIds,
+    queryConstraintRelationIds,
+    queryCandidateRelationIds,
+    onSelectModel,
+    onSelectRelation,
+  } = props;
 
   const interactionRef = useRef<InteractionState>('SELECT');
   const linkSourceRef = useRef<string | undefined>(undefined);
@@ -266,6 +281,17 @@ export function CanvasContainer(props: {
       const relHit = nodeId ? undefined : hitRelationAt(sx, sy);
       const relId = relHit?.id;
       if (st === 'LINKING') {
+        return;
+      }
+      if (isQueryDesignerMode(mode)) {
+        if (nodeId) {
+          onSelectModel(nodeId);
+          return;
+        }
+        if (relId) {
+          onSelectRelation(relId);
+          return;
+        }
         return;
       }
       if (mode === 'page') {
@@ -487,6 +513,7 @@ export function CanvasContainer(props: {
       }
     }
     const visibility = data.getLayerVisibilitySnapshot();
+    const queryVisualActive = queryMode || isQueryDesignerMode(modes.mode);
     const layerVisualActive = modes.mode === 'page' || data.layerTreePanelOpen;
     const hoveredLayerPageId = layerVisualActive ? data.hoveredLayerPageId : undefined;
     const pageMembership = hoveredLayerPageId
@@ -508,6 +535,23 @@ export function CanvasContainer(props: {
         }
       }
     }
+    const queryHighlightRelationIds = new Set([
+      ...(queryRelationIds ?? []),
+      ...(queryCandidateRelationIds ?? []),
+    ]);
+    if (queryVisualActive) {
+      const chainNodeIds = queryModelIds ?? new Set<string>();
+      for (const model of data.models) {
+        if (!chainNodeIds.has(model.id)) {
+          mutedNodeIds.add(model.id);
+        }
+      }
+      for (const relation of data.relations) {
+        if (!queryHighlightRelationIds.has(relation.id)) {
+          mutedRelationIds.add(relation.id);
+        }
+      }
+    }
     paintScene({
       ctx,
       width: cssSizeRef.current.width,
@@ -522,8 +566,11 @@ export function CanvasContainer(props: {
       hiddenRelationIds: visibility.hiddenRelationIds,
       mutedNodeIds,
       mutedRelationIds,
-      highlightNodeIds: pageMembership?.nodeIds,
-      highlightRelationIds: pageMembership?.relationIds,
+      highlightNodeIds: queryVisualActive ? queryModelIds : pageMembership?.nodeIds,
+      highlightRelationIds: queryVisualActive
+        ? queryHighlightRelationIds
+        : pageMembership?.relationIds,
+      constraintRelationIds: queryVisualActive ? queryConstraintRelationIds : undefined,
       linkPreview,
       uiLocale: i18n.locale,
       snapGuides,
@@ -536,6 +583,11 @@ export function CanvasContainer(props: {
     selectedRelationId,
     hoveredModelId,
     hoveredRelationId,
+    queryMode,
+    queryModelIds,
+    queryRelationIds,
+    queryConstraintRelationIds,
+    queryCandidateRelationIds,
     placed,
     toWorld,
     i18n.locale,

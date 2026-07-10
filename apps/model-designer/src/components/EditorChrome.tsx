@@ -10,22 +10,26 @@ import { AppDrawer, useAppConfirm } from '@mode-db/data-ui';
 import { useDesigner } from '../context/designer-context.js';
 import { withBusinessLibrarySession } from '../engine/business-library-session.js';
 import { isInheritRelation } from '../config/graph-edge-kinds.js';
-import { isSidePanelReadOnly } from '../managers/mode-manager.js';
+import { isQueryDesignerMode, isSidePanelReadOnly } from '../managers/mode-manager.js';
 import { InfoPanel } from './InfoPanel.js';
 import { PropsEditor } from './PropsEditor.js';
 import { ActiveLibraryPanel } from './ActiveLibraryPanel.js';
 import { NotificationCenter } from './NotificationCenter.js';
 import { LayerTreePanel } from './LayerTreePanel.js';
 import { RelationDetailPanel } from './RelationDetailPanel.js';
+import { QueryDesignerPanel } from './QueryDesignerPanel.js';
 import { DesignerSelect } from './base/designer-select.js';
 import type { LocaleCode } from '../managers/i18n-manager.js';
 import { IconGrid, IconSettings, IconBell } from './designer-icons.js';
+import type { QueryChainState } from '../query-designer/index.js';
 
 export type ManualPanelKind = 'hierarchy' | 'settings' | 'notifications';
 
 export function EditorChrome(props: {
   selectedModelId: string | undefined;
   selectedRelationId: string | undefined;
+  queryChain: QueryChainState;
+  onQueryChainChange: (queryChain: QueryChainState) => void;
   onRequestClearCanvasSelection: () => void;
   children: ReactNode;
 }): ReactElement {
@@ -57,6 +61,9 @@ export function EditorChrome(props: {
     if (modes.mode === 'page') {
       return;
     }
+    if (isQueryDesignerMode(modes.mode)) {
+      return;
+    }
     setManualPanel(null);
   }, [modes.mode, props.selectedModelId, props.selectedRelationId]);
 
@@ -68,7 +75,8 @@ export function EditorChrome(props: {
 
   const passiveOpen = Boolean(effectiveModelId || showRelationDetail);
   const manualOpen = manualPanel !== null;
-  const shellOpen = passiveOpen || manualOpen;
+  const queryOpen = isQueryDesignerMode(modes.mode);
+  const shellOpen = passiveOpen || manualOpen || queryOpen;
 
   const closeAll = useCallback((): void => {
     if (manualOpen) {
@@ -77,8 +85,12 @@ export function EditorChrome(props: {
     }
     if (passiveOpen) {
       props.onRequestClearCanvasSelection();
+      return;
     }
-  }, [manualOpen, passiveOpen, props]);
+    if (queryOpen) {
+      modes.setMode('select');
+    }
+  }, [manualOpen, modes, passiveOpen, props, queryOpen]);
 
   const openManual = useCallback(
     (kind: ManualPanelKind): void => {
@@ -102,6 +114,9 @@ export function EditorChrome(props: {
     }
     if (manualPanel === 'notifications') {
       return i18n.t('ui', 'notifyCenterTitle');
+    }
+    if (queryOpen) {
+      return i18n.t('ui', 'modeQueryDesigner');
     }
     if (showRelationDetail) {
       return i18n.t('ui', 'relations');
@@ -217,6 +232,15 @@ export function EditorChrome(props: {
             </button>
           </div>
         </div>
+      );
+    }
+    if (queryOpen) {
+      return (
+        <QueryDesignerPanel
+          selectedModelId={props.selectedModelId}
+          queryChain={props.queryChain}
+          onQueryChainChange={props.onQueryChainChange}
+        />
       );
     }
     if (showRelationDetail && props.selectedRelationId) {
