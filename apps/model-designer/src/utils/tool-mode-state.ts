@@ -17,6 +17,7 @@ export function interactionStateForToolMode(mode: DesignerToolMode): Interaction
     case 'page':
     case 'query-select':
     case 'query-create':
+    case 'query-rewire':
     case 'query-inspect':
     case 'query-preview':
       return 'SELECT';

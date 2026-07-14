@@ -454,10 +454,10 @@ export async function importEngineCatalogIntoDesignerDb(
     if (!parentId || !childId) continue;
     try {
       await designerClient.bindRelation(
-        { model: SYS_MODEL, id: parentId },
         { model: SYS_MODEL, id: childId },
-        'parentModelHasChildren',
+        { model: SYS_MODEL, id: parentId },
         'modelBelongsToParent',
+        'parentModelHasChildren',
       );
     } catch {
       /* 已存在则忽略 */

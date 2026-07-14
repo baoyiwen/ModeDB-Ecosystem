@@ -38,6 +38,13 @@ modeldb-server create-db <db-name> -c modeldb.config.json
 <workspace>/modeldb/backups/*.modeldb-backup.json
 ```
 
+Management API 还支持浏览器/SDK 迁移文件：
+
+- `GET /api/v1/management/backups/:backupFile/download`：下载原始备份文件。
+- `POST /api/v1/management/backups/import?fileName=...`：以 `application/octet-stream` 上传备份文件。
+- 上传时会验证备份版本、数据库名、创建时间、文件条目和相对路径；同名文件不会覆盖已有备份。
+- 导入只把文件加入备份目录，实际替换数据库仍通过 restore API 完成并创建安全备份。
+
 常用 CLI：
 
 ```bash

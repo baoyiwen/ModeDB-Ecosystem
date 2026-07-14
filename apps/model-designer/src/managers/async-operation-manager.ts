@@ -5,6 +5,8 @@ export type AsyncOperationKey =
   | 'clearAllData'
   | 'clearModelData'
   | 'backupDatabase'
+  | 'exportBackup'
+  | 'importBackup'
   | 'restoreDatabase'
   | 'clearDatabaseManaged'
   | 'forceResetDatabase'

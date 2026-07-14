@@ -11,6 +11,7 @@ export {
 export { deriveWireSessionKey, encodeWirePayload, decodeWirePayload } from './wire-codec.js';
 export type {
   ManagementBackupCreateResponse,
+  ManagementBackupImportResponse,
   ManagementBackupInfo,
   ManagementBackupRestoreResponse,
   ManagementBackupsResponse,

@@ -1,6 +1,11 @@
 import type { ReactElement, ReactNode } from 'react';
 import { RemoteModelDBClient } from '@mode-db/sdk';
-import { useAppConfirm, type AppConfirmOptions } from '@mode-db/data-ui';
+import {
+  useAppConfirm,
+  useAppSelect,
+  type AppConfirmOptions,
+  type AppSelectOptions,
+} from '@mode-db/data-ui';
 import { DesignerComponent } from './base/designer-component.js';
 import { pushLibraryToEngine } from '../sync/designer-push-sync.js';
 import {
@@ -35,12 +40,66 @@ import {
   IconSearch,
   IconTrash,
   IconUndo,
+  IconUpload,
+  IconRestore,
 } from './designer-icons.js';
+
+const QUERY_TOOL_REWIRE_LABEL = '\u5207\u6362\u5173\u7cfb';
+
+function formatBackupBytes(bytes: number): string {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function downloadBackupBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function chooseBackupFile(): Promise<File | null> {
+  return new Promise<File | null>((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.modeldb-backup.json,.json,application/json,application/octet-stream';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    let settled = false;
+    const finish = (file: File | null): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      window.removeEventListener('focus', handleWindowFocus);
+      input.remove();
+      resolve(file);
+    };
+    const handleWindowFocus = (): void => {
+      window.setTimeout(() => finish(input.files?.[0] ?? null), 0);
+    };
+    input.addEventListener('change', () => finish(input.files?.[0] ?? null), { once: true });
+    window.addEventListener('focus', handleWindowFocus, { once: true });
+    input.click();
+  });
+}
+
 export interface DesignerToolbarProps {
   selectedId: string | undefined;
   onSelect: (id: string | undefined) => void;
   onDisconnected: () => void;
   requestConfirm: (options: AppConfirmOptions) => Promise<boolean>;
+  requestSelect: (options: AppSelectOptions) => Promise<string | null>;
 }
 
 /**
@@ -73,7 +132,7 @@ export class DesignerToolbar extends DesignerComponent<
   }
 
   override render(): ReactNode {
-    const { state, i18n, data, config, modes, graphSync, asyncOps } = this.managers;
+    const { state, i18n, data, config, modes, graphSync, asyncOps, notifications } = this.managers;
     const st = state.state;
     const client = config.remoteClient;
     const mode = modes.mode;
@@ -169,6 +228,18 @@ export class DesignerToolbar extends DesignerComponent<
                 }}
               >
                 <IconPlus />
+              </button>
+              <button
+                type="button"
+                className="designer-fab"
+                data-active={mode === 'query-rewire' ? 'true' : 'false'}
+                title={QUERY_TOOL_REWIRE_LABEL}
+                onClick={() => {
+                  modes.setMode('query-rewire');
+                  state.transition(interactionStateForToolMode('query-rewire'));
+                }}
+              >
+                <IconLink />
               </button>
               <button
                 type="button"
@@ -421,38 +492,47 @@ export class DesignerToolbar extends DesignerComponent<
               if (!client || !libName || remoteBusy) {
                 return;
               }
+              let operationStarted = false;
               try {
+                const backups = await RemoteModelDBClient.listBackups({
+                  host,
+                  port,
+                  token,
+                  database: libName,
+                });
+                if (backups.length === 0) {
+                  notifications.warning(i18n.t('ui', 'backupRestore'), {
+                    message: i18n.t('ui', 'backupEmpty'),
+                  });
+                  return;
+                }
+                const backupFile = await this.props.requestSelect({
+                  title: i18n.t('ui', 'backupRestoreSelectTitle'),
+                  message: i18n.t('ui', 'backupFileCount', { count: String(backups.length) }),
+                  confirmLabel: i18n.t('ui', 'backupRestoreAction'),
+                  initialValue: backups[0]?.fileName,
+                  items: backups.map((backup) => ({
+                    value: backup.fileName,
+                    label: backup.fileName,
+                    description: new Date(backup.createdAt).toLocaleString(i18n.locale),
+                    meta: formatBackupBytes(backup.bytes),
+                  })),
+                });
+                if (!backupFile) {
+                  return;
+                }
+                if (
+                  !(await this.props.requestConfirm({
+                    title: i18n.t('ui', 'backupRestoreConfirm', { file: backupFile }),
+                    tone: 'danger',
+                  }))
+                ) {
+                  return;
+                }
+                operationStarted = true;
                 await asyncOps.run(
                   'restoreDatabase',
                   async () => {
-                    const backups = await RemoteModelDBClient.listBackups({
-                      host,
-                      port,
-                      token,
-                      database: libName,
-                    });
-                    if (backups.length === 0) {
-                      throw new Error(i18n.t('ui', 'backupEmpty'));
-                    }
-                    const backupFile = window
-                      .prompt(
-                        `${i18n.t('ui', 'backupRestorePrompt')}\n${backups
-                          .map((b) => `${b.fileName} (${new Date(b.createdAt).toLocaleString()})`)
-                          .join('\n')}`,
-                        backups[0]?.fileName ?? '',
-                      )
-                      ?.trim();
-                    if (!backupFile) {
-                      return;
-                    }
-                    if (
-                      !(await this.props.requestConfirm({
-                        title: i18n.t('ui', 'backupRestoreConfirm', { file: backupFile }),
-                        tone: 'danger',
-                      }))
-                    ) {
-                      return;
-                    }
                     await RemoteModelDBClient.restoreBackup({
                       host,
                       port,
@@ -464,12 +544,132 @@ export class DesignerToolbar extends DesignerComponent<
                   },
                   { detail: libName },
                 );
-              } catch {
-                /* 失败态由 toast 展示 */
+              } catch (error) {
+                if (!operationStarted) {
+                  notifications.error(i18n.t('errors', 'databaseManagementFailed'), {
+                    message: error instanceof Error ? error.message : String(error),
+                  });
+                }
+              }
+            }}
+          >
+            <IconRestore />
+          </button>
+          <button
+            type="button"
+            className="designer-fab designer-fab--ghost"
+            title={i18n.t('ui', 'backupExport')}
+            disabled={!client || !libName || remoteBusy}
+            data-busy={asyncOps.isActive('exportBackup') ? 'true' : undefined}
+            onClick={async () => {
+              if (!client || !libName || remoteBusy) {
+                return;
+              }
+              let operationStarted = false;
+              try {
+                const backups = await RemoteModelDBClient.listBackups({
+                  host,
+                  port,
+                  token,
+                  database: libName,
+                });
+                if (backups.length === 0) {
+                  notifications.warning(i18n.t('ui', 'backupExport'), {
+                    message: i18n.t('ui', 'backupEmpty'),
+                  });
+                  return;
+                }
+                const backupFile = await this.props.requestSelect({
+                  title: i18n.t('ui', 'backupExportSelectTitle'),
+                  message: i18n.t('ui', 'backupFileCount', { count: String(backups.length) }),
+                  confirmLabel: i18n.t('ui', 'backupExportAction'),
+                  initialValue: backups[0]?.fileName,
+                  items: backups.map((backup) => ({
+                    value: backup.fileName,
+                    label: backup.fileName,
+                    description: new Date(backup.createdAt).toLocaleString(i18n.locale),
+                    meta: formatBackupBytes(backup.bytes),
+                  })),
+                });
+                if (!backupFile) {
+                  return;
+                }
+                operationStarted = true;
+                await asyncOps.run(
+                  'exportBackup',
+                  async () => {
+                    const blob = await RemoteModelDBClient.downloadBackup({
+                      host,
+                      port,
+                      token,
+                      backupFile,
+                    });
+                    downloadBackupBlob(blob, backupFile);
+                  },
+                  { detail: backupFile },
+                );
+              } catch (error) {
+                if (!operationStarted) {
+                  notifications.error(i18n.t('errors', 'databaseManagementFailed'), {
+                    message: error instanceof Error ? error.message : String(error),
+                  });
+                }
               }
             }}
           >
             <IconExport />
+          </button>
+          <button
+            type="button"
+            className="designer-fab designer-fab--ghost"
+            title={i18n.t('ui', 'backupImport')}
+            disabled={!client || !libName || remoteBusy}
+            data-busy={asyncOps.isActive('importBackup') ? 'true' : undefined}
+            onClick={async () => {
+              if (!client || !libName || remoteBusy) {
+                return;
+              }
+              const file = await chooseBackupFile();
+              if (!file) {
+                return;
+              }
+              if (
+                !(await this.props.requestConfirm({
+                  title: i18n.t('ui', 'backupImportConfirm', { file: file.name }),
+                  message: i18n.t('ui', 'backupImportHint'),
+                  tone: 'danger',
+                }))
+              ) {
+                return;
+              }
+              try {
+                await asyncOps.run(
+                  'importBackup',
+                  async () => {
+                    const imported = await RemoteModelDBClient.importBackup({
+                      host,
+                      port,
+                      token,
+                      fileName: file.name,
+                      file,
+                    });
+                    await RemoteModelDBClient.restoreBackup({
+                      host,
+                      port,
+                      token,
+                      database: libName,
+                      backupFile: imported.fileName,
+                    });
+                    await reloadBusinessCatalog();
+                  },
+                  { detail: file.name },
+                );
+              } catch {
+                /* Failure state is shown by the async operation toast. */
+              }
+            }}
+          >
+            <IconUpload />
           </button>
           <button
             type="button"
@@ -612,8 +812,9 @@ export class DesignerToolbar extends DesignerComponent<
 }
 
 export function DesignerToolbarWithConfirm(
-  props: Omit<DesignerToolbarProps, 'requestConfirm'>,
+  props: Omit<DesignerToolbarProps, 'requestConfirm' | 'requestSelect'>,
 ): ReactElement {
   const confirm = useAppConfirm();
-  return <DesignerToolbar {...props} requestConfirm={confirm} />;
+  const select = useAppSelect();
+  return <DesignerToolbar {...props} requestConfirm={confirm} requestSelect={select} />;
 }

@@ -8,6 +8,7 @@ import {
   edgePerpOffsetById,
   edgeSelfLoopSlotById,
   RELATION_INTRA_PAIR_GAP,
+  segmentLabelPlacement,
   selfLoopGeometry,
 } from './relation-geometry.js';
 import { isInheritRelation } from '../config/graph-edge-kinds.js';
@@ -88,6 +89,10 @@ function segmentHitDistance(
   return distancePointToSegment(px, py, seg.x1, seg.y1, seg.x2, seg.y2);
 }
 
+function pointDistance(px: number, py: number, x: number, y: number): number {
+  return Math.hypot(px - x, py - y);
+}
+
 /**
  * 世界坐标下命中关系边；`threshold` 为最大可点击距离（px）。
  */
@@ -124,12 +129,14 @@ export function hitTestRelation(
     const meta = getMeta?.(r.id) ?? {};
     if (r.source_model_id === r.target_model_id) {
       const slot = loopSlotMap.get(r.id) ?? 0;
-      const loop = selfLoopGeometry(a, slot);
+      const loop = selfLoopGeometry(a, slot, meta.self_loop_anchor);
       const d = Math.min(
         distancePointToSelfLoopArc(px, py, loop.forward),
         distancePointToSelfLoopArc(px, py, loop.reverse),
+        pointDistance(px, py, loop.forward.labelX, loop.forward.labelY),
+        pointDistance(px, py, loop.reverse.labelX, loop.reverse.labelY),
       );
-      if (d <= threshold && d < bestD) {
+      if (d <= threshold * 1.45 && d < bestD) {
         bestD = d;
         best = { id: r.id, direction: 'self' };
       }
@@ -138,8 +145,9 @@ export function hitTestRelation(
     const slotOff = offMap.get(r.id) ?? 0;
     if (isInheritRelation(r.kind)) {
       const seg = directedCurvedSegment(a, b, slotOff, meta.forward_bend);
-      const d = segmentHitDistance(px, py, seg);
-      if (d <= threshold && d < bestD) {
+      const label = segmentLabelPlacement(seg);
+      const d = Math.min(segmentHitDistance(px, py, seg), pointDistance(px, py, label.x, label.y));
+      if (d <= threshold * 1.35 && d < bestD) {
         bestD = d;
         best = { id: r.id, direction: 'inherit' };
       }
@@ -152,14 +160,22 @@ export function hitTestRelation(
       -(slotOff - RELATION_INTRA_PAIR_GAP),
       meta.reverse_bend,
     );
-    const dFwd = segmentHitDistance(px, py, fwd);
-    const dRev = segmentHitDistance(px, py, rev);
+    const fwdLabel = segmentLabelPlacement(fwd);
+    const revLabel = segmentLabelPlacement(rev);
+    const dFwd = Math.min(
+      segmentHitDistance(px, py, fwd),
+      pointDistance(px, py, fwdLabel.x, fwdLabel.y),
+    );
+    const dRev = Math.min(
+      segmentHitDistance(px, py, rev),
+      pointDistance(px, py, revLabel.x, revLabel.y),
+    );
     if (dFwd <= dRev) {
-      if (dFwd <= threshold && dFwd < bestD) {
+      if (dFwd <= threshold * 1.35 && dFwd < bestD) {
         bestD = dFwd;
         best = { id: r.id, direction: 'forward' };
       }
-    } else if (dRev <= threshold && dRev < bestD) {
+    } else if (dRev <= threshold * 1.35 && dRev < bestD) {
       bestD = dRev;
       best = { id: r.id, direction: 'reverse' };
     }

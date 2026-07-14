@@ -116,6 +116,10 @@ export function curvedLabelPlacement(seg: CurvedDirectedSegment): RelationLabelP
 
 /** 自关联弧标签：沿弧在 (x,y) 处的切线方向。 */
 export function arcLabelPlacement(arc: SelfLoopArc, x: number, y: number): RelationLabelPlacement {
+  if (arc.cpx !== undefined && arc.cpy !== undefined) {
+    const tan = quadraticTangentAt(0.5, arc.x1, arc.y1, arc.cpx, arc.cpy, arc.x2, arc.y2);
+    return { x, y, angle: normalizeLabelAngle(Math.atan2(tan.y, tan.x)) };
+  }
   const radial = Math.atan2(y - arc.cy, x - arc.cx);
   const tangent = arc.counterclockwise ? radial + Math.PI / 2 : radial - Math.PI / 2;
   return { x, y, angle: normalizeLabelAngle(tangent) };
@@ -362,6 +366,8 @@ export interface SelfLoopArc {
   uy: number;
   labelX: number;
   labelY: number;
+  cpx?: number;
+  cpy?: number;
 }
 
 /**
@@ -541,7 +547,47 @@ function buildHatBand(
 }
 
 /** 点到自关联纯圆弧的最近距离。 */
+function buildBezierLoopBand(
+  c: { x: number; y: number },
+  startBrimAngle: number,
+  endBrimAngle: number,
+  control: { x: number; y: number },
+): SelfLoopArc {
+  const x1 = c.x + NODE_RADIUS * Math.cos(startBrimAngle);
+  const y1 = c.y + NODE_RADIUS * Math.sin(startBrimAngle);
+  const x2 = c.x + NODE_RADIUS * Math.cos(endBrimAngle);
+  const y2 = c.y + NODE_RADIUS * Math.sin(endBrimAngle);
+  const tan = quadraticTangentAt(1, x1, y1, control.x, control.y, x2, y2);
+  const len = Math.hypot(tan.x, tan.y);
+  const ux = len < 1e-6 ? Math.cos(endBrimAngle) : tan.x / len;
+  const uy = len < 1e-6 ? Math.sin(endBrimAngle) : tan.y / len;
+  const label = quadraticPointAt(0.5, x1, y1, control.x, control.y, x2, y2);
+  return {
+    cx: control.x,
+    cy: control.y,
+    radius: 0,
+    startAngle: 0,
+    endAngle: 0,
+    counterclockwise: false,
+    x1,
+    y1,
+    x2,
+    y2,
+    arrowX: x2,
+    arrowY: y2,
+    ux,
+    uy,
+    labelX: label.x,
+    labelY: label.y,
+    cpx: control.x,
+    cpy: control.y,
+  };
+}
+
 export function distancePointToSelfLoopArc(px: number, py: number, arc: SelfLoopArc): number {
+  if (arc.cpx !== undefined && arc.cpy !== undefined) {
+    return distancePointToQuadraticBezier(px, py, arc.x1, arc.y1, arc.cpx, arc.cpy, arc.x2, arc.y2);
+  }
   const ang = Math.atan2(py - arc.cy, px - arc.cx);
   const radial = Math.hypot(px - arc.cx, py - arc.cy);
   if (angleInArcSweep(ang, arc.startAngle, arc.endAngle, arc.counterclockwise)) {
@@ -554,14 +600,58 @@ export function distancePointToSelfLoopArc(px: number, py: number, arc: SelfLoop
 export const distancePointToSelfLoopRing = distancePointToSelfLoopArc;
 
 /** 自关联「帽子」几何：slot 决定帽子扣在节点哪一侧（0 = 正上方）。 */
-export function selfLoopGeometry(node: PlacedLike, slotIndex: number): SelfLoopGeometry {
+export function selfLoopDefaultAnchor(
+  node: PlacedLike,
+  slotIndex: number,
+): { x: number; y: number } {
   const c = nodeCircleCenter(node);
   const phi = -Math.PI / 2 + slotIndex * HAT_SLOT_STEP;
+  const distance = NODE_RADIUS + HAT_OUTER_LIFT + 22;
+  return {
+    x: c.x + Math.cos(phi) * distance,
+    y: c.y + Math.sin(phi) * distance,
+  };
+}
+
+export function selfLoopGeometry(
+  node: PlacedLike,
+  slotIndex: number,
+  anchor?: { x: number; y: number } | null,
+): SelfLoopGeometry {
+  const c = nodeCircleCenter(node);
+  const defaultAnchor = selfLoopDefaultAnchor(node, slotIndex);
+  const anchorDx = (anchor ?? defaultAnchor).x - c.x;
+  const anchorDy = (anchor ?? defaultAnchor).y - c.y;
+  const anchorDistance = Math.hypot(anchorDx, anchorDy);
+  const phi =
+    anchor && anchorDistance > 1e-6
+      ? Math.atan2(anchorDy, anchorDx)
+      : Math.atan2(defaultAnchor.y - c.y, defaultAnchor.x - c.x);
+  const outerLift = Math.max(HAT_OUTER_LIFT, Math.min(360, anchorDistance - NODE_RADIUS - 22));
+  const innerLift = Math.max(HAT_INNER_LIFT, outerLift - HAT_BAND_GAP);
   const a1 = phi - HAT_ATTACH_HALF;
   const a2 = phi + HAT_ATTACH_HALF;
+  if (anchor && anchorDistance > 1e-6) {
+    const ux = Math.cos(phi);
+    const uy = Math.sin(phi);
+    const outerDistance = Math.max(NODE_RADIUS + HAT_OUTER_LIFT + 22, anchorDistance);
+    const innerDistance = Math.max(
+      NODE_RADIUS + HAT_INNER_LIFT + 14,
+      outerDistance - HAT_BAND_GAP * 1.8,
+    );
+    const forward = buildBezierLoopBand(c, a1, a2, {
+      x: c.x + ux * outerDistance,
+      y: c.y + uy * outerDistance,
+    });
+    const reverse = buildBezierLoopBand(c, a2, a1, {
+      x: c.x + ux * innerDistance,
+      y: c.y + uy * innerDistance,
+    });
+    return { forward, reverse };
+  }
   // forward：左檐→右檐；reverse：右檐→左檐。attach 角精确落在节点圆上，箭头分置两侧。
-  const forward = buildHatBand(c, phi, HAT_OUTER_LIFT, HAT_OUTER_LABEL_PAD, a1, a2);
-  const reverse = buildHatBand(c, phi, HAT_INNER_LIFT, 0, a2, a1);
+  const forward = buildHatBand(c, phi, outerLift, HAT_OUTER_LABEL_PAD, a1, a2);
+  const reverse = buildHatBand(c, phi, innerLift, 0, a2, a1);
   // 内檐标签：内外檐顶连线中点（与帽檐同侧、位于两圈之间）。
   const innerLabel = labelOnHatBulge(reverse, c, 0);
   const outerLabel = labelOnHatBulge(forward, c, 0);

@@ -42,21 +42,10 @@ export function drawNodeCircle(params: DrawNodeCircleParams): void {
   const vis = CANVAS_VISUAL.node;
 
   ctx.save();
-  ctx.shadowBlur = selected
-    ? vis.shadowBlurSelected
-    : hovered
-      ? vis.shadowBlurHover
-      : highlighted
-        ? vis.shadowBlurHover
-        : vis.shadowBlur;
-  ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 4;
-  ctx.shadowColor = vis.shadowColor;
   ctx.beginPath();
   ctx.arc(cx, cy, r - 1.5, 0, Math.PI * 2);
   ctx.fillStyle = fill;
   ctx.fill();
-  ctx.shadowBlur = 0;
 
   if (selected) {
     ctx.strokeStyle = vis.selectedRingColor;

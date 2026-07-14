@@ -7,7 +7,8 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { assertFlatGraphSegment } from '@mode-db/common';
 
 export interface ModelDbBackupFileEntry {
   readonly path: string;
@@ -50,6 +51,45 @@ function safeFilePart(value: string, fallback: string): string {
 function assertSafeBackupFileName(fileName: string): void {
   if (!/^[A-Za-z0-9_.-]+\.modeldb-backup\.json$/.test(fileName)) {
     throw new Error('Invalid backup file name.');
+  }
+}
+
+function validateBackupPayload(payload: ModelDbBackupPayload): ModelDbBackupPayload {
+  if (
+    payload.format !== 'modeldb.backup.v1' ||
+    typeof payload.database !== 'string' ||
+    typeof payload.createdAt !== 'string' ||
+    (payload.kind !== 'nested' && payload.kind !== 'flat') ||
+    !Array.isArray(payload.files)
+  ) {
+    throw new Error('Invalid ModelDB backup file.');
+  }
+  assertFlatGraphSegment(payload.database, 'backup database name');
+  if (!Number.isFinite(Date.parse(payload.createdAt))) {
+    throw new Error('Invalid ModelDB backup creation time.');
+  }
+  for (const file of payload.files) {
+    if (
+      !file ||
+      typeof file.path !== 'string' ||
+      file.encoding !== 'base64' ||
+      typeof file.data !== 'string'
+    ) {
+      throw new Error('Invalid ModelDB backup file entry.');
+    }
+    targetRelativePath(file.path, payload.database, payload.database);
+  }
+  return payload;
+}
+
+function parseBackupPayload(text: string): ModelDbBackupPayload {
+  try {
+    return validateBackupPayload(JSON.parse(text) as ModelDbBackupPayload);
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error('Invalid ModelDB backup JSON.');
+    }
+    throw error;
   }
 }
 
@@ -97,11 +137,7 @@ function collectFiles(absPath: string, workspaceRoot: string): ModelDbBackupFile
 }
 
 function readBackupPayload(absPath: string): ModelDbBackupPayload {
-  const payload = JSON.parse(readFileSync(absPath, 'utf-8')) as ModelDbBackupPayload;
-  if (payload.format !== 'modeldb.backup.v1' || !Array.isArray(payload.files)) {
-    throw new Error('Invalid ModelDB backup file.');
-  }
-  return payload;
+  return parseBackupPayload(readFileSync(absPath, 'utf-8'));
 }
 
 function targetRelativePath(
@@ -115,7 +151,17 @@ function targetRelativePath(
   }
   const prefix = `${sourceDatabase}/`;
   if (normalized.startsWith(prefix)) {
-    return `${targetDatabase}/${normalized.slice(prefix.length)}`;
+    const suffix = normalized.slice(prefix.length);
+    const segments = suffix.split('/');
+    if (
+      segments.length === 0 ||
+      segments.some(
+        (segment) => !segment || segment === '.' || segment === '..' || segment.includes('\0'),
+      )
+    ) {
+      throw new Error(`Backup entry "${entryPath}" contains an invalid relative path.`);
+    }
+    return `${targetDatabase}/${segments.join('/')}`;
   }
   throw new Error(`Backup entry "${entryPath}" does not belong to database "${sourceDatabase}".`);
 }
@@ -191,6 +237,63 @@ export function listDatabaseBackups(
   }
   out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return out;
+}
+
+export function readDatabaseBackupFile(
+  workspaceRoot: string,
+  backupFileName: string,
+): { readonly info: ModelDbBackupInfo; readonly content: Buffer } {
+  assertSafeBackupFileName(backupFileName);
+  const abs = join(backupRoot(workspaceRoot), backupFileName);
+  if (!existsSync(abs)) {
+    throw new Error(`Backup "${backupFileName}" not found.`);
+  }
+  const payload = readBackupPayload(abs);
+  const content = readFileSync(abs);
+  return {
+    info: {
+      fileName: backupFileName,
+      database: payload.database,
+      createdAt: payload.createdAt,
+      bytes: content.byteLength,
+      path: abs,
+    },
+    content,
+  };
+}
+
+export function importDatabaseBackup(
+  workspaceRoot: string,
+  requestedFileName: string,
+  content: Uint8Array,
+): ModelDbBackupInfo {
+  if (content.byteLength === 0) {
+    throw new Error('Backup file is empty.');
+  }
+  const payload = parseBackupPayload(Buffer.from(content).toString('utf-8'));
+  const requestedBase = basename(requestedFileName.trim());
+  const requestedStem = requestedBase.replace(/\.modeldb-backup\.json$/i, '');
+  const fallbackStem = safeFilePart(payload.database, 'database');
+  const safeStem = safeFilePart(requestedStem, fallbackStem);
+  const preferredName = `${safeStem}.modeldb-backup.json`;
+  assertSafeBackupFileName(preferredName);
+
+  const root = backupRoot(workspaceRoot);
+  mkdirSync(root, { recursive: true });
+  let fileName = preferredName;
+  if (existsSync(join(root, fileName))) {
+    fileName = `${safeStem}-${safeTimestamp()}-imported.modeldb-backup.json`;
+  }
+  const abs = join(root, fileName);
+  writeFileSync(abs, Buffer.from(content));
+  const st = statSync(abs);
+  return {
+    fileName,
+    database: payload.database,
+    createdAt: payload.createdAt,
+    bytes: st.size,
+    path: abs,
+  };
 }
 
 export function restoreDatabaseBackup(
