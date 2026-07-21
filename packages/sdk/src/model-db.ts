@@ -83,6 +83,27 @@ export class ModelDB {
     });
   }
 
+  /** Download one server-side backup as a portable file. */
+  async downloadBackup(backupFile: string): Promise<Blob> {
+    return RemoteModelDBClient.downloadBackup({
+      host: this.host,
+      port: this.port,
+      token: this.token,
+      backupFile,
+    });
+  }
+
+  /** Upload a portable backup file into the server backup directory. */
+  async importBackup(fileName: string, file: Blob): Promise<ManagementBackupInfo> {
+    return RemoteModelDBClient.importBackup({
+      host: this.host,
+      port: this.port,
+      token: this.token,
+      fileName,
+      file,
+    });
+  }
+
   /** Restore a logical database from a server-side backup file. */
   async restoreBackup(
     database: string,

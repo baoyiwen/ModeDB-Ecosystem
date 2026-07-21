@@ -1,8 +1,8 @@
 import { CANVAS_VISUAL } from '../config/canvas-visual.js';
 import type { RelationLabelPlacement } from './relation-geometry.js';
 
-const LABEL_FONT = '600 11px system-ui, "Segoe UI", sans-serif';
-const LABEL_LINE_HEIGHT = 11;
+const LABEL_FONT = '650 10px "Segoe UI", sans-serif';
+const LABEL_LINE_HEIGHT = 10;
 
 function roundRectPath(
   ctx: CanvasRenderingContext2D,
@@ -31,12 +31,11 @@ export function drawRelationLabel(
   ctx: CanvasRenderingContext2D,
   placement: RelationLabelPlacement,
   text: string,
-  zoom: number,
+  _zoom: number,
 ): void {
   const vis = CANVAS_VISUAL.label;
   ctx.save();
   ctx.translate(placement.x, placement.y);
-  ctx.scale(1 / zoom, 1 / zoom);
   ctx.rotate(placement.angle);
 
   ctx.font = LABEL_FONT;

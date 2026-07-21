@@ -386,10 +386,10 @@ async function pushDesignerCatalogRows(
       const parentStorageId = modelStorageIdByCanvasId.get(model.parent_id) ?? model.parent_id;
       try {
         await client.bindRelation(
-          { model: SYS_MODEL, id: parentStorageId },
           { model: SYS_MODEL, id: storageModelId },
-          'parentModelHasChildren',
+          { model: SYS_MODEL, id: parentStorageId },
           'modelBelongsToParent',
+          'parentModelHasChildren',
         );
       } catch {
         /* idempotent */

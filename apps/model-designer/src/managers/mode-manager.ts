@@ -7,6 +7,7 @@ export type ModelDesignerToolMode = 'select' | 'add' | 'delete' | 'link' | 'inhe
 export type QueryDesignerToolMode =
   | 'query-select'
   | 'query-create'
+  | 'query-rewire'
   | 'query-inspect'
   | 'query-preview';
 

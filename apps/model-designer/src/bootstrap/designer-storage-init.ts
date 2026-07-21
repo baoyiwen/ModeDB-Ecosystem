@@ -16,6 +16,8 @@ export const SYS_PROPS = 'sys_props';
 export const SYS_DATA_ASSET_MAP = 'sys_data_asset_map';
 /** SDK 快照行模型（`graph_b64` push/pull 协议）。 */
 export const SYS_DESIGNER_GRAPH = 'sys_designer_graph';
+/** Query Designer 接口资产注册表。 */
+export const SYS_QUERY_INTERFACE = 'sys_query_interface';
 
 type RelationLogicWire = 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many';
 
@@ -123,6 +125,20 @@ export async function ensureDesignerCatalog(
         updated_at: 'String',
         /** 用户业务库的逻辑标签（= `sys_data_asset_map.code`），用于在共享元数据库内做多库隔离。 */
         library_code: 'String',
+      },
+    },
+    {
+      name: SYS_QUERY_INTERFACE,
+      schema: {
+        library_code: 'String',
+        display_name: 'String',
+        description: 'String',
+        query_json: 'String',
+        chain_json: 'String',
+        signature: 'String',
+        created_at: 'String',
+        updated_at: 'String',
+        projection_configured: 'Boolean',
       },
     },
   ];
@@ -268,6 +284,7 @@ export async function ensureDesignerCatalog(
     { model: SYS_PROPS, fields: { model_engine_name: 'String' } },
     { model: SYS_PROPS, fields: { library_code: 'String' } },
     { model: SYS_DESIGNER_GRAPH, fields: { library_code: 'String' } },
+    { model: SYS_QUERY_INTERFACE, fields: { library_code: 'String' } },
   ];
   for (const p of patches) {
     try {

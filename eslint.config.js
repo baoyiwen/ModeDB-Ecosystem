@@ -63,6 +63,8 @@ export default [
             'packages/server/scripts/*.mjs',
             'packages/data-ui/scripts/*.mjs',
           ],
+          // Repository tooling scripts are intentionally outside package tsconfig files.
+          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 16,
         },
       },
     },

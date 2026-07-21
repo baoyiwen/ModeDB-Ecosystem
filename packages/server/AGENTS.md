@@ -27,6 +27,7 @@
 - 关键文件：`src/backup-manager.ts`、`src/auto-backup-scheduler.ts`、`src/cli-backup.ts`、`src/config-loader.ts`、`src/dual-track-app.ts`。
 - 备份文件写入 `<workspace>/modeldb/backups/`。
 - `restore` / `clear-data` / `force-reset` 前应尽量创建安全备份。
+- 外部备份迁移通过 management download/import API；导入必须验证 payload 与每个相对路径，禁止覆盖已有备份文件。
 - `force-reset` 是损坏恢复后门，可在库文件缺失时重建；普通 `clear-data` 仍应要求库存在。
 - 自动备份默认关闭；仅 `autoBackup.enabled === true` 且间隔不小于 `60000ms` 时启动。
 - 破坏性 CLI 必须要求 `--yes`。

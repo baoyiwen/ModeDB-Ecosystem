@@ -23,8 +23,13 @@ export type {
 } from './components/import-failure-panel.js';
 export { AppDrawer } from './components/app-drawer.js';
 export type { AppDrawerProps } from './components/app-drawer.js';
-export { AppConfirmProvider, useAppConfirm } from './components/app-confirm.js';
-export type { AppConfirmOptions, AppConfirmTone } from './components/app-confirm.js';
+export { AppConfirmProvider, useAppConfirm, useAppSelect } from './components/app-confirm.js';
+export type {
+  AppConfirmOptions,
+  AppConfirmTone,
+  AppSelectItem,
+  AppSelectOptions,
+} from './components/app-confirm.js';
 export {
   AppNotificationCenter,
   AppNotificationToastStack,

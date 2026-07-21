@@ -23,6 +23,19 @@ ModelDB **远程客户端**：通过 WebSocket 连接 **`@mode-db/server`**，�
 | **协议** | `apply(op)` / `applyAll(ops)` — 与 Designer JSON 配置同源      |
 | **管理** | `listDatabases`、`getManagementStatus`（静态方法）             |
 
+### 备份文件迁移
+
+```typescript
+const backups = await db.listBackups('Asset_Graph');
+const file = await db.downloadBackup(backups[0].fileName);
+
+// 浏览器中可将 Blob 下载到本地，也可以在目标服务器重新导入。
+const imported = await targetDb.importBackup('asset-transfer.modeldb-backup.json', file);
+await targetDb.restoreBackup('Asset_Graph_Copy', imported.fileName);
+```
+
+`downloadBackup` 返回原始备份 `Blob`，`importBackup` 会把经过服务端校验的文件放入目标服务器的 `modeldb/backups/` 目录。
+
 ## 安装与构建
 
 ```bash

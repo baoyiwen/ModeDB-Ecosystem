@@ -523,6 +523,104 @@ function collectEqualSpacingGuides(
   return out;
 }
 
+function equalSpacingCandidateX(
+  cx: number,
+  cy: number,
+  peers: readonly SnapPeer[],
+  threshold: number,
+  gapEps: number,
+): { center: number; guides: SnapGuide[] } | undefined {
+  const sorted = [...peers].sort((a, b) => a.cx - b.cx);
+  const candidates: AxisSnapCandidate[] = [];
+  const push = (center: number, row: Point2[]): void => {
+    const dist = Math.abs(cx - center);
+    if (dist > threshold) {
+      return;
+    }
+    const guides = equalSpacingForRow(row, cy, gapEps);
+    if (guides.length > 0) {
+      candidates.push({ center, dist, guides });
+    }
+  };
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const a = sorted[i]!;
+    const b = sorted[i + 1]!;
+    const middle = (a.cx + b.cx) / 2;
+    push(middle, [
+      { cx: a.cx, cy: a.cy },
+      { cx: middle, cy },
+      { cx: b.cx, cy: b.cy },
+    ]);
+    const gap = b.cx - a.cx - NODE_RADIUS * 2;
+    if (gap >= -gapEps) {
+      const step = NODE_RADIUS * 2 + gap;
+      const left = a.cx - step;
+      const right = b.cx + step;
+      push(left, [
+        { cx: left, cy },
+        { cx: a.cx, cy: a.cy },
+        { cx: b.cx, cy: b.cy },
+      ]);
+      push(right, [
+        { cx: a.cx, cy: a.cy },
+        { cx: b.cx, cy: b.cy },
+        { cx: right, cy },
+      ]);
+    }
+  }
+  const best = pickBestCandidate(cx, candidates, threshold);
+  return best.guides.length > 0 ? best : undefined;
+}
+
+function equalSpacingCandidateY(
+  cx: number,
+  cy: number,
+  peers: readonly SnapPeer[],
+  threshold: number,
+  gapEps: number,
+): { center: number; guides: SnapGuide[] } | undefined {
+  const sorted = [...peers].sort((a, b) => a.cy - b.cy);
+  const candidates: AxisSnapCandidate[] = [];
+  const push = (center: number, col: Point2[]): void => {
+    const dist = Math.abs(cy - center);
+    if (dist > threshold) {
+      return;
+    }
+    const guides = equalSpacingForCol(col, cx, gapEps);
+    if (guides.length > 0) {
+      candidates.push({ center, dist, guides });
+    }
+  };
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const a = sorted[i]!;
+    const b = sorted[i + 1]!;
+    const middle = (a.cy + b.cy) / 2;
+    push(middle, [
+      { cx: a.cx, cy: a.cy },
+      { cx, cy: middle },
+      { cx: b.cx, cy: b.cy },
+    ]);
+    const gap = b.cy - a.cy - NODE_RADIUS * 2;
+    if (gap >= -gapEps) {
+      const step = NODE_RADIUS * 2 + gap;
+      const top = a.cy - step;
+      const bottom = b.cy + step;
+      push(top, [
+        { cx, cy: top },
+        { cx: a.cx, cy: a.cy },
+        { cx: b.cx, cy: b.cy },
+      ]);
+      push(bottom, [
+        { cx: a.cx, cy: a.cy },
+        { cx: b.cx, cy: b.cy },
+        { cx, cy: bottom },
+      ]);
+    }
+  }
+  const best = pickBestCandidate(cy, candidates, threshold);
+  return best.guides.length > 0 ? best : undefined;
+}
+
 export function snapWorldPoint(
   x: number,
   y: number,
@@ -570,6 +668,24 @@ export function snapWorldPoint(
     cx = sx.center;
     cy = sy.center;
     snapGuides.push(...sy.guides, ...sx.guides);
+  }
+
+  const equalSnapThreshold = Math.max(opts.threshold * 1.45, opts.gapEqualEps);
+  const equalX = equalSpacingCandidateX(cx, cy, hAligned, equalSnapThreshold, opts.gapEqualEps);
+  if (equalX) {
+    cx = equalX.center;
+    snapGuides.push(...equalX.guides);
+  }
+  const equalY = equalSpacingCandidateY(cx, cy, vAligned, equalSnapThreshold, opts.gapEqualEps);
+  if (equalY) {
+    cy = equalY.center;
+    snapGuides.push(...equalY.guides);
+  }
+  if (opts.showTripleLineGuides) {
+    equalGuides = mergeGuides(
+      equalGuides,
+      collectEqualSpacingGuides(cx, cy, peers, excludeId, opts.gapEqualEps),
+    );
   }
 
   const merged = mergeGuides(preview, equalGuides, snapGuides);

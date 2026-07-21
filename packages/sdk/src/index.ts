@@ -34,6 +34,7 @@ export type {
   EngineOperationResult,
   EngineApplyOutcome,
   ManagementBackupCreateResponse,
+  ManagementBackupImportResponse,
   ManagementBackupInfo,
   ManagementBackupRestoreResponse,
   ManagementBackupsResponse,

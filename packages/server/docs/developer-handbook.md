@@ -53,6 +53,9 @@
 - 创建备份前应尽量 `AuthoringEngine.flushAll()`，保证内存写缓冲落盘。
 - 恢复与强制重置后必须清理 server 侧 client/authoring 缓存，避免旧连接继续读旧文件。
 - 恢复时必须校验备份文件名和写出路径，禁止路径逃逸。
+- 外部导入文件必须校验 `modeldb.backup.v1` payload，并拒绝空路径、`.`、`..` 和不属于源库的文件条目。
+- 下载接口返回原始 `*.modeldb-backup.json`；上传接口使用 `application/octet-stream`，避免 JSON 再包装造成体积膨胀。
+- 导入同名备份时生成带时间戳的新文件名，不覆盖服务器已有备份。
 - `force-reset` 是数据损坏恢复后门，允许目标库文件缺失时重建；普通 `clear-data` 仍应要求逻辑库存在。
 - 自动备份默认关闭；只有 `autoBackup.enabled === true` 且间隔不小于 `60000ms` 才启动调度器。
 

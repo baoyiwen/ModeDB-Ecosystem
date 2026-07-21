@@ -45,6 +45,7 @@ export interface PaintSceneParams {
   mutedRelationIds?: ReadonlySet<string>;
   highlightNodeIds?: ReadonlySet<string>;
   highlightRelationIds?: ReadonlySet<string>;
+  candidateRelationIds?: ReadonlySet<string>;
   constraintRelationIds?: ReadonlySet<string>;
   linkPreview: DirectedSegment | null;
   inheritPreview?: DirectedSegment | null;
@@ -115,6 +116,7 @@ export function paintScene(params: PaintSceneParams): void {
     mutedRelationIds,
     highlightNodeIds,
     highlightRelationIds,
+    candidateRelationIds,
     constraintRelationIds,
     linkPreview,
     inheritPreview,
@@ -124,6 +126,11 @@ export function paintScene(params: PaintSceneParams): void {
   const hide = hiddenNodeIds;
   const hideRelation = hiddenRelationIds;
   ctx.clearRect(0, 0, width, height);
+  // Keep canvas rendering flat even if a caller leaves a shadow state behind.
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
 
   const snap = config.snapshot();
   const panX = config.viewportPanX;
@@ -135,22 +142,6 @@ export function paintScene(params: PaintSceneParams): void {
 
   paintVisibleWorldDotGrid(ctx, width, height, panX, panY, zoom, snap.gridSize, snap.gridEnabled);
 
-  if (snapGuides && snapGuides.length > 0) {
-    paintSnapGuides({
-      ctx,
-      width,
-      height,
-      panX,
-      panY,
-      zoom,
-      guides: snapGuides,
-      tangentColor: CANVAS_VISUAL.snapGuide.tangentColor,
-      centerColor: CANVAS_VISUAL.snapGuide.centerColor,
-      previewTangentColor: CANVAS_VISUAL.snapGuide.previewTangentColor,
-      equalGapColor: CANVAS_VISUAL.snapGuide.equalGapColor,
-    });
-  }
-
   const placed = buildPlacedNodes(data.models, (id) => data.getLayout(id)?.position);
   const byId = new Map<string, PlacedNode>();
   for (const p of placed) {
@@ -161,12 +152,19 @@ export function paintScene(params: PaintSceneParams): void {
   const loopSlotMap = edgeSelfLoopSlotById(data.relations);
 
   const vis = CANVAS_VISUAL.relation;
-  const baseLw = vis.strokePx / zoom;
-  const hoverLw = vis.strokeHoverPx / zoom;
-  const empLw = vis.strokeSelectedPx / zoom;
-  const arrow = vis.arrowPx / zoom;
+  const baseLw = vis.strokePx;
+  const hoverLw = vis.strokeHoverPx;
+  const empLw = vis.strokeSelectedPx;
+  const arrow = vis.arrowPx;
 
-  type EdgeDrawKind = 'normal' | 'hover' | 'selected' | 'muted' | 'highlight' | 'constraint';
+  type EdgeDrawKind =
+    | 'normal'
+    | 'hover'
+    | 'selected'
+    | 'muted'
+    | 'highlight'
+    | 'candidate'
+    | 'constraint';
   const relationColor = (r: EngineRelationEdge, kind: EdgeDrawKind): string => {
     const inherit = isInheritRelation(r.kind);
     if (kind === 'selected') {
@@ -176,19 +174,23 @@ export function paintScene(params: PaintSceneParams): void {
       return inherit ? vis.inheritHoverColor : vis.hoverColor;
     }
     if (kind === 'highlight') {
-      return '#f59e0b';
+      return '#2563eb';
+    }
+    if (kind === 'candidate') {
+      return '#7c3aed';
     }
     if (kind === 'constraint') {
       return '#0891b2';
     }
     if (kind === 'muted') {
-      return '#cbd5e1';
+      return '#e2e8f0';
     }
     return inherit ? vis.inheritColor : vis.normalColor;
   };
   const relationWidth = (kind: EdgeDrawKind): number => {
     if (kind === 'selected') return empLw;
-    if (kind === 'highlight') return hoverLw;
+    if (kind === 'highlight') return empLw;
+    if (kind === 'candidate') return empLw;
     if (kind === 'hover') return hoverLw;
     return baseLw;
   };
@@ -223,13 +225,14 @@ export function paintScene(params: PaintSceneParams): void {
     const lw = relationWidth(drawKind);
     const isInherit = isInheritRelation(r.kind);
     if (drawKind === 'constraint') {
-      ctx.setLineDash([10 / zoom, 6 / zoom]);
+      ctx.setLineDash([10, 6]);
     } else {
       ctx.setLineDash([]);
     }
     if (r.source_model_id === r.target_model_id) {
       const slot = loopSlotMap.get(r.id) ?? 0;
-      const loop = selfLoopGeometry(a, slot);
+      const meta = data.getRelationCanvasMeta(r.id);
+      const loop = selfLoopGeometry(a, slot, meta.self_loop_anchor);
       drawSelfLoop(ctx, loop, color, lw, arrow, isInherit);
       return {
         forward: arcLabelPlacement(loop.forward, loop.forward.labelX, loop.forward.labelY),
@@ -286,6 +289,7 @@ export function paintScene(params: PaintSceneParams): void {
   const edgeDrawKind = (relId: string): EdgeDrawKind => {
     if (relId === selRel) return 'selected';
     if (relId === hovRel) return 'hover';
+    if (candidateRelationIds?.has(relId)) return 'candidate';
     if (constraintRelationIds?.has(relId)) return 'constraint';
     if (highlightRelationIds?.has(relId)) return 'highlight';
     if (mutedRelationIds?.has(relId)) return 'muted';
@@ -362,6 +366,22 @@ export function paintScene(params: PaintSceneParams): void {
 
   for (const { placement, text } of labelEntries) {
     drawRelationLabel(ctx, placement, text, zoom);
+  }
+
+  if (snapGuides && snapGuides.length > 0) {
+    paintSnapGuides({
+      ctx,
+      width,
+      height,
+      panX,
+      panY,
+      zoom,
+      guides: snapGuides,
+      tangentColor: CANVAS_VISUAL.snapGuide.tangentColor,
+      centerColor: CANVAS_VISUAL.snapGuide.centerColor,
+      previewTangentColor: CANVAS_VISUAL.snapGuide.previewTangentColor,
+      equalGapColor: CANVAS_VISUAL.snapGuide.equalGapColor,
+    });
   }
 
   ctx.restore();

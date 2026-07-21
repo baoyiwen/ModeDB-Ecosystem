@@ -17,19 +17,53 @@ import { ActiveLibraryPanel } from './ActiveLibraryPanel.js';
 import { NotificationCenter } from './NotificationCenter.js';
 import { LayerTreePanel } from './LayerTreePanel.js';
 import { RelationDetailPanel } from './RelationDetailPanel.js';
-import { QueryDesignerPanel } from './QueryDesignerPanel.js';
+import {
+  QueryDesignerPanel,
+  QueryInterfaceManagerPanel,
+  type QueryInterfaceSaveResult,
+  type SavedQueryInterfaceView,
+} from './QueryDesignerPanel.js';
 import { DesignerSelect } from './base/designer-select.js';
 import type { LocaleCode } from '../managers/i18n-manager.js';
-import { IconGrid, IconSettings, IconBell } from './designer-icons.js';
-import type { QueryChainState } from '../query-designer/index.js';
+import { IconDocument, IconGrid, IconSettings, IconBell } from './designer-icons.js';
+import type {
+  QueryChainState,
+  QueryInterface,
+  QueryModelPickCandidate,
+  QueryRelationPickCandidate,
+} from '../query-designer/index.js';
 
-export type ManualPanelKind = 'hierarchy' | 'settings' | 'notifications';
+export type ManualPanelKind = 'hierarchy' | 'interfaces' | 'settings' | 'notifications';
 
 export function EditorChrome(props: {
   selectedModelId: string | undefined;
   selectedRelationId: string | undefined;
   queryChain: QueryChainState;
+  pendingQueryRelationPick:
+    | { relationId: string; candidates: readonly QueryRelationPickCandidate[] }
+    | undefined;
+  pendingQueryModelPick:
+    | { modelId: string; candidates: readonly QueryModelPickCandidate[] }
+    | undefined;
+  savedQueryInterfaces: readonly SavedQueryInterfaceView[];
+  activeQueryInterface: SavedQueryInterfaceView | undefined;
   onQueryChainChange: (queryChain: QueryChainState) => void;
+  onResolveQueryRelationPick: (sourceNodeIds: readonly string[]) => void;
+  onCancelQueryRelationPick: () => void;
+  onResolveQueryModelPick: (candidates: readonly QueryModelPickCandidate[]) => void;
+  onCancelQueryModelPick: () => void;
+  onSaveQueryInterface: (
+    queryInterface: QueryInterface,
+    queryChain: QueryChainState,
+    name: string,
+    description: string,
+    activeInterfaceId?: string,
+    projectionConfigured?: boolean,
+  ) => QueryInterfaceSaveResult;
+  onClearActiveQueryInterface: () => void;
+  onOpenQueryInterface: (id: string) => void;
+  onRenameQueryInterface: (id: string, name: string) => void;
+  onDeleteQueryInterface: (id: string) => void;
   onRequestClearCanvasSelection: () => void;
   children: ReactNode;
 }): ReactElement {
@@ -58,6 +92,9 @@ export function EditorChrome(props: {
   const [manualPanel, setManualPanel] = useState<ManualPanelKind | null>(null);
 
   useEffect(() => {
+    if (manualPanel === 'interfaces') {
+      return;
+    }
     if (modes.mode === 'page') {
       return;
     }
@@ -65,7 +102,7 @@ export function EditorChrome(props: {
       return;
     }
     setManualPanel(null);
-  }, [modes.mode, props.selectedModelId, props.selectedRelationId]);
+  }, [manualPanel, modes.mode, props.selectedModelId, props.selectedRelationId]);
 
   useEffect(() => {
     if (modes.mode === 'page') {
@@ -81,6 +118,9 @@ export function EditorChrome(props: {
   const closeAll = useCallback((): void => {
     if (manualOpen) {
       setManualPanel(null);
+      if (modes.mode === 'page') {
+        modes.setMode('select');
+      }
       return;
     }
     if (passiveOpen) {
@@ -94,15 +134,16 @@ export function EditorChrome(props: {
 
   const openManual = useCallback(
     (kind: ManualPanelKind): void => {
-      setManualPanel((p) => {
-        const next = p === kind ? null : kind;
-        if (next === 'notifications') {
-          notifications.markAllRead();
-        }
-        return next;
-      });
+      const next = manualPanel === kind ? null : kind;
+      if (next === 'notifications') {
+        notifications.markAllRead();
+      }
+      setManualPanel(next);
+      if (modes.mode === 'page' && next !== 'hierarchy') {
+        modes.setMode('select');
+      }
     },
-    [notifications],
+    [manualPanel, modes, notifications],
   );
 
   const title = (): string => {
@@ -114,6 +155,9 @@ export function EditorChrome(props: {
     }
     if (manualPanel === 'notifications') {
       return i18n.t('ui', 'notifyCenterTitle');
+    }
+    if (manualPanel === 'interfaces') {
+      return TEXT_INTERFACE_MANAGER;
     }
     if (queryOpen) {
       return i18n.t('ui', 'modeQueryDesigner');
@@ -133,6 +177,19 @@ export function EditorChrome(props: {
     }
     if (manualPanel === 'notifications') {
       return <NotificationCenter />;
+    }
+    if (manualPanel === 'interfaces') {
+      return (
+        <QueryInterfaceManagerPanel
+          savedQueryInterfaces={props.savedQueryInterfaces}
+          onOpenQueryInterface={(id) => {
+            props.onOpenQueryInterface(id);
+            setManualPanel(null);
+          }}
+          onRenameQueryInterface={props.onRenameQueryInterface}
+          onDeleteQueryInterface={props.onDeleteQueryInterface}
+        />
+      );
     }
     if (manualPanel === 'settings') {
       const currentAccent = appearance.accent.toLowerCase();
@@ -239,7 +296,16 @@ export function EditorChrome(props: {
         <QueryDesignerPanel
           selectedModelId={props.selectedModelId}
           queryChain={props.queryChain}
+          pendingQueryRelationPick={props.pendingQueryRelationPick}
+          pendingQueryModelPick={props.pendingQueryModelPick}
+          activeQueryInterface={props.activeQueryInterface}
           onQueryChainChange={props.onQueryChainChange}
+          onResolveQueryRelationPick={props.onResolveQueryRelationPick}
+          onCancelQueryRelationPick={props.onCancelQueryRelationPick}
+          onResolveQueryModelPick={props.onResolveQueryModelPick}
+          onCancelQueryModelPick={props.onCancelQueryModelPick}
+          onSaveQueryInterface={props.onSaveQueryInterface}
+          onClearActiveQueryInterface={props.onClearActiveQueryInterface}
         />
       );
     }
@@ -287,6 +353,15 @@ export function EditorChrome(props: {
         </button>
         <button
           type="button"
+          className="designer-fab designer-fab--panel"
+          data-active={manualPanel === 'interfaces' ? 'true' : 'false'}
+          title={TEXT_INTERFACE_MANAGER}
+          onClick={() => openManual('interfaces')}
+        >
+          <IconDocument />
+        </button>
+        <button
+          type="button"
           className="designer-fab designer-fab--panel designer-fab--notify"
           data-active={manualPanel === 'notifications' ? 'true' : 'false'}
           title={i18n.t('ui', 'fabNotifications')}
@@ -327,3 +402,5 @@ export function EditorChrome(props: {
     </>
   );
 }
+
+const TEXT_INTERFACE_MANAGER = '\u63a5\u53e3\u7ba1\u7406\u5668';

@@ -47,6 +47,11 @@ export interface ManagementBackupCreateResponse {
   readonly backup: ManagementBackupInfo;
 }
 
+export interface ManagementBackupImportResponse {
+  readonly ok: true;
+  readonly backup: ManagementBackupInfo;
+}
+
 export interface ManagementBackupRestoreResponse {
   readonly ok: true;
   readonly restored: ManagementBackupInfo;

@@ -134,8 +134,12 @@ function drawHatBand(
   ctx.setLineDash(dashed ? [dash, dash] : []);
   ctx.beginPath();
   ctx.moveTo(x1, y1);
+  if (band.cpx !== undefined && band.cpy !== undefined) {
+    ctx.quadraticCurveTo(band.cpx, band.cpy, arrowX, arrowY);
+  } else {
+    ctx.arc(cx, cy, radius, startAngle, endAngle, counterclockwise);
+  }
   // 弧一直画到节点圆 attach 点（与箭尖同位置），避免线与箭头脱节。
-  ctx.arc(cx, cy, radius, startAngle, endAngle, counterclockwise);
   ctx.stroke();
   ctx.setLineDash([]);
 

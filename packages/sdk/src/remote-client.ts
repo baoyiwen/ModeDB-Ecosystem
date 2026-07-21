@@ -8,6 +8,7 @@ import {
   type EngineOperation,
   type EngineOperationResult,
   type ManagementBackupCreateResponse,
+  type ManagementBackupImportResponse,
   type ManagementBackupInfo,
   type ManagementBackupRestoreResponse,
   type ManagementBackupsResponse,
@@ -1208,6 +1209,75 @@ async function fetchManagementPostJson<T>(
   }
 }
 
+async function fetchManagementBlob(origin: string, token: string, path: string): Promise<Blob> {
+  const base = origin.replace(/\/$/, '');
+  const url = `${base}${path}`;
+  const trace = logInteractionStart('Management API', `GET ${path}`, { url, response: 'binary' });
+  try {
+    const res = await fetch(url, {
+      headers: { 'X-ModelDB-Connect-Token': token },
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      if (res.status === 404 && /Route\s+GET:/i.test(text)) {
+        throw new Error(
+          'The connected ModelDB Server does not provide the backup download API. Rebuild, upgrade, and restart @mode-db/server before exporting backups.',
+        );
+      }
+      throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+    }
+    const blob = await res.blob();
+    logInteractionSuccess(trace, { status: res.status, bytes: blob.size });
+    return blob;
+  } catch (e) {
+    logInteractionError(trace, e);
+    throw e;
+  }
+}
+
+async function fetchManagementPostBlobJson<T>(
+  origin: string,
+  token: string,
+  path: string,
+  body: Blob,
+): Promise<T> {
+  const base = origin.replace(/\/$/, '');
+  const url = `${base}${path}`;
+  const trace = logInteractionStart('Management API', `POST ${path}`, {
+    url,
+    bytes: body.size,
+    contentType: body.type || 'application/octet-stream',
+  });
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-ModelDB-Connect-Token': token,
+      },
+      body,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      if (res.status === 404 && /Route\s+POST:/i.test(text)) {
+        throw new Error(
+          'The connected ModelDB Server does not provide the backup import API. Rebuild, upgrade, and restart @mode-db/server before importing backups.',
+        );
+      }
+      throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+    }
+    const json = (await res.json()) as T;
+    logInteractionSuccess(trace, {
+      status: res.status,
+      ...summarizeManagementResult(path, json),
+    });
+    return json;
+  } catch (e) {
+    logInteractionError(trace, e);
+    throw e;
+  }
+}
+
 async function fetchManagementDelete(origin: string, token: string, path: string): Promise<void> {
   const base = origin.replace(/\/$/, '');
   const url = `${base}${path}`;
@@ -1367,6 +1437,41 @@ export class RemoteModelDBClient {
       options.token,
       `/api/v1/management/databases/${enc}/backup`,
       { reason: options.reason ?? 'manual' },
+    );
+    return json.backup;
+  }
+
+  /** Download one server-side backup as a portable file. */
+  static async downloadBackup(options: {
+    readonly host: string;
+    readonly port: number;
+    readonly token: string;
+    readonly backupFile: string;
+  }): Promise<Blob> {
+    const origin = `http://${options.host}:${options.port}`;
+    const file = encodeURIComponent(options.backupFile.trim());
+    return fetchManagementBlob(
+      origin,
+      options.token,
+      `/api/v1/management/backups/${file}/download`,
+    );
+  }
+
+  /** Upload a portable ModelDB backup into the server backup directory. */
+  static async importBackup(options: {
+    readonly host: string;
+    readonly port: number;
+    readonly token: string;
+    readonly fileName: string;
+    readonly file: Blob;
+  }): Promise<ManagementBackupInfo> {
+    const origin = `http://${options.host}:${options.port}`;
+    const query = `?fileName=${encodeURIComponent(options.fileName.trim())}`;
+    const json = await fetchManagementPostBlobJson<ManagementBackupImportResponse>(
+      origin,
+      options.token,
+      `/api/v1/management/backups/import${query}`,
+      options.file,
     );
     return json.backup;
   }
