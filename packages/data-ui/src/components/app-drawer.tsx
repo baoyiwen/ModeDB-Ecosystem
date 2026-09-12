@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
 import './app-shell.css';
+import { AppCloseIcon } from './app-close-icon.js';
 
 export interface AppDrawerProps {
   readonly open: boolean;
@@ -74,7 +75,7 @@ export function AppDrawer(props: AppDrawerProps): ReactElement {
               aria-label={closeLabel}
               onClick={onClose}
             >
-              <span aria-hidden="true">x</span>
+              <AppCloseIcon />
             </button>
           </header>
           <div className={['mode-ui-drawer-body', bodyClassName].filter(Boolean).join(' ')}>

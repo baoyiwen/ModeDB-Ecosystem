@@ -154,4 +154,56 @@ describe('adaptQueryResult', () => {
       ['name'],
     );
   });
+
+  it('adapts binding surface query rows and keeps record refs out of visible data', () => {
+    const shape = adaptQueryResult({
+      kind: 'bindingSurface',
+      surfaceId: 'item-editor',
+      version: '1.0.0',
+      action: 'read',
+      status: 'success',
+      query: {
+        kind: 'interface',
+        callableName: 'itemsByCategory',
+        version: '1.0.0',
+        rows: [
+          {
+            $recordRef: { nodeId: 'node_item', model: 'Item', id: 'item-1' },
+            label: 'First',
+          },
+        ],
+      },
+    });
+    assert.equal(shape.kind, 'tabular');
+    if (shape.kind !== 'tabular') {
+      return;
+    }
+    assert.deepEqual(shape.columns.map((column) => column.key), ['label']);
+    assert.deepEqual(shape.rows, [{ label: 'First' }]);
+    assert.deepEqual(shape.rowRefs, [{ model: 'Item', id: 'item-1' }]);
+  });
+
+  it('returns an empty shape for a mutation-only binding surface result', () => {
+    const shape = adaptQueryResult({
+      kind: 'bindingSurface',
+      surfaceId: 'item-editor',
+      version: '1.0.0',
+      action: 'mutate',
+      status: 'success',
+      mutation: {
+        mutationId: 'update-name',
+        result: {
+          kind: 'operationInterface',
+          callableName: 'updateItem',
+          version: '1.0.0',
+          operation: 'update',
+          output: { ok: true },
+        },
+      },
+    });
+    assert.deepEqual(shape, {
+      kind: 'empty',
+      reason: 'binding_surface_result_not_viewable',
+    });
+  });
 });

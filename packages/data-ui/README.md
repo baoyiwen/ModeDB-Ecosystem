@@ -22,4 +22,24 @@ import { DataPageProvider, DataPageToolbar } from '@mode-db/data-ui';
 </DataPageProvider>;
 ```
 
-Table / Pivot components will be added incrementally.
+## Binding Surface
+
+```tsx
+const surfaceSession = createBindingSurfaceSession({
+  surfaceId: release.contract.surfaceId,
+  version: release.version,
+  executor: client,
+});
+
+<BindingSurfaceProvider contract={release.contract} session={surfaceSession}>
+  <BindingSurfaceStatus />
+  <BindingSurfaceTable />
+  <BindingSurfaceForm rowIndex={0} />
+  <BindingSurfaceRelationEditor rowIndex={0} />
+</BindingSurfaceProvider>;
+```
+
+The host owns the `BindingSurfaceSession` and must keep it stable while the provider is mounted.
+Table and form edits invoke one published mutation at a time. A form with several editable fields is
+therefore not an implicit transaction. `BindingSurfaceStatus` keeps committed mutations with failed
+refreshes distinct from failed mutations.

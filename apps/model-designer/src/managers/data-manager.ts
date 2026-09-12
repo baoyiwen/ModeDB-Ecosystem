@@ -29,6 +29,7 @@ import { loadLibraryCanvas as loadLibraryCanvasFromRows } from '../sync/designer
 import { mapI18nSuffix, pickCanonicalFromI18n } from '../utils/i18n-resolve.js';
 import { pickNewModelColor } from '../utils/model-color-pick.js';
 import { makeUniqueName } from '../utils/name-validation.js';
+import { createUuid } from '../utils/random-id.js';
 
 export type DataListener = () => void;
 
@@ -45,7 +46,7 @@ export interface LayerPageMembershipSnapshot {
 }
 
 function newId(): string {
-  return crypto.randomUUID();
+  return createUuid();
 }
 
 import {

@@ -15,6 +15,7 @@
     "noFallthroughCasesInSwitch": true,
     "verbatimModuleSyntax": true,
     "paths": {
+      "@mode-db/data-kit": ["../../packages/data-kit/src/index.ts"],
       "@mode-db/data-ui": ["../../packages/data-ui/src/index.ts"]
     }
   },

@@ -1,3 +1,5 @@
+import type { BindingSurfaceMutationTrigger, BindingSurfaceParameterBinding } from '@mode-db/sdk';
+
 export type InterfaceId = string;
 export type ModelId = string;
 export type FieldId = string;
@@ -9,6 +11,8 @@ export type InterfaceVersion = string;
 export type IsoDateTime = string;
 
 export type EngineInterface = QueryInterface | OperationInterface;
+
+export type DesignerInterfaceAsset = EngineInterface | BindingSurface;
 
 export type EngineInterfaceKind = 'query' | 'operation';
 
@@ -51,6 +55,8 @@ export interface InterfaceLifecycle {
   lastValidatedAt?: IsoDateTime;
   lastCompiledAt?: IsoDateTime;
   lastExecutedAt?: IsoDateTime;
+  publishedAt?: IsoDateTime;
+  deprecatedAt?: IsoDateTime;
 }
 
 export type QueryInterface = EngineInterfaceBase & {
@@ -61,7 +67,9 @@ export type QueryInterface = EngineInterfaceBase & {
 export interface QueryInterfaceSpec {
   rootNodeId: NodeId;
   traversal: QueryTraversalSpec;
+  filterTree?: QueryFilterGroup;
   filters: QueryFilter[];
+  aggregation?: QueryAggregationSpec;
   sorts: QuerySort[];
   projection: QueryProjection;
   pagination?: QueryPagination;
@@ -83,11 +91,32 @@ export interface QueryBranch {
 
 export interface QueryFilter {
   id: string;
-  target: QueryFieldRef | QueryRelationRef;
+  target: QueryFieldRef | QueryRelationRef | QueryMetricRef;
   operator: QueryFilterOperator;
   value?: QueryFilterValue;
   enabled: boolean;
 }
+
+export interface QueryFilterGroup {
+  id: string;
+  kind: 'group';
+  combinator: 'and' | 'or';
+  enabled: boolean;
+  children: QueryFilterExpression[];
+}
+
+export interface QueryRelationFilter {
+  id: string;
+  kind: 'relation';
+  target: QueryRelationRef;
+  sourceNodeId: NodeId;
+  targetNodeId: NodeId;
+  quantifier: 'any' | 'all' | 'none';
+  enabled: boolean;
+  condition: QueryFilterGroup;
+}
+
+export type QueryFilterExpression = QueryFilter | QueryFilterGroup | QueryRelationFilter;
 
 export type QueryFilterOperator =
   | 'eq'
@@ -108,9 +137,33 @@ export type QueryFilterValue =
   | { kind: 'literal'; value: unknown }
   | { kind: 'parameter'; parameterId: ParameterId };
 
+export interface QueryAggregationSpec {
+  groupBy: QueryGroupField[];
+  metrics: QueryAggregateMetric[];
+  having?: QueryFilterGroup;
+}
+
+export interface QueryGroupField {
+  id: string;
+  source: QueryFieldRef;
+  outputName: string;
+}
+
+export interface QueryAggregateMetric {
+  id: string;
+  function: 'count' | 'sum' | 'avg' | 'min' | 'max';
+  source: QueryFieldRef;
+  outputName: string;
+  distinct?: boolean;
+}
+
+export interface QueryMetricRef {
+  metricId: string;
+}
+
 export interface QuerySort {
   id: string;
-  target: QueryFieldRef;
+  target: QueryFieldRef | QueryMetricRef;
   direction: 'asc' | 'desc';
   priority: number;
 }
@@ -164,6 +217,7 @@ export interface OperationInterfaceSpec {
   validationRules: OperationValidationRule[];
   transactionPolicy: TransactionPolicy;
   result: OperationResultContract;
+  batch?: BatchOperationSpec;
 }
 
 export type OperationType =
@@ -176,6 +230,13 @@ export type OperationType =
   | 'upsert'
   | 'batch';
 
+export type BatchItemOperationType = Exclude<OperationType, 'batch'>;
+
+export interface BatchOperationSpec {
+  itemOperationType: BatchItemOperationType;
+  maxItems: number;
+}
+
 export type OperationTarget =
   | { kind: 'model'; modelId: ModelId }
   | { kind: 'relation'; relationId: RelationId }
@@ -186,7 +247,15 @@ export interface OperationInputMapping {
   parameterId: ParameterId;
   target: QueryFieldRef | QueryRelationRef | OperationTarget;
   mode: 'set' | 'lookup' | 'connect' | 'disconnect';
+  role?: OperationInputRole;
 }
+
+export type OperationInputRole =
+  | 'recordIdentity'
+  | 'relationSource'
+  | 'relationTarget'
+  | 'relationPreviousTarget'
+  | 'relationNextTarget';
 
 export interface OperationValidationRule {
   id: string;
@@ -196,11 +265,13 @@ export interface OperationValidationRule {
 export interface TransactionPolicy {
   mode: 'none' | 'single' | 'batch';
   rollbackOnFailure: boolean;
+  failureMode?: 'continue' | 'stop';
 }
 
 export interface OperationResultContract {
   returns: 'none' | 'recordRef' | 'record' | 'summary';
   schema?: QueryResultField[];
+  includeItemResults?: boolean;
 }
 
 export interface InterfaceContract {
@@ -244,9 +315,16 @@ export interface InterfaceErrorContract {
 }
 
 export interface InterfacePermissionPolicy {
-  mode: 'none' | 'role' | 'custom';
+  mode: 'none' | 'key' | 'disabled' | 'role' | 'custom';
+  accessKeyDigest?: string;
   roles?: string[];
   ruleId?: string;
+  rateLimit?: InterfaceRateLimitPolicy;
+}
+
+export interface InterfaceRateLimitPolicy {
+  maxRequests: number;
+  windowSeconds: number;
 }
 
 export interface InterfaceInvocationShape {
@@ -350,3 +428,47 @@ export interface BindingWarning {
   message: string;
   targetId?: NodeId | EdgeId | FieldId;
 }
+
+export interface BindingSurface {
+  id: InterfaceId;
+  kind: 'binding';
+  name: string;
+  displayName?: string;
+  description?: string;
+  status: EngineInterfaceStatus;
+  version: InterfaceVersionInfo;
+  permissions?: InterfacePermissionPolicy;
+  parameters: InterfaceParameter[];
+  query: BindingSurfaceQueryBinding;
+  writeback: WritebackPolicy;
+  lifecycle: InterfaceLifecycle;
+  tags?: string[];
+}
+
+export interface BindingSurfaceReleaseReference {
+  interfaceId: InterfaceId;
+  version: InterfaceVersion;
+}
+
+export interface BindingSurfaceQueryBinding extends BindingSurfaceReleaseReference {
+  parameterBindings: BindingSurfaceParameterBinding[];
+}
+
+export interface BindingSurfaceMutationBinding {
+  id: string;
+  trigger: BindingSurfaceMutationTrigger;
+  operation: BindingSurfaceReleaseReference;
+  parameterBindings: BindingSurfaceParameterBinding[];
+}
+
+export interface WritebackPolicy {
+  mode: 'readonly' | 'explicit';
+  mutations: BindingSurfaceMutationBinding[];
+  refresh: 'manual' | 'afterMutation';
+}
+
+export type {
+  BindingSurfaceMutationTrigger,
+  BindingSurfaceParameterBinding,
+  BindingSurfaceValueSource,
+} from '@mode-db/sdk';

@@ -891,6 +891,7 @@ export async function buildDualTrackFastify(
     dev: cfg.dev,
     getEngine: (atlas) => authoring.getEngine(atlas),
     writeGate,
+    designerWorkspace: cfg.designerWorkspace,
   });
 
   const app = Fastify({ logger: false, bodyLimit: 128 * 1024 * 1024 });

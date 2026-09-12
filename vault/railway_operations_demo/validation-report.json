@@ -1,0 +1,275 @@
+{
+  "generatedAt": "2026-07-22T04:03:01.245Z",
+  "database": "railway_operations_demo",
+  "server": "127.0.0.1:9091",
+  "models": 32,
+  "relations": 42,
+  "rowsPerModel": 100,
+  "totalRows": 3200,
+  "modelCounts": {
+    "MetaDefinition": 100,
+    "UnitDefinition": 100,
+    "Region": 100,
+    "AssetType": 100,
+    "StationLevel": 100,
+    "LineClass": 100,
+    "TrainType": 100,
+    "ServiceStatus": 100,
+    "CarriageType": 100,
+    "EmployeeRole": 100,
+    "ShiftType": 100,
+    "WorkOrderCategory": 100,
+    "WorkOrderPriority": 100,
+    "WorkOrderStatus": 100,
+    "IncidentType": 100,
+    "IncidentSeverity": 100,
+    "TravelClass": 100,
+    "SalesChannel": 100,
+    "TicketStatus": 100,
+    "RailwayAsset": 100,
+    "Station": 100,
+    "RailwayLine": 100,
+    "Train": 100,
+    "Operator": 100,
+    "TrainService": 100,
+    "ServiceStop": 100,
+    "Carriage": 100,
+    "Employee": 100,
+    "Shift": 100,
+    "WorkOrder": 100,
+    "Incident": 100,
+    "Ticket": 100
+  },
+  "relationStats": {
+    "subStations": {
+      "forwardKeys": 10,
+      "reverseKeys": 90,
+      "totalLinks": 90
+    },
+    "stations": {
+      "forwardKeys": 100,
+      "reverseKeys": 100,
+      "totalLinks": 600
+    },
+    "assignedShifts": {
+      "forwardKeys": 100,
+      "reverseKeys": 100,
+      "totalLinks": 200
+    },
+    "assetTypeRef": {
+      "forwardKeys": 400,
+      "reverseKeys": 8,
+      "totalLinks": 400
+    },
+    "stationRegionRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 10,
+      "totalLinks": 100
+    },
+    "stationLevelRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 5,
+      "totalLinks": 100
+    },
+    "lineClassRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 4,
+      "totalLinks": 100
+    },
+    "lineLengthUnit": {
+      "forwardKeys": 100,
+      "reverseKeys": 1,
+      "totalLinks": 100
+    },
+    "lineSpeedUnit": {
+      "forwardKeys": 100,
+      "reverseKeys": 1,
+      "totalLinks": 100
+    },
+    "trainTypeRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 4,
+      "totalLinks": 100
+    },
+    "trainSpeedUnit": {
+      "forwardKeys": 100,
+      "reverseKeys": 1,
+      "totalLinks": 100
+    },
+    "trainMileageUnit": {
+      "forwardKeys": 100,
+      "reverseKeys": 1,
+      "totalLinks": 100
+    },
+    "serviceStatusRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 3,
+      "totalLinks": 100
+    },
+    "serviceEnergyUnit": {
+      "forwardKeys": 100,
+      "reverseKeys": 1,
+      "totalLinks": 100
+    },
+    "carriageTypeRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 4,
+      "totalLinks": 100
+    },
+    "employeeRoleRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 5,
+      "totalLinks": 100
+    },
+    "shiftTypeRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 4,
+      "totalLinks": 100
+    },
+    "workOrderCategoryRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 4,
+      "totalLinks": 100
+    },
+    "workOrderPriorityRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 5,
+      "totalLinks": 100
+    },
+    "workOrderStatusRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 4,
+      "totalLinks": 100
+    },
+    "workOrderCurrencyUnit": {
+      "forwardKeys": 100,
+      "reverseKeys": 1,
+      "totalLinks": 100
+    },
+    "incidentTypeRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 4,
+      "totalLinks": 100
+    },
+    "incidentSeverityRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 5,
+      "totalLinks": 100
+    },
+    "travelClassRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 3,
+      "totalLinks": 100
+    },
+    "salesChannelRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 4,
+      "totalLinks": 100
+    },
+    "ticketStatusRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 3,
+      "totalLinks": 100
+    },
+    "ticketCurrencyUnit": {
+      "forwardKeys": 100,
+      "reverseKeys": 1,
+      "totalLinks": 100
+    },
+    "originStationRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 100,
+      "totalLinks": 100
+    },
+    "destinationStationRef": {
+      "forwardKeys": 100,
+      "reverseKeys": 100,
+      "totalLinks": 100
+    },
+    "lineOperator": {
+      "forwardKeys": 100,
+      "reverseKeys": 20,
+      "totalLinks": 100
+    },
+    "trainOperator": {
+      "forwardKeys": 100,
+      "reverseKeys": 20,
+      "totalLinks": 100
+    },
+    "line": {
+      "forwardKeys": 100,
+      "reverseKeys": 100,
+      "totalLinks": 100
+    },
+    "assignedTrain": {
+      "forwardKeys": 100,
+      "reverseKeys": 100,
+      "totalLinks": 100
+    },
+    "stopService": {
+      "forwardKeys": 100,
+      "reverseKeys": 20,
+      "totalLinks": 100
+    },
+    "stopStation": {
+      "forwardKeys": 100,
+      "reverseKeys": 100,
+      "totalLinks": 100
+    },
+    "train": {
+      "forwardKeys": 100,
+      "reverseKeys": 20,
+      "totalLinks": 100
+    },
+    "employer": {
+      "forwardKeys": 100,
+      "reverseKeys": 20,
+      "totalLinks": 100
+    },
+    "shiftStation": {
+      "forwardKeys": 100,
+      "reverseKeys": 100,
+      "totalLinks": 100
+    },
+    "asset": {
+      "forwardKeys": 100,
+      "reverseKeys": 100,
+      "totalLinks": 100
+    },
+    "incidentService": {
+      "forwardKeys": 100,
+      "reverseKeys": 50,
+      "totalLinks": 100
+    },
+    "incidentStation": {
+      "forwardKeys": 100,
+      "reverseKeys": 100,
+      "totalLinks": 100
+    },
+    "ticketService": {
+      "forwardKeys": 100,
+      "reverseKeys": 20,
+      "totalLinks": 100
+    }
+  },
+  "designerMetadata": {
+    "models": 32,
+    "fields": 240,
+    "relations": 42,
+    "catalogLocalizedModels": 32,
+    "catalogLocalizedFields": 246
+  },
+  "queryChecks": {
+    "lineStations": 6,
+    "serviceStops": 5,
+    "trainCarriages": 5,
+    "serviceStatus": "ON_TIME",
+    "incidentSeverity": "SEV1",
+    "ticketStatus": "REFUNDED",
+    "lineLengthUnit": "KM",
+    "stationTreeSize": 10,
+    "delayedServices": 20,
+    "ticketPageTotal": 100,
+    "groupedAggregation": true
+  }
+}

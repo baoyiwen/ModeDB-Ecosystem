@@ -1,9 +1,36 @@
+import './components/binding-surface.css';
+
 export { DataPageProvider } from './context/data-page-provider.js';
 export { useDataPage } from './context/data-page-context.js';
 export type { DataPageContextValue } from './context/data-page-context.js';
 export type { DataPageProviderProps } from './context/data-page-provider.js';
+export { BindingSurfaceProvider, useBindingSurface } from './context/binding-surface-context.js';
+export type {
+  BindingSurfaceContextValue,
+  BindingSurfaceProviderProps,
+} from './context/binding-surface-context.js';
 export { DataPageToolbar } from './components/data-page-toolbar.js';
 export { DataTable } from './components/data-table.js';
+export { BindingSurfaceTable } from './components/binding-surface-table.js';
+export type {
+  BindingSurfaceTableLabels,
+  BindingSurfaceTableProps,
+} from './components/binding-surface-table.js';
+export { BindingSurfaceForm } from './components/binding-surface-form.js';
+export type {
+  BindingSurfaceFormLabels,
+  BindingSurfaceFormProps,
+} from './components/binding-surface-form.js';
+export { BindingSurfaceRelationEditor } from './components/binding-surface-relation-editor.js';
+export type {
+  BindingSurfaceRelationEditorProps,
+  BindingSurfaceRelationLabels,
+} from './components/binding-surface-relation-editor.js';
+export { BindingSurfaceStatus } from './components/binding-surface-status.js';
+export type {
+  BindingSurfaceStatusLabels,
+  BindingSurfaceStatusProps,
+} from './components/binding-surface-status.js';
 export { PivotTable } from './components/pivot-table.js';
 export { TreeTable } from './components/tree-table.js';
 export { GroupedTable } from './components/grouped-table.js';

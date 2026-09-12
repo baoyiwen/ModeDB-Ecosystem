@@ -57,6 +57,7 @@
 - 备份恢复必须使用共享主题化列表/确认组件，禁止退回 `window.prompt` 或 `window.confirm`；本地迁移文件通过 SDK management API 上传、下载。
 - 侧栏宽度有限，改布局时必须考虑窄宽度下表现。
 - 新交互建议配套适度动画，但不要牺牲稳定性。
+- 画布浮动工具按钮分三组：左上角（视图/保存）、右上角（数据库管理，需避让“断开连接”按钮）、底部中间（画布布局）。`DesignerToolbar.tsx` 的 JSX 分组必须与 `designer-shell.css` 的 `.designer-float-top-left` / `.designer-float-top-right` / `.designer-float-bottom` 一致。
 
 ### 4.4 i18n 约束
 
@@ -72,6 +73,7 @@
 - 页面自动关系归属由两个端点模型共同决定，不要在 UI 中维护另一套独立规则。
 - `sys_data_asset_map`、`sys_model`、`sys_props`、`sys_relation` 保存必须是 upsert / update-first，禁止无修改也追加重复行。
 - i18n 显示名为空时应保持为空；不要把唯一名自动写回显示名字段。
+- 查询链中继承关系（`modelInherits`）不是可遍历步骤：子模型是父模型的分身，选择子模型应通过 `rebaseInheritedIdentityToChild` 复用已有节点身份，禁止新建独立查询节点或把继承边作为普通关系候选。详见 `docs/query-designer-architecture.md` §10。
 
 ## 5. 典型任务路径
 

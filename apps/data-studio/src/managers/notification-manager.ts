@@ -1,3 +1,5 @@
+import { createUuid } from '../utils/random-id.js';
+
 export type NotificationLevel = 'info' | 'success' | 'warning' | 'error';
 
 export interface StudioNotification {
@@ -60,12 +62,12 @@ export class StudioNotificationManager {
   }
 
   private push(level: NotificationLevel, title: string, message?: string): void {
-    const id = crypto.randomUUID();
+    const id = createUuid();
     this._items.unshift({ id, level, title, message, timestamp: Date.now() });
     if (this._items.length > 60) {
       this._items.length = 60;
     }
-    this._toasts.push({ id: crypto.randomUUID(), notificationId: id, startedAt: Date.now() });
+    this._toasts.push({ id: createUuid(), notificationId: id, startedAt: Date.now() });
     this.emit();
   }
 

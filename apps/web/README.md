@@ -9,7 +9,14 @@ React + TypeScript + Vite。左侧配置 **ModelDB** 连接参数与逻辑库/�
 pnpm run dev:web
 ```
 
-默认 **<http://127.0.0.1:5174>**。主机、端口、令牌、库名、模型名会写入 **localStorage**；也可用环境变量 **`VITE_DEFAULT_*`**（见 **`src/vite-env.d.ts`**）。
+Dev server 已绑定 **`host: true`**（监听所有网卡），启动后终端会同时打印：
+
+- **Local**：**<http://localhost:5174>**，本机使用。
+- **Network**：**`http://<开发机局域网 IP>:5174`**，同一局域网内其它设备用它访问（首次监听所有网卡时 Windows 防火墙可能弹窗，需放行 `5174`）。
+
+主机、端口、令牌、库名、模型名会写入 **localStorage**；也可用环境变量 **`VITE_DEFAULT_*`**（见 **`src/vite-env.d.ts`**）。
+
+**跨设备连接引擎**：从另一台设备用 Network 地址打开时，左侧主机 **不要填 `127.0.0.1` / `localhost`**（指向设备自身），应填开发机的局域网 IP 与引擎端口（默认 `9090`）；引擎 server 需用 **`pnpm start:server:network`** 监听局域网。也可用 **`VITE_DEFAULT_HOST`**（见 **`src/vite-env.d.ts`**）预置默认主机。
 
 依赖 **`@mode-db/sdk`**（workspace）。SDK 侧线协议为 **`Uint8Array`** 等浏览器原生 API，**不**再依赖全局 **`Buffer`** 注入；本应用 **`vite.config.ts`** 中 **`vite-plugin-node-polyfills`** 仅保留 **`process`** 等按需项。
 

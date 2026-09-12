@@ -4,6 +4,7 @@ import {
   isLayerRootGroupId,
   LAYER_ROOT_GROUP_ID,
 } from '../config/layer-tree-defaults.js';
+import { createUuid } from './random-id.js';
 
 export type LayerDropZone = 'before' | 'after' | 'inside';
 
@@ -52,7 +53,7 @@ function reindexSort(list: LayerTreeNode[]): void {
 
 function createWrapGroup(children: LayerTreeNode[]): LayerTreeNode {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     kind: 'group',
     label: defaultLayerGroupLabel(),
     isVisible: true,

@@ -1,3 +1,5 @@
+import { createUuid } from '../utils/random-id.js';
+
 /** 全局通知级别。 */
 export type NotificationLevel = 'info' | 'success' | 'warning' | 'error';
 
@@ -76,7 +78,7 @@ export class NotificationManager {
   }
 
   push(input: PushNotificationInput): string {
-    const id = crypto.randomUUID();
+    const id = createUuid();
     const entry: DesignerNotification = {
       id,
       level: input.level,
@@ -145,7 +147,7 @@ export class NotificationManager {
 
   private enqueueToast(notificationId: string): void {
     this._toasts.push({
-      id: crypto.randomUUID(),
+      id: createUuid(),
       notificationId,
       startedAt: Date.now(),
     });

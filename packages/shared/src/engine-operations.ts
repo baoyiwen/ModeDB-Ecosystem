@@ -58,6 +58,9 @@ export const WORKSPACE_OP_NAMES: ReadonlySet<string> = new Set([
 /** All recognized database-scope op names. */
 export const DATABASE_OP_NAMES: ReadonlySet<string> = new Set([
   'executeQuery',
+  'executeInterface',
+  'executeOperationInterface',
+  'executeBindingSurface',
   'insert',
   'update',
   'insertMany',
@@ -73,6 +76,7 @@ export const DATABASE_OP_NAMES: ReadonlySet<string> = new Set([
   'bindPair',
   'bindImportLookup',
   'unlinkPair',
+  'rebindPair',
   'bind',
   'previewBind',
   'relationStats',
@@ -83,6 +87,8 @@ export const DATABASE_OP_NAMES: ReadonlySet<string> = new Set([
 
 /** Database-scope ops that mutate state (drive the server write-serialization gate). */
 const MUTATING_DATABASE_OPS: ReadonlySet<string> = new Set([
+  'executeOperationInterface',
+  'executeBindingSurface',
   'insert',
   'update',
   'insertMany',
@@ -98,6 +104,7 @@ const MUTATING_DATABASE_OPS: ReadonlySet<string> = new Set([
   'bindPair',
   'bindImportLookup',
   'unlinkPair',
+  'rebindPair',
   'bind',
   'updateRelationLogic',
   'clearModelData',

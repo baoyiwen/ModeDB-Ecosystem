@@ -13,6 +13,7 @@ import {
 } from '../config/relation-cardinality.js';
 import { makeUniqueName, sanitizeUniqueNameFragment } from '../utils/name-validation.js';
 import { relationCardinalityLabel, relationNamesUsedInScope } from '../utils/relation-identity.js';
+import { createUuid } from '../utils/random-id.js';
 
 export function RelationPanel(props: {
   modelId: string | undefined;
@@ -97,7 +98,7 @@ export function RelationPanel(props: {
           used.add(forward_name);
           const reverse_name = makeUniqueName(reverseBase, used);
           data.addRelation({
-            id: crypto.randomUUID(),
+            id: createUuid(),
             source_model_id: mid,
             target_model_id: target.id,
             forward_name,

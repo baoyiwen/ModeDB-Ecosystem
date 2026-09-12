@@ -209,6 +209,89 @@ export function directedCurvedSegment(
   return buildCurvedSegmentToAnchor(source, target, perpOffset, bend, dist >= BEND_EPS);
 }
 
+/**
+ * Builds one side of a bidirectional relation from the pair's shared center anchor.
+ * The per-direction offset is applied exactly once, keeping both curves symmetric.
+ */
+export function directedPairedCurvedSegment(
+  source: PlacedLike,
+  target: PlacedLike,
+  perpOffset: number,
+  pairBend?: { x: number; y: number } | null,
+): CurvedDirectedSegment {
+  const base = directedShortestSegment(source, target, perpOffset);
+  if (!pairBend) {
+    return { ...base, cpx: base.midX, cpy: base.midY, bent: false };
+  }
+  const centerBase = directedShortestSegment(source, target, 0);
+  const dist = Math.hypot(pairBend.x - centerBase.midX, pairBend.y - centerBase.midY);
+  if (dist < BEND_EPS) {
+    return { ...base, cpx: base.midX, cpy: base.midY, bent: false };
+  }
+
+  const cs = nodeCircleCenter(source);
+  const ct = nodeCircleCenter(target);
+  const dx = ct.x - cs.x;
+  const dy = ct.y - cs.y;
+  const len = Math.hypot(dx, dy);
+  const px = len < 1e-6 ? 0 : -dy / len;
+  const py = len < 1e-6 ? 1 : dx / len;
+  return buildCurvedSegmentToControlPoint(source, target, {
+    x: pairBend.x + px * perpOffset,
+    y: pairBend.y + py * perpOffset,
+  });
+}
+
+/** Default center anchor shared by the two directions of a normal relation. */
+export function relationPairDefaultAnchor(
+  source: PlacedLike,
+  target: PlacedLike,
+): { x: number; y: number } {
+  const cs = nodeCircleCenter(source);
+  const ct = nodeCircleCenter(target);
+  return { x: (cs.x + ct.x) / 2, y: (cs.y + ct.y) / 2 };
+}
+
+function buildCurvedSegmentToControlPoint(
+  source: PlacedLike,
+  target: PlacedLike,
+  control: { x: number; y: number },
+): CurvedDirectedSegment {
+  const cs = nodeCircleCenter(source);
+  const ct = nodeCircleCenter(target);
+  const p1 = circlePointClosestTo(cs.x, cs.y, NODE_RADIUS, control.x, control.y);
+  const p2 = circlePointClosestTo(ct.x, ct.y, NODE_RADIUS, control.x, control.y);
+  const mid = quadraticPointAt(0.5, p1.x, p1.y, control.x, control.y, p2.x, p2.y);
+  const tangent = quadraticTangentAt(1, p1.x, p1.y, control.x, control.y, p2.x, p2.y);
+  const tangentLength = Math.hypot(tangent.x, tangent.y);
+  const fallbackDx = ct.x - cs.x;
+  const fallbackDy = ct.y - cs.y;
+  const fallbackLength = Math.hypot(fallbackDx, fallbackDy);
+  return {
+    x1: p1.x,
+    y1: p1.y,
+    x2: p2.x,
+    y2: p2.y,
+    ux:
+      tangentLength >= 1e-6
+        ? tangent.x / tangentLength
+        : fallbackLength >= 1e-6
+          ? fallbackDx / fallbackLength
+          : 1,
+    uy:
+      tangentLength >= 1e-6
+        ? tangent.y / tangentLength
+        : fallbackLength >= 1e-6
+          ? fallbackDy / fallbackLength
+          : 0,
+    midX: mid.x,
+    midY: mid.y,
+    cpx: control.x,
+    cpy: control.y,
+    bent: true,
+  };
+}
+
 function buildCurvedSegmentToAnchor(
   source: PlacedLike,
   target: PlacedLike,

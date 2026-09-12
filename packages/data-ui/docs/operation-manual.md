@@ -11,6 +11,21 @@
 
 导入场景可额外使用 `ImportPanel`。
 
+## Binding Surface usage
+
+```tsx
+<BindingSurfaceProvider contract={release.contract} session={surfaceSession}>
+  <BindingSurfaceStatus />
+  <BindingSurfaceTable />
+</BindingSurfaceProvider>
+```
+
+- 宿主应用负责创建并稳定持有 `BindingSurfaceSession`。
+- `BindingSurfaceTable` 根据发布契约生成字段保存和删除操作。
+- `BindingSurfaceForm` 针对指定 `rowIndex` 展示逐字段显式写回。
+- `BindingSurfaceRelationEditor` 根据契约展示 bind / unbind / rebind；只有参数来源包含 `editedValue` 时才要求输入关联目标。
+- `BindingSurfaceStatus` 出现“变更已提交但刷新失败”时，可以执行读取刷新，不要再次提交原 mutation。
+
 ## ImportPanel inputs
 
 `ImportPanel` 需要由宿主应用传入：

@@ -10,10 +10,14 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      '@mode-db/data-kit': path.resolve(repoRoot, 'packages/data-kit/src/index.ts'),
       '@mode-db/data-ui': path.resolve(repoRoot, 'packages/data-ui/src/index.ts'),
+      '@mode-db/sdk': path.resolve(repoRoot, 'packages/sdk/src/index.ts'),
+      '@mode-db/shared': path.resolve(repoRoot, 'packages/shared/src/index.ts'),
     },
   },
   server: {
+    host: true,
     port: 5175,
   },
 });

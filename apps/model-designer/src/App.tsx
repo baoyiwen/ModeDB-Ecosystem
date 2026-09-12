@@ -26,12 +26,28 @@ import { isQueryDesignerMode } from './managers/mode-manager.js';
 import { withTimeout } from './engine/async-timeout.js';
 import { ensureDesignerWorkspaceSession } from './engine/workspace-session.js';
 import { interactionStateForToolMode } from './utils/tool-mode-state.js';
+import { createUuid } from './utils/random-id.js';
+import { interfaceDiagnosticMessage } from './utils/interface-diagnostic-i18n.js';
 import { getLibraryByCode } from './sync/library-registry.js';
 import {
   deleteQueryInterfaceRegistry,
+  listQueryInterfaceAuditSummaries,
   listQueryInterfaceRegistry,
+  type QueryInterfaceAuditSummary,
   upsertQueryInterfaceRegistry,
 } from './sync/query-interface-registry.js';
+import {
+  deleteOperationInterfaceRegistry,
+  listOperationInterfaceRegistry,
+  upsertOperationInterfaceRegistry,
+} from './sync/operation-interface-registry.js';
+import {
+  deleteBindingSurfaceRegistry,
+  listBindingSurfaceAuditSummaries,
+  listBindingSurfaceRegistry,
+  type BindingSurfaceAuditSummary,
+  upsertBindingSurfaceRegistry,
+} from './sync/binding-surface-registry.js';
 import {
   EMPTY_QUERY_CHAIN_STATE,
   nextQueryChainFromModelPick,
@@ -45,7 +61,32 @@ import {
   removeQueryChainModel,
   removeQueryChainRelation,
   replaceQueryChainRelationWithRelation,
+  deprecateQueryInterfaceRelease,
+  nextDraftInterface,
+  publishQueryInterface,
+  queryInterfacePublicationSignature,
+  compilePublishedQueryExecutionTemplate,
+  appendExecutableReleaseHistory,
+  appendOperationReleaseHistory,
+  compilePublishedOperationExecutionTemplate,
+  deprecateOperationInterfaceRelease,
+  nextDraftOperationInterface,
+  operationInterfacePublicationSignature,
+  publishOperationInterface,
+  appendBindingSurfaceReleaseHistory,
+  bindingSurfacePublicationSignature,
+  deprecateBindingSurfaceRelease,
+  nextDraftBindingSurface,
+  publishBindingSurface,
+  prepareBindingSurfaceRollback,
+  prepareOperationInterfaceRollback,
+  prepareQueryInterfaceRollback,
+  type BindingSurface,
+  type BindingSurfaceRelease,
+  type OperationInterface,
+  type OperationInterfaceRelease,
   type QueryInterface,
+  type QueryInterfaceRelease,
   type QueryChainState,
   type QueryModelPickCandidate,
   type QueryRelationPickCandidate,
@@ -53,12 +94,6 @@ import {
 
 const RECONNECT_TIMEOUT_MS = 20_000;
 const RECONNECT_BOOTSTRAP_MS = 60_000;
-const TEXT_QUERY_INTERFACE_CREATED = '\u63a5\u53e3\u5df2\u4fdd\u5b58';
-const TEXT_QUERY_INTERFACE_UPDATED = '\u63a5\u53e3\u5df2\u66f4\u65b0';
-const TEXT_QUERY_INTERFACE_UNCHANGED = '\u63a5\u53e3\u5df2\u5b58\u5728';
-const TEXT_QUERY_INTERFACE_RENAMED = '\u63a5\u53e3\u5df2\u91cd\u547d\u540d';
-const TEXT_QUERY_INTERFACE_PERSIST_FAILED = '\u63a5\u53e3\u8d44\u4ea7\u540c\u6b65\u5931\u8d25';
-
 interface AppState {
   selectedModelId: string | undefined;
   selectedRelationId: string | undefined;
@@ -74,10 +109,15 @@ interface AppState {
     | undefined;
   savedQueryInterfaces: SavedQueryInterface[];
   activeQueryInterfaceId: string | undefined;
+  savedOperationInterfaces: SavedOperationInterface[];
+  activeOperationInterfaceId: string | undefined;
+  savedBindingSurfaces: SavedBindingSurface[];
+  activeBindingSurfaceId: string | undefined;
 }
 
 export interface SavedQueryInterface {
   id: string;
+  storageId?: string;
   name: string;
   queryInterface: QueryInterface;
   queryChain: QueryChainState;
@@ -85,6 +125,34 @@ export interface SavedQueryInterface {
   updatedAt: string;
   signature?: string;
   projectionConfigured?: boolean;
+  publishedRelease?: QueryInterfaceRelease;
+  releaseHistory?: QueryInterfaceRelease[];
+  auditSummary?: QueryInterfaceAuditSummary;
+}
+
+export interface SavedOperationInterface {
+  id: string;
+  storageId?: string;
+  name: string;
+  operationInterface: OperationInterface;
+  createdAt: string;
+  updatedAt: string;
+  signature?: string;
+  publishedRelease?: OperationInterfaceRelease;
+  releaseHistory?: OperationInterfaceRelease[];
+}
+
+export interface SavedBindingSurface {
+  id: string;
+  storageId?: string;
+  name: string;
+  bindingSurface: BindingSurface;
+  createdAt: string;
+  updatedAt: string;
+  signature?: string;
+  publishedRelease?: BindingSurfaceRelease;
+  releaseHistory?: BindingSurfaceRelease[];
+  auditSummary?: BindingSurfaceAuditSummary;
 }
 
 type QueryInterfaceSaveResult =
@@ -92,12 +160,17 @@ type QueryInterfaceSaveResult =
   | { status: 'updated'; id: string; name: string }
   | { status: 'unchanged'; id: string; name: string };
 
+type OperationInterfaceSaveResult = QueryInterfaceSaveResult;
+type BindingSurfaceSaveResult = QueryInterfaceSaveResult;
+
 /**
  * 根页面：未连接时 {@link ConnectionFlow}；连接并选择逻辑库后进入画布（当前库名见 {@link ConfigManager#activeLibraryName}）。
  */
 export default class App extends DesignerChromePage<Record<string, never>, AppState> {
   private modeUnsub: (() => void) | undefined;
   private readonly queryInterfaceWriteQueue = new Map<string, Promise<void>>();
+  private readonly operationInterfaceWriteQueue = new Map<string, Promise<void>>();
+  private readonly bindingSurfaceWriteQueue = new Map<string, Promise<void>>();
 
   constructor(props: Record<string, never>) {
     super(props);
@@ -115,6 +188,10 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
       pendingQueryModelPick: undefined,
       savedQueryInterfaces: [],
       activeQueryInterfaceId: undefined,
+      savedOperationInterfaces: [],
+      activeOperationInterfaceId: undefined,
+      savedBindingSurfaces: [],
+      activeBindingSurfaceId: undefined,
     };
   }
 
@@ -248,9 +325,39 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
     let savedQueryInterfaces: SavedQueryInterface[] | undefined;
     try {
       savedQueryInterfaces = await listQueryInterfaceRegistry(client, libraryName);
+      const auditSummaries = await listQueryInterfaceAuditSummaries(client, libraryName);
+      savedQueryInterfaces = savedQueryInterfaces.map((item) => {
+        const callableName =
+          item.publishedRelease?.callableName ??
+          item.queryInterface.contract.invocation.callableName ??
+          '';
+        return {
+          ...item,
+          auditSummary: callableName ? auditSummaries.get(callableName) : undefined,
+        };
+      });
     } catch (e) {
       // eslint-disable-next-line no-console
       console.warn('[Designer] load query interfaces failed', e);
+    }
+    let savedOperationInterfaces: SavedOperationInterface[] | undefined;
+    try {
+      savedOperationInterfaces = await listOperationInterfaceRegistry(client, libraryName);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[Designer] load operation interfaces failed', e);
+    }
+    let savedBindingSurfaces: SavedBindingSurface[] | undefined;
+    try {
+      savedBindingSurfaces = await listBindingSurfaceRegistry(client, libraryName);
+      const auditSummaries = await listBindingSurfaceAuditSummaries(client, libraryName);
+      savedBindingSurfaces = savedBindingSurfaces.map((item) => ({
+        ...item,
+        auditSummary: auditSummaries.get(item.id),
+      }));
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[Designer] load binding surfaces failed', e);
     }
     config.resetViewport();
     modes.setMode('select');
@@ -266,6 +373,11 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
       pendingQueryModelPick: undefined,
       savedQueryInterfaces: savedQueryInterfaces ?? (reconnecting ? s.savedQueryInterfaces : []),
       activeQueryInterfaceId: undefined,
+      savedOperationInterfaces:
+        savedOperationInterfaces ?? (reconnecting ? s.savedOperationInterfaces : []),
+      activeOperationInterfaceId: undefined,
+      savedBindingSurfaces: savedBindingSurfaces ?? (reconnecting ? s.savedBindingSurfaces : []),
+      activeBindingSurfaceId: undefined,
       sessionEpoch: s.sessionEpoch + 1,
     }));
   }
@@ -288,6 +400,10 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
       pendingQueryModelPick: undefined,
       savedQueryInterfaces: [],
       activeQueryInterfaceId: undefined,
+      savedOperationInterfaces: [],
+      activeOperationInterfaceId: undefined,
+      savedBindingSurfaces: [],
+      activeBindingSurfaceId: undefined,
     }));
   };
 
@@ -537,9 +653,12 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
       const sameSignature =
         (existing.signature ?? queryInterfaceSignature(existing.queryInterface)) === signature;
       if (sameName && sameDescription && sameSignature) {
-        this.managers.notifications.warning(TEXT_QUERY_INTERFACE_UNCHANGED, {
-          message: displayName,
-        });
+        this.managers.notifications.warning(
+          this.managers.i18n.t('ui', 'queryInterfaceNotifyUnchanged'),
+          {
+            message: displayName,
+          },
+        );
         return { status: 'unchanged', id: existing.id, name: displayName };
       }
       const callableName = uniqueInterfaceName(displayName);
@@ -562,10 +681,15 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
           updatedAt: now,
         },
       };
+      const editableInterface =
+        existing.publishedRelease &&
+        queryInterfacePublicationSignature(updatedInterface) !== existing.publishedRelease.signature
+          ? nextDraftInterface(updatedInterface, existing.publishedRelease, now)
+          : updatedInterface;
       const updated: SavedQueryInterface = {
         ...existing,
         name: displayName,
-        queryInterface: updatedInterface,
+        queryInterface: editableInterface,
         queryChain: cloneQueryChain(queryChain),
         updatedAt: now,
         signature,
@@ -580,13 +704,16 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
         }),
         () => this.persistQueryInterface(updated),
       );
-      this.managers.notifications.success(TEXT_QUERY_INTERFACE_UPDATED, {
-        message: displayName,
-      });
+      this.managers.notifications.success(
+        this.managers.i18n.t('ui', 'queryInterfaceNotifyUpdated'),
+        {
+          message: displayName,
+        },
+      );
       return { status: 'updated', id: existing.id, name: displayName };
     }
 
-    const id = `${queryInterface.id}_${crypto.randomUUID()}`;
+    const id = `${queryInterface.id}_${createUuid()}`;
     const callableName = uniqueInterfaceName(displayName);
     const savedInterface: QueryInterface = {
       ...queryInterface,
@@ -624,7 +751,7 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
       }),
       () => this.persistQueryInterface(saved),
     );
-    this.managers.notifications.success(TEXT_QUERY_INTERFACE_CREATED, {
+    this.managers.notifications.success(this.managers.i18n.t('ui', 'queryInterfaceNotifyCreated'), {
       message: displayName,
     });
     return { status: 'created', id, name: displayName };
@@ -663,26 +790,32 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
             return item;
           }
           const callableName = uniqueInterfaceName(displayName);
+          const renamedInterface: QueryInterface = {
+            ...item.queryInterface,
+            name: callableName,
+            displayName,
+            contract: {
+              ...item.queryInterface.contract,
+              invocation: {
+                ...item.queryInterface.contract.invocation,
+                callableName,
+              },
+            },
+            lifecycle: {
+              ...item.queryInterface.lifecycle,
+              updatedAt: now,
+            },
+          };
           return {
             ...item,
             name: displayName,
             updatedAt: now,
-            queryInterface: {
-              ...item.queryInterface,
-              name: callableName,
-              displayName,
-              contract: {
-                ...item.queryInterface.contract,
-                invocation: {
-                  ...item.queryInterface.contract.invocation,
-                  callableName,
-                },
-              },
-              lifecycle: {
-                ...item.queryInterface.lifecycle,
-                updatedAt: now,
-              },
-            },
+            queryInterface:
+              item.publishedRelease &&
+              queryInterfacePublicationSignature(renamedInterface) !==
+                item.publishedRelease.signature
+                ? nextDraftInterface(renamedInterface, item.publishedRelease, now)
+                : renamedInterface,
           };
         }),
       }),
@@ -693,9 +826,194 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
         }
       },
     );
-    this.managers.notifications.success(TEXT_QUERY_INTERFACE_RENAMED, {
+    this.managers.notifications.success(this.managers.i18n.t('ui', 'queryInterfaceNotifyRenamed'), {
       message: displayName,
     });
+  };
+
+  private handlePublishQueryInterface = (id: string): void => {
+    const current = this.state.savedQueryInterfaces.find((item) => item.id === id);
+    if (!current) {
+      return;
+    }
+    const signature = queryInterfacePublicationSignature(current.queryInterface);
+    const templateCompilation = compilePublishedQueryExecutionTemplate({
+      queryInterface: current.queryInterface,
+      models: this.managers.data.models,
+      relations: this.managers.data.relations,
+    });
+    if (!templateCompilation.template) {
+      this.managers.notifications.error(
+        this.managers.i18n.t('ui', 'queryInterfaceNotifyPublishFailed'),
+        {
+          message: interfaceDiagnosticMessage(
+            this.managers.i18n,
+            templateCompilation.diagnostics.find((item) => item.severity === 'error'),
+          ),
+        },
+      );
+      return;
+    }
+    const result = publishQueryInterface({
+      queryInterface: current.queryInterface,
+      signature,
+      executionTemplate: templateCompilation.template,
+      models: this.managers.data.models,
+      existingRelease: current.publishedRelease,
+      otherReleases: this.state.savedQueryInterfaces
+        .filter((item) => item.id !== id)
+        .flatMap((item) => [item.publishedRelease, ...(item.releaseHistory ?? [])])
+        .filter(
+          (release): release is QueryInterfaceRelease =>
+            Boolean(release) && release?.queryInterface.status === 'active',
+        ),
+    });
+    if (!result.ok) {
+      this.managers.notifications.error(
+        this.managers.i18n.t('ui', 'queryInterfaceNotifyPublishFailed'),
+        {
+          message: interfaceDiagnosticMessage(this.managers.i18n, result.issues[0]),
+        },
+      );
+      return;
+    }
+    const updated: SavedQueryInterface = {
+      ...current,
+      queryInterface: result.queryInterface,
+      publishedRelease: result.release,
+      releaseHistory: appendExecutableReleaseHistory(
+        current.releaseHistory,
+        current.publishedRelease,
+      ),
+      updatedAt: result.release.publishedAt,
+    };
+    this.setState(
+      (state) => ({
+        savedQueryInterfaces: state.savedQueryInterfaces.map((item) =>
+          item.id === id ? updated : item,
+        ),
+      }),
+      () => this.persistQueryInterface(updated),
+    );
+    this.managers.notifications.success(
+      this.managers.i18n.t('ui', 'queryInterfaceNotifyPublished'),
+      {
+        message: `${current.name} v${result.release.version}`,
+      },
+    );
+  };
+
+  private handleRollbackQueryInterface = (id: string, version: string): void => {
+    const current = this.state.savedQueryInterfaces.find((item) => item.id === id);
+    const target = current?.releaseHistory?.find((release) => release.version === version);
+    if (!current?.publishedRelease || !target) {
+      return;
+    }
+    const plan = prepareQueryInterfaceRollback({ current: current.publishedRelease, target });
+    const signature = queryInterfacePublicationSignature(plan.draft);
+    const compilation = compilePublishedQueryExecutionTemplate({
+      queryInterface: plan.draft,
+      models: this.managers.data.models,
+      relations: this.managers.data.relations,
+    });
+    if (!compilation.template) {
+      this.managers.notifications.error(
+        this.managers.i18n.t('ui', 'queryInterfaceNotifyRollbackFailed'),
+        {
+          message: interfaceDiagnosticMessage(
+            this.managers.i18n,
+            compilation.diagnostics.find((item) => item.severity === 'error'),
+          ),
+        },
+      );
+      return;
+    }
+    const result = publishQueryInterface({
+      queryInterface: plan.draft,
+      signature,
+      executionTemplate: compilation.template,
+      models: this.managers.data.models,
+      existingRelease: current.publishedRelease,
+      otherReleases: this.state.savedQueryInterfaces
+        .filter((item) => item.id !== id)
+        .flatMap((item) => [item.publishedRelease, ...(item.releaseHistory ?? [])])
+        .filter(
+          (release): release is QueryInterfaceRelease =>
+            Boolean(release) && release?.queryInterface.status === 'active',
+        ),
+    });
+    if (!result.ok) {
+      this.managers.notifications.error(
+        this.managers.i18n.t('ui', 'queryInterfaceNotifyRollbackFailed'),
+        {
+          message: interfaceDiagnosticMessage(this.managers.i18n, result.issues[0]),
+        },
+      );
+      return;
+    }
+    const updated: SavedQueryInterface = {
+      ...current,
+      publishedRelease: result.release,
+      releaseHistory: appendExecutableReleaseHistory(
+        current.releaseHistory,
+        current.publishedRelease,
+      ),
+      updatedAt: result.release.publishedAt,
+    };
+    this.setState(
+      (state) => ({
+        savedQueryInterfaces: state.savedQueryInterfaces.map((item) =>
+          item.id === id ? updated : item,
+        ),
+      }),
+      () => this.persistQueryInterface(updated),
+    );
+    this.managers.notifications.success(
+      this.managers.i18n.t('ui', 'queryInterfaceNotifyRolledBack'),
+      {
+        message: `v${version} -> v${result.release.version}`,
+      },
+    );
+  };
+
+  private handleDeprecateQueryInterface = (id: string): void => {
+    const current = this.state.savedQueryInterfaces.find((item) => item.id === id);
+    if (!current?.publishedRelease) {
+      return;
+    }
+    const deprecatedAt = new Date().toISOString();
+    const deprecatedRelease = deprecateQueryInterfaceRelease(
+      current.publishedRelease,
+      deprecatedAt,
+    );
+    const releaseMatchesDraft =
+      queryInterfacePublicationSignature(current.queryInterface) ===
+      current.publishedRelease.signature;
+    const updated: SavedQueryInterface = {
+      ...current,
+      publishedRelease: deprecatedRelease,
+      releaseHistory: current.releaseHistory?.map((release) =>
+        deprecateQueryInterfaceRelease(release, deprecatedAt),
+      ),
+      queryInterface: releaseMatchesDraft
+        ? deprecatedRelease.queryInterface
+        : current.queryInterface,
+      updatedAt: deprecatedRelease.queryInterface.lifecycle.updatedAt,
+    };
+    this.setState(
+      (state) => ({
+        savedQueryInterfaces: state.savedQueryInterfaces.map((item) =>
+          item.id === id ? updated : item,
+        ),
+      }),
+      () => this.persistQueryInterface(updated),
+    );
+    this.managers.notifications.warning(
+      this.managers.i18n.t('ui', 'queryInterfaceNotifyDeprecated'),
+      {
+        message: current.name,
+      },
+    );
   };
 
   private handleDeleteQueryInterface = (id: string): void => {
@@ -738,13 +1056,613 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
       .catch((error) => {
         // eslint-disable-next-line no-console
         console.warn('[Designer] query interface registry write failed', error);
-        this.managers.notifications.error(TEXT_QUERY_INTERFACE_PERSIST_FAILED, {
-          message: error instanceof Error ? error.message : String(error),
-        });
+        this.managers.notifications.error(
+          this.managers.i18n.t('ui', 'queryInterfaceNotifyPersistFailed'),
+          {
+            message: error instanceof Error ? error.message : String(error),
+          },
+        );
       })
       .finally(() => {
         if (this.queryInterfaceWriteQueue.get(key) === task) {
           this.queryInterfaceWriteQueue.delete(key);
+        }
+      });
+  }
+
+  private handleSaveOperationInterface = (
+    operationInterface: OperationInterface,
+    name: string,
+    description: string,
+    activeInterfaceId?: string,
+  ): OperationInterfaceSaveResult => {
+    const now = new Date().toISOString();
+    const displayName = name.trim() || operationInterface.displayName || operationInterface.name;
+    const callableName = uniqueInterfaceName(displayName);
+    const normalizedDescription = description.trim();
+    const active = activeInterfaceId
+      ? this.state.savedOperationInterfaces.find((item) => item.id === activeInterfaceId)
+      : undefined;
+    const normalized: OperationInterface = {
+      ...operationInterface,
+      id: active?.id ?? operationInterface.id,
+      name: callableName,
+      displayName,
+      description: normalizedDescription || undefined,
+      contract: {
+        ...operationInterface.contract,
+        invocation: { ...operationInterface.contract.invocation, callableName },
+      },
+      lifecycle: {
+        ...operationInterface.lifecycle,
+        createdAt: active?.createdAt ?? operationInterface.lifecycle.createdAt,
+        updatedAt: now,
+      },
+    };
+    const signature = operationInterfacePublicationSignature(normalized);
+    const existing =
+      active ??
+      this.state.savedOperationInterfaces.find(
+        (item) =>
+          (item.signature ?? operationInterfacePublicationSignature(item.operationInterface)) ===
+          signature,
+      );
+    if (existing) {
+      const unchanged =
+        existing.name === displayName &&
+        (existing.signature ??
+          operationInterfacePublicationSignature(existing.operationInterface)) === signature;
+      if (unchanged) {
+        return { status: 'unchanged', id: existing.id, name: displayName };
+      }
+      const withIdentity = { ...normalized, id: existing.id };
+      const editable =
+        existing.publishedRelease &&
+        operationInterfacePublicationSignature(withIdentity) !== existing.publishedRelease.signature
+          ? nextDraftOperationInterface(withIdentity, existing.publishedRelease, now)
+          : withIdentity;
+      const updated: SavedOperationInterface = {
+        ...existing,
+        name: displayName,
+        operationInterface: editable,
+        updatedAt: now,
+        signature: operationInterfacePublicationSignature(editable),
+      };
+      this.setState(
+        (state) => ({
+          savedOperationInterfaces: state.savedOperationInterfaces.map((item) =>
+            item.id === existing.id ? updated : item,
+          ),
+          activeOperationInterfaceId: existing.id,
+        }),
+        () => this.persistOperationInterface(updated),
+      );
+      return { status: 'updated', id: existing.id, name: displayName };
+    }
+
+    const id = `${operationInterface.id}_${createUuid()}`;
+    const savedAsset = { ...normalized, id };
+    const saved: SavedOperationInterface = {
+      id,
+      name: displayName,
+      operationInterface: savedAsset,
+      createdAt: now,
+      updatedAt: now,
+      signature: operationInterfacePublicationSignature(savedAsset),
+    };
+    this.setState(
+      (state) => ({
+        savedOperationInterfaces: [saved, ...state.savedOperationInterfaces],
+        activeOperationInterfaceId: id,
+      }),
+      () => this.persistOperationInterface(saved),
+    );
+    return { status: 'created', id, name: displayName };
+  };
+
+  private handleOpenOperationInterface = (id: string): void => {
+    if (this.state.savedOperationInterfaces.some((item) => item.id === id)) {
+      this.setState({ activeOperationInterfaceId: id });
+    }
+  };
+
+  private handleClearActiveOperationInterface = (): void => {
+    this.setState({ activeOperationInterfaceId: undefined });
+  };
+
+  private handlePublishOperationInterface = (id: string): void => {
+    const current = this.state.savedOperationInterfaces.find((item) => item.id === id);
+    if (!current) {
+      return;
+    }
+    const compilation = compilePublishedOperationExecutionTemplate({
+      operationInterface: current.operationInterface,
+      models: this.managers.data.models,
+      relations: this.managers.data.relations,
+    });
+    if (!compilation.template) {
+      this.managers.notifications.error(this.managers.i18n.t('ui', 'operationValidation'), {
+        message: interfaceDiagnosticMessage(
+          this.managers.i18n,
+          compilation.diagnostics.find((item) => item.severity === 'error'),
+        ),
+      });
+      return;
+    }
+    const result = publishOperationInterface({
+      operationInterface: current.operationInterface,
+      signature: operationInterfacePublicationSignature(current.operationInterface),
+      executionTemplate: compilation.template,
+      models: this.managers.data.models,
+      relations: this.managers.data.relations,
+      existingRelease: current.publishedRelease,
+      otherReleases: this.state.savedOperationInterfaces
+        .filter((item) => item.id !== id)
+        .flatMap((item) => [item.publishedRelease, ...(item.releaseHistory ?? [])])
+        .filter(
+          (release): release is OperationInterfaceRelease =>
+            Boolean(release) && release?.operationInterface.status === 'active',
+        ),
+    });
+    if (!result.ok) {
+      this.managers.notifications.error(this.managers.i18n.t('ui', 'operationValidation'), {
+        message: interfaceDiagnosticMessage(this.managers.i18n, result.issues[0]),
+      });
+      return;
+    }
+    const updated: SavedOperationInterface = {
+      ...current,
+      operationInterface: result.operationInterface,
+      publishedRelease: result.release,
+      releaseHistory: appendOperationReleaseHistory(
+        current.releaseHistory,
+        current.publishedRelease,
+      ),
+      updatedAt: result.release.publishedAt,
+      signature: result.release.signature,
+    };
+    this.setState(
+      (state) => ({
+        savedOperationInterfaces: state.savedOperationInterfaces.map((item) =>
+          item.id === id ? updated : item,
+        ),
+      }),
+      () => this.persistOperationInterface(updated),
+    );
+    this.managers.notifications.success(this.managers.i18n.t('ui', 'operationPublished'), {
+      message: `${current.name} v${result.release.version}`,
+    });
+  };
+
+  private handleRollbackOperationInterface = (id: string, version: string): void => {
+    const current = this.state.savedOperationInterfaces.find((item) => item.id === id);
+    const target = current?.releaseHistory?.find((release) => release.version === version);
+    if (!current?.publishedRelease || !target) {
+      return;
+    }
+    const plan = prepareOperationInterfaceRollback({ current: current.publishedRelease, target });
+    const compilation = compilePublishedOperationExecutionTemplate({
+      operationInterface: plan.draft,
+      models: this.managers.data.models,
+      relations: this.managers.data.relations,
+    });
+    if (!compilation.template) {
+      this.managers.notifications.error(this.managers.i18n.t('ui', 'releaseRollbackFailed'), {
+        message: interfaceDiagnosticMessage(
+          this.managers.i18n,
+          compilation.diagnostics.find((item) => item.severity === 'error'),
+        ),
+      });
+      return;
+    }
+    const result = publishOperationInterface({
+      operationInterface: plan.draft,
+      signature: operationInterfacePublicationSignature(plan.draft),
+      executionTemplate: compilation.template,
+      models: this.managers.data.models,
+      relations: this.managers.data.relations,
+      existingRelease: current.publishedRelease,
+      otherReleases: this.state.savedOperationInterfaces
+        .filter((item) => item.id !== id)
+        .flatMap((item) => [item.publishedRelease, ...(item.releaseHistory ?? [])])
+        .filter(
+          (release): release is OperationInterfaceRelease =>
+            Boolean(release) && release?.operationInterface.status === 'active',
+        ),
+    });
+    if (!result.ok) {
+      this.managers.notifications.error(this.managers.i18n.t('ui', 'releaseRollbackFailed'), {
+        message: interfaceDiagnosticMessage(this.managers.i18n, result.issues[0]),
+      });
+      return;
+    }
+    const updated: SavedOperationInterface = {
+      ...current,
+      publishedRelease: result.release,
+      releaseHistory: appendOperationReleaseHistory(
+        current.releaseHistory,
+        current.publishedRelease,
+      ),
+      updatedAt: result.release.publishedAt,
+    };
+    this.setState(
+      (state) => ({
+        savedOperationInterfaces: state.savedOperationInterfaces.map((item) =>
+          item.id === id ? updated : item,
+        ),
+      }),
+      () => this.persistOperationInterface(updated),
+    );
+    this.managers.notifications.success(this.managers.i18n.t('ui', 'releaseRolledBack'), {
+      message: `v${version} -> v${result.release.version}`,
+    });
+  };
+
+  private handleDeprecateOperationInterface = (id: string): void => {
+    const current = this.state.savedOperationInterfaces.find((item) => item.id === id);
+    if (!current?.publishedRelease) {
+      return;
+    }
+    const deprecatedAt = new Date().toISOString();
+    const publishedRelease = deprecateOperationInterfaceRelease(
+      current.publishedRelease,
+      deprecatedAt,
+    );
+    const releaseMatchesDraft =
+      operationInterfacePublicationSignature(current.operationInterface) ===
+      current.publishedRelease.signature;
+    const updated: SavedOperationInterface = {
+      ...current,
+      publishedRelease,
+      releaseHistory: current.releaseHistory?.map((release) =>
+        deprecateOperationInterfaceRelease(release, deprecatedAt),
+      ),
+      operationInterface: releaseMatchesDraft
+        ? publishedRelease.operationInterface
+        : current.operationInterface,
+      updatedAt: publishedRelease.operationInterface.lifecycle.updatedAt,
+    };
+    this.setState(
+      (state) => ({
+        savedOperationInterfaces: state.savedOperationInterfaces.map((item) =>
+          item.id === id ? updated : item,
+        ),
+      }),
+      () => this.persistOperationInterface(updated),
+    );
+  };
+
+  private handleDeleteOperationInterface = (id: string): void => {
+    this.setState(
+      (state) => ({
+        savedOperationInterfaces: state.savedOperationInterfaces.filter((item) => item.id !== id),
+        activeOperationInterfaceId:
+          state.activeOperationInterfaceId === id ? undefined : state.activeOperationInterfaceId,
+      }),
+      () => this.deletePersistedOperationInterface(id),
+    );
+  };
+
+  private persistOperationInterface(record: SavedOperationInterface): void {
+    this.enqueueOperationInterfaceWrite(record.id, (client, libraryCode) =>
+      upsertOperationInterfaceRegistry(client, libraryCode, record),
+    );
+  }
+
+  private deletePersistedOperationInterface(id: string): void {
+    this.enqueueOperationInterfaceWrite(id, (client, libraryCode) =>
+      deleteOperationInterfaceRegistry(client, libraryCode, id),
+    );
+  }
+
+  private enqueueOperationInterfaceWrite(
+    id: string,
+    write: (client: RemoteModelDBClient, libraryCode: string) => Promise<void>,
+  ): void {
+    const client = this.managers.config.remoteClient;
+    const libraryCode = this.managers.config.activeLibraryName;
+    if (!client || !libraryCode || !id) {
+      return;
+    }
+    const key = `${libraryCode}:${id}`;
+    const previous = this.operationInterfaceWriteQueue.get(key) ?? Promise.resolve();
+    const task = previous.catch(() => undefined).then(() => write(client, libraryCode));
+    this.operationInterfaceWriteQueue.set(key, task);
+    void task
+      .catch((error) => {
+        // eslint-disable-next-line no-console
+        console.warn('[Designer] operation interface registry write failed', error);
+        this.managers.notifications.error(this.managers.i18n.t('ui', 'operationValidation'), {
+          message: error instanceof Error ? error.message : String(error),
+        });
+      })
+      .finally(() => {
+        if (this.operationInterfaceWriteQueue.get(key) === task) {
+          this.operationInterfaceWriteQueue.delete(key);
+        }
+      });
+  }
+
+  private handleSaveBindingSurface = (
+    bindingSurface: BindingSurface,
+    name: string,
+    description: string,
+    activeSurfaceId?: string,
+  ): BindingSurfaceSaveResult => {
+    const now = new Date().toISOString();
+    const displayName = name.trim() || bindingSurface.displayName || bindingSurface.name;
+    const normalizedDescription = description.trim();
+    const active = activeSurfaceId
+      ? this.state.savedBindingSurfaces.find((item) => item.id === activeSurfaceId)
+      : undefined;
+    const normalized: BindingSurface = {
+      ...bindingSurface,
+      id: active?.id ?? bindingSurface.id,
+      name: uniqueInterfaceName(displayName),
+      displayName,
+      description: normalizedDescription || undefined,
+      lifecycle: {
+        ...bindingSurface.lifecycle,
+        createdAt: active?.createdAt ?? bindingSurface.lifecycle.createdAt,
+        updatedAt: now,
+      },
+    };
+    const signature = bindingSurfacePublicationSignature(normalized);
+    const existing =
+      active ??
+      this.state.savedBindingSurfaces.find(
+        (item) =>
+          (item.signature ?? bindingSurfacePublicationSignature(item.bindingSurface)) === signature,
+      );
+    if (existing) {
+      const unchanged =
+        existing.name === displayName &&
+        (existing.signature ?? bindingSurfacePublicationSignature(existing.bindingSurface)) ===
+          signature;
+      if (unchanged) {
+        return { status: 'unchanged', id: existing.id, name: displayName };
+      }
+      const withIdentity = { ...normalized, id: existing.id };
+      const editable =
+        existing.publishedRelease &&
+        bindingSurfacePublicationSignature(withIdentity) !== existing.publishedRelease.signature
+          ? nextDraftBindingSurface(withIdentity, existing.publishedRelease, now)
+          : withIdentity;
+      const updated: SavedBindingSurface = {
+        ...existing,
+        name: displayName,
+        bindingSurface: editable,
+        updatedAt: now,
+        signature: bindingSurfacePublicationSignature(editable),
+      };
+      this.setState(
+        (state) => ({
+          savedBindingSurfaces: state.savedBindingSurfaces.map((item) =>
+            item.id === existing.id ? updated : item,
+          ),
+          activeBindingSurfaceId: existing.id,
+        }),
+        () => this.persistBindingSurface(updated),
+      );
+      return { status: 'updated', id: existing.id, name: displayName };
+    }
+
+    const id = `${bindingSurface.id}_${createUuid()}`;
+    const savedSurface = { ...normalized, id };
+    const saved: SavedBindingSurface = {
+      id,
+      name: displayName,
+      bindingSurface: savedSurface,
+      createdAt: now,
+      updatedAt: now,
+      signature: bindingSurfacePublicationSignature(savedSurface),
+    };
+    this.setState(
+      (state) => ({
+        savedBindingSurfaces: [saved, ...state.savedBindingSurfaces],
+        activeBindingSurfaceId: id,
+      }),
+      () => this.persistBindingSurface(saved),
+    );
+    return { status: 'created', id, name: displayName };
+  };
+
+  private handleOpenBindingSurface = (id: string): void => {
+    if (this.state.savedBindingSurfaces.some((item) => item.id === id)) {
+      this.setState({ activeBindingSurfaceId: id });
+    }
+  };
+
+  private handleClearActiveBindingSurface = (): void => {
+    this.setState({ activeBindingSurfaceId: undefined });
+  };
+
+  private handlePublishBindingSurface = (id: string): void => {
+    const current = this.state.savedBindingSurfaces.find((item) => item.id === id);
+    if (!current) {
+      return;
+    }
+    const queryReleases = this.state.savedQueryInterfaces
+      .flatMap((item) => [item.publishedRelease, ...(item.releaseHistory ?? [])])
+      .filter(
+        (release): release is QueryInterfaceRelease =>
+          Boolean(release) && release?.queryInterface.status === 'active',
+      );
+    const operationReleases = this.state.savedOperationInterfaces
+      .flatMap((item) => [item.publishedRelease, ...(item.releaseHistory ?? [])])
+      .filter(
+        (release): release is OperationInterfaceRelease =>
+          Boolean(release) && release?.operationInterface.status === 'active',
+      );
+    const result = publishBindingSurface({
+      bindingSurface: current.bindingSurface,
+      signature: bindingSurfacePublicationSignature(current.bindingSurface),
+      queryReleases,
+      operationReleases,
+      existingRelease: current.publishedRelease,
+    });
+    if (!result.ok) {
+      this.managers.notifications.error(this.managers.i18n.t('ui', 'bindingSurfaceValidation'), {
+        message: interfaceDiagnosticMessage(this.managers.i18n, result.issues[0]),
+      });
+      return;
+    }
+    const updated: SavedBindingSurface = {
+      ...current,
+      bindingSurface: result.bindingSurface,
+      publishedRelease: result.release,
+      releaseHistory: appendBindingSurfaceReleaseHistory(
+        current.releaseHistory,
+        current.publishedRelease,
+      ),
+      updatedAt: result.release.publishedAt,
+      signature: result.release.signature,
+    };
+    this.setState(
+      (state) => ({
+        savedBindingSurfaces: state.savedBindingSurfaces.map((item) =>
+          item.id === id ? updated : item,
+        ),
+      }),
+      () => this.persistBindingSurface(updated),
+    );
+    this.managers.notifications.success(this.managers.i18n.t('ui', 'bindingSurfacePublished'), {
+      message: `${current.name} v${result.release.version}`,
+    });
+  };
+
+  private handleRollbackBindingSurface = (id: string, version: string): void => {
+    const current = this.state.savedBindingSurfaces.find((item) => item.id === id);
+    const target = current?.releaseHistory?.find((release) => release.version === version);
+    if (!current?.publishedRelease || !target) {
+      return;
+    }
+    const queryReleases = this.state.savedQueryInterfaces
+      .flatMap((item) => [item.publishedRelease, ...(item.releaseHistory ?? [])])
+      .filter(
+        (release): release is QueryInterfaceRelease =>
+          Boolean(release) && release?.queryInterface.status === 'active',
+      );
+    const operationReleases = this.state.savedOperationInterfaces
+      .flatMap((item) => [item.publishedRelease, ...(item.releaseHistory ?? [])])
+      .filter(
+        (release): release is OperationInterfaceRelease =>
+          Boolean(release) && release?.operationInterface.status === 'active',
+      );
+    const plan = prepareBindingSurfaceRollback({ current: current.publishedRelease, target });
+    const result = publishBindingSurface({
+      bindingSurface: plan.draft,
+      signature: bindingSurfacePublicationSignature(plan.draft),
+      queryReleases,
+      operationReleases,
+      existingRelease: current.publishedRelease,
+    });
+    if (!result.ok) {
+      this.managers.notifications.error(this.managers.i18n.t('ui', 'releaseRollbackFailed'), {
+        message: interfaceDiagnosticMessage(this.managers.i18n, result.issues[0]),
+      });
+      return;
+    }
+    const updated: SavedBindingSurface = {
+      ...current,
+      publishedRelease: result.release,
+      releaseHistory: appendBindingSurfaceReleaseHistory(
+        current.releaseHistory,
+        current.publishedRelease,
+      ),
+      updatedAt: result.release.publishedAt,
+    };
+    this.setState(
+      (state) => ({
+        savedBindingSurfaces: state.savedBindingSurfaces.map((item) =>
+          item.id === id ? updated : item,
+        ),
+      }),
+      () => this.persistBindingSurface(updated),
+    );
+    this.managers.notifications.success(this.managers.i18n.t('ui', 'releaseRolledBack'), {
+      message: `v${version} -> v${result.release.version}`,
+    });
+  };
+
+  private handleDeprecateBindingSurface = (id: string): void => {
+    const current = this.state.savedBindingSurfaces.find((item) => item.id === id);
+    if (!current?.publishedRelease) {
+      return;
+    }
+    const deprecatedAt = new Date().toISOString();
+    const publishedRelease = deprecateBindingSurfaceRelease(current.publishedRelease, deprecatedAt);
+    const releaseMatchesDraft =
+      bindingSurfacePublicationSignature(current.bindingSurface) ===
+      current.publishedRelease.signature;
+    const updated: SavedBindingSurface = {
+      ...current,
+      publishedRelease,
+      releaseHistory: current.releaseHistory?.map((release) =>
+        deprecateBindingSurfaceRelease(release, deprecatedAt),
+      ),
+      bindingSurface: releaseMatchesDraft
+        ? publishedRelease.bindingSurface
+        : current.bindingSurface,
+      updatedAt: publishedRelease.bindingSurface.lifecycle.updatedAt,
+    };
+    this.setState(
+      (state) => ({
+        savedBindingSurfaces: state.savedBindingSurfaces.map((item) =>
+          item.id === id ? updated : item,
+        ),
+      }),
+      () => this.persistBindingSurface(updated),
+    );
+  };
+
+  private handleDeleteBindingSurface = (id: string): void => {
+    this.setState(
+      (state) => ({
+        savedBindingSurfaces: state.savedBindingSurfaces.filter((item) => item.id !== id),
+        activeBindingSurfaceId:
+          state.activeBindingSurfaceId === id ? undefined : state.activeBindingSurfaceId,
+      }),
+      () => this.deletePersistedBindingSurface(id),
+    );
+  };
+
+  private persistBindingSurface(record: SavedBindingSurface): void {
+    this.enqueueBindingSurfaceWrite(record.id, (client, libraryCode) =>
+      upsertBindingSurfaceRegistry(client, libraryCode, record),
+    );
+  }
+
+  private deletePersistedBindingSurface(id: string): void {
+    this.enqueueBindingSurfaceWrite(id, (client, libraryCode) =>
+      deleteBindingSurfaceRegistry(client, libraryCode, id),
+    );
+  }
+
+  private enqueueBindingSurfaceWrite(
+    id: string,
+    write: (client: RemoteModelDBClient, libraryCode: string) => Promise<void>,
+  ): void {
+    const client = this.managers.config.remoteClient;
+    const libraryCode = this.managers.config.activeLibraryName;
+    if (!client || !libraryCode || !id) {
+      return;
+    }
+    const key = `${libraryCode}:${id}`;
+    const previous = this.bindingSurfaceWriteQueue.get(key) ?? Promise.resolve();
+    const task = previous.catch(() => undefined).then(() => write(client, libraryCode));
+    this.bindingSurfaceWriteQueue.set(key, task);
+    void task
+      .catch((error) => {
+        // eslint-disable-next-line no-console
+        console.warn('[Designer] binding surface registry write failed', error);
+        this.managers.notifications.error(this.managers.i18n.t('ui', 'bindingSurfaceValidation'), {
+          message: error instanceof Error ? error.message : String(error),
+        });
+      })
+      .finally(() => {
+        if (this.bindingSurfaceWriteQueue.get(key) === task) {
+          this.bindingSurfaceWriteQueue.delete(key);
         }
       });
   }
@@ -761,9 +1679,19 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
       pendingQueryModelPick,
       savedQueryInterfaces,
       activeQueryInterfaceId,
+      savedOperationInterfaces,
+      activeOperationInterfaceId,
+      savedBindingSurfaces,
+      activeBindingSurfaceId,
     } = this.state;
     const activeQueryInterface = activeQueryInterfaceId
       ? savedQueryInterfaces.find((item) => item.id === activeQueryInterfaceId)
+      : undefined;
+    const activeOperationInterface = activeOperationInterfaceId
+      ? savedOperationInterfaces.find((item) => item.id === activeOperationInterfaceId)
+      : undefined;
+    const activeBindingSurface = activeBindingSurfaceId
+      ? savedBindingSurfaces.find((item) => item.id === activeBindingSurfaceId)
       : undefined;
     const queryModelIds = new Set(queryChainModelIds(queryChain, this.managers.data.relations));
     const queryRelationIds = new Set(queryChainAllRelationIds(queryChain));
@@ -824,6 +1752,10 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
           pendingQueryModelPick={pendingQueryModelPick}
           savedQueryInterfaces={savedQueryInterfaces}
           activeQueryInterface={activeQueryInterface}
+          savedOperationInterfaces={savedOperationInterfaces}
+          activeOperationInterface={activeOperationInterface}
+          savedBindingSurfaces={savedBindingSurfaces}
+          activeBindingSurface={activeBindingSurface}
           onQueryChainChange={this.handleQueryChainChange}
           onResolveQueryRelationPick={this.handleResolveQueryRelationPick}
           onCancelQueryRelationPick={this.handleCancelQueryRelationPick}
@@ -833,7 +1765,24 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
           onClearActiveQueryInterface={this.handleClearActiveQueryInterface}
           onOpenQueryInterface={this.handleOpenQueryInterface}
           onRenameQueryInterface={this.handleRenameQueryInterface}
+          onPublishQueryInterface={this.handlePublishQueryInterface}
+          onRollbackQueryInterface={this.handleRollbackQueryInterface}
+          onDeprecateQueryInterface={this.handleDeprecateQueryInterface}
           onDeleteQueryInterface={this.handleDeleteQueryInterface}
+          onSaveOperationInterface={this.handleSaveOperationInterface}
+          onClearActiveOperationInterface={this.handleClearActiveOperationInterface}
+          onOpenOperationInterface={this.handleOpenOperationInterface}
+          onPublishOperationInterface={this.handlePublishOperationInterface}
+          onRollbackOperationInterface={this.handleRollbackOperationInterface}
+          onDeprecateOperationInterface={this.handleDeprecateOperationInterface}
+          onDeleteOperationInterface={this.handleDeleteOperationInterface}
+          onSaveBindingSurface={this.handleSaveBindingSurface}
+          onClearActiveBindingSurface={this.handleClearActiveBindingSurface}
+          onOpenBindingSurface={this.handleOpenBindingSurface}
+          onPublishBindingSurface={this.handlePublishBindingSurface}
+          onRollbackBindingSurface={this.handleRollbackBindingSurface}
+          onDeprecateBindingSurface={this.handleDeprecateBindingSurface}
+          onDeleteBindingSurface={this.handleDeleteBindingSurface}
           onRequestClearCanvasSelection={this.handleClearCanvasSelection}
         >
           <div className="designer-editor-root">
@@ -916,7 +1865,9 @@ function queryInterfaceSignature(queryInterface: QueryInterface): string {
     query: {
       rootNodeId: queryInterface.query.rootNodeId,
       traversal: queryInterface.query.traversal,
+      filterTree: queryInterface.query.filterTree,
       filters: queryInterface.query.filters,
+      aggregation: queryInterface.query.aggregation,
       sorts: queryInterface.query.sorts,
       projection: queryInterface.query.projection,
       pagination: queryInterface.query.pagination,

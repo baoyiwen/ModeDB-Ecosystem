@@ -1,11 +1,19 @@
+import { isInheritRelation } from '../config/graph-edge-kinds.js';
 import type { EngineModelNode, EngineRelationEdge } from '../types/engine-schema.js';
+import { sortPropsBySort } from '../utils/prop-order.js';
 import type {
   InterfaceParameter,
+  InterfacePermissionPolicy,
   InterfaceValueType,
+  QueryAggregationSpec,
   QueryFilter,
+  QueryFilterGroup,
   QueryInterface,
+  QueryPagination,
   QueryProjectionField,
+  QuerySort,
 } from './types.js';
+import { cloneQueryFilterGroup, flattenQueryFilterTree } from './query-filter-tree.js';
 import { queryGraphOutputNodes } from './query-chain-state.js';
 import type {
   QueryGraphEdgeDirection,
@@ -27,6 +35,11 @@ export interface QueryInterfaceDraftOptions {
   projectionFieldKeys?: readonly string[];
   parameters?: readonly InterfaceParameter[];
   filters?: readonly QueryFilter[];
+  filterTree?: QueryFilterGroup;
+  aggregation?: QueryAggregationSpec;
+  sorts?: readonly QuerySort[];
+  pagination?: QueryPagination;
+  permissions?: InterfacePermissionPolicy;
   createdAt?: string;
 }
 
@@ -111,6 +124,25 @@ export function buildQueryInterfaceDraft(options: QueryInterfaceDraftOptions): Q
     options.projectionFieldKeys,
     options.graphInstances?.rootNodeId ?? nodeIdForModel(options.rootModelId),
   );
+  const filterTree = options.filterTree ? cloneQueryFilterGroup(options.filterTree) : undefined;
+  const filters = filterTree
+    ? flattenQueryFilterTree(filterTree)
+    : options.filters
+      ? [...options.filters]
+      : [];
+  const aggregation = cloneQueryAggregation(options.aggregation);
+  const aggregationEnabled = Boolean(
+    aggregation && (aggregation.groupBy.length > 0 || aggregation.metrics.length > 0),
+  );
+  const resultSchema = aggregationEnabled
+    ? buildAggregationResultSchema(aggregation!, options.models)
+    : projectionFields.map((field) => ({
+        name: field.outputName,
+        type: queryResultFieldType(field, options.models),
+        nullable: field.nullable ?? true,
+        source: field.source,
+      }));
+  const resultShape = aggregationEnabled ? ('flat' as const) : ('tree' as const);
   const rootModel = options.models.find((model) => model.id === options.rootModelId);
   const rootName = rootModel?.model_name ?? options.rootModelId;
 
@@ -127,9 +159,11 @@ export function buildQueryInterfaceDraft(options: QueryInterfaceDraftOptions): Q
     contract: {
       parameters: options.parameters ? [...options.parameters] : [],
       output: {
-        shape: 'tree',
+        shape: aggregationEnabled ? 'list' : 'tree',
+        schema: aggregationEnabled ? resultSchema : undefined,
       },
       errors: [],
+      permissions: options.permissions ?? { mode: 'none' },
       invocation: {
         method: 'query',
         callableName: `${rootName}Query`,
@@ -181,21 +215,22 @@ export function buildQueryInterfaceDraft(options: QueryInterfaceDraftOptions): Q
               label: relation.forward_name ?? relation.engine_forward_name ?? relation.id,
             })),
       },
-      filters: options.filters ? [...options.filters] : [],
-      sorts: [],
+      filterTree,
+      filters,
+      aggregation,
+      sorts: options.sorts ? [...options.sorts] : [],
+      pagination:
+        options.pagination && options.pagination.mode !== 'none'
+          ? { ...options.pagination }
+          : undefined,
       projection: {
-        shape: 'tree',
+        shape: resultShape,
         fields: projectionFields,
       },
       result: {
-        shape: 'tree',
-        schema: projectionFields.map((field) => ({
-          name: field.outputName,
-          type: queryResultFieldType(field, options.models),
-          nullable: field.nullable ?? true,
-          source: field.source,
-        })),
-        includesRecordRefs: true,
+        shape: resultShape,
+        schema: resultSchema,
+        includesRecordRefs: !aggregationEnabled,
       },
       binding: {
         bindable: true,
@@ -213,8 +248,22 @@ export function buildQueryInterfaceDraft(options: QueryInterfaceDraftOptions): Q
       },
     },
     dependencies: {
-      models: nodes.map((node) => node.modelId),
-      fields: projectionFields.map((field) => `${field.source.modelId}.${field.source.fieldId}`),
+      models: unique(nodes.map((node) => node.modelId)),
+      fields: unique([
+        ...projectionFields.map((field) => `${field.source.modelId}.${field.source.fieldId}`),
+        ...filters.flatMap((filter) =>
+          'fieldId' in filter.target ? [`${filter.target.modelId}.${filter.target.fieldId}`] : [],
+        ),
+        ...(options.sorts ?? []).flatMap((sort) =>
+          'fieldId' in sort.target ? [`${sort.target.modelId}.${sort.target.fieldId}`] : [],
+        ),
+        ...(aggregation?.groupBy ?? []).map(
+          (group) => `${group.source.modelId}.${group.source.fieldId}`,
+        ),
+        ...(aggregation?.metrics ?? []).map(
+          (metric) => `${metric.source.modelId}.${metric.source.fieldId}`,
+        ),
+      ]),
       relations: unique(selectedRelations.map((relation) => relation.id)),
     },
     lifecycle: {
@@ -259,7 +308,9 @@ export function outgoingRelationsForModel(
   modelId: string,
   relations: readonly EngineRelationEdge[],
 ): EngineRelationEdge[] {
-  return relations.filter((relation) => relation.source_model_id === modelId);
+  return relations.filter(
+    (relation) => relation.source_model_id === modelId && !isInheritRelation(relation.kind),
+  );
 }
 
 export function nodeIdForModel(modelId: string): string {
@@ -327,7 +378,7 @@ function buildProjectionFields(
 
   for (const node of nodes) {
     const model = byId.get(node.modelId);
-    const modelFields = model?.props_objects_array ?? [];
+    const modelFields = sortPropsBySort(model?.props_objects_array ?? []);
     for (const prop of modelFields) {
       const fieldKey = queryProjectionFieldKey(node.nodeId, prop.id);
       if (selectedFieldKeys ? !selectedFieldKeys.has(fieldKey) : node.nodeId !== rootNodeId) {
@@ -348,6 +399,55 @@ function buildProjectionFields(
   }
 
   return fields;
+}
+
+function cloneQueryAggregation(
+  aggregation: QueryAggregationSpec | undefined,
+): QueryAggregationSpec | undefined {
+  if (!aggregation) {
+    return undefined;
+  }
+  return {
+    groupBy: aggregation.groupBy.map((group) => ({
+      ...group,
+      source: { ...group.source },
+    })),
+    metrics: aggregation.metrics.map((metric) => ({
+      ...metric,
+      source: { ...metric.source },
+    })),
+    having: aggregation.having ? cloneQueryFilterGroup(aggregation.having) : undefined,
+  };
+}
+
+function buildAggregationResultSchema(
+  aggregation: QueryAggregationSpec,
+  models: readonly EngineModelNode[],
+): QueryInterface['query']['result']['schema'] {
+  const groups = aggregation.groupBy.map((group) => {
+    const model = models.find((item) => item.id === group.source.modelId);
+    const prop = model?.props_objects_array.find((item) => item.id === group.source.fieldId);
+    return {
+      name: group.outputName,
+      type: interfaceValueTypeForPropType(prop?.type),
+      nullable: !Boolean(prop?.is_required),
+      source: group.source,
+    };
+  });
+  const metrics = aggregation.metrics.map((metric) => {
+    const model = models.find((item) => item.id === metric.source.modelId);
+    const prop = model?.props_objects_array.find((item) => item.id === metric.source.fieldId);
+    return {
+      name: metric.outputName,
+      type:
+        metric.function === 'count' || metric.function === 'sum' || metric.function === 'avg'
+          ? ('number' as const)
+          : interfaceValueTypeForPropType(prop?.type),
+      nullable: metric.function !== 'count',
+      source: metric.source,
+    };
+  });
+  return [...groups, ...metrics];
 }
 
 function queryResultFieldType(

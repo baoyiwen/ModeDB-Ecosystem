@@ -6,6 +6,8 @@ export interface RelationCanvasMeta {
   forward_bend?: { x: number; y: number };
   /** 逆向（target → source）二次贝塞尔控制点（世界坐标）。 */
   reverse_bend?: { x: number; y: number };
+  /** Shared center anchor for a normal relation pair. Directional spacing is applied at render time. */
+  pair_bend?: { x: number; y: number };
   /** Self-loop anchor around the node. Existing relations without it keep the automatic slot. */
   self_loop_anchor?: { x: number; y: number };
 }
@@ -31,6 +33,10 @@ export function parseRelationCanvasMeta(raw?: string): RelationCanvasMeta {
     const rev = o.reverse_bend;
     if (rev && typeof rev === 'object' && typeof (rev as { x?: unknown }).x === 'number') {
       out.reverse_bend = { x: (rev as { x: number }).x, y: (rev as { y: number }).y };
+    }
+    const pair = o.pair_bend;
+    if (pair && typeof pair === 'object' && typeof (pair as { x?: unknown }).x === 'number') {
+      out.pair_bend = { x: (pair as { x: number }).x, y: (pair as { y: number }).y };
     }
     const self = o.self_loop_anchor;
     if (self && typeof self === 'object' && typeof (self as { x?: unknown }).x === 'number') {

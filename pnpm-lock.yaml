@@ -99,6 +99,9 @@ importers:
 
   apps/model-designer:
     dependencies:
+      '@mode-db/data-kit':
+        specifier: workspace:*
+        version: link:../../packages/data-kit
       '@mode-db/data-ui':
         specifier: workspace:*
         version: link:../../packages/data-ui

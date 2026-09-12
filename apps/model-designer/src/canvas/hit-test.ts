@@ -2,6 +2,7 @@ import type { EngineModelNode, EngineRelationEdge } from '../types/engine-schema
 import type { RelationCanvasMeta } from '../types/relation-canvas-meta.js';
 import {
   directedCurvedSegment,
+  directedPairedCurvedSegment,
   distancePointToQuadraticBezier,
   distancePointToSegment,
   distancePointToSelfLoopArc,
@@ -153,12 +154,18 @@ export function hitTestRelation(
       }
       continue;
     }
-    const fwd = directedCurvedSegment(a, b, slotOff + RELATION_INTRA_PAIR_GAP, meta.forward_bend);
-    const rev = directedCurvedSegment(
+    const segmentForPair = meta.pair_bend ? directedPairedCurvedSegment : directedCurvedSegment;
+    const fwd = segmentForPair(
+      a,
+      b,
+      slotOff + RELATION_INTRA_PAIR_GAP,
+      meta.pair_bend ?? meta.forward_bend,
+    );
+    const rev = segmentForPair(
       b,
       a,
       -(slotOff - RELATION_INTRA_PAIR_GAP),
-      meta.reverse_bend,
+      meta.pair_bend ?? meta.reverse_bend,
     );
     const fwdLabel = segmentLabelPlacement(fwd);
     const revLabel = segmentLabelPlacement(rev);

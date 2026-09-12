@@ -14,9 +14,16 @@
 
 ```bash
 pnpm --filter data-studio dev
+# 或
+pnpm dev:data-studio
 ```
 
-打开 Vite 地址后会先进入连接页。
+Vite dev server 已绑定 `host: true`（监听所有网卡），启动后终端会同时打印两类地址：
+
+- **Local**：`http://localhost:5176/`，本机使用。
+- **Network**：`http://<开发机局域网 IP>:5176/`，同一局域网内的其它设备用它访问。
+
+打开任一地址后会先进入连接页。首次监听所有网卡时，Windows 防火墙可能弹窗，需要放行 `5176` 端口。
 
 ## 3. 连接流程
 
@@ -29,6 +36,8 @@ pnpm --filter data-studio dev
 - token
 
 点击连接后，前端会先调用 `listDatabases` 列出逻辑库。
+
+跨设备访问时：从另一台设备用 Network 地址打开工作台，主机 **不要填 `127.0.0.1` / `localhost`**（指向设备自身），应填开发机的**局域网 IP**（如 `192.168.x.x`）与引擎端口（默认 `9090`）；引擎 server 需用 `pnpm start:server:network` 监听局域网。也可在启动 dev server 前设置 `VITE_MODE_DB_HOST=192.168.x.x` 作为默认主机。
 
 ### 3.2 打开逻辑库
 

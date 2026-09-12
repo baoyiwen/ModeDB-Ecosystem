@@ -16,6 +16,7 @@ import { readBusinessCatalog } from './engine-catalog-import.js';
 import { pushDesignerSnapshot } from './sdk-designer-sync.js';
 import { extractEngineModelRelationPayload } from './engine-model-relation.js';
 import { serializeMldgDocumentToUint8Array } from './mldg-wire-bytes.js';
+import { createUuid } from '../utils/random-id.js';
 import {
   relationLogicFromCardinality,
   relationSourceCardinality,
@@ -462,7 +463,7 @@ async function pushDesignerCatalogRows(
       const prop = model.props_objects_array[sort]!;
       const existingPropId =
         prop.id && existingPropRowsById.has(prop.id) ? prop.id : existingFields.get(prop.name);
-      const propId = existingPropId ?? prop.id ?? crypto.randomUUID();
+      const propId = existingPropId ?? prop.id ?? createUuid();
       const alreadyBound = existingFields.has(prop.name);
       const partial = {
         engine_name: prop.name,

@@ -2,6 +2,7 @@ import type { RemoteModelDBClient } from '@mode-db/sdk';
 import { SYS_LAYER_TYPE } from './designer-storage-init.js';
 import { ensureLibraryRecord } from '../sync/library-registry.js';
 import type { LibraryRegistryDraft } from '../types/library-registry.js';
+import { createUuid } from '../utils/random-id.js';
 
 function hydrateRowData(row: unknown): Record<string, unknown> {
   if (
@@ -56,7 +57,7 @@ export async function seedDefaultWorkspaceRecords(
 
   const { failureCount } = await client.model(SYS_LAYER_TYPE).insertMany(
     toInsert.map((d) => ({
-      _id: crypto.randomUUID(),
+      _id: createUuid(),
       code: d.code,
       name: d.name,
       description: d.description,

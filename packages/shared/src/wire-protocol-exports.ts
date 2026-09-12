@@ -1,3 +1,5 @@
+import type { QueryInterfaceErrorDetail } from './query-interface-errors.js';
+
 /**
  * Wire types for clients/servers that only depend on **@mode-db/shared**.
  * Snapshot payloads are `unknown` here; the WebSocket host narrows and executes them at RPC dispatch.
@@ -43,10 +45,52 @@ export interface WireRowRef {
 /** Strategies accepted by the server-side `bind` op (mirror of `@mode-db/common` **`BindStrategy`**, minus CONDITIONAL which is not wire-safe). */
 export type WireBindStrategy = 'GLOBAL' | 'PROTOCOL' | 'MANUAL';
 
+export interface WireBindingSurfacePageOptions {
+  readonly page?: number;
+  readonly cursor?: string | null;
+  readonly limit?: number;
+}
+
+export type WireBindingSurfaceAction =
+  | ({ readonly kind: 'read' } & WireBindingSurfacePageOptions)
+  | ({
+      readonly kind: 'mutate';
+      readonly mutationId: string;
+      readonly row?: Readonly<Record<string, unknown>>;
+      readonly recordRefs?: Readonly<Record<string, WireRowRef>>;
+      readonly editedValue?: unknown;
+    } & WireBindingSurfacePageOptions);
+
 export type WireExecuteBody =
   | {
       readonly op: 'executeQuery';
       readonly snapshot: unknown;
+    }
+  | {
+      readonly op: 'executeInterface';
+      readonly callableName: string;
+      readonly version?: string;
+      readonly parameters?: Readonly<Record<string, unknown>>;
+      readonly accessKey?: string;
+      readonly page?: number;
+      readonly cursor?: string | null;
+      readonly limit?: number;
+    }
+  | {
+      readonly op: 'executeOperationInterface';
+      readonly callableName: string;
+      readonly version?: string;
+      readonly parameters?: Readonly<Record<string, unknown>>;
+      readonly accessKey?: string;
+    }
+  | {
+      readonly op: 'executeBindingSurface';
+      readonly surfaceId: string;
+      readonly version?: string;
+      readonly parameters?: Readonly<Record<string, unknown>>;
+      readonly accessKey?: string;
+      readonly accessKeys?: Readonly<Record<string, string>>;
+      readonly action: WireBindingSurfaceAction;
     }
   | {
       readonly op: 'insert';
@@ -198,6 +242,14 @@ export type WireExecuteBody =
       readonly source: WireRowRef;
       readonly target: WireRowRef;
     }
+  | {
+      readonly op: 'rebindPair';
+      readonly forward: string;
+      readonly reverse: string;
+      readonly source: WireRowRef;
+      readonly previousTarget: WireRowRef;
+      readonly nextTarget: WireRowRef;
+    }
   /**
    * Strategy-driven bulk bind (maps to **`AuthoringEngine.bind`**).
    *
@@ -263,6 +315,7 @@ export interface WireRpcResponse {
   readonly id: string;
   readonly cipher?: string;
   readonly error?: string;
+  readonly errorDetail?: QueryInterfaceErrorDetail;
 }
 
 export interface WireErrorMessage {
@@ -302,6 +355,47 @@ export interface WireGroupBucket {
   readonly members: readonly WireEntityNode[];
 }
 
+export interface WireQueryInterfaceResult {
+  readonly kind: 'interface';
+  readonly callableName: string;
+  readonly version: string;
+  readonly rows: readonly Record<string, unknown>[];
+  readonly total?: number;
+  readonly page?: number;
+  readonly pageCount?: number;
+  readonly nextCursor?: string;
+}
+
+export interface WireOperationInterfaceResult {
+  readonly kind: 'operationInterface';
+  readonly callableName: string;
+  readonly version: string;
+  readonly operation:
+    | 'create'
+    | 'update'
+    | 'delete'
+    | 'upsert'
+    | 'bind'
+    | 'unbind'
+    | 'rebind'
+    | 'batch';
+  readonly output: unknown;
+}
+
+export interface WireBindingSurfaceResult {
+  readonly kind: 'bindingSurface';
+  readonly surfaceId: string;
+  readonly version: string;
+  readonly action: 'read' | 'mutate';
+  readonly status: 'success' | 'refreshFailed';
+  readonly query?: WireQueryInterfaceResult;
+  readonly mutation?: {
+    readonly mutationId: string;
+    readonly result: WireOperationInterfaceResult;
+  };
+  readonly refreshError?: QueryInterfaceErrorDetail;
+}
+
 /** JSON-safe execute result for wire transport (must match the host serializer contract). */
 export type WireExecuteResultJson =
   | {
@@ -327,8 +421,12 @@ export type WireExecuteResultJson =
       readonly total: number;
       readonly limit: number;
       readonly pageCount: number;
+      readonly nextCursor?: string;
       readonly items: WireExecuteResultJson;
     }
+  | WireQueryInterfaceResult
+  | WireOperationInterfaceResult
+  | WireBindingSurfaceResult
   | {
       readonly kind: 'mutation';
       readonly op:
@@ -347,6 +445,7 @@ export type WireExecuteResultJson =
         | 'bindPair'
         | 'bindImportLookup'
         | 'unlinkPair'
+        | 'rebindPair'
         | 'bind'
         | 'updateRelationLogic'
         | 'clearModelData'

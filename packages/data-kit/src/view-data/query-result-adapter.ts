@@ -17,6 +17,7 @@ import {
 } from './tree-builders.js';
 
 const ID_FIELD = '_id';
+const RECORD_REF_FIELD = '$recordRef';
 type ColumnLabelMap = Readonly<Record<string, string>>;
 
 function inferColumns(rows: readonly Record<string, unknown>[]): ColumnDef[] {
@@ -47,6 +48,34 @@ function extractRowRef(
     return { model: sourceModel, id: String(id) };
   }
   return null;
+}
+
+function extractInterfaceRowRef(row: Readonly<Record<string, unknown>>): EntityRowRef | null {
+  const value = row[RECORD_REF_FIELD];
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const recordRef = value as Readonly<Record<string, unknown>>;
+  return typeof recordRef.model === 'string' &&
+    recordRef.model.length > 0 &&
+    typeof recordRef.id === 'string' &&
+    recordRef.id.length > 0
+    ? { model: recordRef.model, id: recordRef.id }
+    : null;
+}
+
+function adaptInterfaceRows(rows: readonly Record<string, unknown>[]): ViewDataShape {
+  if (rows.length === 0) {
+    return { kind: 'empty', reason: 'no_rows' };
+  }
+  const visibleRows = rows.map(({ [RECORD_REF_FIELD]: _recordRef, ...row }) => row);
+  const rowRefs = rows.map(extractInterfaceRowRef);
+  return {
+    kind: 'tabular',
+    columns: inferColumns(visibleRows),
+    rows: visibleRows,
+    ...(rowRefs.some(Boolean) ? { rowRefs } : {}),
+  };
 }
 
 function applyColumnLabels(columns: readonly ColumnDef[], labels?: ColumnLabelMap): ColumnDef[] {
@@ -241,6 +270,9 @@ function isWireExecuteResultJson(x: unknown): x is WireExecuteResultJson {
     kind === 'analysis' ||
     kind === 'groups' ||
     kind === 'paginated' ||
+    kind === 'interface' ||
+    kind === 'operationInterface' ||
+    kind === 'bindingSurface' ||
     kind === 'mutation' ||
     kind === 'previewBind' ||
     kind === 'relationStats'
@@ -282,6 +314,12 @@ export function adaptQueryResult(
         options.columnLabels,
       );
     }
+    case 'interface': {
+      const shape = adaptInterfaceRows(result.rows);
+      return shape.kind === 'tabular'
+        ? { ...shape, columns: applyColumnLabels(shape.columns, options.columnLabels) }
+        : shape;
+    }
     case 'analysis': {
       const preferTree = options.preferAnalysisTree !== false;
       const tree = preferTree ? result.tree : undefined;
@@ -304,6 +342,12 @@ export function adaptQueryResult(
       );
     case 'mutation':
       return { kind: 'empty', reason: 'mutation_result_not_viewable' };
+    case 'operationInterface':
+      return { kind: 'empty', reason: 'operation_interface_result_not_viewable' };
+    case 'bindingSurface':
+      return result.query
+        ? adaptQueryResult(result.query, options)
+        : { kind: 'empty', reason: 'binding_surface_result_not_viewable' };
     case 'previewBind':
       return { kind: 'empty', reason: 'preview_bind_not_viewable' };
     case 'relationStats':

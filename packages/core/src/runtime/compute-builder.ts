@@ -53,6 +53,26 @@ export class ComputeBuilder {
   variance(field: string): ComputeMetricToken {
     return makeToken(field, 'variance');
   }
+
+  sumDistinct(field: string): ComputeMetricToken {
+    return makeToken(field, 'sumDistinct');
+  }
+
+  avgDistinct(field: string): ComputeMetricToken {
+    return makeToken(field, 'avgDistinct');
+  }
+
+  minDistinct(field: string): ComputeMetricToken {
+    return makeToken(field, 'minDistinct');
+  }
+
+  maxDistinct(field: string): ComputeMetricToken {
+    return makeToken(field, 'maxDistinct');
+  }
+
+  countDistinct(field: string): ComputeMetricToken {
+    return makeToken(field, 'countDistinct');
+  }
 }
 
 /** 将 {@link ComputeMetricToken}[] 合并为 {@link AggregateInputEntry} 映射（同字段多算子 → 数组）。 */

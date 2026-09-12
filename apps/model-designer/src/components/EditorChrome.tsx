@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useState,
@@ -23,17 +25,34 @@ import {
   type QueryInterfaceSaveResult,
   type SavedQueryInterfaceView,
 } from './QueryDesignerPanel.js';
+import type {
+  OperationInterfaceSaveResult,
+  SavedOperationInterfaceView,
+} from './OperationDesignerPanel.js';
+import type { SavedBindingSurfaceView } from './BindingSurfaceDesignerPanel.js';
 import { DesignerSelect } from './base/designer-select.js';
 import type { LocaleCode } from '../managers/i18n-manager.js';
-import { IconDocument, IconGrid, IconSettings, IconBell } from './designer-icons.js';
+import { IconDocument, IconGrid, IconLink, IconSettings, IconBell } from './designer-icons.js';
 import type {
   QueryChainState,
   QueryInterface,
+  OperationInterface,
+  BindingSurface,
   QueryModelPickCandidate,
   QueryRelationPickCandidate,
 } from '../query-designer/index.js';
 
-export type ManualPanelKind = 'hierarchy' | 'interfaces' | 'settings' | 'notifications';
+const OperationDesignerPanel = lazy(() => import('./OperationDesignerPanel.js'));
+const BindingSurfaceDesignerPanel = lazy(() => import('./BindingSurfaceDesignerPanel.js'));
+
+export type ManualPanelKind =
+  | 'hierarchy'
+  | 'interfaces'
+  | 'query-interface'
+  | 'operations'
+  | 'bindings'
+  | 'settings'
+  | 'notifications';
 
 export function EditorChrome(props: {
   selectedModelId: string | undefined;
@@ -47,6 +66,10 @@ export function EditorChrome(props: {
     | undefined;
   savedQueryInterfaces: readonly SavedQueryInterfaceView[];
   activeQueryInterface: SavedQueryInterfaceView | undefined;
+  savedOperationInterfaces: readonly SavedOperationInterfaceView[];
+  activeOperationInterface: SavedOperationInterfaceView | undefined;
+  savedBindingSurfaces: readonly SavedBindingSurfaceView[];
+  activeBindingSurface: SavedBindingSurfaceView | undefined;
   onQueryChainChange: (queryChain: QueryChainState) => void;
   onResolveQueryRelationPick: (sourceNodeIds: readonly string[]) => void;
   onCancelQueryRelationPick: () => void;
@@ -63,7 +86,34 @@ export function EditorChrome(props: {
   onClearActiveQueryInterface: () => void;
   onOpenQueryInterface: (id: string) => void;
   onRenameQueryInterface: (id: string, name: string) => void;
+  onPublishQueryInterface: (id: string) => void;
+  onRollbackQueryInterface: (id: string, version: string) => void;
+  onDeprecateQueryInterface: (id: string) => void;
   onDeleteQueryInterface: (id: string) => void;
+  onSaveOperationInterface: (
+    operationInterface: OperationInterface,
+    name: string,
+    description: string,
+    activeInterfaceId?: string,
+  ) => OperationInterfaceSaveResult;
+  onClearActiveOperationInterface: () => void;
+  onOpenOperationInterface: (id: string) => void;
+  onPublishOperationInterface: (id: string) => void;
+  onRollbackOperationInterface: (id: string, version: string) => void;
+  onDeprecateOperationInterface: (id: string) => void;
+  onDeleteOperationInterface: (id: string) => void;
+  onSaveBindingSurface: (
+    surface: BindingSurface,
+    name: string,
+    description: string,
+    activeId?: string,
+  ) => OperationInterfaceSaveResult;
+  onClearActiveBindingSurface: () => void;
+  onOpenBindingSurface: (id: string) => void;
+  onPublishBindingSurface: (id: string) => void;
+  onRollbackBindingSurface: (id: string, version: string) => void;
+  onDeprecateBindingSurface: (id: string) => void;
+  onDeleteBindingSurface: (id: string) => void;
   onRequestClearCanvasSelection: () => void;
   children: ReactNode;
 }): ReactElement {
@@ -92,17 +142,17 @@ export function EditorChrome(props: {
   const [manualPanel, setManualPanel] = useState<ManualPanelKind | null>(null);
 
   useEffect(() => {
-    if (manualPanel === 'interfaces') {
-      return;
-    }
-    if (modes.mode === 'page') {
-      return;
-    }
     if (isQueryDesignerMode(modes.mode)) {
-      return;
+      setManualPanel((current) =>
+        current === 'interfaces' ||
+        current === 'query-interface' ||
+        current === 'operations' ||
+        current === 'bindings'
+          ? current
+          : null,
+      );
     }
-    setManualPanel(null);
-  }, [manualPanel, modes.mode, props.selectedModelId, props.selectedRelationId]);
+  }, [modes.mode]);
 
   useEffect(() => {
     if (modes.mode === 'page') {
@@ -114,11 +164,16 @@ export function EditorChrome(props: {
   const manualOpen = manualPanel !== null;
   const queryOpen = isQueryDesignerMode(modes.mode);
   const shellOpen = passiveOpen || manualOpen || queryOpen;
+  const interfaceWorkspaceOpen =
+    manualPanel === 'interfaces' ||
+    manualPanel === 'query-interface' ||
+    manualPanel === 'operations' ||
+    manualPanel === 'bindings';
 
   const closeAll = useCallback((): void => {
     if (manualOpen) {
       setManualPanel(null);
-      if (modes.mode === 'page') {
+      if (modes.mode === 'page' || (interfaceWorkspaceOpen && queryOpen)) {
         modes.setMode('select');
       }
       return;
@@ -130,7 +185,7 @@ export function EditorChrome(props: {
     if (queryOpen) {
       modes.setMode('select');
     }
-  }, [manualOpen, modes, passiveOpen, props, queryOpen]);
+  }, [interfaceWorkspaceOpen, manualOpen, modes, passiveOpen, props, queryOpen]);
 
   const openManual = useCallback(
     (kind: ManualPanelKind): void => {
@@ -157,7 +212,16 @@ export function EditorChrome(props: {
       return i18n.t('ui', 'notifyCenterTitle');
     }
     if (manualPanel === 'interfaces') {
-      return TEXT_INTERFACE_MANAGER;
+      return i18n.t('ui', 'interfaceWorkspaceQueries');
+    }
+    if (manualPanel === 'query-interface') {
+      return props.activeQueryInterface?.name ?? i18n.t('ui', 'interfaceWorkspaceQueryEditor');
+    }
+    if (manualPanel === 'operations') {
+      return i18n.t('ui', 'operationDesigner');
+    }
+    if (manualPanel === 'bindings') {
+      return i18n.t('ui', 'bindingSurfaceDesigner');
     }
     if (queryOpen) {
       return i18n.t('ui', 'modeQueryDesigner');
@@ -180,15 +244,75 @@ export function EditorChrome(props: {
     }
     if (manualPanel === 'interfaces') {
       return (
-        <QueryInterfaceManagerPanel
-          savedQueryInterfaces={props.savedQueryInterfaces}
-          onOpenQueryInterface={(id) => {
-            props.onOpenQueryInterface(id);
-            setManualPanel(null);
-          }}
-          onRenameQueryInterface={props.onRenameQueryInterface}
-          onDeleteQueryInterface={props.onDeleteQueryInterface}
+        <div className="interface-manager-stack interface-workspace-query-list">
+          <QueryInterfaceManagerPanel
+            savedQueryInterfaces={props.savedQueryInterfaces}
+            onOpenQueryInterface={(id) => {
+              props.onOpenQueryInterface(id);
+              setManualPanel('query-interface');
+            }}
+            onRenameQueryInterface={props.onRenameQueryInterface}
+            onPublishQueryInterface={props.onPublishQueryInterface}
+            onRollbackQueryInterface={props.onRollbackQueryInterface}
+            onDeprecateQueryInterface={props.onDeprecateQueryInterface}
+            onDeleteQueryInterface={props.onDeleteQueryInterface}
+          />
+        </div>
+      );
+    }
+    if (manualPanel === 'query-interface') {
+      return (
+        <QueryDesignerPanel
+          selectedModelId={props.selectedModelId}
+          queryChain={props.queryChain}
+          pendingQueryRelationPick={props.pendingQueryRelationPick}
+          pendingQueryModelPick={props.pendingQueryModelPick}
+          activeQueryInterface={props.activeQueryInterface}
+          onQueryChainChange={props.onQueryChainChange}
+          onResolveQueryRelationPick={props.onResolveQueryRelationPick}
+          onCancelQueryRelationPick={props.onCancelQueryRelationPick}
+          onResolveQueryModelPick={props.onResolveQueryModelPick}
+          onCancelQueryModelPick={props.onCancelQueryModelPick}
+          onSaveQueryInterface={props.onSaveQueryInterface}
+          onClearActiveQueryInterface={props.onClearActiveQueryInterface}
         />
+      );
+    }
+    if (manualPanel === 'operations') {
+      return (
+        <Suspense fallback={<div className="operation-designer-loading" aria-busy="true" />}>
+          <OperationDesignerPanel
+            savedOperationInterfaces={props.savedOperationInterfaces}
+            activeOperationInterface={props.activeOperationInterface}
+            selectedModelId={props.selectedModelId}
+            onSaveOperationInterface={props.onSaveOperationInterface}
+            onClearActiveOperationInterface={props.onClearActiveOperationInterface}
+            onOpenOperationInterface={props.onOpenOperationInterface}
+            onPublishOperationInterface={props.onPublishOperationInterface}
+            onRollbackOperationInterface={props.onRollbackOperationInterface}
+            onDeprecateOperationInterface={props.onDeprecateOperationInterface}
+            onDeleteOperationInterface={props.onDeleteOperationInterface}
+          />
+        </Suspense>
+      );
+    }
+    if (manualPanel === 'bindings') {
+      return (
+        <Suspense fallback={<div className="operation-designer-loading" aria-busy="true" />}>
+          <BindingSurfaceDesignerPanel
+            savedBindingSurfaces={props.savedBindingSurfaces}
+            activeBindingSurface={props.activeBindingSurface}
+            savedQueryInterfaces={props.savedQueryInterfaces}
+            savedOperationInterfaces={props.savedOperationInterfaces}
+            onSaveBindingSurface={props.onSaveBindingSurface}
+            onClearActiveBindingSurface={props.onClearActiveBindingSurface}
+            onOpenBindingSurface={props.onOpenBindingSurface}
+            onPublishBindingSurface={props.onPublishBindingSurface}
+            onRollbackBindingSurface={props.onRollbackBindingSurface}
+            onDeprecateBindingSurface={props.onDeprecateBindingSurface}
+            onDeleteBindingSurface={props.onDeleteBindingSurface}
+          />
+        </Suspense>
       );
     }
     if (manualPanel === 'settings') {
@@ -336,6 +460,53 @@ export function EditorChrome(props: {
   };
 
   const body = renderBody();
+  const workspaceBody = interfaceWorkspaceOpen ? (
+    <div className="interface-workspace-layout">
+      <aside
+        className="interface-workspace-navigation"
+        aria-label={i18n.t('ui', 'interfaceManager')}
+      >
+        <div className="interface-workspace-navigation-title">
+          <span>{i18n.t('ui', 'interfaceWorkspaceTitle')}</span>
+          <small>{config.activeLibraryName ?? '-'}</small>
+        </div>
+        <nav>
+          <button
+            type="button"
+            data-active={
+              manualPanel === 'interfaces' || manualPanel === 'query-interface' ? 'true' : 'false'
+            }
+            onClick={() => setManualPanel('interfaces')}
+          >
+            <IconDocument />
+            <span>{i18n.t('ui', 'interfaceWorkspaceQueries')}</span>
+            <strong>{props.savedQueryInterfaces.length}</strong>
+          </button>
+          <button
+            type="button"
+            data-active={manualPanel === 'operations' ? 'true' : 'false'}
+            onClick={() => setManualPanel('operations')}
+          >
+            <IconLink />
+            <span>{i18n.t('ui', 'interfaceWorkspaceOperations')}</span>
+            <strong>{props.savedOperationInterfaces.length}</strong>
+          </button>
+          <button
+            type="button"
+            data-active={manualPanel === 'bindings' ? 'true' : 'false'}
+            onClick={() => setManualPanel('bindings')}
+          >
+            <IconGrid />
+            <span>{i18n.t('ui', 'interfaceWorkspaceBindings')}</span>
+            <strong>{props.savedBindingSurfaces.length}</strong>
+          </button>
+        </nav>
+      </aside>
+      <main className="interface-workspace-content">{body}</main>
+    </div>
+  ) : (
+    body
+  );
 
   return (
     <>
@@ -354,8 +525,8 @@ export function EditorChrome(props: {
         <button
           type="button"
           className="designer-fab designer-fab--panel"
-          data-active={manualPanel === 'interfaces' ? 'true' : 'false'}
-          title={TEXT_INTERFACE_MANAGER}
+          data-active={interfaceWorkspaceOpen ? 'true' : 'false'}
+          title={i18n.t('ui', 'interfaceManager')}
           onClick={() => openManual('interfaces')}
         >
           <IconDocument />
@@ -388,19 +559,25 @@ export function EditorChrome(props: {
       <AppDrawer
         open={shellOpen}
         title={shellOpen ? title() : ''}
-        eyebrow="ModeDB"
+        eyebrow={interfaceWorkspaceOpen ? i18n.t('ui', 'interfaceWorkspaceEyebrow') : 'ModeDB'}
         side="right"
-        width={430}
+        width={interfaceWorkspaceOpen ? 'calc(100vw - 32px)' : 430}
         closeLabel={i18n.t('ui', 'notifyDismiss')}
         onClose={closeAll}
-        bodyClassName="designer-panel-body designer-scrollbar-hide"
+        className={interfaceWorkspaceOpen ? 'designer-interface-workspace' : undefined}
+        bodyClassName={[
+          'designer-panel-body',
+          'designer-scrollbar-hide',
+          queryOpen && !interfaceWorkspaceOpen ? 'designer-panel-body--query' : '',
+          interfaceWorkspaceOpen ? 'designer-panel-body--interface-workspace' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         labelledById="designer-drawer-title"
         withScrim={false}
       >
-        {body}
+        {workspaceBody}
       </AppDrawer>
     </>
   );
 }
-
-const TEXT_INTERFACE_MANAGER = '\u63a5\u53e3\u7ba1\u7406\u5668';

@@ -130,6 +130,11 @@
   line-height: 1;
 }
 
+.mode-ui-close-icon {
+  display: block;
+  flex: none;
+}
+
 .mode-ui-drawer-close:hover,
 .mode-ui-notification-close:hover,
 .mode-ui-notification-action:hover:not(:disabled) {
@@ -486,6 +491,11 @@
   color: var(--mode-ui-level-color);
   font-size: 14px;
   font-weight: 900;
+}
+
+.mode-ui-notification-icon > svg {
+  display: block;
+  flex: none;
 }
 
 .mode-ui-toast-body,

@@ -43,6 +43,16 @@ export type {
 } from './binding/binding-executor.js';
 export type { BindingSession, BindingSessionOptions } from './binding/binding-session.js';
 export { createBindingSession } from './binding/binding-session.js';
+export type {
+  BindingSurfaceExecutor,
+  BindingSurfaceSessionOptions,
+  BindingSurfaceMutationInput,
+  BindingSurfaceSession,
+} from './binding/binding-surface-session.js';
+export {
+  createBindingSurfaceSession,
+  bindingSurfaceRecordRefs,
+} from './binding/binding-surface-session.js';
 export { assertOpAllowedForMode, BindingModeError } from './binding/mode-guards.js';
 export {
   WIRE_EMPTY_TRAILING,
@@ -169,3 +179,13 @@ export {
 } from './binding/insert-many-failures.js';
 
 export type { RemoteExecuteSnapshot, AggregateInputEntry } from '@mode-db/shared';
+export type {
+  BindingSurfaceMutationKind,
+  BindingSurfaceOperationType,
+  BindingSurfaceInterfaceReference,
+  BindingSurfaceMutationTrigger,
+  BindingSurfaceValueSource,
+  BindingSurfaceParameterBinding,
+  PublishedBindingSurfaceMutation,
+  PublishedBindingSurfaceContract,
+} from '@mode-db/shared';

@@ -9,6 +9,7 @@ const pairs = [
   ['src/components/import-panel.css', 'dist/components/import-panel.css'],
   ['src/components/data-view-panel.css', 'dist/components/data-view-panel.css'],
   ['src/components/app-shell.css', 'dist/components/app-shell.css'],
+  ['src/components/binding-surface.css', 'dist/components/binding-surface.css'],
 ];
 
 for (const [fromRel, toRel] of pairs) {

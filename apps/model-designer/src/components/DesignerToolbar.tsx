@@ -348,7 +348,7 @@ export class DesignerToolbar extends DesignerComponent<
           )}
         </div>
 
-        <div className="designer-float-bottom">
+        <div className="designer-float-top-left">
           <button
             type="button"
             className="designer-fab designer-fab--ghost"
@@ -450,6 +450,9 @@ export class DesignerToolbar extends DesignerComponent<
           >
             <IconExport />
           </button>
+        </div>
+
+        <div className="designer-float-top-right">
           <button
             type="button"
             className="designer-fab designer-fab--ghost"
@@ -750,6 +753,9 @@ export class DesignerToolbar extends DesignerComponent<
           >
             <IconForceLayout />
           </button>
+        </div>
+
+        <div className="designer-float-bottom">
           <button
             type="button"
             className="designer-fab designer-fab--ghost"

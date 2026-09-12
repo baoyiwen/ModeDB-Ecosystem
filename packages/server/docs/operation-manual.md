@@ -16,6 +16,16 @@ modeldb-server ls -c modeldb.config.json
 modeldb-server create-db <db-name> -c modeldb.config.json
 ```
 
+**监听地址（host）**：默认绑定 **`127.0.0.1`**，仅本机可连。要让同一局域网内其它设备连接，用 **`--host 0.0.0.0`** 监听所有网卡：
+
+```bash
+modeldb-server start -c modeldb.config.json --host 0.0.0.0
+# 仓库根等价脚本：
+pnpm run start:server:network
+```
+
+局域网访问需放行防火墙对应端口；**公网**必须置于 **TLS 反向代理（WSS）** 之后，不要以明文 `ws://` 暴露到公网。
+
 ## 2. 常见职责
 
 - 列出逻辑库。

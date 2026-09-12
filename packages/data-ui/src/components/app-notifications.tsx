@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import './app-shell.css';
+import { AppCloseIcon } from './app-close-icon.js';
 
 export type AppNotificationLevel = 'info' | 'success' | 'warning' | 'error';
 
@@ -184,7 +185,7 @@ function AppToastCard(props: {
           aria-label={dismissLabel}
           onClick={requestExit}
         >
-          <span aria-hidden="true">x</span>
+          <AppCloseIcon />
         </button>
       </div>
       <div className="mode-ui-toast-progress" aria-hidden>
@@ -358,7 +359,7 @@ export function AppNotificationCenter(props: {
                       onDismiss(item.id);
                     }}
                   >
-                    <span aria-hidden="true">x</span>
+                    <AppCloseIcon />
                   </button>
                 ) : item.read === false ? (
                   <span className="mode-ui-notification-unread-dot" aria-hidden />

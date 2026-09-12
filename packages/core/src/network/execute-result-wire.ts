@@ -52,6 +52,7 @@ export function serializeExecuteResultForWire(result: unknown): WireExecuteResul
       total: result.total,
       limit: result.limit,
       pageCount: result.pageCount,
+      ...(result.nextCursor ? { nextCursor: result.nextCursor } : {}),
       items: serializeExecuteResultForWire(result.items),
     };
   }

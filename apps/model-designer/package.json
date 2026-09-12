@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@mode-db/data-kit": "workspace:*",
     "@mode-db/data-ui": "workspace:*",
     "@mode-db/sdk": "workspace:*",
     "react": "^19.2.7",

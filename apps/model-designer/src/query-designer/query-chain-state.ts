@@ -858,6 +858,104 @@ export function reverseQueryChainPrimaryPath(
   };
 }
 
+/**
+ * Nearest ancestor (via inheritance edges) of {@link modelId} that already
+ * exists as a node in the query graph, if any.
+ */
+function nearestInheritedAncestorOnGraph(
+  chain: QueryChainState,
+  modelId: string,
+  relations: readonly EngineRelationEdge[],
+): string | undefined {
+  const graphModelIds = new Set(queryChainModelIds(chain, relations));
+  for (const ancestor of collectAncestorRelations(modelId, relations)) {
+    if (graphModelIds.has(ancestor.ownerModelId)) {
+      return ancestor.ownerModelId;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Fold an inherited child model onto the node of its already-present ancestor
+ * instead of spawning a distinct node. A child is an avatar of its parent, so
+ * selecting it re-homes the shared node onto the child identity (root case) and
+ * keeps the child active. Non-root ancestors keep their node but stay active,
+ * because a target node's model cannot be re-homed through usage metadata alone.
+ */
+function rebaseInheritedIdentityToChild(
+  chain: QueryChainState,
+  childModelId: string,
+  ancestorModelId: string,
+  relations: readonly EngineRelationEdge[],
+): QueryChainState {
+  const collapse: QueryChainState = { ...chain, activeModelId: ancestorModelId };
+  if (chain.rootModelId !== ancestorModelId) {
+    return collapse;
+  }
+
+  const byId = new Map(relations.map((relation) => [relation.id, relation]));
+  let relationUsages = chain.relationUsages;
+  for (const relationKey of queryChainAllRelationKeys(chain)) {
+    const { relationId, direction } = decodeQueryRelationId(relationKey);
+    const relation = byId.get(relationId);
+    if (!relation) {
+      continue;
+    }
+    // The old root as a relation target cannot be re-homed onto the child, so
+    // fall back to a safe collapse rather than corrupt the graph.
+    if (queryRelationTargetModelId(relation, direction) === ancestorModelId) {
+      return collapse;
+    }
+    const currentUsage = relationUsages?.[relationKey];
+    if (currentUsage?.kind === 'inherited') {
+      continue;
+    }
+    if (queryRelationSourceModelId(relation, direction, currentUsage) !== ancestorModelId) {
+      continue;
+    }
+    const inherited = inheritedRelationCandidate(childModelId, relation, relations);
+    if (!inherited || inherited.direction !== direction) {
+      return collapse;
+    }
+    relationUsages = { ...(relationUsages ?? {}), [relationKey]: inherited.usage };
+  }
+
+  return {
+    ...chain,
+    rootModelId: childModelId,
+    relationUsages,
+    activeModelId: childModelId,
+  };
+}
+
+/**
+ * Resolve a click on an inheritance edge. The edge itself is never a traversal
+ * step; it selects the child model as an avatar of its parent.
+ */
+function nextQueryChainFromInheritEdge(
+  chain: QueryChainState,
+  relation: EngineRelationEdge,
+  relations: readonly EngineRelationEdge[],
+): QueryChainState {
+  const childModelId = relation.target_model_id;
+  const parentModelId = relation.source_model_id;
+  if (!chain.rootModelId) {
+    return { ...EMPTY_QUERY_CHAIN_STATE, rootModelId: childModelId, activeModelId: childModelId };
+  }
+  const graphModelIds = new Set(queryChainModelIds(chain, relations));
+  if (graphModelIds.has(childModelId)) {
+    return { ...chain, activeModelId: childModelId };
+  }
+  const ancestor =
+    nearestInheritedAncestorOnGraph(chain, childModelId, relations) ??
+    (graphModelIds.has(parentModelId) ? parentModelId : undefined);
+  if (ancestor) {
+    return rebaseInheritedIdentityToChild(chain, childModelId, ancestor, relations);
+  }
+  return chain;
+}
+
 export function nextQueryChainFromModelPick(
   chain: QueryChainState,
   modelId: string,
@@ -870,6 +968,11 @@ export function nextQueryChainFromModelPick(
   const graphModelIds = queryChainModelIds(chain, relations);
   if (graphModelIds.includes(modelId)) {
     return { ...chain, activeModelId: modelId };
+  }
+
+  const inheritedAncestor = nearestInheritedAncestorOnGraph(chain, modelId, relations);
+  if (inheritedAncestor) {
+    return rebaseInheritedIdentityToChild(chain, modelId, inheritedAncestor, relations);
   }
 
   const next = findTraversalRelationToModel(chain, modelId, relations);
@@ -889,6 +992,10 @@ export function nextQueryChainFromRelationPick(
   const relation = relations.find((item) => item.id === relationId);
   if (!relation) {
     return chain;
+  }
+
+  if (isInheritRelation(relation.kind)) {
+    return nextQueryChainFromInheritEdge(chain, relation, relations);
   }
 
   if (!chain.rootModelId) {
@@ -995,6 +1102,11 @@ function allQueryRelationPickCandidates(
   relations: readonly EngineRelationEdge[],
   graph: QueryGraphInstances,
 ): QueryRelationPickCandidate[] {
+  // Inheritance edges never spawn a traversal node; picking a child model is
+  // resolved as an inherited-identity rebase, not as a relation candidate.
+  if (isInheritRelation(relation.kind)) {
+    return [];
+  }
   const candidates: QueryRelationPickCandidate[] = [];
   const addCandidate = (
     sourceNodeId: string,
@@ -1147,6 +1259,11 @@ function findRelationStep(
   const matches: { relation: EngineRelationEdge; direction: QueryGraphEdgeDirection }[] = [];
   for (const relation of relations) {
     if (selectedRelationIds.has(relation.id)) {
+      continue;
+    }
+    // Inheritance edges are not traversable query steps: a child model is an
+    // avatar of its parent, not a distinct node reachable through a relation.
+    if (isInheritRelation(relation.kind)) {
       continue;
     }
     if (relation.source_model_id === fromModelId && relation.target_model_id === toModelId) {

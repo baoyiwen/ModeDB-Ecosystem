@@ -9,6 +9,7 @@ import type { EngineRelationEdge } from '../types/engine-schema.js';
 import { buildPlacedNodes, type PlacedNode } from './hit-test.js';
 import {
   directedCurvedSegment,
+  directedPairedCurvedSegment,
   edgePerpOffsetById,
   edgeSelfLoopSlotById,
   RELATION_INTRA_PAIR_GAP,
@@ -246,17 +247,18 @@ export function paintScene(params: PaintSceneParams): void {
       drawDirectedRelation(ctx, seg, color, lw, arrow, true);
       return { forward: segmentLabelAnchor(seg) };
     }
-    const forward = directedCurvedSegment(
+    const segmentForPair = meta.pair_bend ? directedPairedCurvedSegment : directedCurvedSegment;
+    const forward = segmentForPair(
       a,
       b,
       slotOff + RELATION_INTRA_PAIR_GAP,
-      meta.forward_bend,
+      meta.pair_bend ?? meta.forward_bend,
     );
-    const reverse = directedCurvedSegment(
+    const reverse = segmentForPair(
       b,
       a,
       -(slotOff - RELATION_INTRA_PAIR_GAP),
-      meta.reverse_bend,
+      meta.pair_bend ?? meta.reverse_bend,
     );
     drawDirectedRelation(ctx, forward, color, lw, arrow, false);
     drawDirectedRelation(ctx, reverse, color, lw, arrow, false);

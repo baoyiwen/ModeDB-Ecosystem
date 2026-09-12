@@ -19,10 +19,8 @@ import {
 } from '../config/engine-prop-types.js';
 import { resolveI18nForLocale } from '../utils/i18n-resolve.js';
 import { filterUniqueNameInput, isValidUniqueName } from '../utils/name-validation.js';
-
-function sortPropsBySort(props: readonly PropObject[]): PropObject[] {
-  return [...props].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
-}
+import { sortPropsBySort } from '../utils/prop-order.js';
+import { createUuid } from '../utils/random-id.js';
 
 type DraftProp = {
   name: string;
@@ -273,7 +271,7 @@ export function PropsEditor(props: {
     const ordered = sortPropsBySort(model.props_objects_array);
     const nt = normalizeLegacyPropType(draft.type);
     const newProp: PropObject = {
-      id: crypto.randomUUID(),
+      id: createUuid(),
       name: draft.name.trim(),
       type: nt,
       engine_type: dataTypeToEngineCode(nt),

@@ -6,6 +6,7 @@ import {
 } from '../config/relation-cardinality.js';
 import { makeUniqueName, sanitizeUniqueNameFragment } from '../utils/name-validation.js';
 import { relationNamesUsedInScope } from '../utils/relation-identity.js';
+import { createUuid } from '../utils/random-id.js';
 
 export { GRAPH_NODE_LINK_KIND } from '../config/graph-edge-kinds.js';
 
@@ -47,7 +48,7 @@ export class GraphLinker {
     used.add(forwardName);
     const reverseName = makeUniqueName(reverseBase, used);
 
-    const id = crypto.randomUUID();
+    const id = createUuid();
     this.data.addRelation({
       id,
       source_model_id: sourceModelId,

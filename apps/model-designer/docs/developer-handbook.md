@@ -152,8 +152,13 @@
 - `sys_layer_type`
 - `sys_data_asset_map`
 - `sys_designer_graph`
+- `sys_query_interface`
+- `sys_operation_interface`
+- `sys_binding_surface`
 
 如果你要扩展设计器专属库 schema，这里是第一入口。
+
+接口资产注册表分别由 `sync/query-interface-registry.ts`、`sync/operation-interface-registry.ts` 和 `sync/binding-surface-registry.ts` 维护。三者都必须保留逻辑资产 ID 与引擎行 `_id` 的区别，并按 `library_code` 做库隔离。
 
 ### 4.3 业务库 catalog 导入
 
@@ -348,6 +353,32 @@ pnpm --filter model-designer typecheck
 - `managers/data-manager.ts`
 - `sync/designer-push-sync.ts`
 - `sync/engine-catalog-import.ts`
+
+### 8.5 改画布浮层工具栏（分组/位置）
+
+画布浮动按钮按功能分为三个浮层区域：
+
+- **左上角**：视图与保存（平移、搜索、撤销、重做、保存、拉取）
+- **右上角**：数据库管理（备份、恢复、导出、导入、清除数据、重置数据），并对右上角落的“断开连接”按钮做偏移避让
+- **底部中间**：画布布局（力导向布局、吸附与对齐、点阵网格）
+
+看：
+
+- `components/DesignerToolbar.tsx`
+- `styles/designer-shell.css` 的 `.designer-float-top-left` / `.designer-float-top-right` / `.designer-float-bottom`
+
+改动按钮分组时，务必让 JSX 分组与这三个 CSS 容器保持一致，并检查窄屏 / 缩放下的换行与避让表现。
+
+### 8.6 改查询设计器链路（含继承语义）
+
+看：
+
+- `query-designer/query-chain-state.ts`
+- `query-designer/query-interface-builder.ts`
+- `query-designer/query-execution-compiler.ts`
+- `query-designer/operation-execution-compiler.ts`
+
+关键约束：**继承关系（`modelInherits`）不是可遍历查询步骤**，子模型是父模型的分身。选择继承子模型时应通过 `rebaseInheritedIdentityToChild` 复用已有节点身份，而不是新建查询节点；继承边不得进入 `findRelationStep` / `allQueryRelationPickCandidates` / `outgoingRelationsForModel` 的候选。详见 `docs/query-designer-architecture.md` §10。
 
 ## 9. 开发注意事项
 

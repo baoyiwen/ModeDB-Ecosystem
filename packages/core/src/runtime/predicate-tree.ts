@@ -39,7 +39,16 @@ export interface CallbackNode {
   readonly label?: string;
 }
 
-export type PredicateNode = AtomNode | GroupNode | CallbackNode;
+export type RelationQuantifier = 'any' | 'all' | 'none';
+
+export interface RelationPredicateNode {
+  readonly type: 'relation';
+  readonly relationName: string;
+  readonly quantifier: RelationQuantifier;
+  readonly target: PredicateNode;
+}
+
+export type PredicateNode = AtomNode | GroupNode | CallbackNode | RelationPredicateNode;
 
 /** 谓词求值失败类别（属性不匹配 / 回调假 / OR 全假） */
 export type PredicateFailureKind = 'ATTRIBUTE_MISMATCH' | 'CALLBACK_FALSE' | 'OR_UNSATISFIED';
@@ -149,6 +158,8 @@ export function evaluatePredicate(
         failureKind: 'OR_UNSATISFIED',
       });
     }
+    case 'relation':
+      throw new Error('Relation predicates require QueryChain execution context.');
     default: {
       const _x: never = node;
       return _x;
@@ -170,6 +181,9 @@ export function clonePredicateNode(node: PredicateNode): PredicateNode {
   if (node.type === 'callback') {
     return { type: 'callback', fn: node.fn, label: node.label };
   }
+  if (node.type === 'relation') {
+    return { ...node, target: clonePredicateNode(node.target) };
+  }
   return {
     type: 'group',
     logic: node.logic,
@@ -184,6 +198,14 @@ export function serializePredicate(node: PredicateNode): Record<string, unknown>
   }
   if (node.type === 'callback') {
     return { type: 'callback', label: node.label ?? '(fn)' };
+  }
+  if (node.type === 'relation') {
+    return {
+      type: 'relation',
+      relationName: node.relationName,
+      quantifier: node.quantifier,
+      target: serializePredicate(node.target),
+    };
   }
   return {
     type: 'group',
@@ -214,6 +236,25 @@ export function deserializePredicate(obj: Record<string, unknown>): PredicateNod
       `deserializePredicate: callback nodes cannot be restored from JSON (label=${String(obj.label ?? '')}).`,
     );
   }
+  if (t === 'relation') {
+    if (!isRecord(obj.target)) {
+      throw new Error('deserializePredicate: relation.target must be an object.');
+    }
+    const quantifier = obj.quantifier;
+    if (quantifier !== 'any' && quantifier !== 'all' && quantifier !== 'none') {
+      throw new Error('deserializePredicate: relation.quantifier must be any/all/none.');
+    }
+    const relationName = String(obj.relationName ?? '').trim();
+    if (!relationName) {
+      throw new Error('deserializePredicate: relation.relationName is required.');
+    }
+    return {
+      type: 'relation',
+      relationName,
+      quantifier,
+      target: deserializePredicate(obj.target),
+    };
+  }
   if (t === 'group') {
     const logic = obj.logic === 'OR' ? 'OR' : 'AND';
     const raw = obj.children;
@@ -238,6 +279,9 @@ export function formatPredicateNode(node: PredicateNode): string {
   if (node.type === 'callback') {
     return node.label ? `callback(${node.label})` : 'callback()';
   }
+  if (node.type === 'relation') {
+    return `${node.quantifier.toUpperCase()}(${node.relationName})`;
+  }
   return `${node.logic}(${node.children.length})`;
 }
 
@@ -256,7 +300,20 @@ export function treeHasCallback(node: PredicateNode): boolean {
   if (node.type === 'atom') {
     return false;
   }
+  if (node.type === 'relation') {
+    return treeHasCallback(node.target);
+  }
   return node.children.some(treeHasCallback);
+}
+
+export function treeHasRelationPredicate(node: PredicateNode): boolean {
+  if (node.type === 'relation') {
+    return true;
+  }
+  if (node.type === 'atom' || node.type === 'callback') {
+    return false;
+  }
+  return node.children.some(treeHasRelationPredicate);
 }
 
 /** 整棵树等价于单个 `_id`/`id` 的 eq 且树中无 callback 时返回该 atom */

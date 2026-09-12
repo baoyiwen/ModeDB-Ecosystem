@@ -1,0 +1,261 @@
+.binding-surface-empty {
+  padding: 20px 4px;
+  color: #5a697f;
+  font:
+    13px/1.5 system-ui,
+    sans-serif;
+}
+
+.binding-surface-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  padding: 8px 12px;
+  border-block: 1px solid #ccd6e4;
+  background: #f4f7fb;
+  color: #334155;
+  font:
+    13px/1.4 system-ui,
+    sans-serif;
+}
+
+.binding-surface-status[data-state='refresh-failed'],
+.binding-surface-status[data-state='needs-refresh'] {
+  border-color: #e4c16f;
+  background: #fff9e9;
+  color: #71551a;
+}
+
+.binding-surface-status[data-state='error'] {
+  border-color: #e4a09a;
+  background: #fff3f2;
+  color: #8a302b;
+}
+
+.binding-surface-status button,
+.binding-surface-inline-editor button,
+.binding-surface-form button,
+.binding-surface-relations button,
+.binding-surface-pagination button {
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid #9eacbe;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #203047;
+  font:
+    600 12px/1 system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+
+.binding-surface-status button:hover:not(:disabled),
+.binding-surface-inline-editor button:hover:not(:disabled),
+.binding-surface-form button:hover:not(:disabled),
+.binding-surface-relations button:hover:not(:disabled),
+.binding-surface-pagination button:hover:not(:disabled) {
+  border-color: #24519c;
+  background: #e8f0fb;
+  color: #17396f;
+}
+
+.binding-surface-status button:disabled,
+.binding-surface-inline-editor button:disabled,
+.binding-surface-form button:disabled,
+.binding-surface-relations button:disabled,
+.binding-surface-pagination button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.binding-surface-table-wrap {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: system-ui, sans-serif;
+}
+
+.binding-surface-table-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  border: 1px solid #ccd6e4;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.binding-surface-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #162033;
+  font-size: 13px;
+}
+
+.binding-surface-table th,
+.binding-surface-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e0e7f0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.binding-surface-table th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  background: #e8eef6;
+  color: #334155;
+  font-weight: 650;
+}
+
+.binding-surface-table tbody tr:hover {
+  background: #f6f9fc;
+}
+
+.binding-surface-inline-editor {
+  display: grid;
+  grid-template-columns: minmax(96px, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 170px;
+}
+
+.binding-surface-inline-editor input:not([type='checkbox']),
+.binding-surface-form input:not([type='checkbox']),
+.binding-surface-relations input {
+  min-width: 0;
+  min-height: 30px;
+  padding: 5px 8px;
+  border: 1px solid #9eacbe;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #162033;
+  font:
+    13px/1.3 system-ui,
+    sans-serif;
+}
+
+.binding-surface-inline-editor input:focus,
+.binding-surface-form input:focus,
+.binding-surface-relations input:focus {
+  border-color: #24519c;
+  outline: 2px solid rgba(36, 81, 156, 0.14);
+  outline-offset: 0;
+}
+
+.binding-surface-inline-editor input[type='checkbox'],
+.binding-surface-form input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.binding-surface-danger-button {
+  border-color: #d58b84 !important;
+  color: #8a302b !important;
+}
+
+.binding-surface-pagination {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  color: #5a697f;
+  font:
+    12px/1.4 system-ui,
+    sans-serif;
+}
+
+.binding-surface-form,
+.binding-surface-relations {
+  display: grid;
+  gap: 0;
+  border-block: 1px solid #ccd6e4;
+  font-family: system-ui, sans-serif;
+}
+
+.binding-surface-form-row,
+.binding-surface-relation-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 1px solid #e0e7f0;
+}
+
+.binding-surface-form-row:last-child,
+.binding-surface-relation-row:last-child {
+  border-bottom: 0;
+}
+
+.binding-surface-form-row label,
+.binding-surface-relation-row label {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  color: #4b5d73;
+  font-size: 12px;
+}
+
+.binding-surface-form-row code {
+  min-height: 30px;
+  padding: 6px 8px;
+  overflow: hidden;
+  border: 1px solid #d8e0ea;
+  border-radius: 4px;
+  background: #f4f7fb;
+  color: #334155;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.binding-surface-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 4px;
+}
+
+.binding-surface-relation-row {
+  grid-template-columns: minmax(120px, 0.6fr) minmax(180px, 1fr) auto;
+}
+
+.binding-surface-relation-name {
+  align-self: center;
+  overflow: hidden;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.binding-surface-inline-error {
+  padding: 9px 4px;
+  border-top: 1px solid #e4a09a;
+  color: #8a302b;
+  font:
+    12px/1.4 system-ui,
+    sans-serif;
+}
+
+@media (max-width: 640px) {
+  .binding-surface-inline-editor {
+    grid-template-columns: minmax(88px, 1fr);
+  }
+
+  .binding-surface-form-row,
+  .binding-surface-relation-row {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .binding-surface-form-row button,
+  .binding-surface-relation-row button {
+    justify-self: start;
+  }
+}

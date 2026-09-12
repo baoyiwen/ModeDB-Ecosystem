@@ -9,6 +9,53 @@ export {
   encodeOutboundTransportBuffer,
 } from './binary-transport.js';
 export { deriveWireSessionKey, encodeWirePayload, decodeWirePayload } from './wire-codec.js';
+export {
+  queryParameterPlaceholder,
+  isQueryParameterPlaceholder,
+  queryInterfaceAccessKeyDigest,
+} from './published-query-interface.js';
+export type {
+  PublishedQueryParameterType,
+  PublishedQueryParameter,
+  QueryParameterPlaceholder,
+  PublishedQueryRowAdapter,
+  PublishedQueryAggregationAdapter,
+  PublishedQueryResultAdapter,
+  PublishedQueryExecutionTemplate,
+} from './published-query-interface.js';
+export { isPublishedBindingSurfaceContract } from './binding-surface.js';
+export type {
+  BindingSurfaceMutationKind,
+  BindingSurfaceOperationType,
+  BindingSurfaceInterfaceReference,
+  BindingSurfaceMutationTrigger,
+  BindingSurfaceValueSource,
+  BindingSurfaceParameterBinding,
+  PublishedBindingSurfaceMutation,
+  PublishedBindingSurfaceContract,
+  PublishedBindingSurfacePermissionPolicy,
+} from './binding-surface.js';
+export {
+  bindPublishedOperationBatchExecutionTemplate,
+  bindPublishedOperationExecutionTemplate,
+  interfaceParameterPlaceholder,
+  isInterfaceParameterPlaceholder,
+  isPublishedOperationExecutionTemplate,
+} from './published-operation-interface.js';
+export type {
+  BoundPublishedOperationBatch,
+  InterfaceParameterPlaceholder,
+  PublishedOperationTemplateOperation,
+  PublishedOperationExecutionTemplate,
+} from './published-operation-interface.js';
+export {
+  queryInterfaceErrorDetailFromMessage,
+  isQueryInterfaceErrorDetail,
+} from './query-interface-errors.js';
+export type {
+  QueryInterfaceErrorCategory,
+  QueryInterfaceErrorDetail,
+} from './query-interface-errors.js';
 export type {
   ManagementBackupCreateResponse,
   ManagementBackupImportResponse,
@@ -39,6 +86,11 @@ export type {
   WireRelationSelfLoopPolicy,
   WireMatchPredicate,
   WireRowRef,
+  WireBindingSurfacePageOptions,
+  WireBindingSurfaceAction,
+  WireQueryInterfaceResult,
+  WireOperationInterfaceResult,
+  WireBindingSurfaceResult,
   WireBindStrategy,
   WireRelationStats,
 } from './wire-protocol-exports.js';
@@ -47,6 +99,8 @@ export {
   WireQueryError,
   finalizeRemoteExecuteSnapshot,
   queryPlanHasSerializedCallback,
+  queryPlanHasRelationPredicate,
+  analysisComputeHasDistinct,
   FilterBuilder,
   PredicateComposer,
   ComputeBuilder,
@@ -84,6 +138,8 @@ export type {
   AggregateOp,
   AggregateInputEntry,
   QueryExecuteOptions,
+  QueryOrderEntry,
+  QuerySortDirection,
   QueryStartSpec,
   QueryPlanASTv2,
   WireHopJSON,
@@ -97,6 +153,8 @@ export type {
   CallbackNode,
   PredicateStandardOperator,
   PredicateAtomOperator,
+  RelationPredicateNode,
+  RelationQuantifier,
   ScalarOperator,
   WireRow,
   RecordPredicate,

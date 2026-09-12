@@ -3,6 +3,7 @@ import { AppNotificationToastStack } from '@mode-db/data-ui';
 import { useDesigner } from '../context/designer-context.js';
 import { TOAST_DURATION_MS } from '../managers/notification-manager.js';
 import { AsyncOperationToast } from './AsyncOperationToast.js';
+import { NotificationLevelIcon } from './notification-level-icon.js';
 
 /** Canvas top-right toast stack, rendered with the shared app notification component. */
 export function NotificationToasts(): ReactElement | null {
@@ -20,6 +21,7 @@ export function NotificationToasts(): ReactElement | null {
       toasts={notifications.toasts}
       durationMs={TOAST_DURATION_MS}
       dismissLabel={i18n.t('ui', 'notifyDismiss')}
+      renderIcon={(level) => <NotificationLevelIcon level={level} />}
       onDismissToast={(id) => notifications.dismissToast(id)}
       childrenBefore={asyncVisible ? <AsyncOperationToast /> : null}
     />

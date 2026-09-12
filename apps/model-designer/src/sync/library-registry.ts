@@ -2,6 +2,7 @@ import type { RemoteModelDBClient } from '@mode-db/sdk';
 import { SYS_DATA_ASSET_MAP } from '../bootstrap/designer-storage-init.js';
 import type { LibraryRegistryDraft, LibraryRegistryRecord } from '../types/library-registry.js';
 import { resolveI18nForLocale } from '../utils/i18n-resolve.js';
+import { createUuid } from '../utils/random-id.js';
 
 function hydrateRowData(row: unknown): Record<string, unknown> {
   if (
@@ -223,7 +224,7 @@ export async function ensureLibraryRecord(
   const { failureCount } = await client.model(SYS_DATA_ASSET_MAP).insertMany(
     [
       {
-        _id: crypto.randomUUID(),
+        _id: createUuid(),
         code,
         name,
         description,

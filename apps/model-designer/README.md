@@ -30,7 +30,11 @@
 
 ```bash
 pnpm --filter model-designer dev
+# 或
+pnpm dev:model-designer
 ```
+
+Dev server 已绑定 `host: true`，终端会同时打印 **Local**（`http://localhost:5175/`）与 **Network**（`http://<局域网 IP>:5175/`）地址，便于用其它设备访问。跨设备访问引擎时需在连接页填开发机局域网 IP（而非 `127.0.0.1`），或用 `VITE_MODE_DB_HOST` 指定默认主机；引擎 server 用 `pnpm start:server:network` 监听局域网。详见 [`docs/operation-manual.md`](./docs/operation-manual.md) §2–§3。
 
 ## 构建
 

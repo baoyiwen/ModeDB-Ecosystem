@@ -46,6 +46,39 @@ binding.stage({ op: 'update', model: 'Country', id: 'jp', data: { name: 'Japan' 
 await binding.commit();
 ```
 
+## Published BindingSurface session
+
+Use `createBindingSurfaceSession` when the read and write routes are published as one
+BindingSurface contract. A compatible `RemoteModelDBClient` can be passed directly as the executor.
+
+```typescript
+import { createBindingSurfaceSession } from '@mode-db/data-kit';
+
+const surface = createBindingSurfaceSession({
+  surfaceId: 'customer-orders',
+  version: '1.2.0',
+  parameters: { status: 'open' },
+  accessKeys: { queryCustomerOrders: queryKey, updateOrder: mutationKey },
+  executor: client,
+});
+
+await surface.refresh();
+await surface.mutate({
+  mutationId: 'update-order-status',
+  rowIndex: 0,
+  editedValue: 'closed',
+});
+
+if (surface.needsRefresh) {
+  // The mutation may already be committed. Retry the read, never the mutation.
+  await surface.refresh();
+}
+```
+
+The session keeps the original projected rows for writeback, exposes normalized `ViewDataShape`,
+and extracts unambiguous node record references from `$recordRef`. A `refreshFailed` result preserves
+the successful mutation result and exposes `refreshError` separately.
+
 ## Package layout
 
 | Path           | Role                                    |

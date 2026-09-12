@@ -36,6 +36,11 @@ export const AggregationProtocol = {
   COUNT: 'count',
   VARIANCE: 'variance',
   STDDEV: 'stdDev',
+  SUM_DISTINCT: 'sumDistinct',
+  AVG_DISTINCT: 'avgDistinct',
+  MIN_DISTINCT: 'minDistinct',
+  MAX_DISTINCT: 'maxDistinct',
+  COUNT_DISTINCT: 'countDistinct',
 } as const;
 
 export type AggregationProtocolOp = (typeof AggregationProtocol)[keyof typeof AggregationProtocol];
@@ -174,6 +179,7 @@ export interface BucketMetricSnapshot {
 /** 内置协议下单指标槽（COUNT 仅用行计数，其余走 {@link StatAccumulator}）。 */
 class BuiltinMetricSlot {
   private readonly acc: StatAccumulator | null;
+  private readonly distinctValues = new Set<string>();
   private bucketRowCount = 0;
 
   constructor(
@@ -181,12 +187,61 @@ class BuiltinMetricSlot {
     readonly sourceField: string,
     readonly op: AggregationProtocolOp,
   ) {
-    this.acc = op === 'count' ? null : new StatAccumulator();
+    this.acc = this.baseOp === 'count' ? null : new StatAccumulator();
+  }
+
+  private get baseOp(): 'sum' | 'avg' | 'min' | 'max' | 'count' | 'variance' | 'stdDev' {
+    switch (this.op) {
+      case 'sumDistinct':
+        return 'sum';
+      case 'avgDistinct':
+        return 'avg';
+      case 'minDistinct':
+        return 'min';
+      case 'maxDistinct':
+        return 'max';
+      case 'countDistinct':
+        return 'count';
+      default:
+        return this.op;
+    }
+  }
+
+  private get distinct(): boolean {
+    return this.op.endsWith('Distinct');
+  }
+
+  get requiresSourceValue(): boolean {
+    return this.op !== 'count';
   }
 
   addRowValue(value: unknown): void {
-    if (this.op === 'count') {
+    if (this.baseOp === 'count') {
+      if (this.distinct) {
+        if (isStatMissing(value)) {
+          return;
+        }
+        const key = distinctValueKey(value);
+        if (this.distinctValues.has(key)) {
+          return;
+        }
+        this.distinctValues.add(key);
+      }
       this.bucketRowCount += 1;
+      return;
+    }
+    if (this.distinct) {
+      const numeric = coerceFiniteNumber(value);
+      if (numeric === undefined) {
+        this.acc!.add(value);
+        return;
+      }
+      const key = `number:${String(numeric)}`;
+      if (this.distinctValues.has(key)) {
+        return;
+      }
+      this.distinctValues.add(key);
+      this.acc!.observeFinite(numeric);
       return;
     }
     this.acc!.add(value);
@@ -202,7 +257,7 @@ class BuiltinMetricSlot {
   }
 
   finalize(): unknown {
-    switch (this.op) {
+    switch (this.baseOp) {
       case 'count':
         return this.bucketRowCount;
       case 'sum':
@@ -222,7 +277,7 @@ class BuiltinMetricSlot {
         return this.acc!.populationStdDev;
       }
       default: {
-        const _x: never = this.op;
+        const _x: never = this.baseOp;
         return _x;
       }
     }
@@ -234,7 +289,7 @@ class BuiltinMetricSlot {
     if (isTraceableNull(value)) {
       resultHint = value.reason;
     }
-    if (this.op === 'count') {
+    if (this.baseOp === 'count') {
       return {
         outputKey: this.outputKey,
         sourceField: this.sourceField,
@@ -278,7 +333,7 @@ export class BucketAggregator {
   /** 每调用一次表示落入该桶一行：`COUNT` 按行 +1，其余指标从 `row[sourceField]` 取值。 */
   ingest(row: Record<string, unknown>): void {
     for (const [, slot] of this.slots) {
-      if (slot.op === 'count') {
+      if (!slot.requiresSourceValue) {
         slot.addRowValue(undefined);
       } else {
         slot.addRowValue(row[slot.sourceField]);
@@ -325,4 +380,28 @@ export class BucketAggregator {
     }
     return o;
   }
+}
+
+function distinctValueKey(value: unknown): string {
+  return stableDistinctValue(value);
+}
+
+function stableDistinctValue(value: unknown): string {
+  if (value === null) {
+    return 'null';
+  }
+  if (Array.isArray(value)) {
+    return `array:[${value.map(stableDistinctValue).join(',')}]`;
+  }
+  if (value instanceof Date) {
+    return `date:${value.toISOString()}`;
+  }
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const entries = Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableDistinctValue(record[key])}`);
+    return `object:{${entries.join(',')}}`;
+  }
+  return `${typeof value}:${String(value)}`;
 }

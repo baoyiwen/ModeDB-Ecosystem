@@ -22,7 +22,11 @@
 
 ```bash
 pnpm --filter data-studio dev
+# 或
+pnpm dev:data-studio
 ```
+
+Dev server 已绑定 `host: true`，终端会同时打印 **Local**（`http://localhost:5176/`）与 **Network**（`http://<局域网 IP>:5176/`）地址，便于其它设备访问。跨设备连接引擎时，连接页主机需填开发机局域网 IP（而非 `127.0.0.1`），或用 `VITE_MODE_DB_HOST` 指定默认主机；引擎 server 用 `pnpm start:server:network` 监听局域网。详见 [`docs/operation-manual.md`](./docs/operation-manual.md) §2–§3。
 
 ## 构建
 

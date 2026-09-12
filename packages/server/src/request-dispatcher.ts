@@ -3,12 +3,17 @@ import {
   decodeWirePayload,
   encodeWirePayload,
   isMutatingDatabaseOperation,
+  queryInterfaceErrorDetailFromMessage,
+  type QueryInterfaceErrorDetail,
   type WireExecuteBody,
   type WireExecuteResultJson,
   type WireServerMessage,
 } from '@mode-db/shared';
 import { executeDatabaseOperation, EngineLogger, type AuthoringEngine } from '@mode-db/core';
 import type { WriteSerializationGate } from './write-serialization-gate.js';
+import { executePublishedQueryInterface } from './published-interface-runtime.js';
+import { executePublishedOperationInterface } from './published-operation-interface-runtime.js';
+import { executePublishedBindingSurface } from './published-binding-surface-runtime.js';
 
 function sendJson(ws: WebSocket, msg: WireServerMessage): void {
   ws.send(JSON.stringify(msg));
@@ -16,14 +21,51 @@ function sendJson(ws: WebSocket, msg: WireServerMessage): void {
 
 function summarizeWireBody(body: WireExecuteBody): Record<string, unknown> {
   const raw = body as unknown as Record<string, unknown>;
+  if (body.op === 'executeBindingSurface') {
+    return {
+      op: body.op,
+      surfaceId: body.surfaceId,
+      version: body.version,
+      action: body.action.kind,
+      mutationId: body.action.kind === 'mutate' ? body.action.mutationId : undefined,
+      parameterCount: Object.keys(body.parameters ?? {}).length,
+    };
+  }
+  if (body.op === 'executeInterface' || body.op === 'executeOperationInterface') {
+    return {
+      op: body.op,
+      callableName: body.callableName,
+      version: body.version,
+      parameterCount: Object.keys(body.parameters ?? {}).length,
+      ...(body.op === 'executeInterface'
+        ? {
+            page: body.page,
+            cursor:
+              body.cursor === null
+                ? 'first'
+                : typeof body.cursor === 'string'
+                  ? 'continuation'
+                  : undefined,
+            limit: body.limit,
+          }
+        : {}),
+    };
+  }
   if (body.op === 'executeQuery') {
     const snapshot = raw.snapshot as Record<string, unknown> | undefined;
     const plan = snapshot?.plan as Record<string, unknown> | undefined;
+    const execute = snapshot?.execute as Record<string, unknown> | undefined;
     return {
       op: body.op,
       model: plan?.originModel,
-      page: (snapshot?.page as Record<string, unknown> | undefined)?.page,
-      limit: (snapshot?.page as Record<string, unknown> | undefined)?.limit,
+      page: execute?.page,
+      cursor:
+        execute?.cursor === null
+          ? 'first'
+          : typeof execute?.cursor === 'string'
+            ? 'continuation'
+            : undefined,
+      limit: execute?.limit,
     };
   }
   return {
@@ -46,12 +88,41 @@ function summarizeWireResult(result: WireExecuteResultJson): Record<string, unkn
   if (result.kind === 'rows') {
     return { kind: result.kind, rows: result.rows.length };
   }
+  if (result.kind === 'interface') {
+    return {
+      kind: result.kind,
+      callableName: result.callableName,
+      version: result.version,
+      rows: result.rows.length,
+      hasNextCursor: Boolean(result.nextCursor),
+    };
+  }
+  if (result.kind === 'operationInterface') {
+    return {
+      kind: result.kind,
+      callableName: result.callableName,
+      version: result.version,
+      operation: result.operation,
+    };
+  }
+  if (result.kind === 'bindingSurface') {
+    return {
+      kind: result.kind,
+      surfaceId: result.surfaceId,
+      version: result.version,
+      action: result.action,
+      status: result.status,
+      rows: result.query?.rows.length,
+      mutationId: result.mutation?.mutationId,
+    };
+  }
   if (result.kind === 'paginated') {
     return {
       kind: result.kind,
       total: result.total,
       page: result.page,
       pageCount: result.pageCount,
+      hasNextCursor: Boolean(result.nextCursor),
     };
   }
   if (result.kind === 'analysis') {
@@ -75,7 +146,12 @@ function summarizeWireResult(result: WireExecuteResultJson): Record<string, unkn
 
 export type RpcCipherReply =
   | { readonly type: 'rpc.ok'; readonly id: string; readonly cipher: string }
-  | { readonly type: 'rpc.err'; readonly id: string; readonly error: string };
+  | {
+      readonly type: 'rpc.err';
+      readonly id: string;
+      readonly error: string;
+      readonly errorDetail?: QueryInterfaceErrorDetail;
+    };
 
 /**
  * Dual-protocol dispatcher: every RPC body is a database-scope engine operation executed by the
@@ -90,6 +166,7 @@ export class WireRequestDispatcher {
       readonly dev: boolean;
       readonly getEngine: (atlas: string) => Promise<AuthoringEngine>;
       readonly writeGate: WriteSerializationGate;
+      readonly designerWorkspace: string;
     },
   ) {}
 
@@ -104,7 +181,12 @@ export class WireRequestDispatcher {
     if (out.type === 'rpc.ok') {
       sendJson(ws, { type: 'rpc.ok', id: out.id, cipher: out.cipher });
     } else {
-      sendJson(ws, { type: 'rpc.err', id: out.id, error: out.error });
+      sendJson(ws, {
+        type: 'rpc.err',
+        id: out.id,
+        error: out.error,
+        ...(out.errorDetail ? { errorDetail: out.errorDetail } : {}),
+      });
     }
   }
 
@@ -148,7 +230,18 @@ export class WireRequestDispatcher {
         ...requestSummary,
         message,
       });
-      return { type: 'rpc.err', id, error: message };
+      const errorDetail =
+        body.op === 'executeInterface' ||
+        body.op === 'executeOperationInterface' ||
+        body.op === 'executeBindingSurface'
+          ? queryInterfaceErrorDetailFromMessage(message)
+          : undefined;
+      return {
+        type: 'rpc.err',
+        id,
+        error: message,
+        ...(errorDetail ? { errorDetail } : {}),
+      };
     } finally {
       EngineLogger.instance.recordHandledRequest(performance.now() - t0);
     }
@@ -156,6 +249,36 @@ export class WireRequestDispatcher {
 
   /** Map one wire op to a JSON result via the shared executor; owns gating + the read/write runtime choice. */
   private async executeBody(atlas: string, body: WireExecuteBody): Promise<WireExecuteResultJson> {
+    if (body.op === 'executeInterface') {
+      return executePublishedQueryInterface({
+        atlas,
+        designerWorkspace: this.opts.designerWorkspace,
+        body,
+        getEngine: this.opts.getEngine,
+      });
+    }
+    if (body.op === 'executeOperationInterface') {
+      return this.opts.writeGate.runExclusive(atlas, () =>
+        executePublishedOperationInterface({
+          atlas,
+          designerWorkspace: this.opts.designerWorkspace,
+          body,
+          getEngine: this.opts.getEngine,
+        }),
+      );
+    }
+    if (body.op === 'executeBindingSurface') {
+      const execute = () =>
+        executePublishedBindingSurface({
+          atlas,
+          designerWorkspace: this.opts.designerWorkspace,
+          body,
+          getEngine: this.opts.getEngine,
+        });
+      return body.action.kind === 'mutate'
+        ? this.opts.writeGate.runExclusive(atlas, execute)
+        : execute();
+    }
     if (body.op === 'executeQuery') {
       if (this.opts.dev) {
         console.error(

@@ -1,5 +1,6 @@
 import { RemoteModelDBClient } from '@mode-db/sdk';
 import { bytesToBase64Url, base64UrlToBytes } from '../persistence/mldg-binary.js';
+import { createUuid } from '../utils/random-id.js';
 
 /**
  * 设计器图谱快照行模型。注入到设计器专属逻辑库（`FIXED_MODEL_DESIGNER_DATABASE`），
@@ -85,7 +86,7 @@ export async function pushDesignerSnapshot(
   const { failureCount } = await m.insertMany(
     [
       {
-        _id: crypto.randomUUID(),
+        _id: createUuid(),
         graph_b64,
         updated_at,
         library_code: code,

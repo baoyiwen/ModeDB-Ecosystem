@@ -15,8 +15,12 @@ import {
 } from './HydratedEntity.js';
 import {
   finalizeRemoteExecuteSnapshot,
+  analysisComputeHasDistinct,
   WireQueryError,
   type QueryPlanASTv2,
+  type QueryOrderEntry,
+  type PredicateNode as WirePredicateNode,
+  type QuerySortDirection,
   type QueryStartSpec,
   type RecursiveHopSpec,
   type RemoteExecuteSnapshot,
@@ -54,6 +58,7 @@ import {
   serializePredicate,
   tryExtractSingleIdEq,
   treeHasCallback,
+  treeHasRelationPredicate,
   type PredicateNode,
 } from './predicate-tree.js';
 import { QueryEngine, type EvaluateResult } from './query-engine.js';
@@ -78,6 +83,8 @@ export type {
   CallbackNode,
   PredicateStandardOperator,
   PredicateAtomOperator,
+  RelationPredicateNode,
+  RelationQuantifier,
   PredicateEvaluateContext,
   PredicateFailureKind,
 } from './predicate-tree.js';
@@ -155,6 +162,8 @@ export interface Paginated<T> {
   readonly page: number;
   readonly limit: number;
   readonly pageCount: number;
+  /** Present when cursor pagination has another result window. */
+  readonly nextCursor?: string;
 }
 
 export function isPaginatedExecuteResult(x: unknown): x is Paginated<unknown> {
@@ -172,6 +181,138 @@ export function isPaginatedExecuteResult(x: unknown): x is Paginated<unknown> {
 type OriginLoadHint =
   | { readonly kind: 'by_uuid'; readonly id: string }
   | { readonly kind: 'scan_all' };
+
+function compareOrderValues(left: unknown, right: unknown): number {
+  if (Object.is(left, right)) {
+    return 0;
+  }
+  if (left === null || left === undefined) {
+    return 1;
+  }
+  if (right === null || right === undefined) {
+    return -1;
+  }
+  if (typeof left === 'number' && typeof right === 'number') {
+    return left - right;
+  }
+  if (typeof left === 'boolean' && typeof right === 'boolean') {
+    return Number(left) - Number(right);
+  }
+  return String(left).localeCompare(String(right), undefined, {
+    numeric: true,
+    sensitivity: 'base',
+  });
+}
+
+function sortByOrder<T>(
+  items: readonly T[],
+  orderBy: readonly QueryOrderEntry[],
+  read: (item: T, field: string) => unknown,
+): T[] {
+  if (orderBy.length === 0 || items.length < 2) {
+    return [...items];
+  }
+  return items
+    .map((item, index) => ({ item, index }))
+    .sort((left, right) => {
+      for (const order of orderBy) {
+        const leftValue = read(left.item, order.field);
+        const rightValue = read(right.item, order.field);
+        const leftMissing = leftValue === null || leftValue === undefined;
+        const rightMissing = rightValue === null || rightValue === undefined;
+        if (leftMissing !== rightMissing) {
+          return leftMissing ? 1 : -1;
+        }
+        const compared = compareOrderValues(leftValue, rightValue);
+        if (compared !== 0) {
+          return order.direction === 'desc' ? -compared : compared;
+        }
+      }
+      return left.index - right.index;
+    })
+    .map(({ item }) => item);
+}
+
+type CursorKind = 'rows' | 'groups' | 'analysis';
+
+interface QueryCursorPayload {
+  readonly v: 1;
+  readonly scope: string;
+  readonly kind: CursorKind;
+  readonly anchor: string;
+}
+
+function stableJson(value: unknown): string {
+  const normalize = (input: unknown): unknown => {
+    if (Array.isArray(input)) {
+      return input.map(normalize);
+    }
+    if (input && typeof input === 'object') {
+      return Object.fromEntries(
+        Object.entries(input as Record<string, unknown>)
+          .filter(([, child]) => child !== undefined)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, child]) => [key, normalize(child)]),
+      );
+    }
+    return input;
+  };
+  return JSON.stringify(normalize(value));
+}
+
+function queryCursorScope(value: unknown): string {
+  return createHash('sha256').update(stableJson(value)).digest('base64url');
+}
+
+function encodeQueryCursor(payload: QueryCursorPayload): string {
+  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+}
+
+function decodeQueryCursor(token: string, scope: string, kind: CursorKind): string {
+  let payload: unknown;
+  try {
+    payload = JSON.parse(Buffer.from(token, 'base64url').toString('utf8'));
+  } catch {
+    throw new QueryError('Invalid query cursor.');
+  }
+  if (
+    !payload ||
+    typeof payload !== 'object' ||
+    (payload as Partial<QueryCursorPayload>).v !== 1 ||
+    typeof (payload as Partial<QueryCursorPayload>).scope !== 'string' ||
+    typeof (payload as Partial<QueryCursorPayload>).kind !== 'string' ||
+    typeof (payload as Partial<QueryCursorPayload>).anchor !== 'string'
+  ) {
+    throw new QueryError('Invalid query cursor.');
+  }
+  const cursor = payload as QueryCursorPayload;
+  if (cursor.scope !== scope) {
+    throw new QueryError('Query cursor does not belong to this query scope.');
+  }
+  if (cursor.kind !== kind) {
+    throw new QueryError('Query cursor does not match this result type.');
+  }
+  return cursor.anchor;
+}
+
+function sliceAfterAnchor<T>(
+  items: readonly T[],
+  anchor: string | undefined,
+  limit: number,
+  readAnchor: (item: T) => string,
+): { items: T[]; nextAnchor?: string } {
+  const anchorIndex =
+    anchor === undefined ? -1 : items.findIndex((item) => readAnchor(item) === anchor);
+  if (anchor !== undefined && anchorIndex < 0) {
+    throw new QueryError('Cursor anchor is no longer present in the query result.');
+  }
+  const sliced = items.slice(anchorIndex + 1, anchorIndex + 1 + limit);
+  const hasMore = anchorIndex + 1 + sliced.length < items.length;
+  return {
+    items: sliced,
+    ...(hasMore && sliced.length > 0 ? { nextAnchor: readAnchor(sliced.at(-1)!) } : {}),
+  };
+}
 
 function tryOptimizedOriginLoad(root: PredicateNode): OriginLoadHint | undefined {
   const atom = tryExtractSingleIdEq(root);
@@ -216,9 +357,13 @@ export class QueryChain<
   private readonly start: QueryStartSpec;
   private analysisGroupBy: string[] | null = null;
   private analysisCompute: Record<string, AggregateInputEntry> | null = null;
+  private analysisHaving: PredicateNode | null = null;
   private readonly analysisCustom: Record<string, CustomReducerSpec> = {};
-  private paginationPartial: { page?: number; limit?: number } | null = null;
+  private paginationPartial: { page?: number; cursor?: string | null; limit?: number } | null =
+    null;
   private wrapGroupsFlag = false;
+  private orderBySpecs: QueryOrderEntry[] = [];
+  private wirePlanVersion: 2 | 3 | 4 | 5 | 6 | 7 = 7;
 
   private readonly fieldCtx: FieldMatchContext | undefined;
   private readonly memoryShadow: MemoryShadowOptions | undefined;
@@ -255,8 +400,10 @@ export class QueryChain<
       readonly analysisCustom: Record<string, CustomReducerSpec>;
       readonly analysisGroupBy: string[] | null;
       readonly analysisCompute: Record<string, AggregateInputEntry> | null;
+      readonly analysisHaving: PredicateNode | null;
       readonly wrapGroupsFlag: boolean;
-      readonly paginationPartial: { page?: number; limit?: number } | null;
+      readonly paginationPartial: { page?: number; cursor?: string | null; limit?: number } | null;
+      readonly orderBySpecs: QueryOrderEntry[];
     };
     try {
       return finalizeRemoteExecuteSnapshot(plan, options, {
@@ -265,6 +412,8 @@ export class QueryChain<
         analysisGroupBy: chainInternals.analysisGroupBy,
         paginationPartial: chainInternals.paginationPartial,
         analysisCompute: chainInternals.analysisCompute,
+        analysisHaving: chainInternals.analysisHaving as unknown as WirePredicateNode | null,
+        orderBy: chainInternals.orderBySpecs,
       });
     } catch (e) {
       if (e instanceof WireQueryError) {
@@ -288,7 +437,14 @@ export class QueryChain<
       readonly smartCache?: SmartCache;
     },
   ): QueryChain {
-    if (plan.version !== 2) {
+    if (
+      plan.version !== 2 &&
+      plan.version !== 3 &&
+      plan.version !== 4 &&
+      plan.version !== 5 &&
+      plan.version !== 6 &&
+      plan.version !== 7
+    ) {
       throw new QueryError(
         `Unsupported query plan version: ${String((plan as { version?: unknown }).version)}`,
       );
@@ -319,6 +475,13 @@ export class QueryChain<
         throw new QueryError('Wire query plan contains callback predicates.');
       }
     }
+    const hopHasRelation = (hop: HopPlan): boolean =>
+      treeHasRelationPredicate(hop.sourcePredicate) ||
+      treeHasRelationPredicate(hop.targetPredicate) ||
+      Boolean(hop.branches?.some(hopHasRelation));
+    if (plan.version < 4 && (treeHasRelationPredicate(trailing) || hops.some(hopHasRelation))) {
+      throw new QueryError('Remote relation predicates require query plan version 4.');
+    }
     const chain = new QueryChain(
       registry,
       indexReader,
@@ -329,9 +492,14 @@ export class QueryChain<
       options?.memoryShadow,
       options?.smartCache,
     );
-    const self = chain as unknown as { hops: HopPlan[]; segments: PredicateNode[][] };
+    const self = chain as unknown as {
+      hops: HopPlan[];
+      segments: PredicateNode[][];
+      wirePlanVersion: 2 | 3 | 4 | 5 | 6 | 7;
+    };
     self.hops = hops;
     self.segments = [[trailing]];
+    self.wirePlanVersion = plan.version;
     return chain;
   }
 
@@ -344,8 +512,10 @@ export class QueryChain<
     const c = chain as unknown as {
       analysisGroupBy: string[] | null;
       analysisCompute: Record<string, AggregateInputEntry> | null;
-      paginationPartial: { page?: number; limit?: number } | null;
+      analysisHaving: PredicateNode | null;
+      paginationPartial: { page?: number; cursor?: string | null; limit?: number } | null;
       wrapGroupsFlag: boolean;
+      orderBySpecs: QueryOrderEntry[];
     };
     if (analysis.groupBy !== null && analysis.groupBy.length > 0) {
       c.analysisGroupBy = [...analysis.groupBy];
@@ -353,11 +523,54 @@ export class QueryChain<
       c.analysisGroupBy = null;
     }
     c.analysisCompute = analysis.compute !== null ? { ...analysis.compute } : null;
+    if (analysisComputeHasDistinct(analysis.compute) && chain.wirePlanVersion < 6) {
+      throw new QueryError('Remote distinct aggregates require query plan version 6.');
+    }
+    if (analysis.having) {
+      if (chain.wirePlanVersion < 5) {
+        throw new QueryError('Remote HAVING requires query plan version 5.');
+      }
+      if (analysis.groupBy === null || analysis.groupBy.length === 0) {
+        throw new QueryError('Remote HAVING requires groupBy or pivot dimensions.');
+      }
+      const having = deserializePredicate(analysis.having as unknown as Record<string, unknown>);
+      if (treeHasCallback(having) || treeHasRelationPredicate(having)) {
+        throw new QueryError('Remote HAVING supports aggregate scalar predicates only.');
+      }
+      c.analysisHaving = having;
+    } else {
+      c.analysisHaving = null;
+    }
     c.paginationPartial = {
       ...(execute.limit !== undefined ? { limit: execute.limit } : {}),
       ...(execute.page !== undefined ? { page: execute.page } : {}),
+      ...(execute.cursor !== undefined ? { cursor: execute.cursor } : {}),
     };
+    if (execute.cursor !== undefined && chain.wirePlanVersion < 7) {
+      throw new QueryError('Remote cursor pagination requires query plan version 7.');
+    }
     c.wrapGroupsFlag = execute.wrapGroups === true;
+    const rawOrderBy: unknown = execute.orderBy;
+    if (rawOrderBy !== undefined && !Array.isArray(rawOrderBy)) {
+      throw new QueryError('Remote orderBy must be an array.');
+    }
+    if (Array.isArray(rawOrderBy) && rawOrderBy.length > 64) {
+      throw new QueryError('Remote orderBy supports at most 64 entries.');
+    }
+    if (Array.isArray(rawOrderBy) && rawOrderBy.length > 0 && chain.wirePlanVersion < 3) {
+      throw new QueryError('Remote orderBy requires query plan version 3.');
+    }
+    c.orderBySpecs = (Array.isArray(rawOrderBy) ? rawOrderBy : []).map((entry) => {
+      if (typeof entry !== 'object' || entry === null) {
+        throw new QueryError('Remote orderBy entry must be an object.');
+      }
+      const field = 'field' in entry && typeof entry.field === 'string' ? entry.field.trim() : '';
+      const direction = 'direction' in entry ? entry.direction : undefined;
+      if (!field || (direction !== 'asc' && direction !== 'desc')) {
+        throw new QueryError('Remote orderBy entry requires field and asc/desc direction.');
+      }
+      return { field, direction };
+    });
   }
 
   private _buildRawQuery(): QueryPlanASTv2 {
@@ -771,7 +984,23 @@ export class QueryChain<
   /** 0-based 页码；需配合 **`limit()`** 或 **`execute({ limit })`** 才启用分页。 */
   page(index: number): this {
     const p = Math.max(0, Math.floor(index));
-    this.paginationPartial = { ...this.paginationPartial, page: p };
+    this.paginationPartial = {
+      ...(this.paginationPartial?.limit !== undefined
+        ? { limit: this.paginationPartial.limit }
+        : {}),
+      page: p,
+    };
+    return this;
+  }
+
+  /** Opaque continuation token; pass `null` to request the first cursor page. */
+  cursor(token: string | null = null): this {
+    this.paginationPartial = {
+      ...(this.paginationPartial?.limit !== undefined
+        ? { limit: this.paginationPartial.limit }
+        : {}),
+      cursor: token,
+    };
     return this;
   }
 
@@ -779,6 +1008,23 @@ export class QueryChain<
   limit(size: number): this {
     const lim = Math.max(1, Math.floor(size));
     this.paginationPartial = { ...this.paginationPartial, limit: lim };
+    return this;
+  }
+
+  having(predicate: PredicateNode): this {
+    if (treeHasCallback(predicate) || treeHasRelationPredicate(predicate)) {
+      throw new QueryError('having() supports aggregate scalar predicates only.');
+    }
+    this.analysisHaving = clonePredicateNode(predicate);
+    return this;
+  }
+
+  orderBy(field: string, direction: QuerySortDirection = 'asc'): this {
+    const key = field.trim();
+    if (!key) {
+      throw new QueryError('orderBy() requires a field name.');
+    }
+    this.orderBySpecs.push({ field: key, direction });
     return this;
   }
 
@@ -817,14 +1063,48 @@ export class QueryChain<
 
   private async executeImpl(options?: QueryExecuteOptions): Promise<any> {
     const limitOpt = options?.limit ?? this.paginationPartial?.limit;
+    const optionHasCursor = Boolean(
+      options && Object.prototype.hasOwnProperty.call(options, 'cursor'),
+    );
+    const cursorOpt = optionHasCursor ? options?.cursor : this.paginationPartial?.cursor;
     const pageOpt = options?.page ?? this.paginationPartial?.page ?? 0;
+    if (cursorOpt !== undefined && options?.page !== undefined) {
+      throw new QueryError('Cursor pagination cannot be combined with page pagination.');
+    }
     const doPage = limitOpt !== undefined && limitOpt !== null;
     const limit = doPage ? Math.max(1, Math.floor(limitOpt as number)) : 0;
     const pageIdx = Math.max(0, Math.floor(pageOpt));
     const wrapGroups = options?.wrapGroups ?? this.wrapGroupsFlag;
+    const orderBy = options?.orderBy ?? this.orderBySpecs;
+    const doCursor = cursorOpt !== undefined;
+    if (doCursor && !doPage) {
+      throw new QueryError('Cursor pagination requires a limit.');
+    }
+    const cursorScope = doCursor
+      ? queryCursorScope({
+          plan: this._buildRawQuery(),
+          analysis: {
+            groupBy: this.analysisGroupBy,
+            compute: this.analysisCompute,
+            having: this.analysisHaving ? serializePredicate(this.analysisHaving) : null,
+          },
+          includeRelates: options?.includeRelates === true,
+          wrapGroups,
+          orderBy,
+        })
+      : '';
 
     if (wrapGroups && (this.analysisGroupBy === null || this.analysisGroupBy.length === 0)) {
       throw new QueryError('wrapGroups requires groupBy(...) or pivot(...).');
+    }
+    if (
+      this.analysisHaving &&
+      (this.analysisGroupBy === null || this.analysisGroupBy.length === 0)
+    ) {
+      throw new QueryError('HAVING requires groupBy(...) or pivot(...).');
+    }
+    if (wrapGroups && this.analysisHaving) {
+      throw new QueryError('HAVING cannot be combined with wrapGroups.');
     }
 
     if (this.analysisGroupBy !== null && this.analysisGroupBy.length > 0) {
@@ -835,7 +1115,33 @@ export class QueryChain<
       }
 
       if (wrapGroups) {
-        const allGroups = await this.buildAllGroupInstances();
+        const allGroups = sortByOrder(
+          await this.buildAllGroupInstances(),
+          orderBy,
+          (group, field) => group.getData()[field],
+        );
+        if (doCursor) {
+          const anchor = cursorOpt
+            ? decodeQueryCursor(cursorOpt, cursorScope, 'groups')
+            : undefined;
+          const sliced = sliceAfterAnchor(allGroups, anchor, limit, (group) =>
+            JSON.stringify(group.dimensionValues),
+          );
+          return this.wrapPaginated(
+            sliced.items,
+            allGroups.length,
+            0,
+            limit,
+            sliced.nextAnchor
+              ? encodeQueryCursor({
+                  v: 1,
+                  scope: cursorScope,
+                  kind: 'groups',
+                  anchor: sliced.nextAnchor,
+                })
+              : undefined,
+          );
+        }
         if (doPage) {
           const total = allGroups.length;
           const off = pageIdx * limit;
@@ -847,7 +1153,31 @@ export class QueryChain<
       }
 
       const { map, meta } = await this.executeAggregation();
-      const ar = new AnalysisResult(this.analysisGroupBy, map, meta);
+      const aggregated = new AnalysisResult(this.analysisGroupBy, map, meta);
+      const filtered = this.analysisHaving
+        ? aggregated.filterBuckets(this.analysisHaving)
+        : aggregated;
+      const ar = filtered.sortBuckets(orderBy);
+      if (doCursor) {
+        const anchor = cursorOpt
+          ? decodeQueryCursor(cursorOpt, cursorScope, 'analysis')
+          : undefined;
+        const sliced = ar.sliceBucketsAfter(anchor, limit);
+        return this.wrapPaginated(
+          sliced.result,
+          ar.bucketCount,
+          0,
+          limit,
+          sliced.nextAnchor
+            ? encodeQueryCursor({
+                v: 1,
+                scope: cursorScope,
+                kind: 'analysis',
+                anchor: sliced.nextAnchor,
+              })
+            : undefined,
+        );
+      }
       if (doPage) {
         const total = ar.bucketCount;
         return this.wrapPaginated(ar.sliceBuckets(pageIdx, limit), total, pageIdx, limit);
@@ -861,7 +1191,14 @@ export class QueryChain<
     const lateralMode = this.hops.some((h) => h.lateral);
     const branchMode = this.hops.some((h) => h.branches && h.branches.length > 0);
     if (options?.includeRelates || treeMode || lateralMode || branchMode) {
-      const rows = await this.executeWithRelates();
+      const rows = sortByOrder(
+        await this.executeWithRelates(),
+        orderBy,
+        (row, field) => (row.getData() as Record<string, unknown>)[field],
+      );
+      if (doCursor) {
+        return this.wrapCursorRows(rows, cursorOpt, cursorScope, limit);
+      }
       if (doPage) {
         const total = rows.length;
         const off = pageIdx * limit;
@@ -872,7 +1209,14 @@ export class QueryChain<
         : HydratedEntity[];
     }
 
-    const flat = await this.executeFlat();
+    const flat = sortByOrder(
+      await this.executeFlat(),
+      orderBy,
+      (row, field) => (row.getData() as Record<string, unknown>)[field],
+    );
+    if (doCursor) {
+      return this.wrapCursorRows(flat, cursorOpt, cursorScope, limit);
+    }
     if (doPage) {
       const total = flat.length;
       const off = pageIdx * limit;
@@ -883,13 +1227,46 @@ export class QueryChain<
       : HydratedEntity[];
   }
 
-  private wrapPaginated<T>(items: T, total: number, page: number, lim: number): Paginated<T> {
+  private wrapCursorRows(
+    rows: readonly HydratedEntity[],
+    cursor: string | null | undefined,
+    scope: string,
+    limit: number,
+  ): Paginated<HydratedEntity[]> {
+    const anchor = cursor ? decodeQueryCursor(cursor, scope, 'rows') : undefined;
+    const readAnchor = (row: HydratedEntity): string => {
+      const id = row.getData()._id;
+      if (typeof id !== 'string' || id.length === 0) {
+        throw new QueryError('Cursor pagination requires every row to have a string _id.');
+      }
+      return id;
+    };
+    const sliced = sliceAfterAnchor(rows, anchor, limit, readAnchor);
+    return this.wrapPaginated(
+      sliced.items,
+      rows.length,
+      0,
+      limit,
+      sliced.nextAnchor
+        ? encodeQueryCursor({ v: 1, scope, kind: 'rows', anchor: sliced.nextAnchor })
+        : undefined,
+    );
+  }
+
+  private wrapPaginated<T>(
+    items: T,
+    total: number,
+    page: number,
+    lim: number,
+    nextCursor?: string,
+  ): Paginated<T> {
     return {
       items,
       total,
       page,
       limit: lim,
       pageCount: lim > 0 ? Math.ceil(total / lim) : 0,
+      ...(nextCursor ? { nextCursor } : {}),
     };
   }
 
@@ -939,8 +1316,6 @@ export class QueryChain<
     };
 
     const root = this.compiledRoot();
-    const matcher = predicateMatcher(root, this._fieldCtxForModel(this.originModel));
-
     const canStream =
       this.hops.length === 0 &&
       typeof this.dataReader.scanModelRecords === 'function' &&
@@ -948,7 +1323,7 @@ export class QueryChain<
 
     if (canStream) {
       await this.dataReader.scanModelRecords!(this.originModel, async (rec) => {
-        if (!matcher(rec)) {
+        if (!(await this.matchesPredicate(rec, root, this.originModel))) {
           return;
         }
         const keys = await resolveGroupKeyValues(rec, this.originModel, groupBy, gctx);
@@ -974,16 +1349,16 @@ export class QueryChain<
   }> {
     if (this.hops.length === 0) {
       let records = await this.loadOriginRecordsNoHop();
-      records = records.filter(
-        predicateMatcher(this.compiledRoot(), this._fieldCtxForModel(this.originModel)),
-      );
+      records = await this.filterByPredicate(records, this.compiledRoot(), this.originModel);
       return { modelName: this.originModel, records };
     }
 
     let model = this.originModel;
     let records = await this.loadOriginRecords(this.hops[0]!.sourcePredicate);
-    records = records.filter(
-      predicateMatcher(this.hops[0]!.sourcePredicate, this._fieldCtxForModel(this.originModel)),
+    records = await this.filterByPredicate(
+      records,
+      this.hops[0]!.sourcePredicate,
+      this.originModel,
     );
     if (records.length === 0) {
       return { modelName: model, records };
@@ -992,9 +1367,7 @@ export class QueryChain<
     for (let i = 0; i < this.hops.length; i++) {
       const hop = this.hops[i]!;
       if (i > 0) {
-        records = records.filter(
-          predicateMatcher(hop.sourcePredicate, this._fieldCtxForModel(model)),
-        );
+        records = await this.filterByPredicate(records, hop.sourcePredicate, model);
         if (records.length === 0) {
           return { modelName: model, records };
         }
@@ -1010,9 +1383,7 @@ export class QueryChain<
           hop.recursive.maxDepth,
         );
         records = await this.dataReader.getByIds(nextModel, [...allIds]);
-        records = records.filter(
-          predicateMatcher(hop.targetPredicate, this._fieldCtxForModel(nextModel)),
-        );
+        records = await this.filterByPredicate(records, hop.targetPredicate, nextModel);
         if (records.length === 0) {
           return { modelName: nextModel, records: [] };
         }
@@ -1026,9 +1397,7 @@ export class QueryChain<
       }
 
       records = await this.dataReader.getByIds(nextModel, nextIds);
-      records = records.filter(
-        predicateMatcher(hop.targetPredicate, this._fieldCtxForModel(nextModel)),
-      );
+      records = await this.filterByPredicate(records, hop.targetPredicate, nextModel);
       if (records.length === 0) {
         return { modelName: nextModel, records: [] };
       }
@@ -1036,7 +1405,7 @@ export class QueryChain<
     }
 
     const tail = this.compiledRoot();
-    records = records.filter(predicateMatcher(tail, this._fieldCtxForModel(model)));
+    records = await this.filterByPredicate(records, tail, model);
     return { modelName: model, records };
   }
 
@@ -1119,7 +1488,7 @@ export class QueryChain<
       }
       let records = await this.loadOriginRecordsNoHop();
       const root = this.compiledRoot();
-      records = records.filter(predicateMatcher(root, this._fieldCtxForModel(this.originModel)));
+      records = await this.filterByPredicate(records, root, this.originModel);
       if (sc) {
         sc.set(fp, this.cacheDependencyModels(this.originModel), [...records], this.originModel);
       }
@@ -1137,8 +1506,10 @@ export class QueryChain<
 
     let model = this.originModel;
     let records = await this.loadOriginRecords(this.hops[0]!.sourcePredicate);
-    records = records.filter(
-      predicateMatcher(this.hops[0]!.sourcePredicate, this._fieldCtxForModel(this.originModel)),
+    records = await this.filterByPredicate(
+      records,
+      this.hops[0]!.sourcePredicate,
+      this.originModel,
     );
     if (records.length === 0) {
       return [];
@@ -1147,9 +1518,7 @@ export class QueryChain<
     for (let i = 0; i < this.hops.length; i++) {
       const hop = this.hops[i]!;
       if (i > 0) {
-        records = records.filter(
-          predicateMatcher(hop.sourcePredicate, this._fieldCtxForModel(model)),
-        );
+        records = await this.filterByPredicate(records, hop.sourcePredicate, model);
         if (records.length === 0) {
           return [];
         }
@@ -1165,9 +1534,7 @@ export class QueryChain<
           hop.recursive.maxDepth,
         );
         records = await this.dataReader.getByIds(nextModel, [...allIds]);
-        records = records.filter(
-          predicateMatcher(hop.targetPredicate, this._fieldCtxForModel(nextModel)),
-        );
+        records = await this.filterByPredicate(records, hop.targetPredicate, nextModel);
         if (records.length === 0) {
           return [];
         }
@@ -1181,9 +1548,7 @@ export class QueryChain<
       }
 
       records = await this.dataReader.getByIds(nextModel, nextIds);
-      records = records.filter(
-        predicateMatcher(hop.targetPredicate, this._fieldCtxForModel(nextModel)),
-      );
+      records = await this.filterByPredicate(records, hop.targetPredicate, nextModel);
       if (records.length === 0) {
         return [];
       }
@@ -1191,7 +1556,7 @@ export class QueryChain<
     }
 
     const tail = this.compiledRoot();
-    records = records.filter(predicateMatcher(tail, this._fieldCtxForModel(model)));
+    records = await this.filterByPredicate(records, tail, model);
     if (sc) {
       sc.set(fp, this.cacheDependencyModels(model), [...records], model);
     }
@@ -1203,16 +1568,16 @@ export class QueryChain<
 
     if (this.hops.length === 0) {
       let records = await this.loadOriginRecordsNoHop();
-      records = records.filter(
-        predicateMatcher(this.compiledRoot(), this._fieldCtxForModel(this.originModel)),
-      );
+      records = await this.filterByPredicate(records, this.compiledRoot(), this.originModel);
       return records.map((r) => new HydratedEntity(r, this.originModel, c));
     }
 
     const model = this.originModel;
     let records = await this.loadOriginRecords(this.hops[0]!.sourcePredicate);
-    records = records.filter(
-      predicateMatcher(this.hops[0]!.sourcePredicate, this._fieldCtxForModel(this.originModel)),
+    records = await this.filterByPredicate(
+      records,
+      this.hops[0]!.sourcePredicate,
+      this.originModel,
     );
     if (records.length === 0) {
       return [];
@@ -1268,18 +1633,17 @@ export class QueryChain<
         const srcRec = entity.materializeRow();
 
         if (hi > 0 || !skipFirstSourceFilter) {
-          const srcEv = evaluatePredicate(
+          const sourceMatches = await this.matchesPredicate(
             srcRec,
             hop.sourcePredicate,
-            undefined,
-            this._fieldCtxForModel(frontierModel),
+            frontierModel,
           );
-          if (!srcEv.ok) {
+          if (!sourceMatches) {
             entity._setRelate(hop.relationName, []);
             entity._setDiagnostic(hop.relationName, {
               reason: 'FILTERED_OUT_WHERE',
-              message: `Source on "${frontierModel}" did not match filters before "${hop.relationName}": ${formatFailureLine(srcEv)}.`,
-              failedPredicate: srcEv.failedAt ? serializePredicate(srcEv.failedAt) : undefined,
+              message: `Source on "${frontierModel}" did not match filters before "${hop.relationName}".`,
+              failedPredicate: serializePredicate(hop.sourcePredicate),
             });
             continue;
           }
@@ -1306,11 +1670,11 @@ export class QueryChain<
               message: `Recursive "${hop.relationName}": expected ${idsList.length} row(s) in "${nextModel}.mld", got ${childRecords.length}; missing _id: ${missing.join(', ')}.`,
             });
           }
-          const { passed, firstFailure } = filterRecordsWithTrace(
-            childRecords,
-            targetRoot,
-            this._fieldCtxForModel(nextModel),
-          );
+          const passed = await this.filterByPredicate(childRecords, targetRoot, nextModel);
+          const firstFailure = treeHasRelationPredicate(targetRoot)
+            ? undefined
+            : filterRecordsWithTrace(childRecords, targetRoot, this._fieldCtxForModel(nextModel))
+                .firstFailure;
           if (passed.length === 0) {
             if (!orphan) {
               entity._setDiagnostic(hop.relationName, {
@@ -1352,11 +1716,11 @@ export class QueryChain<
           });
         }
 
-        const { passed, firstFailure } = filterRecordsWithTrace(
-          childRecords,
-          targetRoot,
-          this._fieldCtxForModel(nextModel),
-        );
+        const passed = await this.filterByPredicate(childRecords, targetRoot, nextModel);
+        const firstFailure = treeHasRelationPredicate(targetRoot)
+          ? undefined
+          : filterRecordsWithTrace(childRecords, targetRoot, this._fieldCtxForModel(nextModel))
+              .firstFailure;
         if (passed.length === 0) {
           if (!orphan) {
             entity._setDiagnostic(hop.relationName, {
@@ -1437,11 +1801,7 @@ export class QueryChain<
         }
 
         const childRecords = await this.dataReader.getByIds(childModel, linked);
-        const { passed } = filterRecordsWithTrace(
-          childRecords,
-          targetPredicate,
-          this._fieldCtxForModel(childModel),
-        );
+        const passed = await this.filterByPredicate(childRecords, targetPredicate, childModel);
         const children = passed.map((r) => {
           const k = idKey(childModel, r._id);
           const existing = canonical.get(k);
@@ -1560,6 +1920,73 @@ export class QueryChain<
     return { locale: this.fieldCtx.locale, fieldTypes: def.fieldTypes };
   }
 
+  private async matchesPredicate(
+    record: ModelRecord,
+    node: PredicateNode,
+    modelName: string,
+    depth = 0,
+  ): Promise<boolean> {
+    if (depth > 32) {
+      throw new QueryError('Relation predicate nesting exceeds 32 levels.');
+    }
+    if (node.type === 'atom' || node.type === 'callback') {
+      return evaluatePredicate(record, node, undefined, this._fieldCtxForModel(modelName)).ok;
+    }
+    if (node.type === 'group') {
+      if (node.logic === 'AND') {
+        for (const child of node.children) {
+          if (!(await this.matchesPredicate(record, child, modelName, depth))) {
+            return false;
+          }
+        }
+        return true;
+      }
+      for (const child of node.children) {
+        if (await this.matchesPredicate(record, child, modelName, depth)) {
+          return true;
+        }
+      }
+      return node.children.length === 0;
+    }
+    const resolved = resolveRelationOnRegistry(this.registry, node.relationName, modelName);
+    const targetModel = targetModelName(resolved);
+    const linked = await this.linkedIds(resolved, record._id);
+    const targets = linked.length > 0 ? await this.dataReader.getByIds(targetModel, linked) : [];
+    if (node.quantifier === 'all') {
+      for (const target of targets) {
+        if (!(await this.matchesPredicate(target, node.target, targetModel, depth + 1))) {
+          return false;
+        }
+      }
+      return true;
+    }
+    let anyMatch = false;
+    for (const target of targets) {
+      if (await this.matchesPredicate(target, node.target, targetModel, depth + 1)) {
+        anyMatch = true;
+        break;
+      }
+    }
+    return node.quantifier === 'any' ? anyMatch : !anyMatch;
+  }
+
+  private async filterByPredicate(
+    records: readonly ModelRecord[],
+    node: PredicateNode,
+    modelName: string,
+  ): Promise<ModelRecord[]> {
+    if (!treeHasRelationPredicate(node)) {
+      return records.filter(predicateMatcher(node, this._fieldCtxForModel(modelName)));
+    }
+    const passed: ModelRecord[] = [];
+    for (const record of records) {
+      if (await this.matchesPredicate(record, node, modelName)) {
+        passed.push(record);
+      }
+    }
+    return passed;
+  }
+
   private async linkedIds(resolved: ResolvedRelation, id: string): Promise<string[]> {
     return resolved.direction === 'forward'
       ? this.indexReader.getForward(resolved.definition, id)
@@ -1600,7 +2027,6 @@ export class QueryChain<
       relationTargetCache,
     };
     const root = this.compiledRoot();
-    const matcher = predicateMatcher(root, this._fieldCtxForModel(this.originModel));
 
     const push = (keyTuple: string, rec: ModelRecord, modelName: string) => {
       const list = members.get(keyTuple) ?? [];
@@ -1616,7 +2042,7 @@ export class QueryChain<
 
     if (canStream) {
       await this.dataReader.scanModelRecords!(this.originModel, async (rec) => {
-        if (!matcher(rec)) {
+        if (!(await this.matchesPredicate(rec, root, this.originModel))) {
           return;
         }
         const keys = await resolveGroupKeyValues(rec, this.originModel, groupBy, gctx);
@@ -1672,6 +2098,9 @@ function formatFailureLine(ev: EvaluateResult): string {
   }
   if (n.type === 'callback') {
     return n.label ? `callback(${n.label})` : 'callback';
+  }
+  if (n.type === 'relation') {
+    return `${n.quantifier.toUpperCase()} relation ${n.relationName}`;
   }
   return `${n.logic} group`;
 }

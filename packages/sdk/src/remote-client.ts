@@ -3,6 +3,8 @@ import {
   deriveWireSessionKey,
   encodeWirePayload,
   isDatabaseOperation,
+  isQueryInterfaceErrorDetail,
+  queryInterfaceErrorDetailFromMessage,
   WireQueryChain,
   type EngineApplyOutcome,
   type EngineOperation,
@@ -18,9 +20,11 @@ import {
   type ManagementDatabasesResponse,
   type ManagementStatusResponse,
   type QueryExecuteOptions,
+  type QueryInterfaceErrorDetail,
   type QueryStartSpec,
   type RemoteExecuteSnapshot,
   type WireBindStrategy,
+  type WireBindingSurfaceAction,
   type WireEntityNode,
   type WireExecuteBody,
   type WireExecuteResultJson,
@@ -30,6 +34,44 @@ import {
   type WireRelationStats,
   type WireRowRef,
 } from '@mode-db/shared';
+
+export type QueryInterfaceInvocationResult = Extract<
+  WireExecuteResultJson,
+  { readonly kind: 'interface' }
+>;
+
+export type OperationInterfaceInvocationResult = Extract<
+  WireExecuteResultJson,
+  { readonly kind: 'operationInterface' }
+>;
+
+export type BindingSurfaceInvocationResult = Extract<
+  WireExecuteResultJson,
+  { readonly kind: 'bindingSurface' }
+>;
+
+export class QueryInterfaceInvocationError extends Error {
+  readonly code: string;
+  readonly category: QueryInterfaceErrorDetail['category'];
+  readonly retryable: boolean;
+  readonly details: Readonly<Record<string, string>> | undefined;
+
+  constructor(detail: QueryInterfaceErrorDetail) {
+    super(detail.message);
+    this.name = 'QueryInterfaceInvocationError';
+    this.code = detail.code;
+    this.category = detail.category;
+    this.retryable = detail.retryable;
+    this.details = detail.details;
+  }
+}
+
+function rpcError(message: string, detail: unknown): Error {
+  const normalized = isQueryInterfaceErrorDetail(detail)
+    ? detail
+    : queryInterfaceErrorDetailFromMessage(message);
+  return normalized ? new QueryInterfaceInvocationError(normalized) : new Error(message);
+}
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return typeof x === 'object' && x !== null && !Array.isArray(x);
@@ -177,15 +219,51 @@ function logInteractionError(trace: InteractionTrace, error: unknown): void {
 
 function summarizeWireBody(body: WireExecuteBody): Record<string, unknown> {
   const raw = body as unknown as Record<string, unknown>;
+  if (body.op === 'executeBindingSurface') {
+    return {
+      op: body.op,
+      surfaceId: body.surfaceId,
+      version: body.version,
+      action: body.action.kind,
+      mutationId: body.action.kind === 'mutate' ? body.action.mutationId : undefined,
+      parameterCount: Object.keys(body.parameters ?? {}).length,
+    };
+  }
+  if (body.op === 'executeInterface' || body.op === 'executeOperationInterface') {
+    return {
+      op: body.op,
+      callableName: body.callableName,
+      version: body.version,
+      parameterCount: Object.keys(body.parameters ?? {}).length,
+      ...(body.op === 'executeInterface'
+        ? {
+            page: body.page,
+            cursor:
+              body.cursor === null
+                ? 'first'
+                : typeof body.cursor === 'string'
+                  ? 'continuation'
+                  : undefined,
+            limit: body.limit,
+          }
+        : {}),
+    };
+  }
   if (body.op === 'executeQuery') {
     const snapshot = raw.snapshot as Record<string, unknown> | undefined;
     const plan = snapshot?.plan as Record<string, unknown> | undefined;
-    const page = snapshot?.page as Record<string, unknown> | undefined;
+    const execute = snapshot?.execute as Record<string, unknown> | undefined;
     return {
       op: body.op,
       model: plan?.originModel,
-      page: page?.page,
-      limit: page?.limit,
+      page: execute?.page,
+      cursor:
+        execute?.cursor === null
+          ? 'first'
+          : typeof execute?.cursor === 'string'
+            ? 'continuation'
+            : undefined,
+      limit: execute?.limit,
     };
   }
   return {
@@ -208,12 +286,41 @@ function summarizeWireResult(result: WireExecuteResultJson): Record<string, unkn
   if (result.kind === 'rows') {
     return { kind: result.kind, rows: result.rows.length };
   }
+  if (result.kind === 'interface') {
+    return {
+      kind: result.kind,
+      callableName: result.callableName,
+      version: result.version,
+      rows: result.rows.length,
+      hasNextCursor: Boolean(result.nextCursor),
+    };
+  }
+  if (result.kind === 'operationInterface') {
+    return {
+      kind: result.kind,
+      callableName: result.callableName,
+      version: result.version,
+      operation: result.operation,
+    };
+  }
+  if (result.kind === 'bindingSurface') {
+    return {
+      kind: result.kind,
+      surfaceId: result.surfaceId,
+      version: result.version,
+      action: result.action,
+      status: result.status,
+      rows: result.query?.rows.length,
+      mutationId: result.mutation?.mutationId,
+    };
+  }
   if (result.kind === 'paginated') {
     return {
       kind: result.kind,
       total: result.total,
       page: result.page,
       pageCount: result.pageCount,
+      hasNextCursor: Boolean(result.nextCursor),
     };
   }
   if (result.kind === 'analysis') {
@@ -500,6 +607,7 @@ function reviveWireResult(json: WireExecuteResultJson): unknown {
       page: json.page,
       limit: json.limit,
       pageCount: json.pageCount,
+      ...(json.nextCursor ? { nextCursor: json.nextCursor } : {}),
     };
   }
   if (json.kind === 'rows') {
@@ -566,7 +674,12 @@ function reviveWireResult(json: WireExecuteResultJson): unknown {
         ok: json.ok === true,
       };
     }
-    if (json.op === 'bindPair' || json.op === 'unlinkPair' || json.op === 'bind') {
+    if (
+      json.op === 'bindPair' ||
+      json.op === 'unlinkPair' ||
+      json.op === 'rebindPair' ||
+      json.op === 'bind'
+    ) {
       return {
         op: json.op,
         model: json.model,
@@ -857,7 +970,8 @@ class ShortRemoteSession implements QuerySession {
         throw new Error('Short mode: response JSON is not an object.');
       }
       if (msg.type === 'rpc.err') {
-        throw new Error(String(msg.error ?? 'RPC error'));
+        const message = String(msg.error ?? 'RPC error');
+        throw rpcError(message, msg.errorDetail);
       }
       if (msg.type !== 'rpc.ok' || typeof msg.cipher !== 'string') {
         throw new Error('Short mode: expected { type: "rpc.ok", cipher }.');
@@ -977,7 +1091,7 @@ class RemoteSession implements QuerySession {
       const def = this.pending.get(id);
       const errText = typeof msg.error === 'string' ? msg.error : 'RPC error';
       if (def) {
-        def.reject(new Error(errText));
+        def.reject(rpcError(errText, msg.errorDetail));
         this.pending.delete(id);
       }
     }
@@ -1600,6 +1714,95 @@ export class RemoteModelDBClient {
       totalDeleted: typeof out.deletedCount === 'number' ? out.deletedCount : 0,
       perModel,
     };
+  }
+
+  async invokeQueryInterface(
+    callableName: string,
+    options?: {
+      readonly version?: string;
+      readonly parameters?: Readonly<Record<string, unknown>>;
+      readonly accessKey?: string;
+      readonly page?: number;
+      readonly cursor?: string | null;
+      readonly limit?: number;
+    },
+  ): Promise<QueryInterfaceInvocationResult> {
+    const name = callableName.trim();
+    if (!name) {
+      throw new Error('invokeQueryInterface: callableName is required.');
+    }
+    const session = await this.ensureSession();
+    const result = await session.executeWireBodyRaw({
+      op: 'executeInterface',
+      callableName: name,
+      ...(options?.version ? { version: options.version } : {}),
+      ...(options?.parameters ? { parameters: options.parameters } : {}),
+      ...(options?.accessKey ? { accessKey: options.accessKey } : {}),
+      ...(options?.page !== undefined ? { page: options.page } : {}),
+      ...(options && Object.prototype.hasOwnProperty.call(options, 'cursor')
+        ? { cursor: options.cursor ?? null }
+        : {}),
+      ...(options?.limit !== undefined ? { limit: options.limit } : {}),
+    });
+    if (result.kind !== 'interface') {
+      throw new Error(`invokeQueryInterface: unexpected result kind "${result.kind}".`);
+    }
+    return result;
+  }
+  async invokeOperationInterface(
+    callableName: string,
+    options?: {
+      readonly version?: string;
+      readonly parameters?: Readonly<Record<string, unknown>>;
+      readonly accessKey?: string;
+    },
+  ): Promise<OperationInterfaceInvocationResult> {
+    const name = callableName.trim();
+    if (!name) {
+      throw new Error('invokeOperationInterface: callableName is required.');
+    }
+    const session = await this.ensureSession();
+    const result = await session.executeWireBodyRaw({
+      op: 'executeOperationInterface',
+      callableName: name,
+      ...(options?.version ? { version: options.version } : {}),
+      ...(options?.parameters ? { parameters: options.parameters } : {}),
+      ...(options?.accessKey ? { accessKey: options.accessKey } : {}),
+    });
+    if (result.kind !== 'operationInterface') {
+      throw new Error(`invokeOperationInterface: unexpected result kind "${result.kind}".`);
+    }
+    return result;
+  }
+
+  async invokeBindingSurface(
+    surfaceId: string,
+    options: {
+      readonly action: WireBindingSurfaceAction;
+      readonly version?: string;
+      readonly parameters?: Readonly<Record<string, unknown>>;
+      readonly accessKey?: string;
+      readonly accessKeys?: Readonly<Record<string, string>>;
+    },
+  ): Promise<BindingSurfaceInvocationResult> {
+    const id = surfaceId.trim();
+    if (!id) {
+      throw new Error('invokeBindingSurface: surfaceId is required.');
+    }
+    const session = await this.ensureSession();
+    const result = await session.executeWireBodyRaw({
+      op: 'executeBindingSurface',
+      surfaceId: id,
+      action: options.action,
+      ...(options.version ? { version: options.version } : {}),
+      ...(options.parameters ? { parameters: options.parameters } : {}),
+      ...(options.accessKey ? { accessKey: options.accessKey } : {}),
+      ...(options.accessKeys ? { accessKeys: options.accessKeys } : {}),
+    });
+    if (result.kind !== 'bindingSurface') {
+      throw new Error(`invokeBindingSurface: unexpected result kind "${result.kind}".`);
+    }
+    return result;
   }
 
   /**

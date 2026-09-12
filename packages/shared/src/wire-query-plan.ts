@@ -11,17 +11,38 @@ export class WireQueryError extends Error {
 }
 
 /** 聚合算子字符串（与宿主机桶内聚合协议一致）。 */
-export type AggregateOp = 'sum' | 'avg' | 'min' | 'max' | 'count' | 'variance' | 'stdDev';
+export type AggregateOp =
+  | 'sum'
+  | 'avg'
+  | 'min'
+  | 'max'
+  | 'count'
+  | 'variance'
+  | 'stdDev'
+  | 'sumDistinct'
+  | 'avgDistinct'
+  | 'minDistinct'
+  | 'maxDistinct'
+  | 'countDistinct';
 
 /** `aggregate` / `compute` 中单字段可配置多个算子。 */
 export type AggregateInputEntry = AggregateOp | readonly AggregateOp[];
+
+export type QuerySortDirection = 'asc' | 'desc';
+
+export interface QueryOrderEntry {
+  readonly field: string;
+  readonly direction: QuerySortDirection;
+}
 
 /** Options merged with snapshot `execute` when issuing a remote `execute` RPC. */
 export interface QueryExecuteOptions {
   readonly includeRelates?: boolean;
   readonly page?: number;
+  readonly cursor?: string | null;
   readonly limit?: number;
   readonly wrapGroups?: boolean;
+  readonly orderBy?: readonly QueryOrderEntry[];
 }
 
 export type WireRow = Record<string, unknown>;
@@ -49,7 +70,16 @@ export interface CallbackNode {
   readonly label?: string;
 }
 
-export type PredicateNode = AtomNode | GroupNode | CallbackNode;
+export type RelationQuantifier = 'any' | 'all' | 'none';
+
+export interface RelationPredicateNode {
+  readonly type: 'relation';
+  readonly relationName: string;
+  readonly quantifier: RelationQuantifier;
+  readonly target: PredicateNode;
+}
+
+export type PredicateNode = AtomNode | GroupNode | CallbackNode | RelationPredicateNode;
 
 export function atomNode(field: string, op: ScalarOperator, value: unknown): AtomNode {
   return { type: 'atom', field, op: op as PredicateAtomOperator, value };
@@ -66,6 +96,9 @@ export function clonePredicateNode(node: PredicateNode): PredicateNode {
   if (node.type === 'callback') {
     return { type: 'callback', fn: node.fn, label: node.label };
   }
+  if (node.type === 'relation') {
+    return { ...node, target: clonePredicateNode(node.target) };
+  }
   return {
     type: 'group',
     logic: node.logic,
@@ -79,6 +112,14 @@ export function serializePredicate(node: PredicateNode): Record<string, unknown>
   }
   if (node.type === 'callback') {
     return { type: 'callback', label: node.label ?? '(fn)' };
+  }
+  if (node.type === 'relation') {
+    return {
+      type: 'relation',
+      relationName: node.relationName,
+      quantifier: node.quantifier,
+      target: serializePredicate(node.target),
+    };
   }
   return {
     type: 'group',
@@ -106,6 +147,25 @@ export function deserializePredicate(obj: Record<string, unknown>): PredicateNod
       `deserializePredicate: callback nodes cannot be restored from JSON (label=${String(obj.label ?? '')}).`,
     );
   }
+  if (t === 'relation') {
+    if (!isRecord(obj.target)) {
+      throw new Error('deserializePredicate: relation.target must be an object.');
+    }
+    const quantifier = obj.quantifier;
+    if (quantifier !== 'any' && quantifier !== 'all' && quantifier !== 'none') {
+      throw new Error('deserializePredicate: relation.quantifier must be any/all/none.');
+    }
+    const relationName = String(obj.relationName ?? '').trim();
+    if (!relationName) {
+      throw new Error('deserializePredicate: relation.relationName is required.');
+    }
+    return {
+      type: 'relation',
+      relationName,
+      quantifier,
+      target: deserializePredicate(obj.target),
+    };
+  }
   if (t === 'group') {
     const logic = obj.logic === 'OR' ? 'OR' : 'AND';
     const raw = obj.children;
@@ -130,7 +190,20 @@ export function treeHasCallback(node: PredicateNode): boolean {
   if (node.type === 'atom') {
     return false;
   }
+  if (node.type === 'relation') {
+    return treeHasCallback(node.target);
+  }
   return node.children.some(treeHasCallback);
+}
+
+export function treeHasRelationPredicate(node: PredicateNode): boolean {
+  if (node.type === 'relation') {
+    return true;
+  }
+  if (node.type === 'atom' || node.type === 'callback') {
+    return false;
+  }
+  return node.children.some(treeHasRelationPredicate);
 }
 
 export type ScalarOperator = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'in' | 'between';
@@ -404,6 +477,26 @@ export class ComputeBuilder {
   variance(field: string): ComputeMetricToken {
     return makeToken(field, 'variance');
   }
+
+  sumDistinct(field: string): ComputeMetricToken {
+    return makeToken(field, 'sumDistinct');
+  }
+
+  avgDistinct(field: string): ComputeMetricToken {
+    return makeToken(field, 'avgDistinct');
+  }
+
+  minDistinct(field: string): ComputeMetricToken {
+    return makeToken(field, 'minDistinct');
+  }
+
+  maxDistinct(field: string): ComputeMetricToken {
+    return makeToken(field, 'maxDistinct');
+  }
+
+  countDistinct(field: string): ComputeMetricToken {
+    return makeToken(field, 'countDistinct');
+  }
 }
 
 export function mergeComputeTokens(
@@ -460,6 +553,31 @@ export class Aggregator {
     return this;
   }
 
+  countDistinct(field: string): this {
+    this.metrics[field] = 'countDistinct';
+    return this;
+  }
+
+  sumDistinct(field: string): this {
+    this.metrics[field] = 'sumDistinct';
+    return this;
+  }
+
+  avgDistinct(field: string): this {
+    this.metrics[field] = 'avgDistinct';
+    return this;
+  }
+
+  minDistinct(field: string): this {
+    this.metrics[field] = 'minDistinct';
+    return this;
+  }
+
+  maxDistinct(field: string): this {
+    this.metrics[field] = 'maxDistinct';
+    return this;
+  }
+
   toMetricsRecord(): Record<string, AggregateOp> {
     return { ...this.metrics };
   }
@@ -489,7 +607,8 @@ export interface WireHopJSON {
 }
 
 export interface QueryPlanASTv2 {
-  readonly version: 2;
+  /** v3 ordering; v4 relation predicates; v5 HAVING; v6 distinct; v7 cursor pagination. */
+  readonly version: 2 | 3 | 4 | 5 | 6 | 7;
   readonly originModel: string;
   readonly start: QueryStartSpec;
   readonly hops: ReadonlyArray<WireHopJSON>;
@@ -523,12 +642,27 @@ export function queryPlanHasSerializedCallback(plan: QueryPlanASTv2): boolean {
   if (walk(plan.trailing)) {
     return true;
   }
-  for (const h of plan.hops) {
-    if (walk(h.source as Record<string, unknown>) || walk(h.target as Record<string, unknown>)) {
+  const hopHasCallback = (hop: WireHopJSON): boolean =>
+    walk(hop.source) || walk(hop.target) || Boolean(hop.branches?.some(hopHasCallback));
+  return plan.hops.some(hopHasCallback);
+}
+
+export function queryPlanHasRelationPredicate(plan: QueryPlanASTv2): boolean {
+  const walk = (node: Record<string, unknown>): boolean => {
+    if (node.type === 'relation') {
       return true;
     }
+    if (node.type === 'group' && Array.isArray(node.children)) {
+      return node.children.some((child) => isRecord(child) && walk(child));
+    }
+    return false;
+  };
+  if (walk(plan.trailing)) {
+    return true;
   }
-  return false;
+  const hopHasRelation = (hop: WireHopJSON): boolean =>
+    walk(hop.source) || walk(hop.target) || Boolean(hop.branches?.some(hopHasRelation));
+  return plan.hops.some(hopHasRelation);
 }
 
 export interface RemoteExecuteSnapshot {
@@ -536,12 +670,15 @@ export interface RemoteExecuteSnapshot {
   readonly execute: {
     readonly limit?: number;
     readonly page?: number;
+    readonly cursor?: string | null;
     readonly includeRelates?: boolean;
     readonly wrapGroups?: boolean;
+    readonly orderBy?: readonly QueryOrderEntry[];
   };
   readonly analysis: {
     readonly groupBy: readonly string[] | null;
     readonly compute: Readonly<Record<string, AggregateInputEntry>> | null;
+    readonly having?: PredicateNode | null;
   };
 }
 
@@ -549,8 +686,14 @@ export interface RemoteSnapshotChainState {
   readonly analysisCustom: Readonly<Record<string, CustomReducerSpec>>;
   readonly wrapGroupsFlag: boolean;
   readonly analysisGroupBy: readonly string[] | null;
-  readonly paginationPartial: { readonly page?: number; readonly limit?: number } | null;
+  readonly paginationPartial: {
+    readonly page?: number;
+    readonly cursor?: string | null;
+    readonly limit?: number;
+  } | null;
   readonly analysisCompute: Readonly<Record<string, AggregateInputEntry>> | null;
+  readonly analysisHaving: PredicateNode | null;
+  readonly orderBy: readonly QueryOrderEntry[];
 }
 
 export function finalizeRemoteExecuteSnapshot(
@@ -574,21 +717,85 @@ export function finalizeRemoteExecuteSnapshot(
   }
   const limitOpt = options?.limit ?? chainState.paginationPartial?.limit;
   const pageOpt = options?.page ?? chainState.paginationPartial?.page ?? 0;
+  const cursorOpt =
+    options && Object.prototype.hasOwnProperty.call(options, 'cursor')
+      ? options.cursor
+      : chainState.paginationPartial?.cursor;
   const wrapGroups = options?.wrapGroups ?? chainState.wrapGroupsFlag;
+  const orderBy = options?.orderBy ?? chainState.orderBy;
+  if (chainState.analysisHaving && treeHasCallback(chainState.analysisHaving)) {
+    throw new WireQueryError('Remote HAVING cannot serialize callback predicates.');
+  }
+  if (chainState.analysisHaving && predicateHasRelationNode(chainState.analysisHaving)) {
+    throw new WireQueryError('Remote HAVING supports aggregate scalar predicates only.');
+  }
+  if (
+    chainState.analysisHaving &&
+    (chainState.analysisGroupBy === null || chainState.analysisGroupBy.length === 0)
+  ) {
+    throw new WireQueryError('HAVING requires groupBy(...) or pivot(...).');
+  }
+  if (chainState.analysisHaving && wrapGroups) {
+    throw new WireQueryError('HAVING cannot be combined with wrapGroups.');
+  }
+  const finalizedPlan: QueryPlanASTv2 =
+    cursorOpt !== undefined
+      ? { ...plan, version: 7 }
+      : analysisComputeHasDistinct(chainState.analysisCompute)
+        ? { ...plan, version: 6 }
+        : chainState.analysisHaving
+          ? { ...plan, version: 5 }
+          : queryPlanHasRelationPredicate(plan)
+            ? { ...plan, version: 4 }
+            : orderBy.length > 0
+              ? { ...plan, version: 3 }
+              : plan;
   const execute: RemoteExecuteSnapshot['execute'] = {
     ...(limitOpt !== undefined && limitOpt !== null ? { limit: limitOpt } : {}),
-    page: pageOpt,
+    ...(cursorOpt === undefined ? { page: pageOpt } : { cursor: cursorOpt ?? null }),
     ...(options?.includeRelates !== undefined ? { includeRelates: options.includeRelates } : {}),
     ...(wrapGroups ? { wrapGroups: true } : {}),
+    ...(orderBy.length > 0
+      ? { orderBy: orderBy.map((entry) => ({ field: entry.field, direction: entry.direction })) }
+      : {}),
   };
   return {
-    plan,
+    plan: finalizedPlan,
     execute,
     analysis: {
       groupBy: chainState.analysisGroupBy,
       compute: chainState.analysisCompute,
+      having: chainState.analysisHaving ? clonePredicateNode(chainState.analysisHaving) : null,
     },
   };
+}
+
+function predicateHasRelationNode(node: PredicateNode): boolean {
+  if (node.type === 'relation') {
+    return true;
+  }
+  if (node.type === 'atom' || node.type === 'callback') {
+    return false;
+  }
+  return node.children.some(predicateHasRelationNode);
+}
+
+const DISTINCT_AGGREGATE_OPS = new Set<AggregateOp>([
+  'sumDistinct',
+  'avgDistinct',
+  'minDistinct',
+  'maxDistinct',
+  'countDistinct',
+]);
+
+export function analysisComputeHasDistinct(
+  compute: Readonly<Record<string, AggregateInputEntry>> | null,
+): boolean {
+  return Object.values(compute ?? {}).some((entry) =>
+    (Array.isArray(entry) ? entry : [entry]).some((op) =>
+      DISTINCT_AGGREGATE_OPS.has(op as AggregateOp),
+    ),
+  );
 }
 
 interface HopPlan {
@@ -635,9 +842,12 @@ export class WireQueryChain<
   private readonly start: QueryStartSpec;
   private analysisGroupBy: string[] | null = null;
   private analysisCompute: Record<string, AggregateInputEntry> | null = null;
+  private analysisHaving: PredicateNode | null = null;
   private readonly analysisCustom: Record<string, CustomReducerSpec> = {};
-  private paginationPartial: { page?: number; limit?: number } | null = null;
+  private paginationPartial: { page?: number; cursor?: string | null; limit?: number } | null =
+    null;
   private wrapGroupsFlag = false;
+  private orderBySpecs: QueryOrderEntry[] = [];
 
   constructor(startModel: string, start: QueryStartSpec) {
     this.originModel = startModel;
@@ -656,6 +866,8 @@ export class WireQueryChain<
       analysisGroupBy: this.analysisGroupBy,
       paginationPartial: this.paginationPartial,
       analysisCompute: this.analysisCompute,
+      analysisHaving: this.analysisHaving,
+      orderBy: this.orderBySpecs,
     });
   }
 
@@ -996,13 +1208,48 @@ export class WireQueryChain<
 
   page(index: number): this {
     const p = Math.max(0, Math.floor(index));
-    this.paginationPartial = { ...this.paginationPartial, page: p };
+    this.paginationPartial = {
+      ...(this.paginationPartial?.limit !== undefined
+        ? { limit: this.paginationPartial.limit }
+        : {}),
+      page: p,
+    };
+    return this;
+  }
+
+  cursor(token: string | null = null): this {
+    this.paginationPartial = {
+      ...(this.paginationPartial?.limit !== undefined
+        ? { limit: this.paginationPartial.limit }
+        : {}),
+      cursor: token,
+    };
     return this;
   }
 
   limit(size: number): this {
     const lim = Math.max(1, Math.floor(size));
     this.paginationPartial = { ...this.paginationPartial, limit: lim };
+    return this;
+  }
+
+  having(predicate: PredicateNode): this {
+    if (treeHasCallback(predicate)) {
+      throw new WireQueryError('having() does not support callback predicates.');
+    }
+    if (predicateHasRelationNode(predicate)) {
+      throw new WireQueryError('having() supports aggregate scalar predicates only.');
+    }
+    this.analysisHaving = clonePredicateNode(predicate);
+    return this;
+  }
+
+  orderBy(field: string, direction: QuerySortDirection = 'asc'): this {
+    const key = field.trim();
+    if (!key) {
+      throw new WireQueryError('orderBy() requires a field name.');
+    }
+    this.orderBySpecs.push({ field: key, direction });
     return this;
   }
 

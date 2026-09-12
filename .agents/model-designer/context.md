@@ -19,6 +19,9 @@
 7. 库、模型、字段、关系的显示名是可选 i18n 元数据；为空时不能自动写成唯一名。
 8. `sys_*` 保存必须 update-first / upsert，不能每次保存新增重复行。
 9. 层级页高亮和显隐权重只在页模式或层级面板打开时生效。
+10. 查询链中继承关系（`modelInherits`）不可遍历；子模型是父模型的分身，选择子模型走 `rebaseInheritedIdentityToChild` 复用节点身份，不新建节点。
+11. 画布浮动工具按钮分三组：左上（视图/保存）、右上（数据库管理）、底部中间（画布布局），由 `DesignerToolbar.tsx` + `designer-shell.css` 的 `.designer-float-top-left/-top-right/-bottom` 控制。
+12. 三个前端 dev server（web/model-designer/data-studio）均已 `host: true`，会打印 Network 地址供跨设备访问。
 
 ## AI 改动首选入口
 

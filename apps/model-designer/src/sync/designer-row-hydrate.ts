@@ -14,6 +14,7 @@ import type { DesignerModelLayout } from '../types/designer-layout.js';
 import type { MldgDocument } from '../types/mldg-document.js';
 import { pullLatestDesignerSnapshot } from './sdk-designer-sync.js';
 import { parseMldgDocumentFromUint8Array } from './mldg-wire-bytes.js';
+import { createUuid } from '../utils/random-id.js';
 
 interface RowDataLike {
   getData?: (deep?: boolean) => Record<string, unknown>;
@@ -148,7 +149,7 @@ function propsFromCatalogFields(
     return [];
   }
   return fields.map((fieldName, sort) => ({
-    id: crypto.randomUUID(),
+    id: createUuid(),
     name: fieldName,
     name_i18n: { en: fieldName, zh: fieldName, ja: fieldName },
     type: DataType.String,
@@ -175,7 +176,7 @@ function propFromSysRow(row: Record<string, unknown>): PropObject {
     DataType.Unit,
   ];
   return {
-    id: typeof row._id === 'string' ? row._id : crypto.randomUUID(),
+    id: typeof row._id === 'string' ? row._id : createUuid(),
     name: fieldName,
     name_i18n: parseI18nField(row.name, fieldName),
     description_i18n: parseI18nField(row.description, ''),
@@ -575,7 +576,7 @@ export async function fetchGraphFromDesignerRows(
       continue;
     }
     relations.push({
-      id: crypto.randomUUID(),
+      id: createUuid(),
       source_model_id: m.parent_id,
       target_model_id: m.id,
       forward_name: INHERIT_RELATION_DEFAULT_NAME,

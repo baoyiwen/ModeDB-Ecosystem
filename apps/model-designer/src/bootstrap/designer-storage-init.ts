@@ -18,6 +18,16 @@ export const SYS_DATA_ASSET_MAP = 'sys_data_asset_map';
 export const SYS_DESIGNER_GRAPH = 'sys_designer_graph';
 /** Query Designer 接口资产注册表。 */
 export const SYS_QUERY_INTERFACE = 'sys_query_interface';
+/** 已发布 QueryInterface 的脱敏调用审计。 */
+export const SYS_QUERY_INTERFACE_CALL_LOG = 'sys_query_interface_call_log';
+/** Operation Designer 写接口资产注册表。 */
+export const SYS_OPERATION_INTERFACE = 'sys_operation_interface';
+/** 已发布 OperationInterface 的脱敏调用审计。 */
+export const SYS_OPERATION_INTERFACE_CALL_LOG = 'sys_operation_interface_call_log';
+/** QueryInterface 与 OperationInterface 的版本固定组合注册表。 */
+export const SYS_BINDING_SURFACE = 'sys_binding_surface';
+/** 已发布 BindingSurface 的脱敏组合调用审计。 */
+export const SYS_BINDING_SURFACE_CALL_LOG = 'sys_binding_surface_call_log';
 
 type RelationLogicWire = 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to-many';
 
@@ -131,6 +141,7 @@ export async function ensureDesignerCatalog(
       name: SYS_QUERY_INTERFACE,
       schema: {
         library_code: 'String',
+        interface_id: 'String',
         display_name: 'String',
         description: 'String',
         query_json: 'String',
@@ -139,6 +150,86 @@ export async function ensureDesignerCatalog(
         created_at: 'String',
         updated_at: 'String',
         projection_configured: 'Boolean',
+        release_json: 'String',
+        release_history_json: 'String',
+      },
+    },
+    {
+      name: SYS_QUERY_INTERFACE_CALL_LOG,
+      schema: {
+        library_code: 'String',
+        callable_name: 'String',
+        requested_version: 'String',
+        resolved_version: 'String',
+        status: 'String',
+        error_code: 'String',
+        started_at: 'String',
+        duration_ms: 'Number',
+        row_count: 'Int',
+        parameter_count: 'Int',
+        pagination_mode: 'String',
+      },
+    },
+    {
+      name: SYS_OPERATION_INTERFACE,
+      schema: {
+        library_code: 'String',
+        interface_id: 'String',
+        display_name: 'String',
+        description: 'String',
+        operation_json: 'String',
+        signature: 'String',
+        created_at: 'String',
+        updated_at: 'String',
+        release_json: 'String',
+        release_history_json: 'String',
+      },
+    },
+    {
+      name: SYS_OPERATION_INTERFACE_CALL_LOG,
+      schema: {
+        library_code: 'String',
+        callable_name: 'String',
+        requested_version: 'String',
+        resolved_version: 'String',
+        operation_type: 'String',
+        status: 'String',
+        error_code: 'String',
+        started_at: 'String',
+        duration_ms: 'Number',
+        parameter_count: 'Int',
+      },
+    },
+    {
+      name: SYS_BINDING_SURFACE,
+      schema: {
+        library_code: 'String',
+        surface_id: 'String',
+        display_name: 'String',
+        description: 'String',
+        surface_json: 'String',
+        signature: 'String',
+        created_at: 'String',
+        updated_at: 'String',
+        release_json: 'String',
+        release_history_json: 'String',
+      },
+    },
+    {
+      name: SYS_BINDING_SURFACE_CALL_LOG,
+      schema: {
+        library_code: 'String',
+        surface_id: 'String',
+        requested_version: 'String',
+        resolved_version: 'String',
+        action: 'String',
+        mutation_id: 'String',
+        status: 'String',
+        error_code: 'String',
+        started_at: 'String',
+        duration_ms: 'Number',
+        parameter_count: 'Int',
+        row_count: 'Int',
       },
     },
   ];
@@ -285,6 +376,21 @@ export async function ensureDesignerCatalog(
     { model: SYS_PROPS, fields: { library_code: 'String' } },
     { model: SYS_DESIGNER_GRAPH, fields: { library_code: 'String' } },
     { model: SYS_QUERY_INTERFACE, fields: { library_code: 'String' } },
+    { model: SYS_QUERY_INTERFACE, fields: { interface_id: 'String' } },
+    { model: SYS_QUERY_INTERFACE, fields: { release_json: 'String' } },
+    { model: SYS_QUERY_INTERFACE, fields: { release_history_json: 'String' } },
+    { model: SYS_OPERATION_INTERFACE, fields: { library_code: 'String' } },
+    { model: SYS_OPERATION_INTERFACE, fields: { interface_id: 'String' } },
+    { model: SYS_OPERATION_INTERFACE, fields: { release_json: 'String' } },
+    { model: SYS_OPERATION_INTERFACE, fields: { release_history_json: 'String' } },
+    { model: SYS_BINDING_SURFACE, fields: { library_code: 'String' } },
+    { model: SYS_BINDING_SURFACE, fields: { surface_id: 'String' } },
+    { model: SYS_BINDING_SURFACE, fields: { release_json: 'String' } },
+    { model: SYS_BINDING_SURFACE, fields: { release_history_json: 'String' } },
+    { model: SYS_BINDING_SURFACE_CALL_LOG, fields: { library_code: 'String' } },
+    { model: SYS_BINDING_SURFACE_CALL_LOG, fields: { surface_id: 'String' } },
+    { model: SYS_BINDING_SURFACE_CALL_LOG, fields: { status: 'String' } },
+    { model: SYS_BINDING_SURFACE_CALL_LOG, fields: { error_code: 'String' } },
   ];
   for (const p of patches) {
     try {

@@ -14,14 +14,15 @@ ModelDB **远程客户端**：通过 WebSocket 连接 **`@mode-db/server`**，�
 
 ## 模块用途
 
-| 能力     | 说明                                                           |
-| -------- | -------------------------------------------------------------- |
-| **连接** | `connectRemote`、`RemoteModelDBClient.connect`、`ModelDB` 门面 |
-| **查询** | `model(name).query().filter(...).execute()`                    |
-| **变更** | `insertMany`、`batchUpdate`、`batchDelete`、`bind`             |
-| **Meta** | `registerModel`、`dropModel`、`alterModel`、`batchRegister`    |
-| **协议** | `apply(op)` / `applyAll(ops)` — 与 Designer JSON 配置同源      |
-| **管理** | `listDatabases`、`getManagementStatus`（静态方法）             |
+| 能力     | 说明                                                                                        |
+| -------- | ------------------------------------------------------------------------------------------- |
+| **连接** | `connectRemote`、`RemoteModelDBClient.connect`、`ModelDB` 门面                              |
+| **查询** | `model(name).query().filter(...).execute()`                                                 |
+| **接口** | `invokeQueryInterface` / `invokeOperationInterface` / `invokeBindingSurface` 调用已发布接口 |
+| **变更** | `insertMany`、`batchUpdate`、`batchDelete`、`bind`                                          |
+| **Meta** | `registerModel`、`dropModel`、`alterModel`、`batchRegister`                                 |
+| **协议** | `apply(op)` / `applyAll(ops)` — 与 Designer JSON 配置同源                                   |
+| **管理** | `listDatabases`、`getManagementStatus`（静态方法）                                          |
 
 ### 备份文件迁移
 
@@ -104,6 +105,104 @@ import type { EngineOperation } from '@mode-db/shared';
 const op: EngineOperation = { op: 'clearModelData', model: 'Country' };
 await client.apply(op);
 ```
+
+### 调用已发布查询接口
+
+Query Designer 发布的 active release 可通过调用名、版本和参数直接执行。调用方不需要了解底层模型关系或 wire query plan。
+
+```typescript
+const first = await client.invokeQueryInterface('itemsByCategory', {
+  version: '1.0.0',
+  parameters: { category: 'A' },
+  accessKey: '接口启用专属密钥策略时提供',
+  cursor: null,
+  limit: 20,
+});
+
+if (first.nextCursor) {
+  const second = await client.invokeQueryInterface('itemsByCategory', {
+    version: '1.0.0',
+    parameters: { category: 'A' },
+    cursor: first.nextCursor,
+    limit: 20,
+  });
+}
+```
+
+返回值的 `rows` 已按接口输出契约完成字段筛选和重命名，并包含 `version`、`callableName` 以及适用的分页元数据。
+
+调用失败时可以通过结构化异常稳定判断错误类型，不需要解析错误文本：
+
+```typescript
+import { QueryInterfaceInvocationError } from '@mode-db/sdk';
+
+try {
+  await client.invokeQueryInterface('itemsByCategory', {
+    parameters: { category: 'A' },
+  });
+} catch (error) {
+  if (error instanceof QueryInterfaceInvocationError) {
+    console.log(error.code, error.category, error.retryable, error.details);
+  }
+}
+```
+
+接口触发固定窗口限流时，异常 `code` 为 `INTERFACE_RATE_LIMITED`、`category` 为 `rate_limited`、`retryable` 为 `true`，并通过 `details.retryAfterSeconds` 告知建议重试等待时间。
+
+### 调用已发布写接口
+
+OperationInterface 使用独立的 mutation 调用入口。调用方只提交发布契约中的参数，不能直接传入底层 Engine operation。
+
+```typescript
+const created = await client.invokeOperationInterface('createItem', {
+  version: '1.0.0',
+  parameters: { name: 'First item', score: 7 },
+  accessKey: '接口启用专属密钥策略时提供',
+});
+
+console.log(created.operation, created.output);
+```
+
+当前发布执行链支持单记录 `create / update / delete / upsert` 和单关系对
+`bind / unbind / rebind`。Server 会在参数校验、访问策略和限流通过后，通过写串行门执行已固化的
+`insert / update / delete / bindPair / unlinkPair / rebindPair` 模板，并返回 `operationInterface`
+结果。`upsert` 通过显式匹配字段编译为单行 `insertMany + upsert.matchFields + returning`；
+`rebind` 保持 source 不变，将 `previousTargetId` 替换为 `nextTargetId`，新边建立失败时恢复旧边。
+batch 接口通过 `parameters.items` 接收同构参数对象数组，支持失败后继续或首错停止。返回值包含
+`success / partial / failed` 状态、请求/尝试/成功/失败/跳过计数和可选逐项结果。batch 当前非原子，
+成功项会独立提交；声明跨项回滚的发布模板会被拒绝。损坏或未知操作模板仍会在执行前被拒绝。
+
+### 调用已发布 BindingSurface
+
+BindingSurface 将固定版本的查询接口和写接口组合为一个稳定入口。读取时只提交 Surface 参数；写入时提交发布契约中的 mutation id，以及该 UI 行的记录引用、当前行值和编辑值。
+
+```typescript
+const read = await client.invokeBindingSurface('item-editor', {
+  version: '1.0.0',
+  parameters: { category: 'A' },
+  accessKeys: {
+    'query-items': 'query-access-key',
+    'operation-update-item': 'operation-access-key',
+  },
+  action: { kind: 'read', limit: 20 },
+});
+
+const updated = await client.invokeBindingSurface('item-editor', {
+  version: '1.0.0',
+  parameters: { category: 'A' },
+  action: {
+    kind: 'mutate',
+    mutationId: 'update-name',
+    editedValue: 'Updated name',
+    row: read.query?.rows[0],
+    recordRefs: {
+      node_item: { model: 'Item', id: 'item-id' },
+    },
+  },
+});
+```
+
+`accessKeys` 可以接口 id 或 callable name 为键，服务端只把对应密钥传给相应固定版本接口。`status === 'refreshFailed'` 表示 mutation 已成功提交、仅自动刷新失败；此时应单独重新读取，不能重试 mutation。
 
 ### 浏览器说明
 

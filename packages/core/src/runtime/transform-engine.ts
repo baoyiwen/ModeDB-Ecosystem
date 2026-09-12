@@ -1,6 +1,8 @@
 import type { ModelRecord, ModelRegistry, DataReader, IndexReader } from '@mode-db/common';
+import type { QueryOrderEntry } from '@mode-db/shared';
 import { QueryError } from '@mode-db/common';
 import type { HydratedEntity } from './HydratedEntity.js';
+import { evaluatePredicate, type PredicateNode } from './predicate-tree.js';
 import {
   BucketAggregator,
   isTraceableNull,
@@ -663,6 +665,31 @@ export class Aggregator {
     return this;
   }
 
+  countDistinct(field: string): this {
+    this.metrics[field] = 'countDistinct';
+    return this;
+  }
+
+  sumDistinct(field: string): this {
+    this.metrics[field] = 'sumDistinct';
+    return this;
+  }
+
+  avgDistinct(field: string): this {
+    this.metrics[field] = 'avgDistinct';
+    return this;
+  }
+
+  minDistinct(field: string): this {
+    this.metrics[field] = 'minDistinct';
+    return this;
+  }
+
+  maxDistinct(field: string): this {
+    this.metrics[field] = 'maxDistinct';
+    return this;
+  }
+
   toMetricsRecord(): Record<string, AggregateOp> {
     return { ...this.metrics };
   }
@@ -699,6 +726,28 @@ function orderedKeysFromBucketMap(aggMap: Map<string, Record<string, unknown>>):
   return keys.map((k) => JSON.parse(k) as unknown[]);
 }
 
+function compareAnalysisOrderValues(left: unknown, right: unknown): number {
+  if (Object.is(left, right)) {
+    return 0;
+  }
+  if (left === null || left === undefined) {
+    return 1;
+  }
+  if (right === null || right === undefined) {
+    return -1;
+  }
+  if (typeof left === 'number' && typeof right === 'number') {
+    return left - right;
+  }
+  if (typeof left === 'boolean' && typeof right === 'boolean') {
+    return Number(left) - Number(right);
+  }
+  return String(left).localeCompare(String(right), undefined, {
+    numeric: true,
+    sensitivity: 'base',
+  });
+}
+
 export function buildAnalysisRunMetadata(
   dimensionKeys: readonly string[],
   bucketMap: Map<string, Record<string, unknown>>,
@@ -722,18 +771,47 @@ export function buildAnalysisRunMetadata(
  */
 export class AnalysisResult {
   private readonly metaMap: Map<string, Record<string, AnalysisMetricMetadata>>;
+  private readonly bucketOrder: readonly string[];
 
   constructor(
     readonly dimensionKeys: readonly string[],
     private readonly bucketMap: Map<string, Record<string, unknown>>,
     metaMap?: Map<string, Record<string, AnalysisMetricMetadata>>,
+    bucketOrder?: readonly string[],
   ) {
     this.metaMap = metaMap ?? new Map();
+    this.bucketOrder = bucketOrder
+      ? bucketOrder.filter((key) => bucketMap.has(key))
+      : [...bucketMap.keys()].sort((a, b) => a.localeCompare(b));
   }
 
   /** 分组桶数量（排序分页用）。 */
   get bucketCount(): number {
     return this.bucketMap.size;
+  }
+
+  filterBuckets(predicate: PredicateNode): AnalysisResult {
+    const newBucket = new Map<string, Record<string, unknown>>();
+    const newMeta = new Map<string, Record<string, AnalysisMetricMetadata>>();
+    const keptKeys: string[] = [];
+    for (const key of this.bucketOrder) {
+      const aggregates = this.bucketMap.get(key);
+      if (!aggregates) {
+        continue;
+      }
+      const dimensions = JSON.parse(key) as unknown[];
+      const row: Record<string, unknown> = { ...aggregates };
+      this.dimensionKeys.forEach((dimensionKey, index) => {
+        row[dimensionKey] = dimensions[index];
+      });
+      if (!evaluatePredicate(row as ModelRecord, predicate).ok) {
+        continue;
+      }
+      newBucket.set(key, aggregates);
+      newMeta.set(key, this.metaMap.get(key) ?? {});
+      keptKeys.push(key);
+    }
+    return new AnalysisResult(this.dimensionKeys, newBucket, newMeta, keptKeys);
   }
 
   /**
@@ -743,30 +821,92 @@ export class AnalysisResult {
   sliceBuckets(pageIndex: number, limit: number): AnalysisResult {
     const safeLimit = Math.max(1, Math.floor(limit));
     const page = Math.max(0, Math.floor(pageIndex));
-    const ordered = orderedKeysFromBucketMap(this.bucketMap);
+    const orderedKeys = this.bucketOrder;
     const off = page * safeLimit;
-    const sliceKeys = ordered.slice(off, off + safeLimit);
+    const sliceKeys = orderedKeys.slice(off, off + safeLimit);
     const newBucket = new Map<string, Record<string, unknown>>();
     const newMeta = new Map<string, Record<string, AnalysisMetricMetadata>>();
-    for (const vals of sliceKeys) {
-      const k = stableKeyTuple(vals);
+    for (const k of sliceKeys) {
       const agg = this.bucketMap.get(k);
       if (agg !== undefined) {
         newBucket.set(k, agg);
       }
       newMeta.set(k, this.metaMap.get(k) ?? {});
     }
-    return new AnalysisResult(this.dimensionKeys, newBucket, newMeta);
+    return new AnalysisResult(this.dimensionKeys, newBucket, newMeta, sliceKeys);
+  }
+
+  sliceBucketsAfter(
+    anchor: string | undefined,
+    limit: number,
+  ): { result: AnalysisResult; nextAnchor?: string } {
+    const safeLimit = Math.max(1, Math.floor(limit));
+    const anchorIndex = anchor === undefined ? -1 : this.bucketOrder.indexOf(anchor);
+    if (anchor !== undefined && anchorIndex < 0) {
+      throw new QueryError('Cursor anchor is no longer present in the aggregation result.');
+    }
+    const sliceKeys = this.bucketOrder.slice(anchorIndex + 1, anchorIndex + 1 + safeLimit);
+    const newBucket = new Map<string, Record<string, unknown>>();
+    const newMeta = new Map<string, Record<string, AnalysisMetricMetadata>>();
+    for (const key of sliceKeys) {
+      const aggregates = this.bucketMap.get(key);
+      if (aggregates !== undefined) {
+        newBucket.set(key, aggregates);
+      }
+      newMeta.set(key, this.metaMap.get(key) ?? {});
+    }
+    const hasMore = anchorIndex + 1 + sliceKeys.length < this.bucketOrder.length;
+    return {
+      result: new AnalysisResult(this.dimensionKeys, newBucket, newMeta, sliceKeys),
+      ...(hasMore && sliceKeys.length > 0 ? { nextAnchor: sliceKeys.at(-1)! } : {}),
+    };
+  }
+
+  sortBuckets(orderBy: readonly QueryOrderEntry[]): AnalysisResult {
+    if (orderBy.length === 0 || this.bucketOrder.length < 2) {
+      return this;
+    }
+    const rows = this.bucketOrder.map((key, index) => ({
+      key,
+      index,
+      dimensions: JSON.parse(key) as unknown[],
+      aggregates: this.bucketMap.get(key) ?? {},
+    }));
+    rows.sort((left, right) => {
+      for (const order of orderBy) {
+        const dimensionIndex = this.dimensionKeys.indexOf(order.field);
+        const leftValue =
+          dimensionIndex >= 0 ? left.dimensions[dimensionIndex] : left.aggregates[order.field];
+        const rightValue =
+          dimensionIndex >= 0 ? right.dimensions[dimensionIndex] : right.aggregates[order.field];
+        const leftMissing = leftValue === null || leftValue === undefined;
+        const rightMissing = rightValue === null || rightValue === undefined;
+        if (leftMissing !== rightMissing) {
+          return leftMissing ? 1 : -1;
+        }
+        const compared = compareAnalysisOrderValues(leftValue, rightValue);
+        if (compared !== 0) {
+          return order.direction === 'desc' ? -compared : compared;
+        }
+      }
+      return left.index - right.index;
+    });
+    return new AnalysisResult(
+      this.dimensionKeys,
+      this.bucketMap,
+      this.metaMap,
+      rows.map((row) => row.key),
+    );
   }
 
   asTree(): Record<string, unknown> {
-    const ordered = orderedKeysFromBucketMap(this.bucketMap);
+    const ordered = this.bucketOrder.map((key) => JSON.parse(key) as unknown[]);
     const aggs = ordered.map((vals) => this.bucketMap.get(stableKeyTuple(vals)) ?? {});
     return new PivotTable(this.dimensionKeys).toNestedTree(ordered, aggs);
   }
 
   asMatrix(): readonly AnalysisFlatRow[] {
-    const ordered = orderedKeysFromBucketMap(this.bucketMap);
+    const ordered = this.bucketOrder.map((key) => JSON.parse(key) as unknown[]);
     const aggs = ordered.map((vals) => this.bucketMap.get(stableKeyTuple(vals)) ?? {});
     return new PivotTable(this.dimensionKeys).toMatrix(ordered, aggs);
   }

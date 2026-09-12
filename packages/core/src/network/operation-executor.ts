@@ -521,7 +521,9 @@ export async function executeDatabaseOperation(
   if (op.op === 'bindPair') {
     const rel = findRelationByLabels(engine, op.forward, op.reverse);
     assertRegistrationOrder(rel, op.source.model, op.target.model, 'bindPair');
+    const before = await engine.indexer.getForward(rel, op.source.id);
     await engine.bind(op.forward, 'MANUAL', { pairs: [[op.source.id, op.target.id]] });
+    const after = await engine.indexer.getForward(rel, op.source.id);
     await flush();
     return {
       kind: 'mutation',
@@ -530,7 +532,7 @@ export async function executeDatabaseOperation(
       relation: op.forward,
       record: null,
       ok: true,
-      pairsCount: 1,
+      pairsCount: !before.includes(op.target.id) && after.includes(op.target.id) ? 1 : 0,
     };
   }
 
@@ -630,11 +632,59 @@ export async function executeDatabaseOperation(
   if (op.op === 'unlinkPair') {
     const rel = findRelationByLabels(engine, op.forward, op.reverse);
     assertRegistrationOrder(rel, op.source.model, op.target.model, 'unlinkPair');
+    const before = await engine.indexer.getForward(rel, op.source.id);
     await engine.unlink(op.forward, [[op.source.id, op.target.id]]);
+    const after = await engine.indexer.getForward(rel, op.source.id);
     await flush();
     return {
       kind: 'mutation',
       op: 'unlinkPair',
+      model: op.source.model,
+      relation: op.forward,
+      record: null,
+      ok: true,
+      pairsCount: before.includes(op.target.id) && !after.includes(op.target.id) ? 1 : 0,
+    };
+  }
+
+  if (op.op === 'rebindPair') {
+    const rel = findRelationByLabels(engine, op.forward, op.reverse);
+    assertRegistrationOrder(rel, op.source.model, op.previousTarget.model, 'rebindPair');
+    assertRegistrationOrder(rel, op.source.model, op.nextTarget.model, 'rebindPair');
+    const currentTargets = await engine.indexer.getForward(rel, op.source.id);
+    if (!currentTargets.includes(op.previousTarget.id)) {
+      throw new Error('rebindPair: the previous relation pair does not exist.');
+    }
+    if (op.previousTarget.id === op.nextTarget.id) {
+      return {
+        kind: 'mutation',
+        op: 'rebindPair',
+        model: op.source.model,
+        relation: op.forward,
+        record: null,
+        ok: true,
+        pairsCount: 0,
+      };
+    }
+    await engine.unlink(op.forward, [[op.source.id, op.previousTarget.id]]);
+    try {
+      await engine.bind(op.forward, 'MANUAL', {
+        pairs: [[op.source.id, op.nextTarget.id]],
+      });
+      const reboundTargets = await engine.indexer.getForward(rel, op.source.id);
+      if (!reboundTargets.includes(op.nextTarget.id)) {
+        throw new Error('rebindPair: the replacement relation pair was rejected.');
+      }
+    } catch (error) {
+      await engine.bind(op.forward, 'MANUAL', {
+        pairs: [[op.source.id, op.previousTarget.id]],
+      });
+      throw error;
+    }
+    await flush();
+    return {
+      kind: 'mutation',
+      op: 'rebindPair',
       model: op.source.model,
       relation: op.forward,
       record: null,

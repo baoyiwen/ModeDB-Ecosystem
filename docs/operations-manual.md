@@ -153,6 +153,8 @@ modeldb-server start --port 9090 --token 'YOUR_LONG_CONNECT_TOKEN'
 
 临时会话根：**`modeldb-server start -c /path/to/session-root`**。未写 **`start`** 时仍可将 **`--port`** 等直接挂在根命令上（兼容旧用法）。
 
+**局域网调试**：默认 **`host`** 为 **`127.0.0.1`**，仅本机可连。若需同一局域网内其它设备连接引擎，追加 **`--host 0.0.0.0`**（或在仓库根用 **`pnpm run start:server:network`**）监听所有网卡，并放行防火墙对应端口。**公网**部署仍须置于 **TLS 反向代理（WSS）** 之后，切勿以明文 **`ws://`** 暴露到公网。
+
 ### 3.6 进程与日志
 
 - 日志目录由配置 **`logDir`** 等决定（见 **[README.md](../README.md)**「运行与配置」）。

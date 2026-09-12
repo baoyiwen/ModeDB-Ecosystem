@@ -7,6 +7,7 @@ import {
 } from '../bootstrap/designer-storage-init.js';
 import { DataType, dataTypeToEngineCode } from '../config/engine-prop-types.js';
 import { pickNewModelColorFromUsed } from '../utils/model-color-pick.js';
+import { createUuid } from '../utils/random-id.js';
 
 /**
  * 业务库 → 设计器库的**反向导入**：
@@ -37,6 +38,30 @@ function hydrate(row: unknown): Record<string, unknown> {
     return row as Record<string, unknown>;
   }
   throw new Error('ENGINE_CATALOG_IMPORT_BAD_ROW');
+}
+
+async function bindRelationIdempotently(
+  client: RemoteModelDBClient,
+  source: { readonly model: string; readonly id: string },
+  target: { readonly model: string; readonly id: string },
+  forward: string,
+  reverse: string,
+): Promise<void> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      await client.bindRelation(source, target, forward, reverse);
+      return;
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes('atlas.mld')) {
+        return;
+      }
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, attempt * 150));
+    }
+  }
+  throw lastError;
 }
 
 function isSystemName(name: string): boolean {
@@ -193,7 +218,7 @@ export async function importEngineCatalogIntoDesignerDb(
     if (modelIdByEngineName.has(m.name)) {
       continue;
     }
-    const _id = crypto.randomUUID();
+    const _id = createUuid();
     const color = pickNewModelColorFromUsed(usedModelColors);
     usedModelColors.push(color);
     newModelRows.push({
@@ -320,7 +345,7 @@ export async function importEngineCatalogIntoDesignerDb(
         continue;
       }
       const reusable = reusablePropIdsByField.get(fieldName)?.shift();
-      const propId = reusable ?? crypto.randomUUID();
+      const propId = reusable ?? createUuid();
       const partial = {
         engine_name: fieldName,
         library_code: code,
@@ -363,16 +388,13 @@ export async function importEngineCatalogIntoDesignerDb(
   }
   if (propBindings.length > 0) {
     for (const { modelId, propId } of propBindings) {
-      try {
-        await designerClient.bindRelation(
-          { model: SYS_MODEL, id: modelId },
-          { model: SYS_PROPS, id: propId },
-          'modelOwnsProps',
-          'propOwnedByModel',
-        );
-      } catch {
-        /* idempotent */
-      }
+      await bindRelationIdempotently(
+        designerClient,
+        { model: SYS_MODEL, id: modelId },
+        { model: SYS_PROPS, id: propId },
+        'modelOwnsProps',
+        'propOwnedByModel',
+      );
     }
   }
 
@@ -384,7 +406,7 @@ export async function importEngineCatalogIntoDesignerDb(
     if (relIdByCatalogKey.has(relationKey)) {
       continue;
     }
-    const _id = crypto.randomUUID();
+    const _id = createUuid();
     newRelRows.push({
       _id,
       engine_name: r.forward,
@@ -421,28 +443,22 @@ export async function importEngineCatalogIntoDesignerDb(
     for (const engineName of newModelEngineNames) {
       const targetId = modelIdByEngineName.get(engineName);
       if (!targetId) continue;
-      try {
-        await designerClient.bindRelation(
-          { model: SYS_DATA_ASSET_MAP, id: assetMapId },
-          { model: SYS_MODEL, id: targetId },
-          'assetMapIncludesModels',
-          'modelBelongsToAssetMap',
-        );
-      } catch {
-        /* idempotent */
-      }
+      await bindRelationIdempotently(
+        designerClient,
+        { model: SYS_DATA_ASSET_MAP, id: assetMapId },
+        { model: SYS_MODEL, id: targetId },
+        'assetMapIncludesModels',
+        'modelBelongsToAssetMap',
+      );
     }
     for (const targetId of newRelationIds) {
-      try {
-        await designerClient.bindRelation(
-          { model: SYS_DATA_ASSET_MAP, id: assetMapId },
-          { model: SYS_RELATION_DEF, id: targetId },
-          'assetMapIncludesRelationDefs',
-          'relationDefBelongsToAssetMap',
-        );
-      } catch {
-        /* idempotent */
-      }
+      await bindRelationIdempotently(
+        designerClient,
+        { model: SYS_DATA_ASSET_MAP, id: assetMapId },
+        { model: SYS_RELATION_DEF, id: targetId },
+        'assetMapIncludesRelationDefs',
+        'relationDefBelongsToAssetMap',
+      );
     }
   }
 
@@ -452,16 +468,13 @@ export async function importEngineCatalogIntoDesignerDb(
     const parentId = modelIdByEngineName.get(m.parentId);
     const childId = modelIdByEngineName.get(m.name);
     if (!parentId || !childId) continue;
-    try {
-      await designerClient.bindRelation(
-        { model: SYS_MODEL, id: childId },
-        { model: SYS_MODEL, id: parentId },
-        'modelBelongsToParent',
-        'parentModelHasChildren',
-      );
-    } catch {
-      /* 已存在则忽略 */
-    }
+    await bindRelationIdempotently(
+      designerClient,
+      { model: SYS_MODEL, id: childId },
+      { model: SYS_MODEL, id: parentId },
+      'modelBelongsToParent',
+      'parentModelHasChildren',
+    );
   }
 
   return {

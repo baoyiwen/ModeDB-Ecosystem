@@ -24,6 +24,7 @@ import {
   edgePerpOffsetById,
   edgeSelfLoopSlotById,
   RELATION_INTRA_PAIR_GAP,
+  relationPairDefaultAnchor,
   segmentFromNodeTowardPoint,
   selfLoopDefaultAnchor,
 } from '../canvas/relation-geometry.js';
@@ -33,6 +34,7 @@ import { LAYER_DEFAULT_PAGE_ID } from '../config/layer-tree-defaults.js';
 import { isInheritRelation } from '../config/graph-edge-kinds.js';
 import { isQueryDesignerMode } from '../managers/mode-manager.js';
 import { pickNewModelColor } from '../utils/model-color-pick.js';
+import { createUuid } from '../utils/random-id.js';
 import type { GestureKind } from '../managers/event-manager.js';
 import type { InteractionState } from '../managers/state-manager.js';
 import {
@@ -65,6 +67,7 @@ function clientToCanvas(
 const REL_HIT_THRESHOLD = CANVAS_VISUAL.hit.relationThresholdPx;
 /** 画布像素：超过则视为拖动节点，不触发「点选」 */
 const DRAG_THRESHOLD_CANVAS = 14;
+const RELATION_PAIR_RESET_THRESHOLD_CANVAS = 14;
 
 export function CanvasContainer(props: {
   selectedModelId: string | undefined;
@@ -116,6 +119,7 @@ export function CanvasContainer(props: {
       relationId: string;
       forwardBend?: { x: number; y: number };
       reverseBend?: { x: number; y: number };
+      pairBend?: { x: number; y: number };
       selfAnchor?: { x: number; y: number };
     }[];
     startWorldX: number;
@@ -126,9 +130,10 @@ export function CanvasContainer(props: {
   } | null>(null);
   const relationDragRef = useRef<{
     relationId: string;
-    direction: RelationHit['direction'];
+    dragKind: 'pair' | 'inherit' | 'self';
     startForwardBend?: { x: number; y: number };
-    startReverseBend?: { x: number; y: number };
+    startPairBend?: { x: number; y: number };
+    defaultPairBend?: { x: number; y: number };
     startSelfAnchor?: { x: number; y: number };
     startSnapX: number;
     startSnapY: number;
@@ -348,7 +353,7 @@ export function CanvasContainer(props: {
         return;
       }
       if (mode === 'add' && !nodeId && !relId) {
-        const nid = crypto.randomUUID();
+        const nid = createUuid();
         const color_value = pickNewModelColor(data.models, (id) => data.getLayout(id));
         // 用户期望「点击位置 = 节点中心」；存储约定 `position` 为外接正方形左上角，故减去半径。
         data.upsertModel(
@@ -752,6 +757,7 @@ export function CanvasContainer(props: {
               relationId: string;
               forwardBend?: { x: number; y: number };
               reverseBend?: { x: number; y: number };
+              pairBend?: { x: number; y: number };
               selfAnchor?: { x: number; y: number };
             } = {
               relationId: r.id,
@@ -759,10 +765,13 @@ export function CanvasContainer(props: {
             if (meta.forward_bend) {
               state.forwardBend = meta.forward_bend;
             }
+            if (!isInheritRelation(r.kind) && meta.pair_bend) {
+              state.pairBend = meta.pair_bend;
+            }
             if (!isInheritRelation(r.kind) && meta.reverse_bend) {
               state.reverseBend = meta.reverse_bend;
             }
-            return state.forwardBend || state.reverseBend ? [state] : [];
+            return state.forwardBend || state.reverseBend || state.pairBend ? [state] : [];
           });
         nodeDragRef.current = {
           id: hit!,
@@ -798,10 +807,12 @@ export function CanvasContainer(props: {
         const meta = data.getRelationCanvasMeta(relHit.id);
         const startAnchor = { x: w.x, y: w.y };
         let startForwardBend = meta.forward_bend ?? startAnchor;
-        let startReverseBend: { x: number; y: number } | undefined =
-          meta.reverse_bend ?? startAnchor;
+        let startPairBend: { x: number; y: number } | undefined;
+        let defaultPairBend: { x: number; y: number } | undefined;
         let startSelfAnchor: { x: number; y: number } | undefined;
+        let dragKind: 'pair' | 'inherit' | 'self' = 'pair';
         if (rel && rel.source_model_id === rel.target_model_id) {
+          dragKind = 'self';
           const source = placed().find((p) => p.model.id === rel.source_model_id);
           const slot = edgeSelfLoopSlotById(data.relations).get(rel.id) ?? 0;
           startSelfAnchor =
@@ -812,39 +823,50 @@ export function CanvasContainer(props: {
           const target = nodes.find((p) => p.model.id === rel.target_model_id);
           if (source && target) {
             const slotOff = edgePerpOffsetById(data.relations).get(rel.id) ?? 0;
-            const forwardSeg = directedCurvedSegment(
-              source,
-              target,
-              slotOff + RELATION_INTRA_PAIR_GAP,
-              meta.forward_bend,
-            );
-            startForwardBend = meta.forward_bend ?? { x: forwardSeg.cpx, y: forwardSeg.cpy };
             if (isInheritRelation(rel.kind)) {
-              startReverseBend = undefined;
+              dragKind = 'inherit';
+              const forwardSeg = directedCurvedSegment(source, target, slotOff, meta.forward_bend);
+              startForwardBend = meta.forward_bend ?? { x: forwardSeg.cpx, y: forwardSeg.cpy };
             } else {
+              defaultPairBend = relationPairDefaultAnchor(source, target);
+              const forwardSeg = directedCurvedSegment(
+                source,
+                target,
+                slotOff + RELATION_INTRA_PAIR_GAP,
+                meta.forward_bend,
+              );
               const reverseSeg = directedCurvedSegment(
                 target,
                 source,
                 -(slotOff - RELATION_INTRA_PAIR_GAP),
                 meta.reverse_bend,
               );
-              startReverseBend = meta.reverse_bend ?? { x: reverseSeg.cpx, y: reverseSeg.cpy };
+              if (meta.pair_bend) {
+                startPairBend = meta.pair_bend;
+              } else if (meta.forward_bend || meta.reverse_bend) {
+                const dx = target.x - source.x;
+                const dy = target.y - source.y;
+                const len = Math.hypot(dx, dy);
+                const px = len < 1e-6 ? 0 : -dy / len;
+                const py = len < 1e-6 ? 1 : dx / len;
+                startPairBend = {
+                  x: (forwardSeg.cpx + reverseSeg.cpx) / 2 - px * slotOff,
+                  y: (forwardSeg.cpy + reverseSeg.cpy) / 2 - py * slotOff,
+                };
+              } else {
+                startPairBend = defaultPairBend;
+              }
             }
           }
         }
         const startRelationSnapPoint =
-          startSelfAnchor ??
-          (startForwardBend && startReverseBend
-            ? {
-                x: (startForwardBend.x + startReverseBend.x) / 2,
-                y: (startForwardBend.y + startReverseBend.y) / 2,
-              }
-            : (startForwardBend ?? startAnchor));
+          startSelfAnchor ?? startPairBend ?? startForwardBend ?? startAnchor;
         relationDragRef.current = {
           relationId: relHit.id,
-          direction: relHit.direction,
+          dragKind,
           startForwardBend,
-          startReverseBend,
+          startPairBend,
+          defaultPairBend,
           startSelfAnchor,
           startSnapX: startRelationSnapPoint.x,
           startSnapY: startRelationSnapPoint.y,
@@ -929,6 +951,15 @@ export function CanvasContainer(props: {
               });
               continue;
             }
+            if (relState.pairBend) {
+              data.patchRelationCanvasMeta(relState.relationId, {
+                pair_bend: {
+                  x: relState.pairBend.x + snappedDx,
+                  y: relState.pairBend.y + snappedDy,
+                },
+              });
+              continue;
+            }
             data.patchRelationCanvasMeta(relState.relationId, {
               ...(relState.forwardBend
                 ? {
@@ -980,23 +1011,33 @@ export function CanvasContainer(props: {
           setSnapGuides(snapped.guides);
           const snappedDx = snapped.x - d.startSnapX;
           const snappedDy = snapped.y - d.startSnapY;
-          if (d.direction === 'self' && d.startSelfAnchor) {
+          if (d.dragKind === 'self' && d.startSelfAnchor) {
             data.patchRelationCanvasMeta(d.relationId, {
               self_loop_anchor: {
                 x: d.startSelfAnchor.x + snappedDx,
                 y: d.startSelfAnchor.y + snappedDy,
               },
             });
+          } else if (d.dragKind === 'pair' && d.startPairBend && d.defaultPairBend) {
+            const pairBend = {
+              x: d.startPairBend.x + snappedDx,
+              y: d.startPairBend.y + snappedDy,
+            };
+            const resetThreshold = RELATION_PAIR_RESET_THRESHOLD_CANVAS / config.viewportZoom;
+            const resetToParallel =
+              Math.hypot(pairBend.x - d.defaultPairBend.x, pairBend.y - d.defaultPairBend.y) <=
+              resetThreshold;
+            data.patchRelationCanvasMeta(d.relationId, {
+              pair_bend: resetToParallel ? undefined : pairBend,
+              forward_bend: undefined,
+              reverse_bend: undefined,
+            });
           } else {
             const forward = d.startForwardBend
               ? { x: d.startForwardBend.x + snappedDx, y: d.startForwardBend.y + snappedDy }
               : undefined;
-            const reverse = d.startReverseBend
-              ? { x: d.startReverseBend.x + snappedDx, y: d.startReverseBend.y + snappedDy }
-              : undefined;
             data.patchRelationCanvasMeta(d.relationId, {
               ...(forward ? { forward_bend: forward } : {}),
-              ...(reverse ? { reverse_bend: reverse } : {}),
             });
           }
         }
