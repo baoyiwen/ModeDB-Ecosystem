@@ -117,17 +117,16 @@ export class RelationIndexer implements IndexReader {
 
   async flushAll(): Promise<void> {
     await this.ensureDir();
-    const tasks: Promise<void>[] = [];
     for (const [key, index] of this.indices) {
-      if (index.dirty) {
-        tasks.push(
-          this.writeToDisk(key, index).then(() => {
-            index.dirty = false;
-          }),
-        );
+      if (!index.dirty) {
+        continue;
       }
+      // A single-file vault serializes every relation index into the same
+      // atlas.mld. Parallel saves can race and make one write replace another
+      // (and on Windows can make a reader observe a transient open failure).
+      await this.writeToDisk(key, index);
+      index.dirty = false;
     }
-    await Promise.all(tasks);
   }
 
   /**

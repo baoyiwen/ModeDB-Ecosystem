@@ -1,0 +1,64 @@
+specVersion: "0.1.0"
+graph: railway_domain_v1
+relations:
+  - id: railwayLineContainsLineSection
+    semantic: composition
+    source: RailwayLine
+    target: LineSection
+    representation: associationEntity
+    associationModel: LineSectionAssignment
+    cardinality: one_to_many
+    queryDefault: nested_children
+
+  - id: lineSectionContainsTrackSegment
+    semantic: composition
+    source: LineSection
+    target: TrackSegment
+    representation: associationEntity
+    associationModel: SectionTrackAssignment
+    cardinality: one_to_many
+    activation: conditional
+    queryDefault: nested_children
+
+  - id: railwayLineServesStation
+    semantic: reference
+    source: RailwayLine
+    target: Station
+    representation: associationEntity
+    associationModel: LineStationAssignment
+    cardinality: many_to_many
+    queryDefault: nested_children
+
+  - id: lineSectionIntersectsAdministrativeDivision
+    semantic: spatial
+    source: LineSection
+    target: AdministrativeDivision
+    representation: associationEntity
+    associationModel: SectionDivisionAssignment
+    cardinality: many_to_many
+    queryDefault: nested_children
+
+referenceTemplates:
+  - id: businessModelReferencesServiceStatus
+    semantic: reference
+    sourcePattern: business_entity
+    target: ServiceStatus
+    cardinality: many_to_one
+  - id: businessModelReferencesAssetCategory
+    semantic: reference
+    sourcePattern: railway_asset
+    target: AssetCategory
+    cardinality: many_to_one
+  - id: businessModelUsesUnitDefinition
+    semantic: reference
+    sourcePattern: measurement_field
+    target: UnitDefinition
+    cardinality: many_to_one
+
+inheritance:
+  - id: sharedRailwayAssetFields
+    sourcePattern: railway_asset_subtype
+    targetPattern: railway_asset_base
+    queryTraversal: disabled
+    nodePolicy: reuse_identity_when_same_record
+

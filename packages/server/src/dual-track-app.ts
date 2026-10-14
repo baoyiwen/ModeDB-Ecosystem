@@ -26,11 +26,11 @@ import { assertFlatGraphSegment, configureModelDBStorageRoot, EngineLogger } fro
 import { ModelDBClient, type AuthoringEngine } from '@mode-db/core';
 import { BinaryInterceptor, TransportAuthError } from './binary-interceptor.js';
 import type { ResolvedModelDBServerConfig } from './config-loader.js';
+import { formatModelDBStartupInfo } from './server-access-info.js';
 import { AuthoringBridge } from './authoring-bridge.js';
 import { startAutoBackupScheduler } from './auto-backup-scheduler.js';
 import { WriteSerializationGate } from './write-serialization-gate.js';
 import { WireRequestDispatcher, decodeExecuteBody } from './request-dispatcher.js';
-import { atlasCatalogSignature } from './atlas-catalog-signature.js';
 import { assertLogicalDatabaseExists } from './logical-database-guard.js';
 import { scanWorkspaceDatabases } from './management-api.js';
 import {
@@ -868,19 +868,26 @@ export async function buildDualTrackFastify(
   // eslint-disable-next-line no-console
   console.log(`[modeldb-server] storage fingerprint (sha256): ${rootPrint}`);
 
-  const atlasClients = new Map<
-    string,
-    { readonly sig: string; readonly promise: Promise<ModelDBClient> }
-  >();
+  // A runtime client stays cached for the lifetime of the server. Reopening it
+  // whenever atlas.mld changes is unsafe: every successful write updates the
+  // file while the authoring engine may still be flushing it, and a concurrent
+  // constructor can fail with Windows `open(...atlas.mld)` or observe a partial
+  // catalog. Management operations that replace/remove a vault explicitly
+  // evict this cache below.
+  const atlasClients = new Map<string, Promise<ModelDBClient>>();
   function getClient(atlas: string): Promise<ModelDBClient> {
     assertLogicalDatabaseExists(dataRoot, atlas);
-    const sig = atlasCatalogSignature(dataRoot, atlas);
     const hit = atlasClients.get(atlas);
-    if (hit && hit.sig === sig) {
-      return hit.promise;
+    if (hit) {
+      return hit;
     }
     const p = ModelDBClient.connect(atlas);
-    atlasClients.set(atlas, { sig, promise: p });
+    atlasClients.set(atlas, p);
+    p.catch(() => {
+      if (atlasClients.get(atlas) === p) {
+        atlasClients.delete(atlas);
+      }
+    });
     return p;
   }
 
@@ -1460,9 +1467,7 @@ export async function buildDualTrackFastify(
 
   const port = getServerListeningPort(app);
   // eslint-disable-next-line no-console
-  console.log(
-    `ModelDB Server is running on http://${cfg.host}:${port} (POST /v2/action, POST /v2/bulk, WS / & /v2/stream)`,
-  );
+  console.log(formatModelDBStartupInfo(cfg, port));
   EngineLogger.instance.info(
     `ModelDB Server is running on port ${port}`,
     { host: cfg.host },

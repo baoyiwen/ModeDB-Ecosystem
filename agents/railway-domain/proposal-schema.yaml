@@ -1,0 +1,104 @@
+kind: proposal-schema
+specVersion: "0.1.0"
+id: railway-domain-proposal-v1
+format: yaml
+root:
+  type: object
+  required: [proposal]
+  properties:
+    proposal:
+      type: object
+      required:
+        - graph
+        - source_summary
+        - models
+        - relations
+        - value_objects
+        - dictionary_bindings
+        - metadata
+        - decisions
+        - ambiguities
+        - rejected_concepts
+        - validation
+        - write_ready
+      properties:
+        graph: {type: string, const: railway_domain_v1}
+        source_summary: {type: string}
+        models:
+          type: array
+          itemRequired: [id, class, grain, identity, lifecycle, decision]
+          itemProperties:
+            id: {type: string}
+            class: {type: string, enum: [entity, referenceModel, associationEntity]}
+            grain: {type: string}
+            identity: {type: string}
+            lifecycle: {type: string}
+            fields: {type: array}
+            decision: {type: string, enum: [adopt, conditional, reject]}
+        relations:
+          type: array
+          itemRequired: [id, source, target, semantic, cardinality, decision]
+          itemProperties:
+            id: {type: string}
+            source: {type: string}
+            target: {type: string}
+            semantic: {type: string, enum: [composition, reference, spatial, association, inheritance]}
+            cardinality: {type: string}
+            associationModel: {type: string}
+            decision: {type: string, enum: [adopt, conditional, reject]}
+        value_objects:
+          type: array
+          itemRequired: [id, owner, fields, decision]
+          itemProperties:
+            id: {type: string}
+            owner: {type: string}
+            fields: {type: array}
+            decision: {type: string, enum: [adopt, conditional, reject]}
+        dictionary_bindings:
+          type: array
+          itemRequired: [sourceModel, sourceField, dictionaryModel, decision]
+          itemProperties:
+            sourceModel: {type: string}
+            sourceField: {type: string}
+            dictionaryModel: {type: string}
+            decision: {type: string, enum: [adopt, conditional, reject]}
+        metadata:
+          type: array
+          itemRequired: [model, grain, identity, lifecycle, ownership, partitionKey]
+          itemProperties:
+            model: {type: string}
+            grain: {type: string}
+            identity: {type: string}
+            lifecycle: {type: string}
+            ownership: {type: string}
+            partitionKey: {type: string}
+        decisions:
+          type: array
+          itemRequired: [subject, decision, evidence]
+          itemProperties:
+            subject: {type: string}
+            decision: {type: string}
+            evidence: {type: array}
+            alternatives: {type: array}
+        ambiguities:
+          type: array
+          itemRequired: [id, subject, options, requiredAction]
+          itemProperties:
+            id: {type: string}
+            subject: {type: string}
+            options: {type: array}
+            requiredAction: {type: string, const: request_human_decision}
+        rejected_concepts: {type: array}
+        validation:
+          type: array
+          itemRequired: [checkId, status]
+          itemProperties:
+            checkId: {type: string}
+            status: {type: string, enum: [pass, fail, blocked]}
+            details: {type: string}
+        write_ready: {type: boolean}
+rules:
+  - write_ready_must_be_false_when_ambiguities_not_empty
+  - write_ready_must_be_false_when_any_validation_failed
+  - write_ready_must_be_false_when_required_metadata_missing
+  - write_ready_must_be_true_only_after_human_approval

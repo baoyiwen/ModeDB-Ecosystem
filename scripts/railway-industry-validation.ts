@@ -31,17 +31,14 @@ type RelationSeed = {
   readonly pairs?: ReadonlyArray<readonly [string, string]>;
 };
 
-type MetaEntry = {
+type FieldValueEntry = {
   readonly code: string;
   readonly name: I18nText;
-  readonly description?: I18nText;
-  readonly extras?: Readonly<Record<string, unknown>>;
 };
 
-type MetaCatalog = {
-  readonly model: string;
-  readonly prefix: string;
-  readonly entries: readonly MetaEntry[];
+type FieldValueDomain = {
+  readonly domain: string;
+  readonly entries: readonly FieldValueEntry[];
 };
 
 const argv = process.argv.slice(2);
@@ -90,21 +87,10 @@ const iso = (dayOffset: number, hour = 8, minute = 0): string => {
   return value.toISOString();
 };
 
-const metaEntry = (
-  code: string,
-  zh: string,
-  en: string,
-  ja: string,
-  extras?: Readonly<Record<string, unknown>>,
-): MetaEntry => ({ code, name: i18n(zh, en, ja), ...(extras ? { extras } : {}) });
-
-const metaSchema: FieldDefsRecord = {
-  metaCode: { type: DataType.String, required: true },
-  name: { type: DataType.I18N, required: true },
-  description: DataType.I18N,
-  active: { type: DataType.Boolean, required: true, default: true },
-  sortOrder: DataType.Int,
-};
+const fieldValueEntry = (code: string, zh: string, en: string, ja: string): FieldValueEntry => ({
+  code,
+  name: i18n(zh, en, ja),
+});
 
 const assetSchema: FieldDefsRecord = {
   assetCode: { type: DataType.String, required: true },
@@ -121,40 +107,16 @@ const schemas: ReadonlyArray<{
   readonly schema: FieldDefsRecord;
   readonly parentId?: string;
 }> = [
-  { name: 'MetaDefinition', schema: metaSchema },
-  {
-    name: 'UnitDefinition',
-    parentId: 'MetaDefinition',
-    schema: {
-      ...metaSchema,
-      symbol: { type: DataType.String, required: true },
-      quantityKind: { type: DataType.String, required: true },
-      decimalScale: DataType.Int,
-    },
-  },
   {
     name: 'Region',
-    parentId: 'MetaDefinition',
-    schema: { ...metaSchema, countryCode: DataType.String, timezone: DataType.String },
+    schema: {
+      regionCode: { type: DataType.String, required: true },
+      name: { type: DataType.I18N, required: true },
+      countryCode: DataType.String,
+      timezone: DataType.String,
+      active: { type: DataType.Boolean, required: true, default: true },
+    },
   },
-  ...[
-    'AssetType',
-    'StationLevel',
-    'LineClass',
-    'TrainType',
-    'ServiceStatus',
-    'CarriageType',
-    'EmployeeRole',
-    'ShiftType',
-    'WorkOrderCategory',
-    'WorkOrderPriority',
-    'WorkOrderStatus',
-    'IncidentType',
-    'IncidentSeverity',
-    'TravelClass',
-    'SalesChannel',
-    'TicketStatus',
-  ].map((name) => ({ name, parentId: 'MetaDefinition', schema: metaSchema })),
   { name: 'RailwayAsset', schema: assetSchema },
   {
     name: 'Station',
@@ -178,10 +140,8 @@ const schemas: ReadonlyArray<{
       lineCode: { type: DataType.String, required: true },
       operatorCode: { type: DataType.String, required: true },
       lineClassCode: { type: DataType.String, required: true },
-      lengthValue: DataType.Number,
-      lengthUnitCode: { type: DataType.String, required: true },
-      maxSpeedValue: DataType.Number,
-      speedUnitCode: { type: DataType.String, required: true },
+      length: { type: DataType.Unit, required: true, unit: 'km' },
+      maxSpeed: { type: DataType.Unit, required: true, unit: 'km/h' },
       electrified: DataType.Boolean,
     },
   },
@@ -193,11 +153,9 @@ const schemas: ReadonlyArray<{
       trainCode: { type: DataType.String, required: true },
       operatorCode: { type: DataType.String, required: true },
       trainTypeCode: { type: DataType.String, required: true },
-      maxSpeedValue: DataType.Number,
-      speedUnitCode: { type: DataType.String, required: true },
+      maxSpeed: { type: DataType.Unit, required: true, unit: 'km/h' },
       seatCapacity: DataType.Int,
-      mileageValue: DataType.Number,
-      mileageUnitCode: { type: DataType.String, required: true },
+      mileage: { type: DataType.Unit, required: true, unit: 'km' },
     },
   },
   {
@@ -223,8 +181,7 @@ const schemas: ReadonlyArray<{
       statusCode: { type: DataType.String, required: true },
       delayMinutes: DataType.Int,
       passengerLoad: DataType.Number,
-      energyValue: DataType.Number,
-      energyUnitCode: { type: DataType.String, required: true },
+      energyUsed: { type: DataType.Unit, required: true, unit: 'kWh' },
     },
   },
   {
@@ -286,8 +243,7 @@ const schemas: ReadonlyArray<{
       statusCode: { type: DataType.String, required: true },
       openedAt: DataType.DateTime,
       dueAt: DataType.DateTime,
-      estimatedCostValue: DataType.Number,
-      currencyUnitCode: { type: DataType.String, required: true },
+      estimatedCost: { type: DataType.Unit, required: true, unit: 'CNY' },
       description: DataType.I18N,
     },
   },
@@ -314,8 +270,7 @@ const schemas: ReadonlyArray<{
       travelClassCode: { type: DataType.String, required: true },
       originStationCode: DataType.String,
       destinationStationCode: DataType.String,
-      fareValue: DataType.Number,
-      currencyUnitCode: { type: DataType.String, required: true },
+      fare: { type: DataType.Unit, required: true, unit: 'CNY' },
       soldAt: DataType.DateTime,
       salesChannelCode: { type: DataType.String, required: true },
       ticketStatusCode: { type: DataType.String, required: true },
@@ -323,198 +278,77 @@ const schemas: ReadonlyArray<{
   },
 ];
 
-const relationDefs = [
+type DataSplitMetadata = {
+  readonly model: string;
+  /** 一行数据代表的最小业务单元；它不是额外的引擎模型。 */
+  readonly grain: string;
+  /** 在该单元内部仍保持完整的值对象字段。 */
+  readonly valueObjectFields?: readonly string[];
+};
+
+/**
+ * 业务库的拆分元数据只描述数据粒度，不会被注册为实体。
+ * 值域由 fieldValueCatalogs 维护，只有真正具有独立生命周期的粒度才出现在 schemas 中。
+ */
+const dataSplitMetadata: readonly DataSplitMetadata[] = [
+  { model: 'Region', grain: '一个运营区域' },
+  { model: 'RailwayAsset', grain: '一个可独立维护的铁路资产' },
+  { model: 'Station', grain: '一个车站' },
   {
-    source: 'RailwayAsset',
-    target: 'AssetType',
-    forward: 'assetTypeRef',
-    reverse: 'typedAssets',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'assetTypeCode', targetField: 'metaCode' },
+    model: 'RailwayLine',
+    grain: '一条铁路线路',
+    valueObjectFields: ['length', 'maxSpeed'],
   },
+  {
+    model: 'Train',
+    grain: '一个列车单元',
+    valueObjectFields: ['maxSpeed', 'mileage'],
+  },
+  { model: 'Operator', grain: '一个运营商' },
+  {
+    model: 'TrainService',
+    grain: '一个日期化车次运行任务',
+    valueObjectFields: ['energyUsed'],
+  },
+  { model: 'ServiceStop', grain: '一条车次经停记录' },
+  { model: 'Carriage', grain: '一节车厢' },
+  { model: 'Employee', grain: '一名铁路员工' },
+  { model: 'Shift', grain: '一个值班班次' },
+  {
+    model: 'WorkOrder',
+    grain: '一张检修工单',
+    valueObjectFields: ['estimatedCost'],
+  },
+  { model: 'Incident', grain: '一个运营事件' },
+  { model: 'Ticket', grain: '一张客票', valueObjectFields: ['fare'] },
+];
+
+function validateDataSplitMetadata(): void {
+  const schemaByName = new Map(schemas.map((schema) => [schema.name, schema]));
+  assert(dataSplitMetadata.length === schemas.length, 'data split metadata must cover every model');
+  for (const definition of dataSplitMetadata) {
+    const schema = schemaByName.get(definition.model);
+    assert(schema, `data split metadata references unknown model ${definition.model}`);
+    for (const field of definition.valueObjectFields ?? []) {
+      const fieldDef = schema.schema[field];
+      assert(fieldDef, `${definition.model}.${field} is missing from its schema`);
+      const type = typeof fieldDef === 'string' ? fieldDef : fieldDef.type;
+      assert(
+        type === DataType.Unit,
+        `${definition.model}.${field} must remain a Unit value object`,
+      );
+    }
+  }
+}
+
+const relationDefs = [
   {
     source: 'Station',
     target: 'Region',
     forward: 'stationRegionRef',
     reverse: 'stationsInRegion',
     logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'regionCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'Station',
-    target: 'StationLevel',
-    forward: 'stationLevelRef',
-    reverse: 'stationsAtLevel',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'stationLevelCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'RailwayLine',
-    target: 'LineClass',
-    forward: 'lineClassRef',
-    reverse: 'linesAtClass',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'lineClassCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'RailwayLine',
-    target: 'UnitDefinition',
-    forward: 'lineLengthUnit',
-    reverse: 'lineLengthValues',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'lengthUnitCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'RailwayLine',
-    target: 'UnitDefinition',
-    forward: 'lineSpeedUnit',
-    reverse: 'lineSpeedValues',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'speedUnitCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'Train',
-    target: 'TrainType',
-    forward: 'trainTypeRef',
-    reverse: 'typedTrains',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'trainTypeCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'Train',
-    target: 'UnitDefinition',
-    forward: 'trainSpeedUnit',
-    reverse: 'trainSpeedValues',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'speedUnitCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'Train',
-    target: 'UnitDefinition',
-    forward: 'trainMileageUnit',
-    reverse: 'trainMileageValues',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'mileageUnitCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'TrainService',
-    target: 'ServiceStatus',
-    forward: 'serviceStatusRef',
-    reverse: 'servicesAtStatus',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'statusCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'TrainService',
-    target: 'UnitDefinition',
-    forward: 'serviceEnergyUnit',
-    reverse: 'serviceEnergyValues',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'energyUnitCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'Carriage',
-    target: 'CarriageType',
-    forward: 'carriageTypeRef',
-    reverse: 'typedCarriages',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'carriageTypeCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'Employee',
-    target: 'EmployeeRole',
-    forward: 'employeeRoleRef',
-    reverse: 'employeesAtRole',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'roleCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'Shift',
-    target: 'ShiftType',
-    forward: 'shiftTypeRef',
-    reverse: 'shiftsAtType',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'shiftTypeCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'WorkOrder',
-    target: 'WorkOrderCategory',
-    forward: 'workOrderCategoryRef',
-    reverse: 'workOrdersAtCategory',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'categoryCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'WorkOrder',
-    target: 'WorkOrderPriority',
-    forward: 'workOrderPriorityRef',
-    reverse: 'workOrdersAtPriority',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'priorityCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'WorkOrder',
-    target: 'WorkOrderStatus',
-    forward: 'workOrderStatusRef',
-    reverse: 'workOrdersAtStatus',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'statusCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'WorkOrder',
-    target: 'UnitDefinition',
-    forward: 'workOrderCurrencyUnit',
-    reverse: 'workOrderCostValues',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'currencyUnitCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'Incident',
-    target: 'IncidentType',
-    forward: 'incidentTypeRef',
-    reverse: 'incidentsAtType',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'incidentTypeCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'Incident',
-    target: 'IncidentSeverity',
-    forward: 'incidentSeverityRef',
-    reverse: 'incidentsAtSeverity',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'severityCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'Ticket',
-    target: 'TravelClass',
-    forward: 'travelClassRef',
-    reverse: 'ticketsAtClass',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'travelClassCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'Ticket',
-    target: 'SalesChannel',
-    forward: 'salesChannelRef',
-    reverse: 'ticketsFromChannel',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'salesChannelCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'Ticket',
-    target: 'TicketStatus',
-    forward: 'ticketStatusRef',
-    reverse: 'ticketsAtStatus',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'ticketStatusCode', targetField: 'metaCode' },
-  },
-  {
-    source: 'Ticket',
-    target: 'UnitDefinition',
-    forward: 'ticketCurrencyUnit',
-    reverse: 'ticketFareValues',
-    logic: 'many-to-one' as const,
-    matchOn: { sourceField: 'currencyUnitCode', targetField: 'metaCode' },
+    matchOn: { sourceField: 'regionCode', targetField: 'regionCode' },
   },
   {
     source: 'Ticket',
@@ -661,25 +495,7 @@ const relationDefs = [
 ] as const;
 
 const modelLabels: Readonly<Record<string, I18nText>> = {
-  MetaDefinition: i18n('元数据定义', 'Metadata Definition', 'メタデータ定義'),
-  UnitDefinition: i18n('计量单位', 'Unit Definition', '計量単位'),
   Region: i18n('运营区域', 'Region', '運行地域'),
-  AssetType: i18n('资产类型', 'Asset Type', '資産種別'),
-  StationLevel: i18n('车站等级', 'Station Level', '駅等級'),
-  LineClass: i18n('线路等级', 'Line Class', '路線区分'),
-  TrainType: i18n('列车类型', 'Train Type', '列車種別'),
-  ServiceStatus: i18n('车次状态', 'Service Status', '列車運行状態'),
-  CarriageType: i18n('车厢类型', 'Carriage Type', '車両種別'),
-  EmployeeRole: i18n('员工岗位', 'Employee Role', '従業員職務'),
-  ShiftType: i18n('班次类型', 'Shift Type', '勤務種別'),
-  WorkOrderCategory: i18n('工单类别', 'Work Order Category', '作業分類'),
-  WorkOrderPriority: i18n('工单优先级', 'Work Order Priority', '作業優先度'),
-  WorkOrderStatus: i18n('工单状态', 'Work Order Status', '作業状態'),
-  IncidentType: i18n('事件类型', 'Incident Type', '事象種別'),
-  IncidentSeverity: i18n('事件严重度', 'Incident Severity', '事象重大度'),
-  TravelClass: i18n('席别', 'Travel Class', '座席等級'),
-  SalesChannel: i18n('销售渠道', 'Sales Channel', '販売チャネル'),
-  TicketStatus: i18n('客票状态', 'Ticket Status', '乗車券状態'),
   RailwayAsset: i18n('铁路资产', 'Railway Asset', '鉄道資産'),
   Station: i18n('车站', 'Station', '駅'),
   RailwayLine: i18n('铁路线路', 'Railway Line', '鉄道路線'),
@@ -696,14 +512,10 @@ const modelLabels: Readonly<Record<string, I18nText>> = {
 };
 
 const fieldLabelParts: Readonly<Record<string, readonly [zh: string, ja: string]>> = {
-  metaCode: ['元数据编码', 'メタデータコード'],
   description: ['描述', '説明'],
-  sortOrder: ['排序序号', '表示順'],
-  symbol: ['单位符号', '単位記号'],
-  quantityKind: ['量纲类型', '量の種類'],
-  decimalScale: ['小数精度', '小数精度'],
   countryCode: ['国家代码', '国コード'],
   timezone: ['时区', 'タイムゾーン'],
+  active: ['是否有效', '有効'],
   assetCode: ['资产编码', '資産コード'],
   assetName: ['资产名称', '資産名'],
   assetTypeCode: ['资产类型编码', '資産種別コード'],
@@ -723,25 +535,18 @@ const fieldLabelParts: Readonly<Record<string, readonly [zh: string, ja: string]
   lineCode: ['线路编码', '路線コード'],
   operatorCode: ['运营商编码', '事業者コード'],
   lineClassCode: ['线路等级编码', '路線区分コード'],
-  lengthValue: ['线路长度值', '路線長値'],
-  lengthUnitCode: ['长度单位编码', '長さ単位コード'],
-  maxSpeedValue: ['最高速度值', '最高速度値'],
-  speedUnitCode: ['速度单位编码', '速度単位コード'],
-  lineClass: ['线路等级', '路線区分'],
   length: ['线路长度', '路線長'],
   maxSpeed: ['最高速度', '最高速度'],
+  lineClass: ['线路等级', '路線区分'],
   electrified: ['是否电气化', '電化済み'],
   trainCode: ['列车编码', '列車コード'],
   trainTypeCode: ['列车类型编码', '列車種別コード'],
-  mileageValue: ['累计里程值', '累積走行距離値'],
-  mileageUnitCode: ['里程单位编码', '走行距離単位コード'],
+  mileage: ['累计里程', '累積走行距離'],
   trainType: ['列车类型', '列車種別'],
   seatCapacity: ['座席容量', '座席定員'],
-  mileage: ['累计里程', '累積走行距離'],
   name: ['名称', '名称'],
   headquarters: ['总部所在地', '本社所在地'],
   foundedAt: ['成立时间', '設立日時'],
-  active: ['是否有效', '有効'],
   serviceRating: ['服务评分', 'サービス評価'],
   serviceNo: ['车次编号', '列車番号'],
   businessDate: ['运营日期', '運行日'],
@@ -751,8 +556,6 @@ const fieldLabelParts: Readonly<Record<string, readonly [zh: string, ja: string]
   status: ['状态', '状態'],
   delayMinutes: ['延误分钟', '遅延分数'],
   passengerLoad: ['客座率', '乗車率'],
-  energyValue: ['能源消耗值', 'エネルギー使用量値'],
-  energyUnitCode: ['能源单位编码', 'エネルギー単位コード'],
   energyUsed: ['能源消耗', 'エネルギー使用量'],
   stopCode: ['停靠编码', '停車コード'],
   sequence: ['停靠顺序', '停車順序'],
@@ -786,8 +589,6 @@ const fieldLabelParts: Readonly<Record<string, readonly [zh: string, ja: string]
   priority: ['优先级', '優先度'],
   openedAt: ['创建时间', '作成日時'],
   dueAt: ['截止时间', '期限日時'],
-  estimatedCostValue: ['预计成本值', '見積費用値'],
-  currencyUnitCode: ['货币单位编码', '通貨単位コード'],
   estimatedCost: ['预计成本', '見積費用'],
   incidentCode: ['事件编码', '事象コード'],
   incidentTypeCode: ['事件类型编码', '事象種別コード'],
@@ -802,13 +603,11 @@ const fieldLabelParts: Readonly<Record<string, readonly [zh: string, ja: string]
   travelClass: ['席别', '座席等級'],
   originStationCode: ['出发站编码', '出発駅コード'],
   destinationStationCode: ['到达站编码', '到着駅コード'],
-  fareValue: ['票价值', '運賃値'],
   fare: ['票价', '運賃'],
   soldAt: ['售票时间', '発売日時'],
   salesChannelCode: ['销售渠道编码', '販売チャネルコード'],
   ticketStatusCode: ['客票状态编码', '乗車券状態コード'],
   salesChannel: ['销售渠道', '販売チャネル'],
-  refunded: ['是否退票', '払戻済み'],
 };
 
 const relationLabelParts: Readonly<
@@ -817,75 +616,7 @@ const relationLabelParts: Readonly<
     { readonly forward: readonly [string, string]; readonly reverse: readonly [string, string] }
   >
 > = {
-  assetTypeRef: { forward: ['资产类型', '資産種別'], reverse: ['该类型资产', '当該種別の資産'] },
   stationRegionRef: { forward: ['所属区域', '所属地域'], reverse: ['区域内车站', '地域内の駅'] },
-  stationLevelRef: { forward: ['车站等级', '駅等級'], reverse: ['该等级车站', '当該等級の駅'] },
-  lineClassRef: { forward: ['线路等级', '路線区分'], reverse: ['该等级线路', '当該区分の路線'] },
-  lineLengthUnit: { forward: ['长度单位', '長さ単位'], reverse: ['线路长度量值', '路線長の値'] },
-  lineSpeedUnit: {
-    forward: ['线路速度单位', '路線速度単位'],
-    reverse: ['线路速度量值', '路線速度の値'],
-  },
-  trainTypeRef: { forward: ['列车类型', '列車種別'], reverse: ['该类型列车', '当該種別の列車'] },
-  trainSpeedUnit: {
-    forward: ['列车速度单位', '列車速度単位'],
-    reverse: ['列车速度量值', '列車速度の値'],
-  },
-  trainMileageUnit: {
-    forward: ['里程单位', '走行距離単位'],
-    reverse: ['列车里程量值', '列車走行距離の値'],
-  },
-  serviceStatusRef: {
-    forward: ['运行状态', '運行状態'],
-    reverse: ['该状态车次', '当該状態の運行'],
-  },
-  serviceEnergyUnit: {
-    forward: ['能源单位', 'エネルギー単位'],
-    reverse: ['车次能源量值', '運行エネルギーの値'],
-  },
-  carriageTypeRef: { forward: ['车厢类型', '車両種別'], reverse: ['该类型车厢', '当該種別の車両'] },
-  employeeRoleRef: {
-    forward: ['员工岗位', '従業員職務'],
-    reverse: ['该岗位员工', '当該職務の従業員'],
-  },
-  shiftTypeRef: { forward: ['班次类型', '勤務種別'], reverse: ['该类型班次', '当該種別の勤務'] },
-  workOrderCategoryRef: {
-    forward: ['工单类别', '作業分類'],
-    reverse: ['该类别工单', '当該分類の作業'],
-  },
-  workOrderPriorityRef: {
-    forward: ['工单优先级', '作業優先度'],
-    reverse: ['该优先级工单', '当該優先度の作業'],
-  },
-  workOrderStatusRef: {
-    forward: ['工单状态', '作業状態'],
-    reverse: ['该状态工单', '当該状態の作業'],
-  },
-  workOrderCurrencyUnit: {
-    forward: ['成本货币单位', '費用通貨単位'],
-    reverse: ['工单成本量值', '作業費用の値'],
-  },
-  incidentTypeRef: { forward: ['事件类型', '事象種別'], reverse: ['该类型事件', '当該種別の事象'] },
-  incidentSeverityRef: {
-    forward: ['严重程度', '重大度'],
-    reverse: ['该程度事件', '当該重大度の事象'],
-  },
-  travelClassRef: {
-    forward: ['席别', '座席等級'],
-    reverse: ['该席别客票', '当該座席等級の乗車券'],
-  },
-  salesChannelRef: {
-    forward: ['销售渠道', '販売チャネル'],
-    reverse: ['渠道客票', 'チャネル別乗車券'],
-  },
-  ticketStatusRef: {
-    forward: ['客票状态', '乗車券状態'],
-    reverse: ['该状态客票', '当該状態の乗車券'],
-  },
-  ticketCurrencyUnit: {
-    forward: ['票价货币单位', '運賃通貨単位'],
-    reverse: ['客票票价量值', '乗車券運賃の値'],
-  },
   originStationRef: { forward: ['出发车站', '出発駅'], reverse: ['始发客票', '出発乗車券'] },
   destinationStationRef: { forward: ['到达车站', '到着駅'], reverse: ['到达客票', '到着乗車券'] },
   subStations: { forward: ['下属车站', '子駅'], reverse: ['上级车站', '親駅'] },
@@ -955,38 +686,20 @@ async function retryDesignerImport<T>(operation: () => Promise<T>): Promise<T> {
 }
 
 const modelLayout: Readonly<Record<string, Readonly<{ x: number; y: number }>>> = {
-  MetaDefinition: { x: 2_700, y: 80 },
-  UnitDefinition: { x: 120, y: 680 },
-  Region: { x: 720, y: 680 },
-  AssetType: { x: 1_320, y: 680 },
-  StationLevel: { x: 1_920, y: 680 },
-  LineClass: { x: 2_520, y: 680 },
-  TrainType: { x: 3_120, y: 680 },
-  ServiceStatus: { x: 3_720, y: 680 },
-  CarriageType: { x: 4_320, y: 680 },
-  EmployeeRole: { x: 4_920, y: 680 },
-  ShiftType: { x: 120, y: 1_300 },
-  WorkOrderCategory: { x: 720, y: 1_300 },
-  WorkOrderPriority: { x: 1_320, y: 1_300 },
-  WorkOrderStatus: { x: 1_920, y: 1_300 },
-  IncidentType: { x: 2_520, y: 1_300 },
-  IncidentSeverity: { x: 3_120, y: 1_300 },
-  TravelClass: { x: 3_720, y: 1_300 },
-  SalesChannel: { x: 4_320, y: 1_300 },
-  TicketStatus: { x: 4_920, y: 1_300 },
-  RailwayAsset: { x: 2_520, y: 2_050 },
-  Station: { x: 900, y: 2_720 },
-  RailwayLine: { x: 1_900, y: 2_720 },
-  Train: { x: 3_100, y: 2_720 },
-  Operator: { x: 4_500, y: 2_720 },
-  TrainService: { x: 2_500, y: 3_650 },
-  ServiceStop: { x: 1_500, y: 4_650 },
-  Carriage: { x: 3_650, y: 3_650 },
-  Employee: { x: 4_850, y: 3_650 },
-  Shift: { x: 4_850, y: 4_650 },
-  WorkOrder: { x: 3_650, y: 4_650 },
-  Incident: { x: 2_550, y: 4_650 },
-  Ticket: { x: 350, y: 4_650 },
+  Region: { x: 250, y: 2_400 },
+  RailwayAsset: { x: 2_520, y: 1_650 },
+  Station: { x: 900, y: 2_400 },
+  RailwayLine: { x: 1_900, y: 2_400 },
+  Train: { x: 3_100, y: 2_400 },
+  Operator: { x: 4_500, y: 2_400 },
+  TrainService: { x: 2_500, y: 3_350 },
+  ServiceStop: { x: 1_500, y: 4_350 },
+  Carriage: { x: 3_650, y: 3_350 },
+  Employee: { x: 4_850, y: 3_350 },
+  Shift: { x: 4_850, y: 4_350 },
+  WorkOrder: { x: 3_650, y: 4_350 },
+  Incident: { x: 2_550, y: 4_350 },
+  Ticket: { x: 350, y: 4_350 },
 };
 
 async function syncDesignerMetadata(
@@ -1000,9 +713,9 @@ async function syncDesignerMetadata(
     '鉄道運行検証データベース',
   );
   const libraryDescription = i18n(
-    '用于验证铁路模型、关系、过滤、分页、递归与聚合查询。',
-    'Validates railway models, relations, filters, pagination, recursion, and aggregation.',
-    '鉄道モデル、関係、フィルタ、ページング、再帰、集計クエリの検証用です。',
+    '用于验证铁路业务模型、最小拆分单元、关系、过滤、分页、递归与聚合查询。',
+    'Validates railway business models, data split units, relations, filters, pagination, recursion, and aggregation.',
+    '鉄道業務モデル、最小分割単位、関係、フィルタ、ページング、再帰、集計クエリの検証用です。',
   );
   const library = await ensureLibraryRecord(designer, {
     code: database,
@@ -1153,75 +866,28 @@ async function syncDesignerMetadata(
   };
 }
 
-const metaCatalogs: readonly MetaCatalog[] = [
+/**
+ * 这些值域只用于生成业务字段值，不会注册成模型或关系。
+ * 值域辅助解释字段含义；元数据的拆分边界由 schema 的字段和值对象表达。
+ */
+const fieldValueCatalogs: readonly FieldValueDomain[] = [
   {
-    model: 'UnitDefinition',
-    prefix: 'UNIT',
+    domain: 'AssetType',
     entries: [
-      metaEntry('KM', '千米', 'Kilometre', 'キロメートル', {
-        symbol: 'km',
-        quantityKind: 'Length',
-        decimalScale: 3,
-      }),
-      metaEntry('KMH', '千米每小时', 'Kilometres per hour', 'キロメートル毎時', {
-        symbol: 'km/h',
-        quantityKind: 'Speed',
-        decimalScale: 1,
-      }),
-      metaEntry('KWH', '千瓦时', 'Kilowatt hour', 'キロワット時', {
-        symbol: 'kWh',
-        quantityKind: 'Energy',
-        decimalScale: 2,
-      }),
-      metaEntry('CNY', '人民币', 'Chinese yuan', '人民元', {
-        symbol: 'CNY',
-        quantityKind: 'Currency',
-        decimalScale: 2,
-      }),
-      metaEntry('MIN', '分钟', 'Minute', '分', {
-        symbol: 'min',
-        quantityKind: 'Duration',
-        decimalScale: 0,
-      }),
-      metaEntry('PERCENT', '百分比', 'Percent', 'パーセント', {
-        symbol: '%',
-        quantityKind: 'Ratio',
-        decimalScale: 2,
-      }),
+      fieldValueEntry('SIGNAL', '信号设备', 'Signal', '信号設備'),
+      fieldValueEntry('SWITCH', '道岔', 'Switch', '分岐器'),
+      fieldValueEntry('BRIDGE', '桥梁', 'Bridge', '橋梁'),
+      fieldValueEntry('CROSSING', '道口', 'Crossing', '踏切'),
+      fieldValueEntry('POWER', '供电设备', 'Power equipment', '電力設備'),
+      fieldValueEntry('STATION', '车站', 'Station', '駅'),
+      fieldValueEntry('RAILWAY_LINE', '铁路线路', 'Railway line', '鉄道路線'),
+      fieldValueEntry('TRAIN', '列车', 'Train', '列車'),
     ],
   },
   {
-    model: 'Region',
-    prefix: 'REG',
-    entries: Array.from({ length: 10 }, (_, index) =>
-      metaEntry(
-        `REG${pad(index + 1, 2)}`,
-        `铁路运营区域${index + 1}`,
-        `Railway Region ${index + 1}`,
-        `鉄道運行地域${index + 1}`,
-        { countryCode: 'CN', timezone: 'Asia/Shanghai' },
-      ),
-    ),
-  },
-  {
-    model: 'AssetType',
-    prefix: 'AST_TYPE',
-    entries: [
-      metaEntry('SIGNAL', '信号设备', 'Signal', '信号設備'),
-      metaEntry('SWITCH', '道岔', 'Switch', '分岐器'),
-      metaEntry('BRIDGE', '桥梁', 'Bridge', '橋梁'),
-      metaEntry('CROSSING', '道口', 'Crossing', '踏切'),
-      metaEntry('POWER', '供电设备', 'Power equipment', '電力設備'),
-      metaEntry('STATION', '车站', 'Station', '駅'),
-      metaEntry('RAILWAY_LINE', '铁路线路', 'Railway line', '鉄道路線'),
-      metaEntry('TRAIN', '列车', 'Train', '列車'),
-    ],
-  },
-  {
-    model: 'StationLevel',
-    prefix: 'STATION_LEVEL',
+    domain: 'StationLevel',
     entries: Array.from({ length: 5 }, (_, index) =>
-      metaEntry(
+      fieldValueEntry(
         `LEVEL_${index + 1}`,
         `${index + 1}级车站`,
         `Station Level ${index + 1}`,
@@ -1230,81 +896,73 @@ const metaCatalogs: readonly MetaCatalog[] = [
     ),
   },
   {
-    model: 'LineClass',
-    prefix: 'LINE_CLASS',
+    domain: 'LineClass',
     entries: [
-      metaEntry('HIGH_SPEED', '高速铁路', 'High-speed', '高速鉄道'),
-      metaEntry('INTERCITY', '城际铁路', 'Intercity', '都市間鉄道'),
-      metaEntry('REGIONAL', '区域铁路', 'Regional', '地域鉄道'),
-      metaEntry('FREIGHT', '货运铁路', 'Freight', '貨物鉄道'),
+      fieldValueEntry('HIGH_SPEED', '高速铁路', 'High-speed', '高速鉄道'),
+      fieldValueEntry('INTERCITY', '城际铁路', 'Intercity', '都市間鉄道'),
+      fieldValueEntry('REGIONAL', '区域铁路', 'Regional', '地域鉄道'),
+      fieldValueEntry('FREIGHT', '货运铁路', 'Freight', '貨物鉄道'),
     ],
   },
   {
-    model: 'TrainType',
-    prefix: 'TRAIN_TYPE',
+    domain: 'TrainType',
     entries: [
-      metaEntry('EMU', '动车组', 'EMU', '電車列車'),
-      metaEntry('INTERCITY', '城际列车', 'Intercity train', '都市間列車'),
-      metaEntry('REGIONAL', '区域列车', 'Regional train', '地域列車'),
-      metaEntry('FREIGHT', '货运列车', 'Freight train', '貨物列車'),
+      fieldValueEntry('EMU', '动车组', 'EMU', '電車列車'),
+      fieldValueEntry('INTERCITY', '城际列车', 'Intercity train', '都市間列車'),
+      fieldValueEntry('REGIONAL', '区域列车', 'Regional train', '地域列車'),
+      fieldValueEntry('FREIGHT', '货运列车', 'Freight train', '貨物列車'),
     ],
   },
   {
-    model: 'ServiceStatus',
-    prefix: 'SERVICE_STATUS',
+    domain: 'ServiceStatus',
     entries: [
-      metaEntry('ON_TIME', '正点', 'On time', '定刻'),
-      metaEntry('DELAYED', '晚点', 'Delayed', '遅延'),
-      metaEntry('COMPLETED', '已完成', 'Completed', '完了'),
-      metaEntry('CANCELLED', '已取消', 'Cancelled', '運休'),
+      fieldValueEntry('ON_TIME', '正点', 'On time', '定刻'),
+      fieldValueEntry('DELAYED', '晚点', 'Delayed', '遅延'),
+      fieldValueEntry('COMPLETED', '已完成', 'Completed', '完了'),
+      fieldValueEntry('CANCELLED', '已取消', 'Cancelled', '運休'),
     ],
   },
   {
-    model: 'CarriageType',
-    prefix: 'CARRIAGE_TYPE',
+    domain: 'CarriageType',
     entries: [
-      metaEntry('FIRST', '一等座车厢', 'First class', '一等車'),
-      metaEntry('SECOND', '二等座车厢', 'Second class', '二等車'),
-      metaEntry('DINING', '餐车', 'Dining car', '食堂車'),
-      metaEntry('SLEEPER', '卧铺车厢', 'Sleeper', '寝台車'),
+      fieldValueEntry('FIRST', '一等座车厢', 'First class', '一等車'),
+      fieldValueEntry('SECOND', '二等座车厢', 'Second class', '二等車'),
+      fieldValueEntry('DINING', '餐车', 'Dining car', '食堂車'),
+      fieldValueEntry('SLEEPER', '卧铺车厢', 'Sleeper', '寝台車'),
     ],
   },
   {
-    model: 'EmployeeRole',
-    prefix: 'EMPLOYEE_ROLE',
+    domain: 'EmployeeRole',
     entries: [
-      metaEntry('DRIVER', '司机', 'Driver', '運転士'),
-      metaEntry('DISPATCHER', '调度员', 'Dispatcher', '指令員'),
-      metaEntry('CONDUCTOR', '列车长', 'Conductor', '車掌'),
-      metaEntry('MAINTAINER', '检修员', 'Maintainer', '保守員'),
-      metaEntry('STATION_MANAGER', '站长', 'Station manager', '駅長'),
+      fieldValueEntry('DRIVER', '司机', 'Driver', '運転士'),
+      fieldValueEntry('DISPATCHER', '调度员', 'Dispatcher', '指令員'),
+      fieldValueEntry('CONDUCTOR', '列车长', 'Conductor', '車掌'),
+      fieldValueEntry('MAINTAINER', '检修员', 'Maintainer', '保守員'),
+      fieldValueEntry('STATION_MANAGER', '站长', 'Station manager', '駅長'),
     ],
   },
   {
-    model: 'ShiftType',
-    prefix: 'SHIFT_TYPE',
+    domain: 'ShiftType',
     entries: [
-      metaEntry('MORNING', '早班', 'Morning', '早番'),
-      metaEntry('DAY', '日班', 'Day', '日勤'),
-      metaEntry('EVENING', '晚班', 'Evening', '遅番'),
-      metaEntry('NIGHT', '夜班', 'Night', '夜勤'),
+      fieldValueEntry('MORNING', '早班', 'Morning', '早番'),
+      fieldValueEntry('DAY', '日班', 'Day', '日勤'),
+      fieldValueEntry('EVENING', '晚班', 'Evening', '遅番'),
+      fieldValueEntry('NIGHT', '夜班', 'Night', '夜勤'),
     ],
   },
   {
-    model: 'WorkOrderCategory',
-    prefix: 'WO_CATEGORY',
+    domain: 'WorkOrderCategory',
     entries: [
-      metaEntry('INSPECTION', '巡检', 'Inspection', '点検'),
-      metaEntry('REPAIR', '维修', 'Repair', '修理'),
-      metaEntry('CALIBRATION', '校准', 'Calibration', '校正'),
-      metaEntry('REPLACEMENT', '更换', 'Replacement', '交換'),
+      fieldValueEntry('INSPECTION', '巡检', 'Inspection', '点検'),
+      fieldValueEntry('REPAIR', '维修', 'Repair', '修理'),
+      fieldValueEntry('CALIBRATION', '校准', 'Calibration', '校正'),
+      fieldValueEntry('REPLACEMENT', '更换', 'Replacement', '交換'),
     ],
   },
   {
-    model: 'WorkOrderPriority',
-    prefix: 'WO_PRIORITY',
+    domain: 'WorkOrderPriority',
     entries: Array.from({ length: 5 }, (_, index) =>
-      metaEntry(
+      fieldValueEntry(
         `P${index + 1}`,
         `${index + 1}级优先级`,
         `Priority ${index + 1}`,
@@ -1313,30 +971,27 @@ const metaCatalogs: readonly MetaCatalog[] = [
     ),
   },
   {
-    model: 'WorkOrderStatus',
-    prefix: 'WO_STATUS',
+    domain: 'WorkOrderStatus',
     entries: [
-      metaEntry('OPEN', '待处理', 'Open', '未処理'),
-      metaEntry('ASSIGNED', '已分派', 'Assigned', '割当済み'),
-      metaEntry('IN_PROGRESS', '处理中', 'In progress', '処理中'),
-      metaEntry('CLOSED', '已关闭', 'Closed', '完了'),
+      fieldValueEntry('OPEN', '待处理', 'Open', '未処理'),
+      fieldValueEntry('ASSIGNED', '已分派', 'Assigned', '割当済み'),
+      fieldValueEntry('IN_PROGRESS', '处理中', 'In progress', '処理中'),
+      fieldValueEntry('CLOSED', '已关闭', 'Closed', '完了'),
     ],
   },
   {
-    model: 'IncidentType',
-    prefix: 'INCIDENT_TYPE',
+    domain: 'IncidentType',
     entries: [
-      metaEntry('SIGNAL_FAILURE', '信号故障', 'Signal failure', '信号故障'),
-      metaEntry('ROLLING_STOCK', '车辆故障', 'Rolling stock failure', '車両故障'),
-      metaEntry('WEATHER', '天气影响', 'Weather disruption', '気象障害'),
-      metaEntry('PASSENGER', '旅客事件', 'Passenger incident', '旅客事象'),
+      fieldValueEntry('SIGNAL_FAILURE', '信号故障', 'Signal failure', '信号故障'),
+      fieldValueEntry('ROLLING_STOCK', '车辆故障', 'Rolling stock failure', '車両故障'),
+      fieldValueEntry('WEATHER', '天气影响', 'Weather disruption', '気象障害'),
+      fieldValueEntry('PASSENGER', '旅客事件', 'Passenger incident', '旅客事象'),
     ],
   },
   {
-    model: 'IncidentSeverity',
-    prefix: 'INCIDENT_SEVERITY',
+    domain: 'IncidentSeverity',
     entries: Array.from({ length: 5 }, (_, index) =>
-      metaEntry(
+      fieldValueEntry(
         `SEV${index + 1}`,
         `${index + 1}级严重度`,
         `Severity ${index + 1}`,
@@ -1345,81 +1000,37 @@ const metaCatalogs: readonly MetaCatalog[] = [
     ),
   },
   {
-    model: 'TravelClass',
-    prefix: 'TRAVEL_CLASS',
+    domain: 'TravelClass',
     entries: [
-      metaEntry('FIRST', '一等座', 'First class', '一等席'),
-      metaEntry('SECOND', '二等座', 'Second class', '二等席'),
-      metaEntry('BUSINESS', '商务座', 'Business class', 'ビジネス席'),
+      fieldValueEntry('FIRST', '一等座', 'First class', '一等席'),
+      fieldValueEntry('SECOND', '二等座', 'Second class', '二等席'),
+      fieldValueEntry('BUSINESS', '商务座', 'Business class', 'ビジネス席'),
     ],
   },
   {
-    model: 'SalesChannel',
-    prefix: 'SALES_CHANNEL',
+    domain: 'SalesChannel',
     entries: [
-      metaEntry('APP', '移动应用', 'Mobile app', 'モバイルアプリ'),
-      metaEntry('WEB', '网站', 'Website', 'ウェブサイト'),
-      metaEntry('COUNTER', '售票窗口', 'Ticket counter', '窓口'),
-      metaEntry('AGENCY', '代理渠道', 'Agency', '代理店'),
+      fieldValueEntry('APP', '移动应用', 'Mobile app', 'モバイルアプリ'),
+      fieldValueEntry('WEB', '网站', 'Website', 'ウェブサイト'),
+      fieldValueEntry('COUNTER', '售票窗口', 'Ticket counter', '窓口'),
+      fieldValueEntry('AGENCY', '代理渠道', 'Agency', '代理店'),
     ],
   },
   {
-    model: 'TicketStatus',
-    prefix: 'TICKET_STATUS',
+    domain: 'TicketStatus',
     entries: [
-      metaEntry('ISSUED', '已出票', 'Issued', '発券済み'),
-      metaEntry('REFUNDED', '已退票', 'Refunded', '払戻済み'),
-      metaEntry('USED', '已使用', 'Used', '使用済み'),
-      metaEntry('CANCELLED', '已取消', 'Cancelled', '取消済み'),
+      fieldValueEntry('ISSUED', '已出票', 'Issued', '発券済み'),
+      fieldValueEntry('REFUNDED', '已退票', 'Refunded', '払戻済み'),
+      fieldValueEntry('USED', '已使用', 'Used', '使用済み'),
+      fieldValueEntry('CANCELLED', '已取消', 'Cancelled', '取消済み'),
     ],
   },
 ];
 
-function metaCodes(model: string): readonly string[] {
-  const catalog = metaCatalogs.find((item) => item.model === model);
-  assert(catalog, `missing metadata catalog for ${model}`);
+function fieldValueCodes(domain: string): readonly string[] {
+  const catalog = fieldValueCatalogs.find((item) => item.domain === domain);
+  assert(catalog, `missing field value domain for ${domain}`);
   return catalog.entries.map((entry) => entry.code);
-}
-
-function metadataRows(catalog: MetaCatalog, count: number): Record<string, unknown>[] {
-  return Array.from({ length: count }, (_, index) => {
-    const entry = catalog.entries[index];
-    if (entry) {
-      return {
-        metaCode: entry.code,
-        name: entry.name,
-        description:
-          entry.description ??
-          i18n(
-            `${entry.name.zh}标准定义`,
-            `Standard definition for ${entry.name.en}`,
-            `${entry.name.ja}の標準定義`,
-          ),
-        active: true,
-        sortOrder: index + 1,
-        ...entry.extras,
-      };
-    }
-    const reservedIndex = index - catalog.entries.length + 1;
-    return {
-      metaCode: `${catalog.prefix}_RESERVED_${pad(reservedIndex)}`,
-      name: i18n(
-        `${modelLabels[catalog.model]!.zh}预留项${reservedIndex}`,
-        `${modelLabels[catalog.model]!.en} Reserved ${reservedIndex}`,
-        `${modelLabels[catalog.model]!.ja}予約項目${reservedIndex}`,
-      ),
-      description: i18n(
-        '查询测试预留元数据',
-        'Reserved metadata for query tests',
-        'クエリテスト用予約メタデータ',
-      ),
-      active: false,
-      sortOrder: index + 1,
-      ...(catalog.model === 'UnitDefinition'
-        ? { symbol: `u${reservedIndex}`, quantityKind: 'Reserved', decimalScale: 3 }
-        : {}),
-    };
-  });
 }
 
 function buildSeeds(count: number): ModelSeed[] {
@@ -1427,57 +1038,24 @@ function buildSeeds(count: number): ModelSeed[] {
   const operatorsUsed = Math.min(20, count);
   const concentratedParents = Math.min(20, count);
 
-  const metadataSeeds: ModelSeed[] = [
-    {
-      model: 'MetaDefinition',
-      keyField: 'metaCode',
-      rows: Array.from({ length: count }, (_, index) => {
-        const catalog = metaCatalogs[index];
-        const code = catalog
-          ? `META_${catalog.model.toUpperCase()}`
-          : `META_RESERVED_${pad(index + 1)}`;
-        const label = catalog
-          ? modelLabels[catalog.model]!
-          : i18n('预留元数据域', 'Reserved metadata domain', '予約メタデータ領域');
-        return {
-          metaCode: code,
-          name: label,
-          description: i18n(
-            `${label.zh}的分类定义域`,
-            `Definition domain for ${label.en}`,
-            `${label.ja}の定義領域`,
-          ),
-          active: Boolean(catalog),
-          sortOrder: index + 1,
-        };
-      }),
-    },
-    ...metaCatalogs.map((catalog) => ({
-      model: catalog.model,
-      keyField: 'metaCode',
-      rows: metadataRows(catalog, count),
-    })),
-  ];
-
-  const assetTypeCodes = metaCodes('AssetType');
-  const stationLevelCodes = metaCodes('StationLevel');
-  const lineClassCodes = metaCodes('LineClass');
-  const trainTypeCodes = metaCodes('TrainType');
-  const serviceStatusCodes = metaCodes('ServiceStatus');
-  const carriageTypeCodes = metaCodes('CarriageType');
-  const employeeRoleCodes = metaCodes('EmployeeRole');
-  const shiftTypeCodes = metaCodes('ShiftType');
-  const workOrderCategoryCodes = metaCodes('WorkOrderCategory');
-  const workOrderPriorityCodes = metaCodes('WorkOrderPriority');
-  const workOrderStatusCodes = metaCodes('WorkOrderStatus');
-  const incidentTypeCodes = metaCodes('IncidentType');
-  const incidentSeverityCodes = metaCodes('IncidentSeverity');
-  const travelClassCodes = metaCodes('TravelClass');
-  const salesChannelCodes = metaCodes('SalesChannel');
-  const ticketStatusCodes = metaCodes('TicketStatus');
+  const assetTypeCodes = fieldValueCodes('AssetType');
+  const stationLevelCodes = fieldValueCodes('StationLevel');
+  const lineClassCodes = fieldValueCodes('LineClass');
+  const trainTypeCodes = fieldValueCodes('TrainType');
+  const serviceStatusCodes = fieldValueCodes('ServiceStatus');
+  const carriageTypeCodes = fieldValueCodes('CarriageType');
+  const employeeRoleCodes = fieldValueCodes('EmployeeRole');
+  const shiftTypeCodes = fieldValueCodes('ShiftType');
+  const workOrderCategoryCodes = fieldValueCodes('WorkOrderCategory');
+  const workOrderPriorityCodes = fieldValueCodes('WorkOrderPriority');
+  const workOrderStatusCodes = fieldValueCodes('WorkOrderStatus');
+  const incidentTypeCodes = fieldValueCodes('IncidentType');
+  const incidentSeverityCodes = fieldValueCodes('IncidentSeverity');
+  const travelClassCodes = fieldValueCodes('TravelClass');
+  const salesChannelCodes = fieldValueCodes('SalesChannel');
+  const ticketStatusCodes = fieldValueCodes('TicketStatus');
 
   return [
-    ...metadataSeeds,
     {
       model: 'RailwayAsset',
       keyField: 'assetCode',
@@ -1493,6 +1071,21 @@ function buildSeeds(count: number): ModelSeed[] {
         commissionedAt: iso(-(index * 17)),
         color: ['#1F6F8B', '#2E7D32', '#D97706', '#B91C1C'][index % 4],
         location: { kilometer: index * 1.75, zone: `Z${pad((index % 10) + 1, 2)}` },
+      })),
+    },
+    {
+      model: 'Region',
+      keyField: 'regionCode',
+      rows: Array.from({ length: 10 }, (_, index) => ({
+        regionCode: `REG${pad(index + 1, 2)}`,
+        name: i18n(
+          `铁路运营区域${index + 1}`,
+          `Railway Region ${index + 1}`,
+          `鉄道運行地域${index + 1}`,
+        ),
+        countryCode: 'CN',
+        timezone: 'Asia/Shanghai',
+        active: index % 17 !== 0,
       })),
     },
     {
@@ -1529,10 +1122,8 @@ function buildSeeds(count: number): ModelSeed[] {
         lineCode: `LIN${pad(index + 1)}`,
         operatorCode: `OPR${pad((index % operatorsUsed) + 1)}`,
         lineClassCode: lineClassCodes[index % lineClassCodes.length],
-        lengthValue: 80 + index * 3.25,
-        lengthUnitCode: 'KM',
-        maxSpeedValue: [160, 200, 250, 350][index % 4],
-        speedUnitCode: 'KMH',
+        length: { value: 80 + index * 3.25, unit: 'km' },
+        maxSpeed: { value: [160, 200, 250, 350][index % 4]!, unit: 'km/h' },
         electrified: index % 6 !== 0,
       })),
     },
@@ -1550,11 +1141,9 @@ function buildSeeds(count: number): ModelSeed[] {
         trainCode: `TRN${pad(index + 1)}`,
         operatorCode: `OPR${pad((index % operatorsUsed) + 1)}`,
         trainTypeCode: trainTypeCodes[index % trainTypeCodes.length],
-        maxSpeedValue: [160, 200, 250, 350][index % 4],
-        speedUnitCode: 'KMH',
+        maxSpeed: { value: [160, 200, 250, 350][index % 4]!, unit: 'km/h' },
         seatCapacity: 420 + (index % 8) * 64,
-        mileageValue: 12_000 + index * 2_345,
-        mileageUnitCode: 'KM',
+        mileage: { value: 12_000 + index * 2_345, unit: 'km' },
       })),
     },
     {
@@ -1586,8 +1175,7 @@ function buildSeeds(count: number): ModelSeed[] {
         statusCode: serviceStatusCodes[[0, 0, 1, 2][index % 4]!],
         delayMinutes: index % 4 === 2 ? 5 + (index % 45) : 0,
         passengerLoad: Number((0.35 + (index % 60) / 100).toFixed(2)),
-        energyValue: 2_500 + index * 19,
-        energyUnitCode: 'KWH',
+        energyUsed: { value: 2_500 + index * 19, unit: 'kWh' },
       })),
     },
     {
@@ -1658,8 +1246,7 @@ function buildSeeds(count: number): ModelSeed[] {
         statusCode: workOrderStatusCodes[index % workOrderStatusCodes.length],
         openedAt: iso(-(index % 30)),
         dueAt: iso((index % 30) + 7),
-        estimatedCostValue: 2_000 + index * 315,
-        currencyUnitCode: 'CNY',
+        estimatedCost: { value: 2_000 + index * 315, unit: 'CNY' },
         description: i18n(
           `铁路设施维护工单${index + 1}`,
           `Railway asset work order ${index + 1}`,
@@ -1696,8 +1283,7 @@ function buildSeeds(count: number): ModelSeed[] {
         travelClassCode: travelClassCodes[index % travelClassCodes.length],
         originStationCode: `STA${pad((index % count) + 1)}`,
         destinationStationCode: `STA${pad(((index + 17) % count) + 1)}`,
-        fareValue: 35 + (index % 40) * 12.5,
-        currencyUnitCode: 'CNY',
+        fare: { value: 35 + (index % 40) * 12.5, unit: 'CNY' },
         soldAt: iso(-(index % 30), 9 + (index % 10), (index * 5) % 60),
         salesChannelCode: salesChannelCodes[index % salesChannelCodes.length],
         ticketStatusCode: ticketStatusCodes[index % 17 === 0 ? 1 : index % 11 === 0 ? 2 : 0],
@@ -1747,6 +1333,7 @@ function rowData(rows: unknown): Record<string, unknown>[] {
 }
 
 async function main(): Promise<void> {
+  validateDataSplitMetadata();
   assert(
     new Set(relationDefs.map((relation) => relation.forward)).size === relationDefs.length,
     'forward relation names must be globally unique for remote bind()',
@@ -1864,15 +1451,17 @@ async function main(): Promise<void> {
       const rows = await client.model(schema.name).query().execute();
       assert(Array.isArray(rows), `${schema.name} count query shape`);
       modelCounts[schema.name] = rows.length;
-      assert(rows.length === rowCount, `${schema.name} expected ${rowCount}, got ${rows.length}`);
+      const expectedCount = schema.name === 'Region' ? 10 : rowCount;
+      assert(
+        rows.length === expectedCount,
+        `${schema.name} expected ${expectedCount}, got ${rows.length}`,
+      );
     }
 
     const firstLineId = requireId(lineIds, 'LIN001');
     const firstServiceId = requireId(idsByModel.get('TrainService')!, 'SVC001');
     const firstTrainId = requireId(idsByModel.get('Train')!, 'TRN001');
     const firstStationId = requireId(stationIds, 'STA001');
-    const firstIncidentId = requireId(idsByModel.get('Incident')!, 'INC0001');
-    const firstTicketId = requireId(idsByModel.get('Ticket')!, 'TKT00001');
 
     const lineStations = rowData(
       await client.model('RailwayLine').query([firstLineId]).relate('stations').execute(),
@@ -1889,33 +1478,19 @@ async function main(): Promise<void> {
     );
     assert(trainCarriages.length >= 4, 'Train -> carriages reverse query');
 
-    const serviceStatus = rowData(
-      await client
-        .model('TrainService')
-        .query([firstServiceId])
-        .relate('serviceStatusRef')
-        .execute(),
+    const stationRegion = rowData(
+      await client.model('Station').query([firstStationId]).relate('stationRegionRef').execute(),
     );
-    assert(serviceStatus[0]?.metaCode === 'ON_TIME', 'TrainService -> ServiceStatus query');
+    assert(stationRegion[0]?.regionCode === 'REG01', 'Station -> Region query');
 
-    const incidentSeverity = rowData(
-      await client
-        .model('Incident')
-        .query([firstIncidentId])
-        .relate('incidentSeverityRef')
-        .execute(),
+    const firstLine = rowData(await client.model('RailwayLine').query([firstLineId]).execute())[0];
+    const lineLength = firstLine?.length;
+    assert(
+      lineLength &&
+        typeof lineLength === 'object' &&
+        (lineLength as { unit?: unknown }).unit === 'km',
+      'RailwayLine Unit field query',
     );
-    assert(incidentSeverity[0]?.metaCode === 'SEV1', 'Incident -> IncidentSeverity query');
-
-    const ticketStatus = rowData(
-      await client.model('Ticket').query([firstTicketId]).relate('ticketStatusRef').execute(),
-    );
-    assert(ticketStatus[0]?.metaCode === 'REFUNDED', 'Ticket -> TicketStatus query');
-
-    const lineLengthUnit = rowData(
-      await client.model('RailwayLine').query([firstLineId]).relate('lineLengthUnit').execute(),
-    );
-    assert(lineLengthUnit[0]?.metaCode === 'KM', 'RailwayLine -> UnitDefinition query');
 
     const stationTree = await client
       .model('Station')
@@ -1975,6 +1550,7 @@ async function main(): Promise<void> {
       relations: relationDefs.length,
       rowsPerModel: rowCount,
       totalRows: Object.values(modelCounts).reduce((sum, count) => sum + count, 0),
+      dataSplitMetadata,
       modelCounts,
       relationStats,
       designerMetadata: {
@@ -1986,10 +1562,8 @@ async function main(): Promise<void> {
         lineStations: lineStations.length,
         serviceStops: serviceStops.length,
         trainCarriages: trainCarriages.length,
-        serviceStatus: serviceStatus[0]?.metaCode,
-        incidentSeverity: incidentSeverity[0]?.metaCode,
-        ticketStatus: ticketStatus[0]?.metaCode,
-        lineLengthUnit: lineLengthUnit[0]?.metaCode,
+        stationRegion: stationRegion[0]?.regionCode,
+        lineLengthValueUnit: (lineLength as { unit: string }).unit,
         stationTreeSize,
         delayedServices: delayedServices.length,
         ticketPageTotal: ticketPage.total,

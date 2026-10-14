@@ -1,0 +1,45 @@
+specVersion: "0.1.0"
+graph: railway_domain_v1
+checks:
+  - id: metadataIsNotEntity
+    rule: 拆分元数据不能自动生成 MetaDefinition 或同类实体模型
+    severity: error
+  - id: lineSectionHasIndependentGrain
+    rule: LineSection 必须有独立的数据粒度和身份定义
+    severity: error
+  - id: trackSegmentIsConditional
+    rule: 没有独立检测、调度、安全或资产生命周期时不得启用 TrackSegment
+    severity: error
+  - id: crossDivisionUsesAssociation
+    rule: 路段跨越多个行政区划时必须使用 SectionDivisionAssignment
+    severity: error
+  - id: reusableDictionaryIsModel
+    rule: 被多个模型复用且需要独立维护的状态、分类或单位必须是引用模型
+    severity: error
+  - id: relationAttributesArePreserved
+    rule: 顺序、里程、方向、覆盖比例和有效期不能在建模时丢失
+    severity: error
+  - id: inheritanceDoesNotDuplicateQueryNode
+    rule: 继承关系默认不能让同一数据在查询链中重复出现
+    severity: error
+
+acceptanceScenarios:
+  - id: lineToSectionToDivision
+    input: 查询一条线路下的路段及其覆盖的行政区划
+    expectedPath: [RailwayLine, LineSection, AdministrativeDivision]
+    requiredThrough: SectionDivisionAssignment
+  - id: lineToStation
+    input: 查询线路经过的车站及线路顺序
+    expectedPath: [RailwayLine, Station]
+    requiredThrough: LineStationAssignment
+  - id: publicDictionaryReuse
+    input: 线路、路段和车站共同引用服务状态或分类
+    expectedPath: [RailwayLine, ServiceStatus, LineSection, Station]
+    requirement: 每个业务模型引用同一个语义字典域
+  - id: measurementSemantics
+    input: 查询线路长度并显示数值与单位
+    expectedShape: { value: number, unitCode: string }
+  - id: ambiguousDecomposition
+    input: 数据只提供“路段”，但无法判断是否存在独立轨道区段
+    expectedAction: request_human_decision
+

@@ -23,6 +23,9 @@
 - 模块说明文档：[`docs/module-overview.md`](./docs/module-overview.md)
 - 操作手册：[`docs/operation-manual.md`](./docs/operation-manual.md)
 - 开发手册：[`docs/developer-handbook.md`](./docs/developer-handbook.md)
+- Query Designer 架构：[`docs/query-designer-architecture.md`](./docs/query-designer-architecture.md)
+- QueryInterface Schema：[`docs/query-interface-schema-v1.md`](./docs/query-interface-schema-v1.md)
+- 数据透视（Pivot）契约：[`docs/pivot-tab-v1.md`](./docs/pivot-tab-v1.md)
 - 模块级 AI 协作约束：[`AGENTS.md`](./AGENTS.md)
 - 面向后续 AI 的上下文资料：[`../../.agents/model-designer/`](../../.agents/model-designer/)
 

@@ -78,6 +78,12 @@
 - 从业务库拉取最新 catalog 并刷新画布
 - 清空业务库下某模型或整库的行数据
 
+### 3.6 接口设计与结果查看
+
+- Query Designer：在模型图上构建查询链，配置投影、条件、排序与分页，保存并发布 QueryInterface。继承子模型与父模型在查询链上视为同一节点。
+- Operation Designer：设计并发布写入 / 关系操作接口。
+- 数据透视（Pivot）：以层级或 JSON 视图查看模型数据或已发布查询接口的真实返回结果，契约见 [`pivot-tab-v1.md`](./pivot-tab-v1.md)。
+
 ## 4. 关键技术栈
 
 - React 19
@@ -100,6 +106,8 @@
 - 画布容器：[`../src/components/CanvasContainer.tsx`](../src/components/CanvasContainer.tsx)
 - 编辑器外壳：[`../src/components/EditorChrome.tsx`](../src/components/EditorChrome.tsx)
 - 字段编辑器：[`../src/components/PropsEditor.tsx`](../src/components/PropsEditor.tsx)
+- 查询设计器面板：[`../src/components/QueryDesignerPanel.tsx`](../src/components/QueryDesignerPanel.tsx)
+- 数据透视：[`../src/components/PivotTab.tsx`](../src/components/PivotTab.tsx)、[`../src/pivot/`](../src/pivot/)
 
 ## 6. 模块输出
 

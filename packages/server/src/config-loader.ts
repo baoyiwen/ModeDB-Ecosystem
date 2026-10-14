@@ -7,6 +7,8 @@ import { resolveModelDbConfigPathFromCli } from './modeldb-default-home.js';
 export interface ModelDBServerFileConfig {
   readonly port?: number;
   readonly host?: string;
+  /** Hostname or IP to print as the preferred client address when the server binds broadly. */
+  readonly advertisedHost?: string;
   /**
    * **首选**：逻辑库工作区根目录；每个逻辑库为 **`<workspace>/<dbName>/`**（内含 **`atlas.mld`** 等）。
    * 与 **`storageRoot`**、**`dbPath`**（目录或 **`.mld` 文件**）互为别名，按合并顺序取第一个非空。
@@ -62,6 +64,8 @@ export interface ResolvedModelDBServerAutoBackupConfig {
 export interface ResolvedModelDBServerConfig {
   readonly port: number;
   readonly host: string;
+  /** Optional externally reachable hostname or IP shown in startup connection details. */
+  readonly advertisedHost?: string;
   /**
    * 逻辑库工作区根；客户端 **`dbName` / `atlas`** 对应 **`<storageRoot>/<name>/`**。
    */
@@ -172,13 +176,14 @@ function resolveStorageRootAndAtlas(
 export interface CliConfigOverrides {
   readonly port?: number;
   readonly host?: string;
+  readonly advertisedHost?: string;
   readonly connectToken?: string;
   readonly dev?: boolean;
   readonly bufferThreshold?: number;
 }
 
 /**
- * Per-key merge order: CLI overrides（**`port`/`host`/`connectToken`/`dev`/`bufferThreshold`**）→ **`modeldb.config.json`**
+ * Per-key merge order: CLI overrides（**`port`/`host`/`advertisedHost`/`connectToken`/`dev`/`bufferThreshold`**）→ **`modeldb.config.json`**
  * → 环境变量 → 默认值（如 port **9090**，host **127.0.0.1**，dev **false**）。**`workspace`/`logDir`** 等路径**仅**来自 JSON（及 **`-c`** 会话根），不由 CLI 覆盖。
  *
  * **`connectToken`**：同一顺序 **CLI → 文件 → `MODEL_DB_CONNECT_TOKEN`**；仅当左侧为 **`null`/`undefined`**
@@ -208,6 +213,8 @@ export async function loadModelDBServerConfig(
   const port = cli.port ?? file.port ?? numEnv('MODEL_DB_PORT') ?? 9090;
 
   const host = cli.host ?? file.host ?? strEnv('MODEL_DB_HOST') ?? '127.0.0.1';
+  const advertisedHost =
+    cli.advertisedHost ?? file.advertisedHost ?? strEnv('MODEL_DB_ADVERTISED_HOST');
 
   const storageEnvBranch = implicitDefaultHome
     ? undefined
@@ -259,6 +266,7 @@ export async function loadModelDBServerConfig(
   return {
     port,
     host,
+    ...(advertisedHost?.trim() ? { advertisedHost: advertisedHost.trim() } : {}),
     storageRoot,
     workspace: storageRoot,
     defaultAtlas,

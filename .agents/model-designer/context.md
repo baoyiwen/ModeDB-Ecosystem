@@ -22,6 +22,8 @@
 10. 查询链中继承关系（`modelInherits`）不可遍历；子模型是父模型的分身，选择子模型走 `rebaseInheritedIdentityToChild` 复用节点身份，不新建节点。
 11. 画布浮动工具按钮分三组：左上（视图/保存）、右上（数据库管理）、底部中间（画布布局），由 `DesignerToolbar.tsx` + `designer-shell.css` 的 `.designer-float-top-left/-top-right/-bottom` 控制。
 12. 三个前端 dev server（web/model-designer/data-studio）均已 `host: true`，会打印 Network 地址供跨设备访问。
+13. 数据透视（Pivot）面板读取模型数据或已发布 QueryInterface 的结果，两类数据源都先归一化为 `PivotDocument`；会话只能在 `src/pivot/execute.ts` 创建，组件不得直连引擎。
+14. Query Designer 的分页设置已移到查询路径区域下方（`QueryPaginationEditor`），只提供 offset + 默认每页数量；条件编辑器不再管分页。
 
 ## AI 改动首选入口
 
@@ -34,6 +36,8 @@
 - 关系身份与基数：`src/utils/relation-identity.ts`
 - 保存 / hydrate：`src/sync/designer-push-sync.ts`、`src/sync/designer-row-hydrate.ts`
 - 逻辑库登记：`src/sync/library-registry.ts`
+- 查询链与继承语义：`src/query-designer/query-chain-state.ts`
+- 数据透视：`src/pivot/`、`src/components/PivotTab.tsx`
 
 ## AI 介入时必须检查
 

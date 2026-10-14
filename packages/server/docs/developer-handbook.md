@@ -45,6 +45,17 @@
 - 关系名是端点局部唯一，catalog 不应暗示 `forward` 全局唯一。
 - 修改 catalog 响应时同步检查 `packages/shared/src/management-types.ts`、`packages/sdk/src/remote-client.ts`、`apps/data-studio/src/components/DataWorkspace.tsx`。
 
+### 3.2 AuthoringBridge 引擎缓存生命周期
+
+`src/authoring-bridge.ts` 为每个逻辑库缓存一个 `AuthoringEngine`。server 运行期间它是该库 `atlas.mld` 的唯一所有者：
+
+- 缓存只按库名命中，**不再**根据 `atlas.mld` 的修改时间（原 `atlasCatalogSignature`）判断失效。每次成功写入都会改变文件 mtime，若按 mtime 重建引擎，下一个排队请求可能在上一个引擎仍在刷盘时重新打开文件，在 Windows 上表现为间歇性的 `open(...atlas.mld)` 错误，并可能丢失内存中的 registry。
+- 初始化中的 Promise 会立即写入缓存，并发请求共享同一次初始化，同一个库不会被打开两次。
+- 初始化失败时会从缓存中移除该 Promise，修复原因后（如临时的文件访问失败）可以重试。
+- 只有显式调用 `evict(dbName)` 才会重建引擎。`dual-track-app.ts` 在恢复备份、清除数据 / 强制重置、删除逻辑库这些会替换或删除磁盘文件的管理操作后调用它。
+
+因此，在 server 运行时用外部工具直接改写 `atlas.mld`，不会被已缓存的引擎感知；需要重启 server，或走管理面 API。新增任何会替换库文件的管理操作时，必须同时调用 `evict`。
+
 ## 4. 备份 / 恢复开发约束
 
 设计边界：

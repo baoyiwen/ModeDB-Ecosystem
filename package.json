@@ -25,6 +25,7 @@
     "build:web": "pnpm --filter modedb-web-playground run build",
     "chunnel:clean": "tsx scripts/chunnel-cleaner.ts",
     "seed:railway": "tsx scripts/railway-industry-validation.ts",
+    "seed:railway-domain-v1": "tsx scripts/railway-domain-v1.ts",
     "test:live:binding-surface-recovery": "tsx scripts/binding-surface-failure-recovery-live-check.ts",
     "start:server": "pnpm run build:server && node ./packages/server/dist/cli.js",
     "start:server:network": "pnpm run build:server && node ./packages/server/dist/cli.js --host 0.0.0.0",

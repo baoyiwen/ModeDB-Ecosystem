@@ -114,22 +114,23 @@ JSON 中 **`/`** 在 Node 下可用；也可用 **`D:\\\\Data\\\\modeldb_workspa
 
 ## 4. 字段说明（与 `modeldb.config.example.json` 对齐）
 
-| JSON 字段                    | 说明                                                                                                              |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **`port`**                   | 监听端口，默认 **9090**；可被 **`MODEL_DB_PORT`** 或 CLI **`-p`** 覆盖。                                          |
-| **`host`**                   | 绑定地址，默认 **127.0.0.1**；可被 **`MODEL_DB_HOST`** 或 CLI **`-H`** 覆盖。                                     |
-| **`workspace`**              | **首选**：逻辑库根；每个库 **`{workspace}/{dbName}/atlas.mld`**。                                                 |
-| **`storageRoot` / `dbPath`** | 与 **`workspace`** 同一条合并链上的别名（见 loader）。                                                            |
-| **`logDir`**                 | 日志目录；**相对路径时相对 `modeldb.config.json` 所在目录** 解析为 **`serverLogDirectory`**。                     |
-| **`bufferThreshold`**        | 服务端写缓冲阈值；可被 **`MODEL_DB_BUFFER_THRESHOLD`** 覆盖。                                                     |
-| **`cacheSize`**              | 当前为预留提示，不参与核心逻辑。                                                                                  |
-| **`mode`**                   | **`"production"`**（不区分大小写）时等价打开访问日志等（与 **`MODEL_DB_ACCESS_LOG`** 协同）。                     |
-| **`connectToken`**           | **必填**（文件、环境变量 **`MODEL_DB_CONNECT_TOKEN`** 或 CLI **`--token`** 三选一合并后非空）；否则服务启动失败。 |
-| **`dev`**                    | 开发标志；可被 **`MODEL_DB_DEV`** 或 CLI **`--dev`** 覆盖。                                                       |
+| JSON 字段                    | 说明                                                                                                                                                     |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`port`**                   | 监听端口，默认 **9090**；可被 **`MODEL_DB_PORT`** 或 CLI **`-p`** 覆盖。                                                                                 |
+| **`host`**                   | 绑定地址，默认 **127.0.0.1**；可被 **`MODEL_DB_HOST`** 或 CLI **`-H`** 覆盖。                                                                            |
+| **`advertisedHost`**         | 启动控制台优先展示的客户端主机名、IP 或域名；可被 **`MODEL_DB_ADVERTISED_HOST`** 或 CLI **`--advertised-host`** 覆盖。仅影响展示，不改变监听或网络路由。 |
+| **`workspace`**              | **首选**：逻辑库根；每个库 **`{workspace}/{dbName}/atlas.mld`**。                                                                                        |
+| **`storageRoot` / `dbPath`** | 与 **`workspace`** 同一条合并链上的别名（见 loader）。                                                                                                   |
+| **`logDir`**                 | 日志目录；**相对路径时相对 `modeldb.config.json` 所在目录** 解析为 **`serverLogDirectory`**。                                                            |
+| **`bufferThreshold`**        | 服务端写缓冲阈值；可被 **`MODEL_DB_BUFFER_THRESHOLD`** 覆盖。                                                                                            |
+| **`cacheSize`**              | 当前为预留提示，不参与核心逻辑。                                                                                                                         |
+| **`mode`**                   | **`"production"`**（不区分大小写）时等价打开访问日志等（与 **`MODEL_DB_ACCESS_LOG`** 协同）。                                                            |
+| **`connectToken`**           | **必填**（文件、环境变量 **`MODEL_DB_CONNECT_TOKEN`** 或 CLI **`--token`** 三选一合并后非空）；否则服务启动失败。                                        |
+| **`dev`**                    | 开发标志；可被 **`MODEL_DB_DEV`** 或 CLI **`--dev`** 覆盖。                                                                                              |
 
 **Vault 磁盘密钥**：当前 **`ModelDBServerFileConfig`** 类型以 **`connectToken`** 与运行时环境为主；若 README 中仍提到 **`vaultSecret`**，请以你使用的 **`@mode-db/server` / 引擎版本** 的 **`config-loader`** 与 README 为准。读 **`atlas.mld`** 的进程通常还需与灌库时一致的 **`MODEL_DB_VAULT_SECRET`** 或 **`MODEL_DB_CONNECT_TOKEN`**（与集成测试 **`test/integration/vault-env.ts`** 一致）。
 
-**配置优先级**（同一键）：**CLI → `modeldb.config.json` → 环境变量 → 默认值**。
+**配置优先级**（同一键）：**CLI → `modeldb.config.json` → 环境变量 → 默认值**。当 **`host`** 为 **`0.0.0.0`** / **`::`** 时，启动控制台会自动列出机器 hostname 和非回环网卡地址；这些地址才是其它机器应使用的直连地址。
 
 ---
 
@@ -185,6 +186,7 @@ modeldb-server start -c D:\opt\modeldb-srv\modeldb.config.json
 - **路径分隔符**：JSON 里推荐 **`/`** 或转义后的 **`\\`**，不要只写一个 **`\\`** 未转义导致 JSON 非法。
 - **权限**：服务账号对 **`workspace`** 目录需有读写权（创建子目录、写 **`atlas.mld`**）。
 - **防火墙**：放行 **`port`**（入站规则）。
+- **直连地址**：启动后复制控制台列出的 **HTTP** 或 **WebSocket** 完整地址。若服务器有固定域名或端口映射，可配置 `"advertisedHost": "db.example.com"`；两台服务器之间必须存在可路由的网络路径，展示地址本身不能替代 VPN、端口映射或代理。
 
 ---
 

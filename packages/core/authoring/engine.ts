@@ -173,6 +173,7 @@ export class AuthoringEngine {
   private readonly smartCacheRef: SmartCache | undefined;
   private readonly memoryShadowHydration: boolean;
   private readonly _autoFlushHandle: ReturnType<typeof setInterval>;
+  private _flushAllPromise: Promise<void> | null = null;
 
   constructor(options: AuthoringEngineOptions) {
     const paths =
@@ -273,7 +274,7 @@ export class AuthoringEngine {
 
     this._autoFlushHandle = setInterval(() => {
       if (this.persistence.hasBufferedRows()) {
-        void this.persistence.flushPendingToDisk();
+        void this.flushAll();
       }
     }, 200);
     if (typeof this._autoFlushHandle.unref === 'function') {
@@ -872,9 +873,31 @@ export class AuthoringEngine {
    * (e.g. cold `ModelDBClient.connect` to the same atlas).
    */
   async flushAll(): Promise<void> {
-    await this.persistence.flushPendingToDisk();
-    await this.indexer.flushAll();
-    await this.writeAtlasManifest();
+    // Model rows, relation indices, and the manifest all share one encrypted
+    // atlas file. Serialize the complete flush so the scheduler cannot write
+    // the same vault while a mutation is persisting its relation/index state.
+    const inFlight = this._flushAllPromise;
+    if (inFlight) {
+      await inFlight;
+      // A mutation may have dirtied an index while the previous flush was in
+      // flight. Run one follow-up pass so its state is included before the
+      // caller observes completion.
+      await this.flushAll();
+      return;
+    }
+    const run = (async (): Promise<void> => {
+      await this.persistence.flushPendingToDisk();
+      await this.indexer.flushAll();
+      await this.writeAtlasManifest();
+    })();
+    this._flushAllPromise = run;
+    try {
+      await run;
+    } finally {
+      if (this._flushAllPromise === run) {
+        this._flushAllPromise = null;
+      }
+    }
   }
 }
 

@@ -2,17 +2,20 @@ import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { DiagnosticCenter, ErrorCodes, PathResolver } from '@mode-db/common';
 import { AuthoringEngine, fileLooksLikeAtlasSingleVault } from '@mode-db/core';
-import { atlasCatalogSignature } from './atlas-catalog-signature.js';
 
 /**
  * Lazily constructs {@link AuthoringEngine} per logical database (**`<workspace>/<db>/atlas.mld`**)
- * for server-side writes. Cache is invalidated when vault mtimes change (see **`atlasCatalogSignature`**).
+ * for server-side writes. An engine stays cached for the lifetime of the server
+ * and is rebuilt only after an explicit {@link evict}.
+ *
+ * The server is the owner of the vault while it is running. Recreating the
+ * engine whenever `atlas.mld` changes is unsafe: every successful mutation
+ * changes the file mtime, so the next queued request can try to open the file
+ * while the previous engine is still flushing it. Besides producing intermittent
+ * Windows `open(...atlas.mld)` errors, that can discard the in-memory registry.
  */
 export class AuthoringBridge {
-  private readonly cache = new Map<
-    string,
-    { readonly sig: string; readonly promise: Promise<AuthoringEngine> }
-  >();
+  private readonly cache = new Map<string, { readonly promise: Promise<AuthoringEngine> }>();
 
   constructor(
     private readonly storageRoot: string,
@@ -21,13 +24,22 @@ export class AuthoringBridge {
   ) {}
 
   getEngine(atlas: string): Promise<AuthoringEngine> {
-    const sig = atlasCatalogSignature(this.storageRoot, atlas);
     const hit = this.cache.get(atlas);
-    if (hit && hit.sig === sig) {
+    if (hit) {
       return hit.promise;
     }
     const p = this.createEngine(atlas);
-    this.cache.set(atlas, { sig, promise: p });
+    // Store the in-flight promise immediately so concurrent callers share the
+    // same initialization and never open the vault more than once.
+    this.cache.set(atlas, { promise: p });
+    p.catch(() => {
+      // A failed initialization must remain retryable after the underlying
+      // cause is fixed (for example, after a transient file access failure).
+      const current = this.cache.get(atlas);
+      if (current?.promise === p) {
+        this.cache.delete(atlas);
+      }
+    });
     return p;
   }
 

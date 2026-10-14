@@ -213,6 +213,7 @@ const program = new Command()
   )
   .option('-p, --port <number>', 'Listen port (overrides config / env)')
   .option('-H, --host <host>', 'Bind host (default 127.0.0.1)')
+  .option('--advertised-host <host>', 'Preferred hostname or IP to print for clients')
   .option('-t, --token <secret>', 'Client connect token (also derives the atlas vault key)')
   .option('--dev', 'Print decrypted RPC payloads to stderr (development only)', false);
 
@@ -222,6 +223,7 @@ const o = program.opts<{
   config?: string;
   port?: string;
   host?: string;
+  advertisedHost?: string;
   token?: string;
   dev?: boolean;
 }>();
@@ -233,6 +235,7 @@ const connectTokenFromCli =
 const cfg = await loadModelDBServerConfig(o.config, {
   port: o.port !== undefined && o.port !== '' ? Number(o.port) : undefined,
   host: o.host,
+  advertisedHost: o.advertisedHost,
   connectToken: connectTokenFromCli,
   dev: Boolean(o.dev),
 });

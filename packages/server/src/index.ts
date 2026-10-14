@@ -18,6 +18,11 @@ export {
   type ResolvedModelDBServerConfig,
   type CliConfigOverrides,
 } from './config-loader.js';
+export {
+  formatModelDBStartupInfo,
+  getModelDBClientHosts,
+  getModelDBNetworkHosts,
+} from './server-access-info.js';
 export { WriteSerializationGate } from './write-serialization-gate.js';
 export { WireRequestDispatcher } from './request-dispatcher.js';
 export {

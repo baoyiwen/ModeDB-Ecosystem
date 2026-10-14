@@ -20,6 +20,7 @@
 - 是否与 `shared` / `sdk` 协议一致
 - catalog 是否完整返回 `displayName`、`fieldLabels`、`fieldTypes`、`selfLoopPolicy`
 - 是否避免把唯一名当显示名写回 catalog
+- `AuthoringBridge` 缓存不得重新改回按 `atlas.mld` mtime 失效；新增会替换库文件的管理操作必须调用 `evict(dbName)`（原因见 `docs/developer-handbook.md` §3.2）
 
 ## 4. 备份 / 恢复规则
 

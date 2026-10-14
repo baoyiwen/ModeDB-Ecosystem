@@ -492,6 +492,7 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 | **`pnpm run dev`**                                                    | **`@mode-db/core`** 源码监听：**`pnpm --filter @mode-db/core run dev`**（**`packages/core` 内 `tsc --watch`**）。                                                                                                                                                                                                                                                            |
 | **`pnpm test`**                                                       | **`test:unit`**（`@mode-db/common` 纯函数）+ **`test:integration`**（端到端 **`test/integration/e2e-engine-workflow.ts`**），见 **`test/README.md`**。                                                                                                                                                                                                                       |
 | **`pnpm run dev:web`**                                                | 浏览器查询 playground（**`apps/web`**，Vite）；左侧填引擎地址与令牌，右侧 JSON 回显（可选 WebGPU 探测）。需已启动 **`modeldb-server`**。三个前端应用（**`apps/web` / `apps/model-designer` / `apps/data-studio`**）的 Vite 均已 **`host: true`**，会同时打印 **Local** 与 **Network** 地址，便于跨设备访问（跨设备连引擎见各 app README）。                                  |
+| **`pnpm run seed:railway-domain-v1`**                                 | 按 **`agents/railway-domain/`** 规范创建独立的 **`railway_domain_v1`** 铁路领域图谱（不覆盖旧的 **`railway_operations_demo`**）；需已启动 server，可传 **`-- --host <h> --port <p>`**，加 **`--reset`** 时先备份再重建。说明见 **[docs/railway-domain-agent-modeling.md](docs/railway-domain-agent-modeling.md)**。                                                          |
 | **`pnpm run typecheck`** / **`pnpm run lint`** / **`pnpm run check`** | 类型检查、ESLint、类型+lint+Prettier 检查。                                                                                                                                                                                                                                                                                                                                  |
 
 ### `modeldb.config.json` 字段说明
@@ -1065,6 +1066,7 @@ EngineError
 ├── modeldb.config.example.json
 ├── modeldb.config.json           # 本地联调（勿提交密钥）
 ├── docs/                         # user-handbook、developer-handbook、配置指南、操作手册、架构图等
+├── agents/                       # 领域建模 Agent 规则包（如 railway-domain/：AGENTS.md + 策略/目录/校验 YAML）
 ├── scripts/
 ├── packages/
 │   ├── core/                     # @mode-db/core → packages/core/dist/
@@ -1073,7 +1075,9 @@ EngineError
 │   ├── server/                   # @mode-db/server → packages/server/dist/
 │   └── sdk/                      # @mode-db/sdk
 ├── apps/
-│   └── web/                      # React + Vite 查询 playground（pnpm run dev:web）
+│   ├── web/                      # React + Vite 查询 playground（pnpm run dev:web，5174）
+│   ├── model-designer/           # 图形化建模 + Query/Operation Designer + 数据透视（5175）
+│   └── data-studio/              # 数据工作台：表格 / 透视 / 导入（5176）
 ├── runtime/                      # 可选：本地/部署占位（如 modeldb_vault/，见 runtime/README.md）
 ├── test/                         # 单元 + 集成（见 test/README.md）
 ├── data/                         # 默认本地图谱数据（建议 git-ignore）

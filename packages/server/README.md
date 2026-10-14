@@ -49,6 +49,8 @@ pnpm run start:server -- -c modeldb.config.json
 modeldb-server start -c ./modeldb.config.json --port 9090
 ```
 
+启动成功后，控制台会打印完整的 HTTP、健康检查、管理状态和 WebSocket 地址。使用 `--host 0.0.0.0` 时会列出机器 hostname 与非回环网卡 IP，跨机器客户端应复制其中一个地址；也可在配置中加入 `advertisedHost`，或临时传入 `--advertised-host <host>` 指定优先展示的域名/IP。
+
 配置项说明：**[modeldb-config-guide.md](../../docs/modeldb-config-guide.md)**。  
 部署清单：**[operations-manual.md](../../docs/operations-manual.md)**。
 

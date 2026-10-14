@@ -1,0 +1,13 @@
+proposal:
+  graph: railway_domain_v1
+  source_summary: ""
+  models: []
+  relations: []
+  value_objects: []
+  dictionary_bindings: []
+  metadata: []
+  decisions: []
+  ambiguities: []
+  rejected_concepts: []
+  validation: []
+  write_ready: false

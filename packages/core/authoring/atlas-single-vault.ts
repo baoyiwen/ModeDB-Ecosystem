@@ -4,10 +4,10 @@
  * manifest under `__manifest__`. No separate `.rid` or per-model files when this vault is active.
  */
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
-import { existsSync, mkdirSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { DiagnosticCenter, ErrorCodes, DiskAdapter } from '@mode-db/common';
+import { DiagnosticCenter, DiskAdapter, EngineLogger, ErrorCodes } from '@mode-db/common';
 
 /** First bytes of `atlas.mld` (single-file vault). */
 export const ATLAS_SINGLE_VAULT_MAGIC = Buffer.from('MDB4SVLT', 'ascii');
@@ -115,7 +115,48 @@ export class AtlasSingleVault {
     lenBe.writeBigUInt64BE(BigInt(inner.length), 0);
     const out = Buffer.concat([MAGIC, fake, lenBe, inner]);
     mkdirSync(dirname(absPath), { recursive: true });
-    DiskAdapter.writeFileSync(absPath, out);
+    // Write beside the live vault and replace it in one filesystem operation.
+    // Directly opening `atlas.mld` with the default `w` flag first truncates the
+    // file. A concurrent read (for example a new SDK handshake on Windows) can
+    // then observe a partial/truncated vault and fail with the opaque
+    // `UNKNOWN ... open atlas.mld` error. The temporary file keeps the previous
+    // valid catalog readable until the replacement is ready.
+    const tempPath = `${absPath}.${process.pid}.${randomBytes(8).toString('hex')}.tmp`;
+    try {
+      mkdirSync(dirname(tempPath), { recursive: true });
+      const t0 = performance.now();
+      writeFileSync(tempPath, out);
+      EngineLogger.instance.recordDiskWrite(performance.now() - t0, out.length, 'writeFileSync');
+      // `renameSync(temp, existing)` is not a replacement operation on
+      // Windows and returns EPERM. copyFileSync replaces the destination while
+      // keeping the temporary write isolated from readers. A short retry
+      // absorbs a reader that is just releasing its handle.
+      let copied = false;
+      let lastError: unknown;
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        try {
+          copyFileSync(tempPath, absPath);
+          copied = true;
+          break;
+        } catch (err) {
+          lastError = err;
+          if (attempt < 11) {
+            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 15);
+          }
+        }
+      }
+      if (!copied) {
+        throw lastError;
+      }
+    } finally {
+      try {
+        if (existsSync(tempPath)) {
+          unlinkSync(tempPath);
+        }
+      } catch {
+        /* best-effort cleanup after a failed replacement */
+      }
+    }
   }
 
   private reportCorrupt(phase: string, path: string, cause: unknown): void {

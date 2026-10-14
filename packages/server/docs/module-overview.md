@@ -15,7 +15,7 @@
 - `src/modeldb-server.ts`：服务启动入口。
 - `src/dual-track-app.ts`：Fastify HTTP + WebSocket 组合、管理 API 路由。
 - `src/request-dispatcher.ts`：线协议 RPC 分发。
-- `src/authoring-bridge.ts`：逻辑库到 `AuthoringEngine` 的缓存桥接。
+- `src/authoring-bridge.ts`：逻辑库到 `AuthoringEngine` 的缓存桥接；引擎在 server 生命周期内常驻，只在恢复、清除、强制重置、删除库等管理操作后通过 `evict` 重建。
 - `src/write-serialization-gate.ts`：写请求串行化门闩。
 - `src/config-loader.ts`：`modeldb.config.json` 加载与合并。
 

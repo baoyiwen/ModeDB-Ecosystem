@@ -1,0 +1,133 @@
+specVersion: '0.1.0'
+status: draft
+graph:
+  id: railway_domain_v1
+  displayName: 铁路领域基础图谱
+  purpose: 建立铁路基础设施、空间归属和公共引用数据的规范图谱
+  legacyPolicy: read_only
+  writePolicy: proposal_then_apply
+
+objectClasses:
+  entity:
+    requires:
+      - stableIdentity
+      - independentLifecycleOrCrud
+    examples: [RailwayLine, LineSection, Station, TrackSegment]
+  referenceModel:
+    requires:
+      - stableCode
+      - reusableAcrossModels
+    examples: [AdministrativeDivision, UnitDefinition, ServiceStatus, AssetCategory]
+  valueObject:
+    requires:
+      - noIndependentIdentity
+      - ownedByParentModel
+    examples: [Geometry, Address, Measurement, Money]
+  associationEntity:
+    requires:
+      - relationshipHasOwnAttributes
+    examples: [LineSectionAssignment, SectionDivisionAssignment]
+  conceptualTerm:
+    requires:
+      - domainMeaningOnly
+    persistence: none_by_default
+
+decomposition:
+  requiredMetadata:
+    - grain
+    - identity
+    - lifecycle
+    - ownership
+    - partitionKey
+    - fieldRoles
+  fieldRoles:
+    - identifier
+    - descriptor
+    - measure
+    - reference
+    - geometry
+    - temporal
+    - status
+    - audit
+  splitWhen:
+    - independentIdentity
+    - independentLifecycle
+    - independentCrud
+    - reusableReference
+    - relationshipAttributes
+  keepEmbeddedWhen:
+    - descriptiveOnly
+    - noIndependentIdentity
+    - parentOwnedLifecycle
+
+dictionary:
+  fixedEnumAllowedWhen:
+    - closedValueSet
+    - noIndependentCrud
+    - noVersionOrEffectivePeriod
+    - noCrossModelReuse
+  referenceModelRequiredWhen:
+    - sharedByMultipleModels
+    - independentlyMaintained
+    - versionedOrEffectiveDated
+    - localized
+    - enabledOrDisabled
+  genericDictionaryPolicy: semantic_domains_are_separate
+
+relations:
+  types:
+    - composition
+    - reference
+    - spatial
+    - association
+    - inheritance
+  associationEntityRequiredWhen:
+    - ordered
+    - hasMileageRange
+    - hasDirection
+    - hasCoverageRatio
+    - hasValidityPeriod
+    - hasBoundaryVersion
+  inheritance:
+    queryTraversal: disabled_by_default
+    identityPolicy: child_reuses_parent_identity_when_same_record
+
+spatial:
+  geometryDefault: valueObject
+  promoteToEntityWhen:
+    - stableSpatialIdentity
+    - independentLifecycle
+    - independentSpatialQuery
+  crossDivisionPolicy: association_entity
+
+naming:
+  modelPattern: PascalCase
+  fieldPattern: camelCase
+  relationPattern: semanticVerb
+  avoidNames:
+    - MetaDefinition
+    - Region
+    - GenericStatus
+    - GenericType
+  preferredNames:
+    Region: [AdministrativeDivision, RailwayOperatingRegion]
+
+i18n:
+  requiredLocales: [zh, en, ja]
+  requireModelDisplayName: true
+  requireFieldLabel: true
+  requireRelationLabel: true
+  requireDescription: true
+  fallbackPolicy: do_not_replace_with_unique_name
+
+decision:
+  unresolvedAmbiguityAction: stop_and_request_human_choice
+  evidencePriority:
+    - explicitUserDefinition
+    - existingDomainStandard
+    - sourceDataConstraint
+    - inferredUsage
+  neverInfer:
+    - relationDirectionFromFieldNameOnly
+    - entityStatusFromAnyStringField
+    - modelSplitFromEveryNestedObject

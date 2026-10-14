@@ -22,6 +22,10 @@
   与 `@mode-db/sdk` 的连接入口与会话封装
 - `src/canvas/`
   画布绘制、命中、布局与吸附算法
+- `src/query-designer/`
+  查询链状态、QueryInterface 构建与发布相关逻辑
+- `src/pivot/`
+  数据透视的数据源适配、结果归一化与执行入口
 - `src/styles/`
   设计器主样式
 
@@ -379,6 +383,34 @@ pnpm --filter model-designer typecheck
 - `query-designer/operation-execution-compiler.ts`
 
 关键约束：**继承关系（`modelInherits`）不是可遍历查询步骤**，子模型是父模型的分身。选择继承子模型时应通过 `rebaseInheritedIdentityToChild` 复用已有节点身份，而不是新建查询节点；继承边不得进入 `findRelationStep` / `allQueryRelationPickCandidates` / `outgoingRelationsForModel` 的候选。详见 `docs/query-designer-architecture.md` §10。
+
+分页编辑器 `QueryPaginationEditor` 位于查询路径区域之下，只在 `modelPathIds.length > 0` 时渲染；条件编辑器 `QueryConditionEditor` 已不再接收 `pagination` / `onPaginationChange`。勾选开关会产出 `{ mode: 'offset', defaultLimit }`（默认 20），取消产出 `{ mode: 'none' }`；修改每页数量时展开保留原对象。`QueryPagination` 类型中的 `cursor` 模式与 `maxLimit` 仍保留，但该编辑器不提供设置入口：已有 cursor 接口加载后仍保持 cursor，而重新勾选开关会重置为 offset 并丢弃 `maxLimit`。
+
+### 8.7 改数据透视（Pivot）
+
+契约见 [`pivot-tab-v1.md`](./pivot-tab-v1.md)。分层如下：
+
+| 层         | 文件                                                       | 职责                                                             |
+| ---------- | ---------------------------------------------------------- | ---------------------------------------------------------------- |
+| 类型       | `src/pivot/types.ts`                                       | `PivotSource`、`PivotDocument`、`PivotNode`、`PivotPageInfo`     |
+| 归一化     | `src/pivot/normalizer.ts`                                  | 把行转换为稳定 id 的节点树，`value` 始终保留原始值               |
+| 数据源适配 | `src/pivot/sources/model-source.ts`、`interface-source.ts` | 只依赖最小客户端接口，执行查询 / 调用接口并提取分页信息          |
+| 执行入口   | `src/pivot/execute.ts`                                     | 通过 `withBusinessLibrarySession` 打开业务库会话后调用数据源适配 |
+| 界面       | `src/components/PivotTab.tsx`                              | 选择数据源、解析参数 JSON、切换视图与语言模式                    |
+
+约束：
+
+- React 组件不得直接打开数据库会话或调用线协议，会话只在 `src/pivot/execute.ts` 中创建。
+- 本地化显示只发生在展示层，不能替换 `PivotRow.raw` 或 `PivotNode.value`。
+- 查询接口数据源不得绕过接口投影读取隐藏字段。
+- 面板入口在 `EditorChrome.tsx` 的 `ManualPanelKind = 'pivot'`，面板宽度为 `min(900px, calc(100vw - 32px))`，样式在 `designer-shell.css` 的 `.designer-pivot-workspace` / `.pivot-*`。
+- `PivotDocumentView` 已实现表格视图，但工具栏目前只暴露层级与 JSON 两个按钮。
+
+单元测试（尚未加入根 `pnpm test:unit` 列表，需单独运行）：
+
+```bash
+npx tsx --test test/unit/pivot-result-model.test.ts test/unit/pivot-sources.test.ts
+```
 
 ## 9. 开发注意事项
 

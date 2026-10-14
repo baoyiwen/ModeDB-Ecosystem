@@ -635,6 +635,14 @@ export function QueryDesignerPanel(props: {
                 )}
               </div>
             </section>
+            {modelPathIds.length > 0 ? (
+              <QueryPaginationEditor
+                pagination={pagination}
+                onChange={setPagination}
+                hint={i18n.t('ui', 'queryPaginationBasicHint')}
+                enableLabel={i18n.t('ui', 'queryPaginationEnable')}
+              />
+            ) : null}
           </>
         ) : null}
 
@@ -659,12 +667,10 @@ export function QueryDesignerPanel(props: {
             filterTree={filterTree}
             aggregation={aggregation}
             sorts={sorts}
-            pagination={pagination}
             onParametersChange={setParameters}
             onFilterTreeChange={setFilterTree}
             onAggregationChange={setAggregation}
             onSortsChange={setSorts}
-            onPaginationChange={setPagination}
           />
         ) : null}
 
@@ -1131,6 +1137,7 @@ function QueryPreviewTable(props: { rows: readonly Record<string, unknown>[] }):
 export function QueryInterfaceManagerPanel(props: {
   savedQueryInterfaces: readonly SavedQueryInterfaceView[];
   onOpenQueryInterface: (id: string) => void;
+  onOpenPivot: (id: string) => void;
   onRenameQueryInterface: (id: string, name: string) => void;
   onPublishQueryInterface: (id: string) => void;
   onRollbackQueryInterface: (id: string, version: string) => void;
@@ -1188,8 +1195,10 @@ export function QueryInterfaceManagerPanel(props: {
                 relations={data.relations}
                 locale={i18n.locale}
                 libraryCode={config.activeLibraryName ?? ''}
+                pivotLabel={i18n.t('ui', 'pivotOpenViewer')}
                 onRefreshAudit={refreshAudit}
                 onOpen={() => props.onOpenQueryInterface(item.id)}
+                onOpenPivot={() => props.onOpenPivot(item.id)}
                 onRename={(name) => props.onRenameQueryInterface(item.id, name)}
                 onPublish={() => props.onPublishQueryInterface(item.id)}
                 onRollback={(version) => props.onRollbackQueryInterface(item.id, version)}
@@ -1212,8 +1221,10 @@ function QueryInterfaceDocCard(props: {
   relations: readonly EngineRelationEdge[];
   locale: string;
   libraryCode: string;
+  pivotLabel: string;
   onRefreshAudit: () => Promise<void>;
   onOpen: () => void;
+  onOpenPivot: () => void;
   onRename: (name: string) => void;
   onPublish: () => void;
   onRollback: (version: string) => void;
@@ -1324,6 +1335,11 @@ function QueryInterfaceDocCard(props: {
             <button type="button" onClick={props.onOpen}>
               {TEXT_OPEN_INTERFACE}
             </button>
+            {publishedRelease?.queryInterface.status === 'active' ? (
+              <button type="button" data-action="pivot" onClick={props.onOpenPivot}>
+                {props.pivotLabel}
+              </button>
+            ) : null}
             <button type="button" onClick={() => setRenaming((value) => !value)}>
               {TEXT_RENAME_INTERFACE}
             </button>
@@ -2400,6 +2416,64 @@ function writeModeLabel(mode: 'readonly' | 'partial' | 'writable' | 'ambiguous')
   return TEXT_WRITE_READONLY;
 }
 
+function QueryPaginationEditor(props: {
+  pagination: QueryPagination;
+  onChange: (pagination: QueryPagination) => void;
+  hint: string;
+  enableLabel: string;
+}): ReactElement {
+  const numericValue = (value: string): number | undefined => {
+    const next = Number(value);
+    return Number.isFinite(next) && next > 0 ? Math.floor(next) : undefined;
+  };
+
+  return (
+    <section className="query-designer-section query-designer-pagination-basic">
+      <div className="query-designer-section-heading">
+        <div>
+          <h3 className="designer-panel-section-title">{TEXT_PAGINATION}</h3>
+          <span className="query-designer-hint">{props.hint}</span>
+        </div>
+      </div>
+      <div className="query-condition-pagination-row">
+        <label className="query-condition-toggle query-pagination-switch">
+          <input
+            type="checkbox"
+            checked={props.pagination.mode !== 'none'}
+            aria-label={TEXT_PAGINATION}
+            onChange={(event) =>
+              props.onChange(
+                event.target.checked
+                  ? { mode: 'offset', defaultLimit: props.pagination.defaultLimit ?? 20 }
+                  : { mode: 'none' },
+              )
+            }
+          />
+          <span>{props.enableLabel}</span>
+        </label>
+        {props.pagination.mode !== 'none' ? (
+          <>
+            <label>
+              <span>{TEXT_PAGINATION_DEFAULT_LIMIT}</span>
+              <input
+                type="number"
+                min="1"
+                value={props.pagination.defaultLimit ?? ''}
+                onChange={(event) =>
+                  props.onChange({
+                    ...props.pagination,
+                    defaultLimit: numericValue(event.target.value),
+                  })
+                }
+              />
+            </label>
+          </>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 function QueryConditionEditor(props: {
   fields: readonly ProjectionFieldCandidate[];
   aggregationFields: readonly ProjectionFieldCandidate[];
@@ -2408,12 +2482,10 @@ function QueryConditionEditor(props: {
   filterTree: QueryFilterGroup;
   aggregation: QueryAggregationSpec;
   sorts: readonly QuerySort[];
-  pagination: QueryPagination;
   onParametersChange: (parameters: readonly InterfaceParameter[]) => void;
   onFilterTreeChange: (filterTree: QueryFilterGroup) => void;
   onAggregationChange: (aggregation: QueryAggregationSpec) => void;
   onSortsChange: (sorts: readonly QuerySort[]) => void;
-  onPaginationChange: (pagination: QueryPagination) => void;
 }): ReactElement {
   const addParameter = (): void => {
     const names = new Set(props.parameters.map((parameter) => parameter.name));
@@ -2582,10 +2654,6 @@ function QueryConditionEditor(props: {
     );
   };
 
-  const numericValue = (value: string): number | undefined => {
-    const next = Number(value);
-    return Number.isFinite(next) && next > 0 ? Math.floor(next) : undefined;
-  };
   const sortOptions = querySortOptions(props.fields, props.aggregation);
 
   return (
@@ -2742,55 +2810,6 @@ function QueryConditionEditor(props: {
           ) : (
             <span className="query-designer-empty">{TEXT_NO_SORTS}</span>
           )}
-        </div>
-      </section>
-
-      <section className="query-designer-section">
-        <h3 className="designer-panel-section-title">{TEXT_PAGINATION}</h3>
-        <div className="query-condition-pagination-row">
-          <select
-            value={props.pagination.mode}
-            aria-label={TEXT_PAGINATION}
-            onChange={(event) =>
-              props.onPaginationChange({ mode: event.target.value as QueryPagination['mode'] })
-            }
-          >
-            <option value="none">{TEXT_PAGINATION_NONE}</option>
-            <option value="offset">{TEXT_PAGINATION_OFFSET}</option>
-            <option value="cursor">{TEXT_PAGINATION_CURSOR}</option>
-          </select>
-          {props.pagination.mode !== 'none' ? (
-            <>
-              <label>
-                <span>{TEXT_PAGINATION_DEFAULT_LIMIT}</span>
-                <input
-                  type="number"
-                  min="1"
-                  value={props.pagination.defaultLimit ?? ''}
-                  onChange={(event) =>
-                    props.onPaginationChange({
-                      ...props.pagination,
-                      defaultLimit: numericValue(event.target.value),
-                    })
-                  }
-                />
-              </label>
-              <label>
-                <span>{TEXT_PAGINATION_MAX_LIMIT}</span>
-                <input
-                  type="number"
-                  min="1"
-                  value={props.pagination.maxLimit ?? ''}
-                  onChange={(event) =>
-                    props.onPaginationChange({
-                      ...props.pagination,
-                      maxLimit: numericValue(event.target.value),
-                    })
-                  }
-                />
-              </label>
-            </>
-          ) : null}
         </div>
       </section>
     </>

@@ -19,6 +19,7 @@ import { ActiveLibraryPanel } from './ActiveLibraryPanel.js';
 import { NotificationCenter } from './NotificationCenter.js';
 import { LayerTreePanel } from './LayerTreePanel.js';
 import { RelationDetailPanel } from './RelationDetailPanel.js';
+import { PivotTab } from './PivotTab.js';
 import {
   QueryDesignerPanel,
   QueryInterfaceManagerPanel,
@@ -51,8 +52,13 @@ export type ManualPanelKind =
   | 'query-interface'
   | 'operations'
   | 'bindings'
+  | 'pivot'
   | 'settings'
   | 'notifications';
+
+type PivotContext =
+  | { readonly kind: 'model'; readonly modelId: string }
+  | { readonly kind: 'interface'; readonly interfaceId: string };
 
 export function EditorChrome(props: {
   selectedModelId: string | undefined;
@@ -140,6 +146,7 @@ export function EditorChrome(props: {
   );
 
   const [manualPanel, setManualPanel] = useState<ManualPanelKind | null>(null);
+  const [pivotContext, setPivotContext] = useState<PivotContext | undefined>();
 
   useEffect(() => {
     if (isQueryDesignerMode(modes.mode)) {
@@ -147,7 +154,8 @@ export function EditorChrome(props: {
         current === 'interfaces' ||
         current === 'query-interface' ||
         current === 'operations' ||
-        current === 'bindings'
+        current === 'bindings' ||
+        current === 'pivot'
           ? current
           : null,
       );
@@ -169,10 +177,12 @@ export function EditorChrome(props: {
     manualPanel === 'query-interface' ||
     manualPanel === 'operations' ||
     manualPanel === 'bindings';
+  const pivotOpen = manualPanel === 'pivot';
 
   const closeAll = useCallback((): void => {
     if (manualOpen) {
       setManualPanel(null);
+      setPivotContext(undefined);
       if (modes.mode === 'page' || (interfaceWorkspaceOpen && queryOpen)) {
         modes.setMode('select');
       }
@@ -186,6 +196,17 @@ export function EditorChrome(props: {
       modes.setMode('select');
     }
   }, [interfaceWorkspaceOpen, manualOpen, modes, passiveOpen, props, queryOpen]);
+
+  const openPivot = useCallback(
+    (context: PivotContext): void => {
+      setPivotContext(context);
+      setManualPanel('pivot');
+      if (modes.mode === 'page' || queryOpen) {
+        modes.setMode('select');
+      }
+    },
+    [modes, queryOpen],
+  );
 
   const openManual = useCallback(
     (kind: ManualPanelKind): void => {
@@ -223,6 +244,9 @@ export function EditorChrome(props: {
     if (manualPanel === 'bindings') {
       return i18n.t('ui', 'bindingSurfaceDesigner');
     }
+    if (manualPanel === 'pivot') {
+      return i18n.t('ui', 'pivotTitle');
+    }
     if (queryOpen) {
       return i18n.t('ui', 'modeQueryDesigner');
     }
@@ -251,6 +275,7 @@ export function EditorChrome(props: {
               props.onOpenQueryInterface(id);
               setManualPanel('query-interface');
             }}
+            onOpenPivot={(id) => openPivot({ kind: 'interface', interfaceId: id })}
             onRenameQueryInterface={props.onRenameQueryInterface}
             onPublishQueryInterface={props.onPublishQueryInterface}
             onRollbackQueryInterface={props.onRollbackQueryInterface}
@@ -262,20 +287,37 @@ export function EditorChrome(props: {
     }
     if (manualPanel === 'query-interface') {
       return (
-        <QueryDesignerPanel
-          selectedModelId={props.selectedModelId}
-          queryChain={props.queryChain}
-          pendingQueryRelationPick={props.pendingQueryRelationPick}
-          pendingQueryModelPick={props.pendingQueryModelPick}
-          activeQueryInterface={props.activeQueryInterface}
-          onQueryChainChange={props.onQueryChainChange}
-          onResolveQueryRelationPick={props.onResolveQueryRelationPick}
-          onCancelQueryRelationPick={props.onCancelQueryRelationPick}
-          onResolveQueryModelPick={props.onResolveQueryModelPick}
-          onCancelQueryModelPick={props.onCancelQueryModelPick}
-          onSaveQueryInterface={props.onSaveQueryInterface}
-          onClearActiveQueryInterface={props.onClearActiveQueryInterface}
-        />
+        <div className="query-interface-editor-stack">
+          <div className="pivot-context-action">
+            <span>{i18n.t('ui', 'pivotInterfacePreviewHint')}</span>
+            <button
+              type="button"
+              className="designer-btn"
+              disabled={!props.activeQueryInterface?.publishedRelease}
+              onClick={() => {
+                if (props.activeQueryInterface) {
+                  openPivot({ kind: 'interface', interfaceId: props.activeQueryInterface.id });
+                }
+              }}
+            >
+              {i18n.t('ui', 'pivotOpenViewer')}
+            </button>
+          </div>
+          <QueryDesignerPanel
+            selectedModelId={props.selectedModelId}
+            queryChain={props.queryChain}
+            pendingQueryRelationPick={props.pendingQueryRelationPick}
+            pendingQueryModelPick={props.pendingQueryModelPick}
+            activeQueryInterface={props.activeQueryInterface}
+            onQueryChainChange={props.onQueryChainChange}
+            onResolveQueryRelationPick={props.onResolveQueryRelationPick}
+            onCancelQueryRelationPick={props.onCancelQueryRelationPick}
+            onResolveQueryModelPick={props.onResolveQueryModelPick}
+            onCancelQueryModelPick={props.onCancelQueryModelPick}
+            onSaveQueryInterface={props.onSaveQueryInterface}
+            onClearActiveQueryInterface={props.onClearActiveQueryInterface}
+          />
+        </div>
       );
     }
     if (manualPanel === 'operations') {
@@ -313,6 +355,11 @@ export function EditorChrome(props: {
             onDeleteBindingSurface={props.onDeleteBindingSurface}
           />
         </Suspense>
+      );
+    }
+    if (manualPanel === 'pivot') {
+      return (
+        <PivotTab savedQueryInterfaces={props.savedQueryInterfaces} sourceContext={pivotContext} />
       );
     }
     if (manualPanel === 'settings') {
@@ -446,7 +493,16 @@ export function EditorChrome(props: {
       return (
         <div className="designer-passive-panels">
           <section className="designer-passive-section">
-            <h3 className="designer-panel-section-title">{i18n.t('ui', 'info')}</h3>
+            <div className="designer-passive-section-header">
+              <h3 className="designer-panel-section-title">{i18n.t('ui', 'info')}</h3>
+              <button
+                type="button"
+                className="designer-btn"
+                onClick={() => openPivot({ kind: 'model', modelId: effectiveModelId })}
+              >
+                {i18n.t('ui', 'pivotOpenViewer')}
+              </button>
+            </div>
             <InfoPanel key={effectiveModelId} modelId={effectiveModelId} readOnly={readOnly} />
           </section>
           <section className="designer-passive-section">
@@ -561,20 +617,27 @@ export function EditorChrome(props: {
         title={shellOpen ? title() : ''}
         eyebrow={interfaceWorkspaceOpen ? i18n.t('ui', 'interfaceWorkspaceEyebrow') : 'ModeDB'}
         side="right"
-        width={interfaceWorkspaceOpen ? 'calc(100vw - 32px)' : 430}
+        width={pivotOpen ? '100vw' : interfaceWorkspaceOpen ? 'calc(100vw - 32px)' : 430}
         closeLabel={i18n.t('ui', 'notifyDismiss')}
         onClose={closeAll}
-        className={interfaceWorkspaceOpen ? 'designer-interface-workspace' : undefined}
+        className={
+          pivotOpen
+            ? 'designer-pivot-workspace'
+            : interfaceWorkspaceOpen
+              ? 'designer-interface-workspace'
+              : undefined
+        }
         bodyClassName={[
           'designer-panel-body',
           'designer-scrollbar-hide',
           queryOpen && !interfaceWorkspaceOpen ? 'designer-panel-body--query' : '',
           interfaceWorkspaceOpen ? 'designer-panel-body--interface-workspace' : '',
+          pivotOpen ? 'designer-panel-body--pivot' : '',
         ]
           .filter(Boolean)
           .join(' ')}
         labelledById="designer-drawer-title"
-        withScrim={false}
+        withScrim={pivotOpen}
       >
         {workspaceBody}
       </AppDrawer>

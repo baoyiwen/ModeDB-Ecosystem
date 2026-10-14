@@ -35,6 +35,8 @@
 - 设计器 catalog 初始化：`src/bootstrap/designer-storage-init.ts`
 - 业务库 catalog 导入：`src/sync/engine-catalog-import.ts`
 - 字段编辑区：`src/components/PropsEditor.tsx`
+- 查询设计器：`src/components/QueryDesignerPanel.tsx`、`src/query-designer/`
+- 数据透视：`src/components/PivotTab.tsx`、`src/pivot/`
 - 主样式：`src/styles/designer-shell.css`
 
 ## 4. 改动原则
@@ -74,6 +76,14 @@
 - `sys_data_asset_map`、`sys_model`、`sys_props`、`sys_relation` 保存必须是 upsert / update-first，禁止无修改也追加重复行。
 - i18n 显示名为空时应保持为空；不要把唯一名自动写回显示名字段。
 - 查询链中继承关系（`modelInherits`）不是可遍历步骤：子模型是父模型的分身，选择子模型应通过 `rebaseInheritedIdentityToChild` 复用已有节点身份，禁止新建独立查询节点或把继承边作为普通关系候选。详见 `docs/query-designer-architecture.md` §10。
+
+### 4.6 数据透视（Pivot）红线
+
+- React 组件不得直接打开数据库会话或调用线协议；会话只在 `src/pivot/execute.ts` 中通过 `withBusinessLibrarySession` 创建。
+- 模型数据与查询接口两类数据源都必须先归一化为 `PivotDocument` 再渲染。
+- 本地化只在展示层发生，不得替换 `PivotRow.raw` / `PivotNode.value` 中的原始值。
+- 查询接口数据源不得绕过接口投影读取隐藏字段，接口的 release、访问密钥和限流规则必须保留。
+- 条件颜色、图标、格式化等后续扩展只能是声明式展示规则，不得修改查询结果或执行任意 JavaScript。契约见 `docs/pivot-tab-v1.md`。
 
 ## 5. 典型任务路径
 
@@ -116,6 +126,7 @@
 修改后：
 
 - 运行 `pnpm --filter model-designer typecheck`
+- 改动 `src/pivot/` 时运行 `npx tsx --test test/unit/pivot-result-model.test.ts test/unit/pivot-sources.test.ts`
 - 检查是否需要补 i18n
 - 检查是否需要补文档
 - 检查右侧侧栏与字段编辑区是否在窄宽度下变形

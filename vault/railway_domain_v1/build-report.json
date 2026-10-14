@@ -1,0 +1,246 @@
+{
+  "generatedAt": "2026-10-10T09:40:59.534Z",
+  "database": "railway_domain_v1",
+  "server": "127.0.0.1:9091",
+  "graphSpec": "railway_domain_v1",
+  "models": 12,
+  "relations": 21,
+  "totalRows": 56,
+  "counts": {
+    "RailwayLine": 2,
+    "LineSection": 4,
+    "TrackSegment": 6,
+    "Station": 5,
+    "AdministrativeDivision": 6,
+    "UnitDefinition": 2,
+    "ServiceStatus": 4,
+    "AssetCategory": 4,
+    "LineSectionAssignment": 4,
+    "SectionTrackAssignment": 6,
+    "LineStationAssignment": 6,
+    "SectionDivisionAssignment": 7
+  },
+  "dataSplitMetadata": [
+    {
+      "model": "RailwayLine",
+      "grain": "一条具有稳定编号和独立运营属性的铁路线路",
+      "identity": "railwayLineCode",
+      "lifecycle": "independent",
+      "ownership": "root",
+      "partitionKey": "railwayLineCode",
+      "valueObjectFields": ["geometry"]
+    },
+    {
+      "model": "LineSection",
+      "grain": "一个可以独立识别、维护或查询的线路区间",
+      "identity": "lineSectionCode",
+      "lifecycle": "independent",
+      "ownership": "domain",
+      "partitionKey": "lineSectionCode",
+      "valueObjectFields": ["geometry"]
+    },
+    {
+      "model": "TrackSegment",
+      "grain": "一个可独立检测、调度或维护的轨道区段",
+      "identity": "trackSegmentCode",
+      "lifecycle": "independent",
+      "ownership": "domain",
+      "partitionKey": "trackSegmentCode",
+      "valueObjectFields": ["geometry"]
+    },
+    {
+      "model": "Station",
+      "grain": "一个具有稳定站点编码和独立运营信息的车站",
+      "identity": "stationCode",
+      "lifecycle": "independent",
+      "ownership": "root",
+      "partitionKey": "stationCode",
+      "valueObjectFields": ["geometry"]
+    },
+    {
+      "model": "AdministrativeDivision",
+      "grain": "一个行政区划版本中的行政单元",
+      "identity": "divisionCode",
+      "lifecycle": "versioned_reference",
+      "ownership": "reference",
+      "partitionKey": "boundaryVersion"
+    },
+    {
+      "model": "UnitDefinition",
+      "grain": "一个可被测量值引用的单位定义",
+      "identity": "unitCode",
+      "lifecycle": "versioned_reference",
+      "ownership": "reference",
+      "partitionKey": "unitCode"
+    },
+    {
+      "model": "ServiceStatus",
+      "grain": "一个可复用的服务状态定义",
+      "identity": "statusCode",
+      "lifecycle": "managed_reference",
+      "ownership": "reference",
+      "partitionKey": "domainCode"
+    },
+    {
+      "model": "AssetCategory",
+      "grain": "一个可复用的铁路资产分类定义",
+      "identity": "categoryCode",
+      "lifecycle": "managed_reference",
+      "ownership": "reference",
+      "partitionKey": "domainCode"
+    },
+    {
+      "model": "LineSectionAssignment",
+      "grain": "一条线路与一个线路区间的带顺序组成关系",
+      "identity": "assignmentCode",
+      "lifecycle": "independent",
+      "ownership": "relationship",
+      "partitionKey": "lineCode"
+    },
+    {
+      "model": "SectionTrackAssignment",
+      "grain": "一个线路区间与一个轨道区段的带顺序组成关系",
+      "identity": "assignmentCode",
+      "lifecycle": "independent",
+      "ownership": "relationship",
+      "partitionKey": "sectionCode"
+    },
+    {
+      "model": "LineStationAssignment",
+      "grain": "一条线路与一个车站的带顺序服务关系",
+      "identity": "assignmentCode",
+      "lifecycle": "independent",
+      "ownership": "relationship",
+      "partitionKey": "lineCode"
+    },
+    {
+      "model": "SectionDivisionAssignment",
+      "grain": "一个线路区间与一个行政区划的空间覆盖关系",
+      "identity": "assignmentCode",
+      "lifecycle": "independent",
+      "ownership": "relationship",
+      "partitionKey": "sectionCode"
+    }
+  ],
+  "relationStats": {
+    "lineSectionAssignments": {
+      "forwardKeys": 2,
+      "reverseKeys": 4,
+      "totalLinks": 4
+    },
+    "assignedSection": {
+      "forwardKeys": 4,
+      "reverseKeys": 4,
+      "totalLinks": 4
+    },
+    "sectionTrackAssignments": {
+      "forwardKeys": 3,
+      "reverseKeys": 6,
+      "totalLinks": 6
+    },
+    "assignedTrackSegment": {
+      "forwardKeys": 6,
+      "reverseKeys": 6,
+      "totalLinks": 6
+    },
+    "lineStationAssignments": {
+      "forwardKeys": 2,
+      "reverseKeys": 6,
+      "totalLinks": 6
+    },
+    "assignedStation": {
+      "forwardKeys": 6,
+      "reverseKeys": 5,
+      "totalLinks": 6
+    },
+    "sectionDivisionAssignments": {
+      "forwardKeys": 4,
+      "reverseKeys": 7,
+      "totalLinks": 7
+    },
+    "coveredDivision": {
+      "forwardKeys": 7,
+      "reverseKeys": 3,
+      "totalLinks": 7
+    },
+    "stationDivision": {
+      "forwardKeys": 5,
+      "reverseKeys": 4,
+      "totalLinks": 5
+    },
+    "childDivisions": {
+      "forwardKeys": 2,
+      "reverseKeys": 5,
+      "totalLinks": 5
+    },
+    "lineStatus": {
+      "forwardKeys": 2,
+      "reverseKeys": 1,
+      "totalLinks": 2
+    },
+    "sectionStatus": {
+      "forwardKeys": 4,
+      "reverseKeys": 2,
+      "totalLinks": 4
+    },
+    "trackStatus": {
+      "forwardKeys": 6,
+      "reverseKeys": 2,
+      "totalLinks": 6
+    },
+    "stationStatus": {
+      "forwardKeys": 5,
+      "reverseKeys": 1,
+      "totalLinks": 5
+    },
+    "lineCategory": {
+      "forwardKeys": 2,
+      "reverseKeys": 1,
+      "totalLinks": 2
+    },
+    "sectionCategory": {
+      "forwardKeys": 4,
+      "reverseKeys": 1,
+      "totalLinks": 4
+    },
+    "trackCategory": {
+      "forwardKeys": 6,
+      "reverseKeys": 1,
+      "totalLinks": 6
+    },
+    "stationCategory": {
+      "forwardKeys": 5,
+      "reverseKeys": 1,
+      "totalLinks": 5
+    },
+    "lineMeasurementUnit": {
+      "forwardKeys": 2,
+      "reverseKeys": 1,
+      "totalLinks": 2
+    },
+    "sectionMeasurementUnit": {
+      "forwardKeys": 4,
+      "reverseKeys": 1,
+      "totalLinks": 4
+    },
+    "trackMeasurementUnit": {
+      "forwardKeys": 6,
+      "reverseKeys": 1,
+      "totalLinks": 6
+    }
+  },
+  "designerMetadata": {
+    "models": 12,
+    "fields": 89,
+    "relations": 21
+  },
+  "queryChecks": {
+    "lineSectionAssignments": 2,
+    "assignedSection": "SEC-001",
+    "sectionDivisionAssignments": 2,
+    "stationDivision": "BJ",
+    "childDivisions": 3,
+    "lineStatus": "ACTIVE",
+    "lineMeasurementUnit": "KM"
+  }
+}

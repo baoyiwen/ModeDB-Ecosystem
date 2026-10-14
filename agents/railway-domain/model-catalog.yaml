@@ -1,0 +1,110 @@
+specVersion: "0.1.0"
+graph: railway_domain_v1
+models:
+  - id: RailwayLine
+    class: entity
+    grain: 一条具有稳定编号和独立运营属性的铁路线路
+    identity: railwayLineCode
+    lifecycle: independently_managed
+    requiredFields: [railwayLineCode, name]
+    valueObjects: [Geometry, Measurement]
+
+  - id: LineSection
+    class: entity
+    grain: 一个可以独立识别、维护或查询的线路区间
+    identity: lineSectionCode
+    lifecycle: independently_managed
+    requiredFields: [lineSectionCode, name]
+    valueObjects: [Geometry, Measurement]
+
+  - id: TrackSegment
+    class: entity
+    activation: conditional
+    activationRule: 只有具备独立检测、调度、安全或资产生命周期时建立
+    grain: 一个可独立维护的轨道区段
+    identity: trackSegmentCode
+    lifecycle: independently_managed
+    requiredFields: [trackSegmentCode]
+
+  - id: Station
+    class: entity
+    grain: 一个具有稳定站点编码和独立运营信息的车站
+    identity: stationCode
+    lifecycle: independently_managed
+    requiredFields: [stationCode, name]
+    valueObjects: [Geometry, Address]
+
+  - id: AdministrativeDivision
+    class: referenceModel
+    grain: 一个在指定行政区划版本中的行政单元
+    identity: divisionCode
+    lifecycle: versioned_reference
+    requiredFields: [divisionCode, name, level]
+    reusableBy: [RailwayLine, LineSection, TrackSegment, Station]
+
+  - id: UnitDefinition
+    class: referenceModel
+    grain: 一个可被测量值引用的单位定义
+    identity: unitCode
+    lifecycle: versioned_reference
+    requiredFields: [unitCode, symbol, name]
+    reusableBy: [RailwayLine, LineSection, TrackSegment, Station]
+
+  - id: ServiceStatus
+    class: referenceModel
+    grain: 一个可复用的服务状态定义
+    identity: statusCode
+    lifecycle: managed_reference
+    requiredFields: [statusCode, name]
+    reusableBy: [RailwayLine, LineSection, Station]
+
+  - id: AssetCategory
+    class: referenceModel
+    grain: 一个可复用的铁路资产分类定义
+    identity: categoryCode
+    lifecycle: managed_reference
+    requiredFields: [categoryCode, name]
+    reusableBy: [RailwayLine, LineSection, TrackSegment, Station]
+
+  - id: LineSectionAssignment
+    class: associationEntity
+    grain: 一条线路与一个线路区间在指定有效期内的组成关系
+    identity: lineSectionAssignmentCode
+    lifecycle: independently_managed
+    requiredFields: [lineSectionAssignmentCode, sequenceNo]
+    relationAttributes: [sequenceNo, direction, fromKm, toKm, validFrom, validTo]
+
+  - id: SectionTrackAssignment
+    class: associationEntity
+    activation: conditional
+    activationRule: TrackSegment 启用后，用于保存路段与轨道区段的顺序和区间属性
+    grain: 一个线路区间与一个轨道区段的组成关系
+    identity: sectionTrackAssignmentCode
+    lifecycle: independently_managed
+    requiredFields: [sectionTrackAssignmentCode, sequenceNo]
+    relationAttributes: [sequenceNo, fromKm, toKm, direction]
+
+  - id: LineStationAssignment
+    class: associationEntity
+    grain: 一条线路与一个车站的服务或经过关系
+    identity: lineStationAssignmentCode
+    lifecycle: independently_managed
+    requiredFields: [lineStationAssignmentCode, sequenceNo]
+    relationAttributes: [sequenceNo, arrivalDirection, fromKm, toKm, validFrom, validTo]
+
+  - id: SectionDivisionAssignment
+    class: associationEntity
+    grain: 一个线路区间与一个行政区划在指定版本和有效期内的空间覆盖关系
+    identity: sectionDivisionAssignmentCode
+    lifecycle: independently_managed
+    requiredFields: [sectionDivisionAssignmentCode, coverageType]
+    relationAttributes: [coverageType, coverageRatio, fromKm, toKm, boundaryVersion, validFrom, validTo]
+
+valueObjects:
+  - id: Geometry
+    fields: [geometryType, coordinates, coordinateReferenceSystem]
+  - id: Address
+    fields: [countryCode, province, city, detail]
+  - id: Measurement
+    fields: [value, unitCode]
+

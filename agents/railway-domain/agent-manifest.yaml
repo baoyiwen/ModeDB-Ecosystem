@@ -1,0 +1,33 @@
+kind: domain-modeling-agent-spec
+specVersion: "0.1.0"
+id: railway-domain-v1
+displayName: 铁路领域图谱自动建模规范
+language: zh-CN
+status: draft
+entrypoint: AGENTS.md
+artifacts:
+  policy: graph-policy.yaml
+  models: model-catalog.yaml
+  relations: relation-catalog.yaml
+  validation: validation.yaml
+  proposalSchema: proposal-schema.yaml
+execution:
+  mode: proposal_then_apply
+  legacyGraphs: read_only
+  requireHumanChoiceOnAmbiguity: true
+  allowDirectOverwrite: false
+outputs:
+  proposalFormat: yaml
+  requiredProposalSections:
+    - graph
+    - source_summary
+    - models
+    - relations
+    - value_objects
+    - dictionary_bindings
+    - metadata
+    - decisions
+    - ambiguities
+    - rejected_concepts
+    - validation
+    - write_ready
