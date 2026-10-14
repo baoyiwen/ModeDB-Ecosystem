@@ -1,6 +1,6 @@
 {
   "name": "@mode-db/data-ui",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "React data page components and DataPageProvider for ModelDB (Table, Pivot, Import — builds on @mode-db/data-kit).",
   "type": "module",
   "main": "./dist/index.js",

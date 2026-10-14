@@ -1,6 +1,6 @@
 {
   "name": "@mode-db/data-kit",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Headless data page kit: global view/edit/delete modes, batch DataBinding, ViewDataShape adapters, and ingest/import protocols for ModelDB data UI.",
   "type": "module",
   "main": "./dist/index.js",
