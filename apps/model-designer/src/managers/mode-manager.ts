@@ -58,6 +58,14 @@ export class ModeManager {
     }
   }
 
+  /** Explicit editor selection also reopens its panel when the mode is unchanged. */
+  activateQueryDesigner(): void {
+    this._mode = 'query-select';
+    for (const listener of this._listeners) {
+      listener();
+    }
+  }
+
   subscribe(fn: ModeManagerListener): () => void {
     this._listeners.add(fn);
     return () => {

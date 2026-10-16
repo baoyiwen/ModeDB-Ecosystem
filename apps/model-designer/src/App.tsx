@@ -763,13 +763,15 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
       return;
     }
     const queryChain = cloneQueryChain(saved.queryChain);
-    this.managers.modes.setMode('query-select');
+    this.managers.modes.activateQueryDesigner();
     this.managers.state.transition(interactionStateForToolMode('query-select'));
     this.setState({
       queryChain,
       selectedModelId: queryChain.activeModelId,
       selectedRelationId: queryChainAllRelationIds(queryChain).at(-1),
       activeQueryInterfaceId: saved.id,
+      pendingQueryRelationPick: undefined,
+      pendingQueryModelPick: undefined,
     });
   };
 

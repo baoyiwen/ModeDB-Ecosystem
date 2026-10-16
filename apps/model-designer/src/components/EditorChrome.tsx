@@ -127,9 +127,18 @@ export function EditorChrome(props: {
   const confirm = useAppConfirm();
   const [, bump] = useState(0);
   const [notifyBump, setNotifyBump] = useState(0);
+  const [queryPanelVisible, setQueryPanelVisible] = useState(true);
+  const [queryEditorRevision, setQueryEditorRevision] = useState(0);
   useEffect(() => i18n.subscribe(() => bump((n) => n + 1)), [i18n]);
   useEffect(() => appearance.subscribe(() => bump((n) => n + 1)), [appearance]);
-  useEffect(() => modes.subscribe(() => bump((n) => n + 1)), [modes]);
+  useEffect(
+    () =>
+      modes.subscribe(() => {
+        if (isQueryDesignerMode(modes.mode)) setQueryPanelVisible(true);
+        bump((n) => n + 1);
+      }),
+    [modes],
+  );
   useEffect(() => data.subscribe(() => bump((n) => n + 1)), [data]);
   useEffect(() => notifications.subscribe(() => setNotifyBump((n) => n + 1)), [notifications]);
   void notifyBump;
@@ -171,7 +180,7 @@ export function EditorChrome(props: {
   const passiveOpen = Boolean(effectiveModelId || showRelationDetail);
   const manualOpen = manualPanel !== null;
   const queryOpen = isQueryDesignerMode(modes.mode);
-  const shellOpen = passiveOpen || manualOpen || queryOpen;
+  const shellOpen = manualOpen || (queryOpen ? queryPanelVisible : passiveOpen);
   const interfaceWorkspaceOpen =
     manualPanel === 'interfaces' ||
     manualPanel === 'query-interface' ||
@@ -183,30 +192,39 @@ export function EditorChrome(props: {
     if (manualOpen) {
       setManualPanel(null);
       setPivotContext(undefined);
-      if (modes.mode === 'page' || (interfaceWorkspaceOpen && queryOpen)) {
+      if (modes.mode === 'page') {
         modes.setMode('select');
       }
+      return;
+    }
+    if (queryOpen) {
+      setQueryPanelVisible(false);
       return;
     }
     if (passiveOpen) {
       props.onRequestClearCanvasSelection();
       return;
     }
-    if (queryOpen) {
-      modes.setMode('select');
-    }
-  }, [interfaceWorkspaceOpen, manualOpen, modes, passiveOpen, props, queryOpen]);
+  }, [manualOpen, modes, passiveOpen, props, queryOpen]);
 
   const openPivot = useCallback(
     (context: PivotContext): void => {
       setPivotContext(context);
       setManualPanel('pivot');
-      if (modes.mode === 'page' || queryOpen) {
+      if (modes.mode === 'page') {
         modes.setMode('select');
       }
     },
-    [modes, queryOpen],
+    [modes],
   );
+
+  const editQueryInterface = (id: string): void => {
+    props.onOpenQueryInterface(id);
+    setQueryEditorRevision((revision) => revision + 1);
+    setQueryPanelVisible(true);
+    setManualPanel(null);
+    setPivotContext(undefined);
+  };
 
   const openManual = useCallback(
     (kind: ManualPanelKind): void => {
@@ -271,8 +289,9 @@ export function EditorChrome(props: {
         <div className="interface-manager-stack interface-workspace-query-list">
           <QueryInterfaceManagerPanel
             savedQueryInterfaces={props.savedQueryInterfaces}
+            onEditQueryInterface={editQueryInterface}
             onOpenQueryInterface={(id) => {
-              props.onOpenQueryInterface(id);
+              editQueryInterface(id);
               setManualPanel('query-interface');
             }}
             onOpenPivot={(id) => openPivot({ kind: 'interface', interfaceId: id })}
@@ -289,7 +308,10 @@ export function EditorChrome(props: {
       return (
         <div className="query-interface-editor-stack">
           <div className="pivot-context-action">
-            <span>{i18n.t('ui', 'pivotInterfacePreviewHint')}</span>
+            <button type="button" className="designer-btn" onClick={() => setManualPanel(null)}>
+              <IconLink />
+              {i18n.t('ui', 'queryEditInDesigner')}
+            </button>
             <button
               type="button"
               className="designer-btn"
@@ -303,20 +325,6 @@ export function EditorChrome(props: {
               {i18n.t('ui', 'pivotOpenViewer')}
             </button>
           </div>
-          <QueryDesignerPanel
-            selectedModelId={props.selectedModelId}
-            queryChain={props.queryChain}
-            pendingQueryRelationPick={props.pendingQueryRelationPick}
-            pendingQueryModelPick={props.pendingQueryModelPick}
-            activeQueryInterface={props.activeQueryInterface}
-            onQueryChainChange={props.onQueryChainChange}
-            onResolveQueryRelationPick={props.onResolveQueryRelationPick}
-            onCancelQueryRelationPick={props.onCancelQueryRelationPick}
-            onResolveQueryModelPick={props.onResolveQueryModelPick}
-            onCancelQueryModelPick={props.onCancelQueryModelPick}
-            onSaveQueryInterface={props.onSaveQueryInterface}
-            onClearActiveQueryInterface={props.onClearActiveQueryInterface}
-          />
         </div>
       );
     }
@@ -359,7 +367,11 @@ export function EditorChrome(props: {
     }
     if (manualPanel === 'pivot') {
       return (
-        <PivotTab savedQueryInterfaces={props.savedQueryInterfaces} sourceContext={pivotContext} />
+        <PivotTab
+          savedQueryInterfaces={props.savedQueryInterfaces}
+          sourceContext={pivotContext}
+          onEditQueryInterface={editQueryInterface}
+        />
       );
     }
     if (manualPanel === 'settings') {
@@ -463,22 +475,7 @@ export function EditorChrome(props: {
       );
     }
     if (queryOpen) {
-      return (
-        <QueryDesignerPanel
-          selectedModelId={props.selectedModelId}
-          queryChain={props.queryChain}
-          pendingQueryRelationPick={props.pendingQueryRelationPick}
-          pendingQueryModelPick={props.pendingQueryModelPick}
-          activeQueryInterface={props.activeQueryInterface}
-          onQueryChainChange={props.onQueryChainChange}
-          onResolveQueryRelationPick={props.onResolveQueryRelationPick}
-          onCancelQueryRelationPick={props.onCancelQueryRelationPick}
-          onResolveQueryModelPick={props.onResolveQueryModelPick}
-          onCancelQueryModelPick={props.onCancelQueryModelPick}
-          onSaveQueryInterface={props.onSaveQueryInterface}
-          onClearActiveQueryInterface={props.onClearActiveQueryInterface}
-        />
-      );
+      return null;
     }
     if (showRelationDetail && props.selectedRelationId) {
       return (
@@ -516,52 +513,84 @@ export function EditorChrome(props: {
   };
 
   const body = renderBody();
-  const workspaceBody = interfaceWorkspaceOpen ? (
-    <div className="interface-workspace-layout">
-      <aside
-        className="interface-workspace-navigation"
-        aria-label={i18n.t('ui', 'interfaceManager')}
+  const workspaceBody = (
+    <div
+      className={
+        interfaceWorkspaceOpen ? 'interface-workspace-layout' : 'designer-editor-workspace'
+      }
+    >
+      {interfaceWorkspaceOpen ? (
+        <aside
+          className="interface-workspace-navigation"
+          aria-label={i18n.t('ui', 'interfaceManager')}
+        >
+          <div className="interface-workspace-navigation-title">
+            <span>{i18n.t('ui', 'interfaceWorkspaceTitle')}</span>
+            <small>{config.activeLibraryName ?? '-'}</small>
+          </div>
+          <nav>
+            <button
+              type="button"
+              data-active={
+                manualPanel === 'interfaces' || manualPanel === 'query-interface' ? 'true' : 'false'
+              }
+              onClick={() => setManualPanel('interfaces')}
+            >
+              <IconDocument />
+              <span>{i18n.t('ui', 'interfaceWorkspaceQueries')}</span>
+              <strong>{props.savedQueryInterfaces.length}</strong>
+            </button>
+            <button
+              type="button"
+              data-active={manualPanel === 'operations' ? 'true' : 'false'}
+              onClick={() => setManualPanel('operations')}
+            >
+              <IconLink />
+              <span>{i18n.t('ui', 'interfaceWorkspaceOperations')}</span>
+              <strong>{props.savedOperationInterfaces.length}</strong>
+            </button>
+            <button
+              type="button"
+              data-active={manualPanel === 'bindings' ? 'true' : 'false'}
+              onClick={() => setManualPanel('bindings')}
+            >
+              <IconGrid />
+              <span>{i18n.t('ui', 'interfaceWorkspaceBindings')}</span>
+              <strong>{props.savedBindingSurfaces.length}</strong>
+            </button>
+          </nav>
+        </aside>
+      ) : null}
+      <div
+        className={
+          interfaceWorkspaceOpen ? 'interface-workspace-content' : 'designer-editor-panel-content'
+        }
       >
-        <div className="interface-workspace-navigation-title">
-          <span>{i18n.t('ui', 'interfaceWorkspaceTitle')}</span>
-          <small>{config.activeLibraryName ?? '-'}</small>
+        {body}
+        <div
+          className="query-designer-panel-host"
+          hidden={!queryOpen || (manualPanel !== null && manualPanel !== 'query-interface')}
+        >
+          {queryOpen ? (
+            <QueryDesignerPanel
+              key={queryEditorRevision}
+              selectedModelId={props.selectedModelId}
+              queryChain={props.queryChain}
+              pendingQueryRelationPick={props.pendingQueryRelationPick}
+              pendingQueryModelPick={props.pendingQueryModelPick}
+              activeQueryInterface={props.activeQueryInterface}
+              onQueryChainChange={props.onQueryChainChange}
+              onResolveQueryRelationPick={props.onResolveQueryRelationPick}
+              onCancelQueryRelationPick={props.onCancelQueryRelationPick}
+              onResolveQueryModelPick={props.onResolveQueryModelPick}
+              onCancelQueryModelPick={props.onCancelQueryModelPick}
+              onSaveQueryInterface={props.onSaveQueryInterface}
+              onClearActiveQueryInterface={props.onClearActiveQueryInterface}
+            />
+          ) : null}
         </div>
-        <nav>
-          <button
-            type="button"
-            data-active={
-              manualPanel === 'interfaces' || manualPanel === 'query-interface' ? 'true' : 'false'
-            }
-            onClick={() => setManualPanel('interfaces')}
-          >
-            <IconDocument />
-            <span>{i18n.t('ui', 'interfaceWorkspaceQueries')}</span>
-            <strong>{props.savedQueryInterfaces.length}</strong>
-          </button>
-          <button
-            type="button"
-            data-active={manualPanel === 'operations' ? 'true' : 'false'}
-            onClick={() => setManualPanel('operations')}
-          >
-            <IconLink />
-            <span>{i18n.t('ui', 'interfaceWorkspaceOperations')}</span>
-            <strong>{props.savedOperationInterfaces.length}</strong>
-          </button>
-          <button
-            type="button"
-            data-active={manualPanel === 'bindings' ? 'true' : 'false'}
-            onClick={() => setManualPanel('bindings')}
-          >
-            <IconGrid />
-            <span>{i18n.t('ui', 'interfaceWorkspaceBindings')}</span>
-            <strong>{props.savedBindingSurfaces.length}</strong>
-          </button>
-        </nav>
-      </aside>
-      <main className="interface-workspace-content">{body}</main>
+      </div>
     </div>
-  ) : (
-    body
   );
 
   return (
@@ -630,7 +659,7 @@ export function EditorChrome(props: {
         bodyClassName={[
           'designer-panel-body',
           'designer-scrollbar-hide',
-          queryOpen && !interfaceWorkspaceOpen ? 'designer-panel-body--query' : '',
+          queryOpen && manualPanel === null ? 'designer-panel-body--query' : '',
           interfaceWorkspaceOpen ? 'designer-panel-body--interface-workspace' : '',
           pivotOpen ? 'designer-panel-body--pivot' : '',
         ]

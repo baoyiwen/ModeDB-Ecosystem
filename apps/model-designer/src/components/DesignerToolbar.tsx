@@ -21,7 +21,7 @@ import {
 import { formatInteractionState } from '../utils/interaction-state-i18n.js';
 import { interactionStateForToolMode } from '../utils/tool-mode-state.js';
 import { formatLibraryLabel } from '../sync/library-registry.js';
-import { isQueryDesignerMode, type DesignerToolMode } from '../managers/mode-manager.js';
+import { isQueryDesignerMode } from '../managers/mode-manager.js';
 import {
   IconCheckSquare,
   IconDocument,
@@ -178,6 +178,7 @@ export class DesignerToolbar extends DesignerComponent<
             className={`designer-mode-pill ${
               queryDesignerActive ? 'designer-mode-pill--inactive' : 'designer-mode-pill--active'
             }`}
+            aria-pressed={!queryDesignerActive}
             onClick={() => {
               modes.setMode('select');
               state.transition(interactionStateForToolMode('select'));
@@ -191,11 +192,11 @@ export class DesignerToolbar extends DesignerComponent<
             className={`designer-mode-pill ${
               queryDesignerActive ? 'designer-mode-pill--active' : 'designer-mode-pill--inactive'
             }`}
+            aria-pressed={queryDesignerActive}
             title={i18n.t('ui', 'modeQueryDesignerHint')}
             onClick={() => {
-              const nextMode: DesignerToolMode = queryDesignerActive ? 'select' : 'query-select';
-              modes.setMode(nextMode);
-              state.transition(interactionStateForToolMode(nextMode));
+              modes.activateQueryDesigner();
+              state.transition(interactionStateForToolMode('query-select'));
             }}
           >
             {i18n.t('ui', 'modeQueryDesigner')}

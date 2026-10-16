@@ -14,6 +14,7 @@ import type { EngineModelNode, EngineRelationEdge } from '../types/engine-schema
 import { useDesigner } from '../context/designer-context.js';
 import { withBusinessLibrarySession } from '../engine/business-library-session.js';
 import { DesignerTooltip } from './base/designer-tooltip.js';
+import { IconGrid, IconLink } from './designer-icons.js';
 import { resolveI18nForLocale } from '../utils/i18n-resolve.js';
 import { sortPropsBySort } from '../utils/prop-order.js';
 import {
@@ -1137,6 +1138,7 @@ function QueryPreviewTable(props: { rows: readonly Record<string, unknown>[] }):
 export function QueryInterfaceManagerPanel(props: {
   savedQueryInterfaces: readonly SavedQueryInterfaceView[];
   onOpenQueryInterface: (id: string) => void;
+  onEditQueryInterface: (id: string) => void;
   onOpenPivot: (id: string) => void;
   onRenameQueryInterface: (id: string, name: string) => void;
   onPublishQueryInterface: (id: string) => void;
@@ -1196,8 +1198,11 @@ export function QueryInterfaceManagerPanel(props: {
                 locale={i18n.locale}
                 libraryCode={config.activeLibraryName ?? ''}
                 pivotLabel={i18n.t('ui', 'pivotOpenViewer')}
+                editLabel={i18n.t('ui', 'queryEditInDesigner')}
+                configureLabel={i18n.t('ui', 'queryConfigureInterface')}
                 onRefreshAudit={refreshAudit}
                 onOpen={() => props.onOpenQueryInterface(item.id)}
+                onEdit={() => props.onEditQueryInterface(item.id)}
                 onOpenPivot={() => props.onOpenPivot(item.id)}
                 onRename={(name) => props.onRenameQueryInterface(item.id, name)}
                 onPublish={() => props.onPublishQueryInterface(item.id)}
@@ -1222,8 +1227,11 @@ function QueryInterfaceDocCard(props: {
   locale: string;
   libraryCode: string;
   pivotLabel: string;
+  editLabel: string;
+  configureLabel: string;
   onRefreshAudit: () => Promise<void>;
   onOpen: () => void;
+  onEdit: () => void;
   onOpenPivot: () => void;
   onRename: (name: string) => void;
   onPublish: () => void;
@@ -1308,38 +1316,57 @@ function QueryInterfaceDocCard(props: {
 
   return (
     <article className="query-interface-doc-card" data-expanded={expanded ? 'true' : 'false'}>
-      <button
-        type="button"
-        className="query-interface-doc-summary"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((value) => !value)}
-      >
-        <span className="query-interface-doc-title-block">
-          <DesignerTooltip content={props.item.name}>
-            {(triggerProps) => (
-              <span {...triggerProps} className="query-interface-doc-title">
-                {props.item.name}
-              </span>
-            )}
-          </DesignerTooltip>
-          <span className="query-interface-doc-description">{description}</span>
-        </span>
-        <span className="query-interface-doc-expand-indicator" aria-hidden>
-          {expanded ? '\u2212' : '+'}
-        </span>
-      </button>
+      <div className="query-interface-doc-summary-row">
+        <button
+          type="button"
+          className="query-interface-doc-summary"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((value) => !value)}
+        >
+          <span className="query-interface-doc-title-block">
+            <DesignerTooltip content={props.item.name}>
+              {(triggerProps) => (
+                <span {...triggerProps} className="query-interface-doc-title">
+                  {props.item.name}
+                </span>
+              )}
+            </DesignerTooltip>
+            <span className="query-interface-doc-description">{description}</span>
+          </span>
+          <span className="query-interface-doc-expand-indicator" aria-hidden>
+            {expanded ? '\u2212' : '+'}
+          </span>
+        </button>
+        <div className="query-interface-quick-actions">
+          <button
+            type="button"
+            className="designer-btn"
+            data-action="edit-query"
+            onClick={props.onEdit}
+          >
+            <IconLink />
+            <span>{props.editLabel}</span>
+          </button>
+          {publishedRelease?.queryInterface.status === 'active' ? (
+            <button
+              type="button"
+              className="designer-btn"
+              data-action="pivot"
+              onClick={props.onOpenPivot}
+            >
+              <IconGrid />
+              <span>{props.pivotLabel}</span>
+            </button>
+          ) : null}
+        </div>
+      </div>
 
       {expanded ? (
         <div className="query-interface-doc-details">
           <div className="query-interface-doc-actions">
             <button type="button" onClick={props.onOpen}>
-              {TEXT_OPEN_INTERFACE}
+              {props.configureLabel}
             </button>
-            {publishedRelease?.queryInterface.status === 'active' ? (
-              <button type="button" data-action="pivot" onClick={props.onOpenPivot}>
-                {props.pivotLabel}
-              </button>
-            ) : null}
             <button type="button" onClick={() => setRenaming((value) => !value)}>
               {TEXT_RENAME_INTERFACE}
             </button>
@@ -2031,7 +2058,6 @@ const TEXT_INTERFACE_DESCRIPTION_PLACEHOLDER =
 const TEXT_INTERFACE_SAVE_HINT =
   '\u4fdd\u5b58\u540e\u4f1a\u8fdb\u5165\u516c\u5171\u63a5\u53e3\u7ba1\u7406\u5668';
 const TEXT_SAVE_INTERFACE = '\u4fdd\u5b58\u63a5\u53e3';
-const TEXT_OPEN_INTERFACE = '\u6253\u5f00';
 const TEXT_RENAME_INTERFACE = '\u91cd\u547d\u540d';
 const TEXT_CONFIRM_RENAME = '\u786e\u5b9a';
 const TEXT_CANCEL_RENAME = '\u53d6\u6d88';

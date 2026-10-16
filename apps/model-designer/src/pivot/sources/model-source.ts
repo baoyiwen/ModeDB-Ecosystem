@@ -16,6 +16,7 @@ export interface PivotModelQueryOptions {
 export interface PivotModelFieldPolicy {
   readonly fields: readonly string[];
   readonly relatedFields?: Readonly<Record<string, readonly string[]>>;
+  readonly relatedPolicies?: Readonly<Record<string, PivotModelFieldPolicy>>;
 }
 
 /** Minimal client surface used by Pivot so the source adapter stays testable. */
@@ -58,6 +59,8 @@ function rowsFromResult(value: unknown): readonly Readonly<Record<string, unknow
 function filterModelRow(
   row: Readonly<Record<string, unknown>>,
   policy: PivotModelFieldPolicy,
+  ancestors: ReadonlySet<unknown> = new Set(),
+  depth = 0,
 ): Readonly<Record<string, unknown>> {
   const fields = new Set(policy.fields);
   const filtered: Record<string, unknown> = {};
@@ -67,17 +70,26 @@ function filterModelRow(
     }
   }
   const relates = row.relates;
-  if (isRecord(relates)) {
+  if (isRecord(relates) && !ancestors.has(row) && depth < 64) {
+    const path = new Set(ancestors);
+    path.add(row);
     const filteredRelates: Record<string, unknown> = {};
     for (const [relationName, children] of Object.entries(relates)) {
       if (!Array.isArray(children)) {
         continue;
       }
+      const childPolicy = policy.relatedPolicies?.[relationName];
+      if (policy.relatedPolicies && !childPolicy) continue;
       const childFields = policy.relatedFields?.[relationName] ?? [];
       filteredRelates[relationName] = children
         .filter(isRecord)
         .map((child) =>
-          filterModelRow(child, { fields: childFields, relatedFields: policy.relatedFields }),
+          filterModelRow(
+            child,
+            childPolicy ?? { fields: childFields, relatedFields: policy.relatedFields },
+            path,
+            depth + 1,
+          ),
         );
     }
     if (Object.keys(filteredRelates).length > 0) {

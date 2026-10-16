@@ -1,17 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import type { QueryInterfaceRelease } from '../query-designer/index.js';
 import {
-  collectPivotLeafNodes,
+  DEFAULT_PIVOT_VIEW,
+  DEFAULT_PIVOT_LANGUAGE,
+  buildInterfacePivotSchema,
+  buildModelPivotSchema,
+  buildPivotModelFieldPolicy,
+  buildPivotTable,
+  formatPivotValue,
+  isPivotI18nValue,
+  resolvePivotPathLabel,
   executeInterfacePivot,
   executeModelPivot,
   type PivotDocument,
-  type PivotModelFieldPolicy,
+  type PivotLanguageMode,
+  type PivotTableSchema,
   type PivotNode,
 } from '../pivot/index.js';
-import type { EngineModelNode, EngineRelationEdge } from '../types/engine-schema.js';
-import { resolveI18nForLocale, resolveModelDisplayName } from '../utils/i18n-resolve.js';
+import { resolveModelDisplayName } from '../utils/i18n-resolve.js';
 import { useDesigner } from '../context/designer-context.js';
 import { DesignerSelect } from './base/designer-select.js';
+import { PivotCompositeTable, type PivotTableLabels } from './PivotCompositeTable.js';
+import { IconLink, IconRestore } from './designer-icons.js';
 
 export interface PivotQueryInterfaceView {
   readonly id: string;
@@ -21,63 +31,9 @@ export interface PivotQueryInterfaceView {
 
 type PivotSourceKind = 'model' | 'interface';
 type PivotViewMode = 'hierarchy' | 'table' | 'json';
-type PivotLanguageMode = 'current' | 'raw' | 'all';
-
-function modelFieldPolicy(
-  model: EngineModelNode,
-  models: readonly EngineModelNode[],
-  relations: readonly EngineRelationEdge[],
-): PivotModelFieldPolicy {
-  const fieldsByModelId = new Map(
-    models.map((item) => [
-      item.id,
-      item.props_objects_array.map((prop) => prop.name).filter(Boolean),
-    ]),
-  );
-  const relatedFields: Record<string, readonly string[]> = {};
-  for (const relation of relations) {
-    const targetModelId =
-      relation.source_model_id === model.id
-        ? relation.target_model_id
-        : relation.target_model_id === model.id
-          ? relation.source_model_id
-          : undefined;
-    if (!targetModelId) {
-      continue;
-    }
-    const fields = fieldsByModelId.get(targetModelId) ?? [];
-    const names = [
-      relation.forward_name,
-      relation.engine_forward_name,
-      relation.reverse_name,
-      relation.engine_reverse_name,
-      relation.id,
-    ].filter((name): name is string => Boolean(name?.trim()));
-    for (const name of names) {
-      relatedFields[name] = fields;
-    }
-  }
-  return {
-    fields: fieldsByModelId.get(model.id) ?? [],
-    relatedFields,
-  };
-}
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isI18nMap(value: unknown): value is Readonly<Record<string, string>> {
-  if (!isRecord(value)) {
-    return false;
-  }
-  const keys = Object.keys(value);
-  return (
-    keys.length > 0 &&
-    keys.some((key) => key === 'zh' || key === 'en' || key === 'ja') &&
-    keys.every((key) => /^[a-z]{2}(?:-[A-Z]{2})?$/.test(key)) &&
-    Object.values(value).every((entry) => typeof entry === 'string')
-  );
 }
 
 function safeJson(value: unknown): string {
@@ -89,25 +45,6 @@ function safeJson(value: unknown): string {
   }
 }
 
-function formatValue(value: unknown, locale: string, mode: PivotLanguageMode): string {
-  if (value === null) {
-    return 'null';
-  }
-  if (value === undefined) {
-    return 'undefined';
-  }
-  if (mode === 'current' && isI18nMap(value)) {
-    return resolveI18nForLocale(value, locale, Object.values(value)[0] ?? '');
-  }
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-    return String(value);
-  }
-  return safeJson(value);
-}
-
 type PivotTreeTableRow = {
   readonly node: PivotNode;
   readonly depth: number;
@@ -117,11 +54,15 @@ type PivotTreeTableRow = {
 function collectVisibleTreeRows(
   document: PivotDocument,
   expandedNodeIds: ReadonlySet<string>,
+  languageMode: PivotLanguageMode,
 ): readonly PivotTreeTableRow[] {
   const rows: PivotTreeTableRow[] = [];
   const visit = (node: PivotNode, depth: number, recordIndex: number): void => {
     rows.push({ node, depth, recordIndex });
-    if (!expandedNodeIds.has(node.id)) {
+    if (
+      !expandedNodeIds.has(node.id) ||
+      (languageMode === 'current' && isPivotI18nValue(node.value))
+    ) {
       return;
     }
     node.children.forEach((child) => visit(child, depth + 1, recordIndex));
@@ -135,8 +76,8 @@ function formatTreeNodeValue(
   locale: string,
   languageMode: PivotLanguageMode,
 ): string {
-  if (node.children.length === 0) {
-    return formatValue(node.value, locale, languageMode);
+  if (node.children.length === 0 || (languageMode === 'current' && isPivotI18nValue(node.value))) {
+    return formatPivotValue(node.value, locale, languageMode);
   }
   if (node.kind === 'array') {
     return `[${node.children.length}]`;
@@ -146,6 +87,7 @@ function formatTreeNodeValue(
 
 function PivotHierarchyTable(props: {
   document: PivotDocument;
+  schema?: PivotTableSchema;
   locale: string;
   languageMode: PivotLanguageMode;
   fieldLabel: string;
@@ -158,6 +100,7 @@ function PivotHierarchyTable(props: {
 }): ReactElement {
   const {
     document,
+    schema,
     locale,
     languageMode,
     fieldLabel,
@@ -178,8 +121,8 @@ function PivotHierarchyTable(props: {
   }, [rootNodeIds]);
 
   const rows = useMemo(
-    () => collectVisibleTreeRows(document, expandedNodeIds),
-    [document, expandedNodeIds],
+    () => collectVisibleTreeRows(document, expandedNodeIds, languageMode),
+    [document, expandedNodeIds, languageMode],
   );
 
   const toggleNode = (nodeId: string): void => {
@@ -206,9 +149,16 @@ function PivotHierarchyTable(props: {
         </thead>
         <tbody>
           {rows.map(({ node, depth, recordIndex }) => {
-            const expandable = node.children.length > 0;
+            const expandable =
+              node.children.length > 0 &&
+              !(languageMode === 'current' && isPivotI18nValue(node.value));
             const expanded = expandedNodeIds.has(node.id);
-            const label = node.kind === 'record' ? recordLabel(String(recordIndex + 1)) : node.key;
+            const label =
+              schema && node.path.length > 0
+                ? resolvePivotPathLabel(schema, node.path, locale)
+                : node.kind === 'record'
+                  ? recordLabel(String(recordIndex + 1))
+                  : node.key;
             return (
               <tr
                 key={node.id}
@@ -247,6 +197,7 @@ function PivotHierarchyTable(props: {
 
 function PivotDocumentView(props: {
   document: PivotDocument;
+  schema?: PivotTableSchema;
   viewMode: PivotViewMode;
   languageMode: PivotLanguageMode;
   locale: string;
@@ -260,9 +211,11 @@ function PivotDocumentView(props: {
   hierarchyExpandLabel: string;
   hierarchyCollapseLabel: string;
   hierarchyNodeTypeLabel: (kind: PivotNode['kind']) => string;
+  tableLabels: PivotTableLabels;
 }): ReactElement {
   const {
     document,
+    schema,
     viewMode,
     languageMode,
     locale,
@@ -277,6 +230,10 @@ function PivotDocumentView(props: {
     hierarchyCollapseLabel,
     hierarchyNodeTypeLabel,
   } = props;
+  const table = useMemo(
+    () => (schema ? buildPivotTable(document, schema) : undefined),
+    [document, schema],
+  );
   if (viewMode === 'json') {
     return (
       <pre className="pivot-json-view" aria-label={jsonLabel}>
@@ -289,48 +246,17 @@ function PivotDocumentView(props: {
     if (document.rows.length === 0) {
       return <div className="pivot-empty">{emptyRowsLabel}</div>;
     }
-    const columns = Array.from(
-      new Map(
-        document.rows
-          .flatMap((row) => collectPivotLeafNodes(row))
-          .map((node) => [JSON.stringify(node.path), node] as const),
-      ).values(),
-    );
-    if (columns.length === 0) {
+    if (!table) {
       return <div className="pivot-empty">{emptyScalarLabel}</div>;
     }
     return (
-      <div className="pivot-table-wrap">
-        <table className="pivot-table">
-          <thead>
-            <tr>
-              <th scope="col">#</th>
-              {columns.map((column) => (
-                <th key={column.id} scope="col">
-                  {column.path.map((segment) => segment.key).join('.')}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {document.rows.map((row, index) => {
-              const byPath = new Map(
-                collectPivotLeafNodes(row).map((node) => [JSON.stringify(node.path), node.value]),
-              );
-              return (
-                <tr key={row.id}>
-                  <th scope="row">{index + 1}</th>
-                  {columns.map((column) => (
-                    <td key={column.id}>
-                      {formatValue(byPath.get(JSON.stringify(column.path)), locale, languageMode)}
-                    </td>
-                  ))}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <PivotCompositeTable
+        key={document.createdAt}
+        table={table}
+        locale={locale}
+        languageMode={languageMode}
+        labels={props.tableLabels}
+      />
     );
   }
 
@@ -340,6 +266,7 @@ function PivotDocumentView(props: {
   return (
     <PivotHierarchyTable
       document={document}
+      schema={schema}
       locale={locale}
       languageMode={languageMode}
       fieldLabel={hierarchyFieldLabel}
@@ -355,6 +282,7 @@ function PivotDocumentView(props: {
 
 export function PivotTab(props: {
   savedQueryInterfaces: readonly PivotQueryInterfaceView[];
+  onEditQueryInterface?: (id: string) => void;
   sourceContext?:
     | { readonly kind: 'model'; readonly modelId: string }
     | { readonly kind: 'interface'; readonly interfaceId: string };
@@ -366,8 +294,8 @@ export function PivotTab(props: {
   const [modelId, setModelId] = useState('');
   const [interfaceId, setInterfaceId] = useState('');
   const [parametersText, setParametersText] = useState('');
-  const [viewMode, setViewMode] = useState<PivotViewMode>('hierarchy');
-  const [languageMode, setLanguageMode] = useState<PivotLanguageMode>('current');
+  const [viewMode, setViewMode] = useState<PivotViewMode>(DEFAULT_PIVOT_VIEW);
+  const [languageMode, setLanguageMode] = useState<PivotLanguageMode>(DEFAULT_PIVOT_LANGUAGE);
   const [document, setDocument] = useState<PivotDocument | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -401,9 +329,22 @@ export function PivotTab(props: {
   const effectiveInterface = props.savedQueryInterfaces.find(
     (item) => item.id === effectiveInterfaceId,
   );
-  const effectiveModelPolicy = effectiveModel
-    ? modelFieldPolicy(effectiveModel, models, relations)
-    : undefined;
+  const schema = useMemo(
+    () =>
+      effectiveSourceKind === 'model'
+        ? effectiveModel
+          ? buildModelPivotSchema(effectiveModel.id, models, relations)
+          : undefined
+        : effectiveInterface?.publishedRelease
+          ? buildInterfacePivotSchema(effectiveInterface.publishedRelease, models, relations)
+          : undefined,
+    [effectiveSourceKind, effectiveModel, effectiveInterface, models, relations],
+  );
+  const effectiveModelPolicy = useMemo(
+    () =>
+      effectiveSourceKind === 'model' && schema ? buildPivotModelFieldPolicy(schema) : undefined,
+    [effectiveSourceKind, schema],
+  );
 
   useEffect(() => {
     if (!modelId || !models.some((model) => model.id === modelId)) {
@@ -508,10 +449,43 @@ export function PivotTab(props: {
     <div className="pivot-tab">
       <div className="pivot-tab-header">
         <div>
-          <div className="designer-panel-section-title">{i18n.t('ui', 'pivotTitle')}</div>
-          <p className="pivot-tab-description">{i18n.t('ui', 'pivotDescription')}</p>
+          <div className="designer-panel-section-title">
+            {effectiveSourceKind === 'interface'
+              ? effectiveInterface?.name
+              : effectiveModel
+                ? resolveModelDisplayName(effectiveModel, i18n.locale)
+                : i18n.t('ui', 'pivotTitle')}
+          </div>
+          {effectiveSourceKind === 'interface' && effectiveInterface?.publishedRelease ? (
+            <span className="pivot-release-version">
+              v{effectiveInterface.publishedRelease.version}
+            </span>
+          ) : null}
         </div>
-        <span className="pivot-library-badge">{config.activeLibraryName ?? '-'}</span>
+        <div className="pivot-header-actions">
+          <span className="pivot-library-badge">{config.activeLibraryName ?? '-'}</span>
+          {effectiveSourceKind === 'interface' &&
+          effectiveInterface &&
+          props.onEditQueryInterface ? (
+            <button
+              type="button"
+              className="designer-btn"
+              onClick={() => props.onEditQueryInterface?.(effectiveInterface.id)}
+            >
+              <IconLink />
+              {i18n.t('ui', 'queryEditInDesigner')}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="designer-btn designer-btn-primary pivot-run-button"
+            disabled={busy}
+            onClick={() => void execute()}
+          >
+            <IconRestore />
+            {busy ? i18n.t('ui', 'pivotRunning') : i18n.t('ui', 'pivotRefresh')}
+          </button>
+        </div>
       </div>
 
       <div className="pivot-source-card">
@@ -542,14 +516,7 @@ export function PivotTab(props: {
           </div>
         ) : null}
         {effectiveSourceKind === 'model' ? (
-          props.sourceContext ? (
-            <div className="pivot-context-source">
-              <span className="designer-field-label">{i18n.t('ui', 'pivotModel')}</span>
-              <strong>
-                {effectiveModel ? resolveModelDisplayName(effectiveModel, i18n.locale) : '-'}
-              </strong>
-            </div>
-          ) : (
+          props.sourceContext ? null : (
             <label className="designer-field">
               <span className="designer-field-label">{i18n.t('ui', 'pivotModel')}</span>
               <DesignerSelect
@@ -561,12 +528,7 @@ export function PivotTab(props: {
               />
             </label>
           )
-        ) : props.sourceContext ? (
-          <div className="pivot-context-source">
-            <span className="designer-field-label">{i18n.t('ui', 'pivotInterface')}</span>
-            <strong>{effectiveInterface?.name ?? '-'}</strong>
-          </div>
-        ) : (
+        ) : props.sourceContext ? null : (
           <label className="designer-field">
             <span className="designer-field-label">{i18n.t('ui', 'pivotInterface')}</span>
             <DesignerSelect
@@ -578,26 +540,35 @@ export function PivotTab(props: {
             />
           </label>
         )}
-        {sourceKind === 'interface' ? (
-          <label className="designer-field">
-            <span className="designer-field-label">{i18n.t('ui', 'pivotParameters')}</span>
-            <textarea
-              className="designer-textarea pivot-parameters"
-              value={parametersText}
-              onChange={(event) => setParametersText(event.target.value)}
-              placeholder={'{\n  "id": "..."\n}'}
-              spellCheck={false}
-            />
-          </label>
+        {effectiveSourceKind === 'interface' ? (
+          <details
+            className="pivot-parameter-section"
+            key={effectiveInterfaceId}
+            open={
+              effectiveInterface?.publishedRelease?.queryInterface.contract.parameters.some(
+                (parameter) => parameter.required && parameter.defaultValue === undefined,
+              ) || undefined
+            }
+          >
+            <summary>
+              {i18n.t('ui', 'pivotParameters')}
+              <span>
+                {effectiveInterface?.publishedRelease?.queryInterface.contract.parameters.length ??
+                  0}
+              </span>
+            </summary>
+            <label className="designer-field">
+              <span className="designer-field-label">{i18n.t('ui', 'pivotParameters')}</span>
+              <textarea
+                className="designer-textarea pivot-parameters"
+                value={parametersText}
+                onChange={(event) => setParametersText(event.target.value)}
+                placeholder={'{\n  "id": "..."\n}'}
+                spellCheck={false}
+              />
+            </label>
+          </details>
         ) : null}
-        <button
-          type="button"
-          className="designer-btn designer-btn-primary pivot-run-button"
-          disabled={busy}
-          onClick={() => void execute()}
-        >
-          {busy ? i18n.t('ui', 'pivotRunning') : i18n.t('ui', 'pivotRun')}
-        </button>
       </div>
 
       <div className="pivot-result-toolbar">
@@ -605,21 +576,24 @@ export function PivotTab(props: {
           <span>{i18n.t('ui', 'pivotView')}</span>
           <button
             type="button"
-            className={viewMode === 'hierarchy' ? 'is-active' : ''}
-            onClick={() => setViewMode('hierarchy')}
-          >
-            {i18n.t('ui', 'pivotHierarchy')}
-          </button>
-          <button
-            type="button"
             className={viewMode === 'table' ? 'is-active' : ''}
+            aria-pressed={viewMode === 'table'}
             onClick={() => setViewMode('table')}
           >
             {i18n.t('ui', 'pivotTable')}
           </button>
           <button
             type="button"
+            className={viewMode === 'hierarchy' ? 'is-active' : ''}
+            aria-pressed={viewMode === 'hierarchy'}
+            onClick={() => setViewMode('hierarchy')}
+          >
+            {i18n.t('ui', 'pivotHierarchy')}
+          </button>
+          <button
+            type="button"
             className={viewMode === 'json' ? 'is-active' : ''}
+            aria-pressed={viewMode === 'json'}
             onClick={() => setViewMode('json')}
           >
             {i18n.t('ui', 'pivotJson')}
@@ -636,6 +610,7 @@ export function PivotTab(props: {
               key={mode}
               type="button"
               className={languageMode === mode ? 'is-active' : ''}
+              aria-pressed={languageMode === mode}
               onClick={() => setLanguageMode(mode)}
             >
               {i18n.t('ui', `pivotLanguage_${mode}`)}
@@ -659,11 +634,12 @@ export function PivotTab(props: {
           </div>
           <PivotDocumentView
             document={document}
+            schema={schema}
             viewMode={viewMode}
             languageMode={languageMode}
             locale={i18n.locale}
             emptyRowsLabel={i18n.t('ui', 'pivotNoRows')}
-            emptyScalarLabel={i18n.t('ui', 'pivotNoScalarFields')}
+            emptyScalarLabel={i18n.t('ui', 'pivotNoSelectedFields')}
             jsonLabel={i18n.t('ui', 'pivotJsonResult')}
             hierarchyFieldLabel={i18n.t('ui', 'pivotHierarchyField')}
             hierarchyTypeLabel={i18n.t('ui', 'pivotHierarchyType')}
@@ -672,6 +648,19 @@ export function PivotTab(props: {
             hierarchyExpandLabel={i18n.t('ui', 'pivotExpand')}
             hierarchyCollapseLabel={i18n.t('ui', 'pivotCollapse')}
             hierarchyNodeTypeLabel={(kind) => i18n.t('ui', `pivotNode_${kind}`)}
+            tableLabels={{
+              emptyRows: i18n.t('ui', 'pivotNoRows'),
+              emptyFields: i18n.t('ui', 'pivotNoSelectedFields'),
+              expand: i18n.t('ui', 'pivotExpand'),
+              collapse: i18n.t('ui', 'pivotCollapse'),
+              expandAll: i18n.t('ui', 'pivotExpandAll'),
+              collapseAll: i18n.t('ui', 'pivotCollapseAll'),
+              missing: i18n.t('ui', 'pivotMissingValue'),
+              null: i18n.t('ui', 'pivotNullValue'),
+              yes: i18n.t('ui', 'pivotBooleanYes'),
+              no: i18n.t('ui', 'pivotBooleanNo'),
+              rows: (count) => i18n.t('ui', 'pivotRows', { count: String(count) }),
+            }}
           />
         </>
       ) : (
