@@ -20,6 +20,7 @@ import { NotificationCenter } from './NotificationCenter.js';
 import { LayerTreePanel } from './LayerTreePanel.js';
 import { RelationDetailPanel } from './RelationDetailPanel.js';
 import { PivotTab } from './PivotTab.js';
+import { ModelMapWorkspace } from './ModelMapWorkspace.js';
 import {
   QueryDesignerPanel,
   QueryInterfaceManagerPanel,
@@ -33,7 +34,14 @@ import type {
 import type { SavedBindingSurfaceView } from './BindingSurfaceDesignerPanel.js';
 import { DesignerSelect } from './base/designer-select.js';
 import type { LocaleCode } from '../managers/i18n-manager.js';
-import { IconDocument, IconGrid, IconLink, IconSettings, IconBell } from './designer-icons.js';
+import {
+  IconDocument,
+  IconGrid,
+  IconLayers,
+  IconLink,
+  IconSettings,
+  IconBell,
+} from './designer-icons.js';
 import type {
   QueryChainState,
   QueryInterface,
@@ -147,6 +155,9 @@ export function EditorChrome(props: {
 
   const [manualPanel, setManualPanel] = useState<ManualPanelKind | null>(null);
   const [pivotContext, setPivotContext] = useState<PivotContext | undefined>();
+  const [pivotReturnPanel, setPivotReturnPanel] = useState<ManualPanelKind | null>(null);
+  const [pivotReturnInterfaceId, setPivotReturnInterfaceId] = useState<string>();
+  const [modelMapOpen, setModelMapOpen] = useState(false);
 
   useEffect(() => {
     if (isQueryDesignerMode(modes.mode)) {
@@ -180,10 +191,15 @@ export function EditorChrome(props: {
   const pivotOpen = manualPanel === 'pivot';
 
   const closeAll = useCallback((): void => {
+    if (pivotOpen) {
+      setManualPanel(pivotReturnPanel);
+      setPivotContext(undefined);
+      return;
+    }
     if (manualOpen) {
       setManualPanel(null);
       setPivotContext(undefined);
-      if (modes.mode === 'page' || (interfaceWorkspaceOpen && queryOpen)) {
+      if (modes.mode === 'page') {
         modes.setMode('select');
       }
       return;
@@ -195,17 +211,16 @@ export function EditorChrome(props: {
     if (queryOpen) {
       modes.setMode('select');
     }
-  }, [interfaceWorkspaceOpen, manualOpen, modes, passiveOpen, props, queryOpen]);
+  }, [pivotOpen, pivotReturnPanel, manualOpen, modes, passiveOpen, props, queryOpen]);
 
   const openPivot = useCallback(
     (context: PivotContext): void => {
+      setPivotReturnPanel(manualPanel === 'pivot' ? pivotReturnPanel : manualPanel);
+      setPivotReturnInterfaceId(context.kind === 'interface' ? context.interfaceId : undefined);
       setPivotContext(context);
       setManualPanel('pivot');
-      if (modes.mode === 'page' || queryOpen) {
-        modes.setMode('select');
-      }
     },
-    [modes, queryOpen],
+    [manualPanel, pivotReturnPanel],
   );
 
   const openManual = useCallback(
@@ -270,6 +285,7 @@ export function EditorChrome(props: {
       return (
         <div className="interface-manager-stack interface-workspace-query-list">
           <QueryInterfaceManagerPanel
+            expandedInterfaceId={pivotReturnInterfaceId}
             savedQueryInterfaces={props.savedQueryInterfaces}
             onOpenQueryInterface={(id) => {
               props.onOpenQueryInterface(id);
@@ -359,7 +375,11 @@ export function EditorChrome(props: {
     }
     if (manualPanel === 'pivot') {
       return (
-        <PivotTab savedQueryInterfaces={props.savedQueryInterfaces} sourceContext={pivotContext} />
+        <PivotTab
+          savedQueryInterfaces={props.savedQueryInterfaces}
+          sourceContext={pivotContext}
+          onBack={closeAll}
+        />
       );
     }
     if (manualPanel === 'settings') {
@@ -568,7 +588,18 @@ export function EditorChrome(props: {
     <>
       {props.children}
 
+      {modelMapOpen ? <ModelMapWorkspace onClose={() => setModelMapOpen(false)} /> : null}
+
       <div className="designer-panel-fabs designer-panel-fabs--row" aria-label="Panel toggles">
+        <button
+          type="button"
+          className="designer-fab designer-fab--panel"
+          aria-label={i18n.t('ui', 'modelMapTitle')}
+          title={i18n.t('ui', 'modelMapTitle')}
+          onClick={() => setModelMapOpen(true)}
+        >
+          <IconLayers />
+        </button>
         <button
           type="button"
           className="designer-fab designer-fab--panel"
@@ -629,8 +660,9 @@ export function EditorChrome(props: {
         }
         bodyClassName={[
           'designer-panel-body',
-          'designer-scrollbar-hide',
-          queryOpen && !interfaceWorkspaceOpen ? 'designer-panel-body--query' : '',
+          !pivotOpen ? 'designer-scrollbar-hide' : '',
+          queryOpen && !manualOpen ? 'designer-panel-body--query' : '',
+          manualPanel === 'notifications' ? 'designer-panel-body--notifications' : '',
           interfaceWorkspaceOpen ? 'designer-panel-body--interface-workspace' : '',
           pivotOpen ? 'designer-panel-body--pivot' : '',
         ]

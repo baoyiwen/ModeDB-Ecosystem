@@ -49,7 +49,7 @@ pnpm run start:server -- -c modeldb.config.json
 modeldb-server start -c ./modeldb.config.json --port 9090
 ```
 
-启动成功后，控制台会打印完整的 HTTP、健康检查、管理状态和 WebSocket 地址。使用 `--host 0.0.0.0` 时会列出机器 hostname 与非回环网卡 IP，跨机器客户端应复制其中一个地址；也可在配置中加入 `advertisedHost`，或临时传入 `--advertised-host <host>` 指定优先展示的域名/IP。
+启动成功后，控制台会打印完整的 HTTP、健康检查、管理状态和 WebSocket 地址。使用 `--host 0.0.0.0` 时会列出机器 hostname 与非回环网卡 IP，跨机器客户端应复制其中一个地址；未配置 `publicBaseUrl` 时，Query Designer 会自动复用其中一个非回环网卡地址生成接口调用地址。多网卡、VPN、容器或反向代理场景可在配置中加入 `publicBaseUrl`，或临时传入 `--public-base-url <url>` 指定稳定地址；它只影响展示和 API 文档，不改变监听。
 
 配置项说明：**[modeldb-config-guide.md](../../docs/modeldb-config-guide.md)**。  
 部署清单：**[operations-manual.md](../../docs/operations-manual.md)**。
@@ -81,7 +81,7 @@ const db = await connectRemote({
 
 ### 典型工作流
 
-1. 编辑 **`modeldb.config.json`**（数据根、`connectToken`、端口）
+1. 复制根目录 **`modeldb.config.example.json`** 到数据根并编辑 **`modeldb.config.json`**；需要逐项中文说明时参考 **`modeldb.config.example.jsonc`** 和 **[modeldb-config-guide.md](../../docs/modeldb-config-guide.md)**
 2. **`pnpm run build`** 或至少 **`build:server`**
 3. **`pnpm run start:server`**
 4. 用 **`apps/web`** 演练场或 **`@mode-db/sdk`** 连接联调

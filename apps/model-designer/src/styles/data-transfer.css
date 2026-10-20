@@ -1,0 +1,201 @@
+.pivot-source-card .designer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 14px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.data-transfer-muted {
+  color: var(--designer-text-muted, #64748b);
+  font-size: 12px;
+}
+.pivot-query-filters p,
+.data-transfer-panel p {
+  line-height: 1.7;
+  margin: 8px 0 0;
+}
+.data-transfer-panel {
+  min-width: 0;
+}
+.pivot-export-help {
+  color: var(--designer-text-muted);
+  font-size: 11px;
+}
+.pivot-export-help summary {
+  cursor: pointer;
+  padding: 4px;
+}
+.pivot-export-help[open] {
+  flex-basis: 100%;
+}
+.pivot-export-help p {
+  max-width: 1000px;
+}
+.designer-panel-body--pivot .data-transfer-table-scroll {
+  max-height: none;
+  overflow: visible;
+}
+.designer-panel-body--pivot .data-transfer-table-scroll th,
+.designer-panel-body--pivot .data-transfer-table-scroll td {
+  vertical-align: middle;
+}
+.data-transfer-relation-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+.data-transfer-relation-option input {
+  margin-top: 3px;
+  accent-color: var(--designer-accent);
+}
+.data-transfer-relation-option small {
+  display: block;
+  margin-top: 4px;
+  color: var(--designer-text-muted);
+  line-height: 1.6;
+}
+.data-transfer-import {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: rgba(241, 245, 249, 0.6);
+  border: 1px solid var(--designer-border, #64748b40);
+  border-radius: 8px;
+}
+.pivot-query-filters h3 {
+  margin: 0;
+  font-size: 13px;
+}
+.pivot-conditions-pending {
+  color: #9a5b08;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.data-transfer-section-heading,
+.data-transfer-actions,
+.data-transfer-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+}
+.data-transfer-section-heading {
+  justify-content: space-between;
+}
+.data-transfer-import .data-transfer-actions,
+.data-transfer-report {
+  margin-top: 12px;
+}
+.data-transfer-status:empty {
+  display: none;
+}
+.data-transfer-status:not(:empty) {
+  margin-top: 12px;
+}
+.data-transfer-status p,
+.data-transfer-error {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.data-transfer-filter {
+  display: grid;
+  grid-template-columns: 76px minmax(140px, 1fr) 155px minmax(150px, 1.5fr) auto;
+  max-width: 1080px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.data-transfer-filter > * {
+  min-width: 0;
+}
+.data-transfer-filter > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--designer-accent, #655bff);
+}
+.data-transfer-filter-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+.data-transfer-filter-values .designer-input {
+  flex: 1;
+  min-width: 110px;
+}
+.data-transfer-filter-values select {
+  max-width: 110px;
+}
+.data-transfer-filename {
+  overflow-wrap: anywhere;
+}
+.data-transfer-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 24px 0 0;
+}
+.data-transfer-counts > div {
+  flex: 1;
+  min-width: 110px;
+  padding: 16px;
+  border: 1px solid var(--designer-border, #64748b40);
+  border-radius: 8px;
+}
+.data-transfer-counts dt {
+  font-size: 12px;
+  opacity: 0.75;
+}
+.data-transfer-counts dd {
+  margin: 8px 0 0;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.data-transfer-status progress {
+  width: 180px;
+  max-width: 100%;
+  accent-color: #3b82f6;
+}
+.data-transfer-error {
+  color: var(--designer-danger, #e85b62);
+}
+.data-transfer-table-scroll {
+  overflow: auto;
+  margin-top: 20px;
+  max-height: 420px;
+}
+.data-transfer-table-scroll table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 620px;
+  text-align: left;
+  font-size: 13px;
+}
+.data-transfer-table-scroll th,
+.data-transfer-table-scroll td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--designer-border, #64748b40);
+  overflow-wrap: anywhere;
+}
+.data-transfer-table-scroll th {
+  position: sticky;
+  top: 0;
+  background: #f1f5f9;
+  color: var(--designer-text, #0f172a);
+}
+@media (max-width: 760px) {
+  .data-transfer-filter {
+    grid-template-columns: 65px minmax(0, 1fr) 110px;
+  }
+  .data-transfer-filter-values {
+    grid-column: 1 / -1;
+  }
+  .data-transfer-filter > button:last-child {
+    grid-column: 3;
+  }
+}

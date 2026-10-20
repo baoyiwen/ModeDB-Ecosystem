@@ -10,6 +10,9 @@ export { DEFAULT_ALLOWED_MODES, canEnterMode, isMutationMode } from './page-mode
 
 export type { ViewSpec, DataPageSpec } from './view-spec.js';
 
+export * from './transfer/types.js';
+export { validateTransferPackage, transferValueValid } from './transfer/validate.js';
+
 export type {
   ColumnDef,
   MetricDef,

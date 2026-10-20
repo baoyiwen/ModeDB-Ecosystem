@@ -19,6 +19,8 @@ export interface ManagementStatusResponse {
   readonly state: 'RUNNING';
   readonly uptimeSeconds: number;
   readonly listen: { readonly host: string; readonly port: number };
+  /** Resolved HTTP(S) base URL for generated API links, if available. */
+  readonly publicBaseUrl?: string;
   readonly storageFormat: 'atlas.mld';
   readonly storageVersion: '2.0';
   readonly workspaceRoot: string;
@@ -32,6 +34,8 @@ export interface ManagementDatabasesResponse {
 
 export interface ManagementBackupInfo {
   readonly fileName: string;
+  /** User-facing name; absent on legacy backup files. */
+  readonly name?: string;
   readonly database: string;
   readonly createdAt: string;
   readonly bytes: number;

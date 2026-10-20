@@ -60,11 +60,14 @@ export function ensureModelDbLayoutAtRoot(home: string): string {
     const payload = {
       port: 9090,
       host: '127.0.0.1',
+      advertisedHost: '',
+      publicBaseUrl: '',
       logDir: 'logs',
       workspace: 'vault',
       bufferThreshold: 50_000,
       cacheSize: '2GB',
       mode: 'development',
+      designerWorkspace: 'model_designer_workspace',
       connectToken,
       autoBackup: {
         enabled: false,

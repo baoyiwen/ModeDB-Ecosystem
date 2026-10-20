@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
@@ -17,24 +17,33 @@ import {
   type ManagementDatabaseInfo,
   type ManagementDatabasesResponse,
   type ManagementStatusResponse,
+  queryInterfaceErrorDetailFromMessage,
+  type WireExecuteBody,
   type WireClientMessage,
   type WireHandshakeRequest,
   type WireRpcEnvelope,
   type WireServerMessage,
 } from '@mode-db/shared';
-import { assertFlatGraphSegment, configureModelDBStorageRoot, EngineLogger } from '@mode-db/common';
+import {
+  assertFlatGraphSegment,
+  configureModelDBStorageRoot,
+  DiagnosticCenter,
+  EngineLogger,
+} from '@mode-db/common';
 import { ModelDBClient, type AuthoringEngine } from '@mode-db/core';
 import { BinaryInterceptor, TransportAuthError } from './binary-interceptor.js';
 import type { ResolvedModelDBServerConfig } from './config-loader.js';
-import { formatModelDBStartupInfo } from './server-access-info.js';
+import { formatModelDBStartupInfo, resolveModelDBPublicBaseUrl } from './server-access-info.js';
 import { AuthoringBridge } from './authoring-bridge.js';
 import { startAutoBackupScheduler } from './auto-backup-scheduler.js';
 import { WriteSerializationGate } from './write-serialization-gate.js';
 import { WireRequestDispatcher, decodeExecuteBody } from './request-dispatcher.js';
+import { executePublishedQueryInterface } from './published-interface-runtime.js';
 import { assertLogicalDatabaseExists } from './logical-database-guard.js';
 import { scanWorkspaceDatabases } from './management-api.js';
 import {
   createDatabaseBackup,
+  normalizeBackupName,
   forceResetDatabase,
   importDatabaseBackup,
   listDatabaseBackups,
@@ -828,6 +837,40 @@ function readActionEnvelope(
   return { cipher, id };
 }
 
+function publishedInterfaceHttpStatus(message: string): number {
+  const detail = queryInterfaceErrorDetailFromMessage(message);
+  if (!detail) {
+    return 500;
+  }
+  if (detail.category === 'not_found') {
+    return 404;
+  }
+  if (detail.category === 'forbidden') {
+    return 403;
+  }
+  if (detail.category === 'rate_limited') {
+    return 429;
+  }
+  if (detail.category === 'unavailable') {
+    return 503;
+  }
+  if (detail.category === 'conflict') {
+    return 409;
+  }
+  return 400;
+}
+
+function sendPublishedInterfaceHttpError(reply: FastifyReply, error: unknown): FastifyReply {
+  const message = error instanceof Error ? error.message : String(error);
+  const detail = queryInterfaceErrorDetailFromMessage(message);
+  if (!detail) {
+    return reply.code(500).send({ error: message });
+  }
+  return reply
+    .code(publishedInterfaceHttpStatus(message))
+    .send({ error: detail.code, errorDetail: detail });
+}
+
 export async function buildDualTrackFastify(
   cfg: ResolvedModelDBServerConfig,
 ): Promise<FastifyInstance> {
@@ -836,23 +879,16 @@ export async function buildDualTrackFastify(
   process.env.MODEL_DB_CONNECT_TOKEN = cfg.connectToken;
 
   const rootPrint = storageRootFingerprint(dataRoot);
-
-  if (cfg.serverLogDirectory) {
-    EngineLogger.instance.configure({
-      logDirectory: cfg.serverLogDirectory,
-      enableAccessLog: cfg.accessLog === true,
-    });
-  } else {
-    EngineLogger.instance.configure({
-      atlasRoot: `${dataRoot}/.modeldb-server`,
-      enableAccessLog: cfg.accessLog === true,
-    });
-  }
-
+  // The config directory owns server resources; workspace is only the parent
+  // of logical databases and can point to a separate directory or disk.
+  const sessionRoot = dirname(cfg.configFilePath);
+  EngineLogger.instance.configure({
+    logDirectory: cfg.serverLogDirectory ?? join(sessionRoot, 'logs'),
+    enableAccessLog: cfg.accessLog === true,
+  });
+  EngineLogger.instance.attachDiagnosticBridge((fn) => DiagnosticCenter.onDiagnostic(fn));
   mkdirSync(dataRoot, { recursive: true });
-  mkdirSync(join(dataRoot, 'vault'), { recursive: true });
-  mkdirSync(join(dataRoot, 'logs'), { recursive: true });
-  mkdirSync(join(dataRoot, 'cache'), { recursive: true });
+  mkdirSync(join(sessionRoot, 'cache'), { recursive: true });
   EngineLogger.instance.info('Workspace directory ready', { workspace: dataRoot }, 'ModelDBServer');
   EngineLogger.instance.info(
     'ModelDB Server starting (dual-track)',
@@ -975,11 +1011,13 @@ export async function buildDualTrackFastify(
         cfg.designerWorkspace,
       );
       const port = getServerListeningPort(app);
+      const publicBaseUrl = resolveModelDBPublicBaseUrl(cfg, port);
       const body: ManagementStatusResponse = {
         engine: 'ModelDB',
         state: 'RUNNING',
         uptimeSeconds: getProcessUptimeSeconds(),
         listen: { host: cfg.host, port },
+        ...(publicBaseUrl ? { publicBaseUrl } : {}),
         storageFormat: 'atlas.mld',
         storageVersion: '2.0',
         workspaceRoot: dataRoot,
@@ -1146,6 +1184,13 @@ export async function buildDualTrackFastify(
         const dbName = decodeURIComponent(String(params.dbName ?? '').trim());
         assertFlatGraphSegment(dbName, 'database name');
         assertLogicalDatabaseExists(dataRoot, dbName);
+        const raw = request.body as { reason?: string; name?: unknown } | undefined;
+        let name: string | undefined;
+        try {
+          name = normalizeBackupName(raw?.name);
+        } catch (error) {
+          return reply.code(400).send({ error: (error as Error).message });
+        }
         try {
           const engine = await authoring.getEngine(dbName);
           await engine.flushAll();
@@ -1156,9 +1201,8 @@ export async function buildDualTrackFastify(
             'ManagementBackup',
           );
         }
-        const raw = request.body as { reason?: string } | undefined;
         const reason = String(raw?.reason ?? 'manual').replace(/[^A-Za-z0-9_-]/g, '_');
-        const backup = createDatabaseBackup(dataRoot, dbName, reason || 'manual');
+        const backup = createDatabaseBackup(dataRoot, dbName, reason || 'manual', name);
         const body: ManagementBackupCreateResponse = { ok: true, backup };
         return reply.send(body);
       } catch (e) {
@@ -1330,6 +1374,79 @@ export async function buildDualTrackFastify(
           return reply.code(401).send({ error: e.message });
         }
         const message = e instanceof Error ? e.message : String(e);
+        return reply.code(500).send({ error: message });
+      }
+    },
+  );
+
+  /**
+   * Plain JSON entry point for published query interfaces.
+   *
+   * The SDK uses the encrypted /v2/action transport, but integrations that
+   * cannot install the SDK can call this route with the same published
+   * contract.  The execution runtime remains the single source of truth for
+   * release selection, projection, access policy, rate limiting and auditing.
+   */
+  app.post(
+    '/api/v1/databases/:dbName/query-interfaces/:callableName',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const interceptor = new BinaryInterceptor(cfg.connectToken);
+      try {
+        interceptor.validateConnectToken(readConnectTokenFromHttpRequest(request));
+        const params = request.params as { dbName?: string; callableName?: string };
+        const dbName = decodeURIComponent(String(params.dbName ?? '').trim());
+        const callableName = decodeURIComponent(String(params.callableName ?? '').trim());
+        if (!dbName || !callableName) {
+          return reply.code(400).send({ error: 'Database name and callable name are required.' });
+        }
+        assertFlatGraphSegment(dbName, 'database name');
+        assertLogicalDatabaseExists(dataRoot, dbName);
+
+        const raw = request.body;
+        if (!isRecord(raw)) {
+          return reply.code(400).send({ error: 'Expected a JSON object request body.' });
+        }
+        const rawParameters = raw.parameters;
+        if (rawParameters !== undefined && !isRecord(rawParameters)) {
+          return reply.code(400).send({ error: 'parameters must be a JSON object.' });
+        }
+        const body: Extract<WireExecuteBody, { readonly op: 'executeInterface' }> = {
+          op: 'executeInterface',
+          callableName,
+          ...(typeof raw.version === 'string' && raw.version.trim()
+            ? { version: raw.version.trim() }
+            : {}),
+          ...(rawParameters ? { parameters: rawParameters } : {}),
+          ...(typeof raw.accessKey === 'string' && raw.accessKey
+            ? { accessKey: raw.accessKey }
+            : {}),
+          ...(typeof raw.page === 'number' && Number.isFinite(raw.page) ? { page: raw.page } : {}),
+          ...(Object.prototype.hasOwnProperty.call(raw, 'cursor') &&
+          (raw.cursor === null || typeof raw.cursor === 'string')
+            ? { cursor: raw.cursor }
+            : {}),
+          ...(typeof raw.limit === 'number' && Number.isFinite(raw.limit)
+            ? { limit: raw.limit }
+            : {}),
+        };
+        const result = await executePublishedQueryInterface({
+          atlas: dbName,
+          designerWorkspace: cfg.designerWorkspace,
+          body,
+          getEngine: (atlas) => authoring.getEngine(atlas),
+        });
+        return reply.send(result);
+      } catch (error) {
+        if (error instanceof TransportAuthError) {
+          return reply.code(401).send({ error: error.message });
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.startsWith('INTERFACE_')) {
+          return sendPublishedInterfaceHttpError(reply, error);
+        }
+        if (/database .*not found/i.test(message)) {
+          return reply.code(404).send({ error: message });
+        }
         return reply.code(500).send({ error: message });
       }
     },

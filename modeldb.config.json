@@ -1,10 +1,21 @@
 {
   "port": 9091,
   "host": "0.0.0.0",
+  "advertisedHost": "",
+  "publicBaseUrl": "",
   "logDir": "logs",
   "workspace": "vault",
   "bufferThreshold": 50000,
   "cacheSize": "2GB",
   "mode": "production",
+  "designerWorkspace": "model_designer_workspace",
+  "autoBackup": {
+    "enabled": false,
+    "intervalMinutes": 60,
+    "runOnStart": false,
+    "reason": "auto",
+    "databases": []
+  },
+  "dev": false,
   "connectToken": "dev-connect-token-change-in-production"
 }

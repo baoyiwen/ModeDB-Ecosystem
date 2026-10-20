@@ -457,21 +457,6 @@
   animation: mode-ui-toast-out 180ms ease forwards;
 }
 
-.mode-ui-toast--success,
-.mode-ui-notification-item--success {
-  --mode-ui-level-color: #059669;
-}
-
-.mode-ui-toast--warning,
-.mode-ui-notification-item--warning {
-  --mode-ui-level-color: #d97706;
-}
-
-.mode-ui-toast--error,
-.mode-ui-notification-item--error {
-  --mode-ui-level-color: #dc2626;
-}
-
 .mode-ui-toast-main {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) 28px;
@@ -550,8 +535,12 @@
 }
 
 .mode-ui-notification-center {
+  box-sizing: border-box;
+  width: 100%;
   height: 100%;
+  min-width: 0;
   min-height: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -559,6 +548,8 @@
 
 .mode-ui-notification-toolbar {
   display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -600,11 +591,12 @@
 .mode-ui-notification-badge {
   border-color: color-mix(in srgb, var(--mode-ui-level-color, #2563eb) 28%, rgba(100, 116, 139, 0.18));
   background: color-mix(in srgb, var(--mode-ui-level-color, #2563eb) 10%, #ffffff);
-  color: #1e293b;
+  color: color-mix(in srgb, var(--mode-ui-level-color, #2563eb) 80%, #0f172a);
 }
 
 .mode-ui-notification-toolbar-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   flex: 0 0 auto;
 }
@@ -615,6 +607,7 @@
   border-radius: 8px;
   font-size: 11px;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .mode-ui-notification-action:disabled {
@@ -636,18 +629,22 @@
 }
 
 .mode-ui-notification-list {
+  min-width: 0;
   min-height: 0;
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 10px;
   overflow: auto;
+  overscroll-behavior: contain;
   padding-right: 2px;
 }
 
 .mode-ui-notification-item {
   --mode-ui-level-color: #2563eb;
   position: relative;
+  min-width: 0;
+  flex: 0 0 auto;
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) auto;
   gap: 10px;
@@ -666,6 +663,21 @@
     box-shadow 150ms ease;
 }
 
+.mode-ui-toast--success,
+.mode-ui-notification-item--success {
+  --mode-ui-level-color: #059669;
+}
+
+.mode-ui-toast--warning,
+.mode-ui-notification-item--warning {
+  --mode-ui-level-color: #d97706;
+}
+
+.mode-ui-toast--error,
+.mode-ui-notification-item--error {
+  --mode-ui-level-color: #dc2626;
+}
+
 .mode-ui-notification-item:hover {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--mode-ui-level-color) 32%, rgba(100, 116, 139, 0.18));
@@ -681,6 +693,7 @@
 
 .mode-ui-notification-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   margin-bottom: 5px;

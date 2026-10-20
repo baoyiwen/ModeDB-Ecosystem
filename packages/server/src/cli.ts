@@ -214,8 +214,9 @@ const program = new Command()
   .option('-p, --port <number>', 'Listen port (overrides config / env)')
   .option('-H, --host <host>', 'Bind host (default 127.0.0.1)')
   .option('--advertised-host <host>', 'Preferred hostname or IP to print for clients')
+  .option('--public-base-url <url>', 'Public HTTP(S) base URL shown in API documentation')
   .option('-t, --token <secret>', 'Client connect token (also derives the atlas vault key)')
-  .option('--dev', 'Print decrypted RPC payloads to stderr (development only)', false);
+  .option('--dev', 'Print decrypted RPC payloads to stderr (development only)');
 
 const startArgv = argv[0] === 'start' ? argv.slice(1) : argv;
 program.parse(startArgv, { from: 'user' });
@@ -224,6 +225,7 @@ const o = program.opts<{
   port?: string;
   host?: string;
   advertisedHost?: string;
+  publicBaseUrl?: string;
   token?: string;
   dev?: boolean;
 }>();
@@ -236,8 +238,10 @@ const cfg = await loadModelDBServerConfig(o.config, {
   port: o.port !== undefined && o.port !== '' ? Number(o.port) : undefined,
   host: o.host,
   advertisedHost: o.advertisedHost,
+  publicBaseUrl: o.publicBaseUrl,
   connectToken: connectTokenFromCli,
-  dev: Boolean(o.dev),
+  // Keep this undefined when --dev is absent so the file/environment value can win.
+  dev: o.dev === true ? true : undefined,
 });
 
 await startModelDBWebSocketServer(cfg);

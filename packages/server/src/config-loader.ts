@@ -9,6 +9,8 @@ export interface ModelDBServerFileConfig {
   readonly host?: string;
   /** Hostname or IP to print as the preferred client address when the server binds broadly. */
   readonly advertisedHost?: string;
+  /** Public HTTP(S) origin shown to API consumers; does not change the bind address. */
+  readonly publicBaseUrl?: string;
   /**
    * **首选**：逻辑库工作区根目录；每个逻辑库为 **`<workspace>/<dbName>/`**（内含 **`atlas.mld`** 等）。
    * 与 **`storageRoot`**、**`dbPath`**（目录或 **`.mld` 文件**）互为别名，按合并顺序取第一个非空。
@@ -66,6 +68,8 @@ export interface ResolvedModelDBServerConfig {
   readonly host: string;
   /** Optional externally reachable hostname or IP shown in startup connection details. */
   readonly advertisedHost?: string;
+  /** Public HTTP(S) base URL used in generated API documentation and status output. */
+  readonly publicBaseUrl?: string;
   /**
    * 逻辑库工作区根；客户端 **`dbName` / `atlas`** 对应 **`<storageRoot>/<name>/`**。
    */
@@ -74,7 +78,7 @@ export interface ResolvedModelDBServerConfig {
   readonly workspace?: string;
   /** When **`dbPath`** resolves to a **`.mld`** file, the inferred default logical library name (basename without suffix). */
   readonly defaultAtlas?: string;
-  /** Absolute directory for **`system.log`** / **`access.log`** when **`logDir`** is set in config. */
+  /** Absolute log directory override; omitted means **`<config directory>/logs`**. */
   readonly serverLogDirectory?: string;
   /** Passed to {@link AuthoringEngineOptions.bufferFlushRowThreshold} for server-side engines. */
   readonly bufferFlushRowThreshold?: number;
@@ -103,6 +107,28 @@ function numEnv(name: string): number | undefined {
 function strEnv(name: string): string | undefined {
   const v = process.env[name]?.trim();
   return v && v.length > 0 ? v : undefined;
+}
+
+function normalizePublicBaseUrl(value: unknown): string | undefined {
+  if (value === undefined || value === null || String(value).trim() === '') {
+    return undefined;
+  }
+  const raw = String(value).trim();
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error(`ModelDB server: publicBaseUrl must be an absolute http(s) URL: ${raw}`);
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('ModelDB server: publicBaseUrl protocol must be http: or https:.');
+  }
+  if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+    throw new Error(
+      'ModelDB server: publicBaseUrl must not contain credentials, query parameters, or a fragment.',
+    );
+  }
+  return raw.replace(/\/+$/, '');
 }
 
 function boolEnv(name: string): boolean | undefined {
@@ -177,6 +203,7 @@ export interface CliConfigOverrides {
   readonly port?: number;
   readonly host?: string;
   readonly advertisedHost?: string;
+  readonly publicBaseUrl?: string;
   readonly connectToken?: string;
   readonly dev?: boolean;
   readonly bufferThreshold?: number;
@@ -189,6 +216,7 @@ export interface CliConfigOverrides {
  * **`connectToken`**：同一顺序 **CLI → 文件 → `MODEL_DB_CONNECT_TOKEN`**；仅当左侧为 **`null`/`undefined`**
  * 时才继续（空字符串的 CLI 入参在 **`cli.ts`** 中已归一为 **`undefined`**，避免误覆盖文件中的令牌）。
  * 逻辑库根等路径**仅**来自 **`modeldb.config.json`**（及 **`-c`** 会话根下的相对 **`vault`/`logs`** 约定），**`modeldb-server` CLI 不提供 `--workspace`**。
+ * **`publicBaseUrl`** 可由 CLI **`--public-base-url`**、文件字段或 **`MODEL_DB_PUBLIC_BASE_URL`** 设置；它只影响公开文档地址。
  *
  * 当 **`configPath === undefined`**（未传 **`-c`**）时：配置文件**仅**来自默认主目录下的
  * **`modeldb.config.json`**；**`workspace`/`storageRoot`/`dbPath`** **不**再读取
@@ -215,6 +243,9 @@ export async function loadModelDBServerConfig(
   const host = cli.host ?? file.host ?? strEnv('MODEL_DB_HOST') ?? '127.0.0.1';
   const advertisedHost =
     cli.advertisedHost ?? file.advertisedHost ?? strEnv('MODEL_DB_ADVERTISED_HOST');
+  const publicBaseUrl = normalizePublicBaseUrl(
+    cli.publicBaseUrl ?? file.publicBaseUrl ?? strEnv('MODEL_DB_PUBLIC_BASE_URL'),
+  );
 
   const storageEnvBranch = implicitDefaultHome
     ? undefined
@@ -235,7 +266,8 @@ export async function loadModelDBServerConfig(
   const connectToken =
     typeof connectTokenRaw === 'string' ? connectTokenRaw.trim() : String(connectTokenRaw).trim();
 
-  const dev = cli.dev ?? boolEnv('MODEL_DB_DEV') ?? file.dev ?? false;
+  // Keep the documented per-key order: CLI → file → environment → default.
+  const dev = cli.dev ?? file.dev ?? boolEnv('MODEL_DB_DEV') ?? false;
 
   const serverLogDirectory =
     file.logDir !== undefined && file.logDir.length > 0
@@ -267,6 +299,7 @@ export async function loadModelDBServerConfig(
     port,
     host,
     ...(advertisedHost?.trim() ? { advertisedHost: advertisedHost.trim() } : {}),
+    ...(publicBaseUrl ? { publicBaseUrl } : {}),
     storageRoot,
     workspace: storageRoot,
     defaultAtlas,

@@ -87,6 +87,11 @@ function bool(x: unknown): boolean | null {
 }
 
 function scalarEquals(actual: unknown, expected: unknown, fieldType?: FieldTypeDef): boolean {
+  if (actual === null || actual === undefined || expected === null || expected === undefined) {
+    return (
+      (actual === null || actual === undefined) && (expected === null || expected === undefined)
+    );
+  }
   if (!fieldType) {
     return actual === expected;
   }
@@ -105,9 +110,13 @@ function scalarEquals(actual: unknown, expected: unknown, fieldType?: FieldTypeD
     }
     case 'String':
     case 'I18N':
-    case 'DateTime':
     case 'Color':
       return String(actual ?? '') === String(expected ?? '');
+    case 'DateTime': {
+      const a = typeof actual === 'string' ? Date.parse(actual) : NaN;
+      const b = typeof expected === 'string' ? Date.parse(expected) : NaN;
+      return Number.isFinite(a) && Number.isFinite(b) && a === b;
+    }
     case 'JSON':
     case 'Unit':
       return actual === expected;
@@ -125,7 +134,26 @@ export function matchesAtomic(
 ): boolean {
   const row = rec as Record<string, unknown>;
   let actual = row[p.field];
-  const fieldType = ctx?.fieldTypes?.get(p.field);
+  let fieldType = ctx?.fieldTypes?.get(p.field);
+  const localePath = /^(.+)\.([a-z]{2}(?:-[A-Za-z]{2,4})?)$/.exec(p.field);
+  if (!fieldType && localePath && ctx?.fieldTypes?.get(localePath[1]!)?.type === 'I18N') {
+    const map = row[localePath[1]!];
+    actual =
+      map !== null && typeof map === 'object' && Object.hasOwn(map, localePath[2]!)
+        ? (map as Record<string, unknown>)[localePath[2]!]
+        : undefined;
+    fieldType = { type: 'String' };
+  }
+  const comparable = (value: unknown): number | null => {
+    if (fieldType?.type !== 'DateTime') {
+      return num(value);
+    }
+    if (typeof value !== 'string' || !value.trim()) {
+      return null;
+    }
+    const time = Date.parse(value);
+    return Number.isFinite(time) ? time : null;
+  };
 
   if (
     ctx?.locale &&
@@ -144,23 +172,23 @@ export function matchesAtomic(
     case 'neq':
       return !scalarEquals(actual, p.value, fieldType);
     case 'gt': {
-      const a = num(actual);
-      const b = num(p.value);
+      const a = comparable(actual);
+      const b = comparable(p.value);
       return a !== null && b !== null && a > b;
     }
     case 'gte': {
-      const a = num(actual);
-      const b = num(p.value);
+      const a = comparable(actual);
+      const b = comparable(p.value);
       return a !== null && b !== null && a >= b;
     }
     case 'lt': {
-      const a = num(actual);
-      const b = num(p.value);
+      const a = comparable(actual);
+      const b = comparable(p.value);
       return a !== null && b !== null && a < b;
     }
     case 'lte': {
-      const a = num(actual);
-      const b = num(p.value);
+      const a = comparable(actual);
+      const b = comparable(p.value);
       return a !== null && b !== null && a <= b;
     }
     case 'like': {
@@ -181,9 +209,9 @@ export function matchesAtomic(
       if (!Array.isArray(p.value) || (p.value as unknown[]).length !== 2) {
         return false;
       }
-      const a = num(actual);
-      const lo = num((p.value as unknown[])[0]);
-      const hi = num((p.value as unknown[])[1]);
+      const a = comparable(actual);
+      const lo = comparable((p.value as unknown[])[0]);
+      const hi = comparable((p.value as unknown[])[1]);
       return a !== null && lo !== null && hi !== null && a >= lo && a <= hi;
     }
     default: {

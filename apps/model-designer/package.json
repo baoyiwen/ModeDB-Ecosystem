@@ -13,6 +13,8 @@
     "@mode-db/data-kit": "workspace:*",
     "@mode-db/data-ui": "workspace:*",
     "@mode-db/sdk": "workspace:*",
+    "dayjs": "1.11.23",
+    "exceljs": "4.4.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

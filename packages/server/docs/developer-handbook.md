@@ -56,6 +56,14 @@
 
 因此，在 server 运行时用外部工具直接改写 `atlas.mld`，不会被已缓存的引擎感知；需要重启 server，或走管理面 API。新增任何会替换库文件的管理操作时，必须同时调用 `evict`。
 
+### 3.3 会话根与逻辑库工作区
+
+`configFilePath` 的父目录是会话根，默认保存同级的 `logs/`、`cache/` 和 `vault/`；`workspace` / `storageRoot` 只表示逻辑库的父目录，通常是 `<会话根>/vault`，也可以位于另一块磁盘。启动服务不得再在 workspace 中创建额外的 `vault/`、`cache/`、`logs/` 或 `.modeldb-server/`。
+
+日志由 server 启动时统一配置：显式 `logDir` 优先，否则写入 `<会话根>/logs/`。诊断订阅同样由 server 注册，`AuthoringBridge` 创建引擎时关闭引擎自身的日志配置，避免切换逻辑库改变全局日志目录或关闭访问日志。
+
+旧版误建的空目录可以在确认为空后移除；非空历史日志和库数据不自动删除或迁移。回归检查见 `test/unit/server-directory-layout.test.ts`，覆盖重复启动、打开多个库、自定义 workspace / logDir 和平铺 vault。
+
 ## 4. 备份 / 恢复开发约束
 
 设计边界：
@@ -67,6 +75,8 @@
 - 外部导入文件必须校验 `modeldb.backup.v1` payload，并拒绝空路径、`.`、`..` 和不属于源库的文件条目。
 - 下载接口返回原始 `*.modeldb-backup.json`；上传接口使用 `application/octet-stream`，避免 JSON 再包装造成体积膨胀。
 - 导入同名备份时生成带时间戳的新文件名，不覆盖服务器已有备份。
+- 创建接口可传可选 `name`（1-120 个字符，不允许控制字符），存入 `modeldb.backup.v1` 的可选字段并通过列表、下载、导入、恢复保留；旧备份无需迁移。
+- 展示名与文件标识分离，系统文件名使用安全字符及唯一后缀，写入使用 `wx`，禁止因同秒创建或同名导入覆盖已有文件。创建时间继续使用 ISO-8601，客户端按本地时区显示年月日时分秒。
 - `force-reset` 是数据损坏恢复后门，允许目标库文件缺失时重建；普通 `clear-data` 仍应要求逻辑库存在。
 - 自动备份默认关闭；只有 `autoBackup.enabled === true` 且间隔不小于 `60000ms` 才启动调度器。
 

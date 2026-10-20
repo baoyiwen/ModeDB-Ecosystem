@@ -53,6 +53,8 @@ modeldb-server start -c /绝对路径/或/相对路径/某数据根
 
 **生产建议**：在 systemd、Windows 服务、Docker 中写死 **`-c`** 为**数据根绝对路径**，避免运维 `cd` 错目录。
 
+会话根与 `workspace` 是两个不同的目录：默认布局为 `<会话根>/cache/`、`<会话根>/logs/`、`<会话根>/vault/<库名>/atlas.mld`。`workspace` 指向其中的 `vault`，服务不会在它下面重复创建 `cache`、`logs` 或另一层 `vault`。未设置 `logDir` 时，日志也默认写到会话根的 `logs/`；打开或切换逻辑库不会改变日志目录。显式设置的 `logDir` 继续生效。
+
 ---
 
 ## 3. `workspace` 是什么？和「你电脑上的目录」有什么关系？
@@ -114,23 +116,39 @@ JSON 中 **`/`** 在 Node 下可用；也可用 **`D:\\\\Data\\\\modeldb_workspa
 
 ## 4. 字段说明（与 `modeldb.config.example.json` 对齐）
 
-| JSON 字段                    | 说明                                                                                                                                                     |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`port`**                   | 监听端口，默认 **9090**；可被 **`MODEL_DB_PORT`** 或 CLI **`-p`** 覆盖。                                                                                 |
-| **`host`**                   | 绑定地址，默认 **127.0.0.1**；可被 **`MODEL_DB_HOST`** 或 CLI **`-H`** 覆盖。                                                                            |
-| **`advertisedHost`**         | 启动控制台优先展示的客户端主机名、IP 或域名；可被 **`MODEL_DB_ADVERTISED_HOST`** 或 CLI **`--advertised-host`** 覆盖。仅影响展示，不改变监听或网络路由。 |
-| **`workspace`**              | **首选**：逻辑库根；每个库 **`{workspace}/{dbName}/atlas.mld`**。                                                                                        |
-| **`storageRoot` / `dbPath`** | 与 **`workspace`** 同一条合并链上的别名（见 loader）。                                                                                                   |
-| **`logDir`**                 | 日志目录；**相对路径时相对 `modeldb.config.json` 所在目录** 解析为 **`serverLogDirectory`**。                                                            |
-| **`bufferThreshold`**        | 服务端写缓冲阈值；可被 **`MODEL_DB_BUFFER_THRESHOLD`** 覆盖。                                                                                            |
-| **`cacheSize`**              | 当前为预留提示，不参与核心逻辑。                                                                                                                         |
-| **`mode`**                   | **`"production"`**（不区分大小写）时等价打开访问日志等（与 **`MODEL_DB_ACCESS_LOG`** 协同）。                                                            |
-| **`connectToken`**           | **必填**（文件、环境变量 **`MODEL_DB_CONNECT_TOKEN`** 或 CLI **`--token`** 三选一合并后非空）；否则服务启动失败。                                        |
-| **`dev`**                    | 开发标志；可被 **`MODEL_DB_DEV`** 或 CLI **`--dev`** 覆盖。                                                                                              |
+| JSON 字段                    | 说明                                                                                                                                                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **`port`**                   | 监听端口，默认 **9090**；可被 **`MODEL_DB_PORT`** 或 CLI **`-p`** 覆盖。                                                                                                                                                       |
+| **`host`**                   | 绑定地址，默认 **127.0.0.1**；可被 **`MODEL_DB_HOST`** 或 CLI **`-H`** 覆盖。                                                                                                                                                  |
+| **`advertisedHost`**         | 启动控制台优先展示的客户端主机名、IP 或域名；可被 **`MODEL_DB_ADVERTISED_HOST`** 或 CLI **`--advertised-host`** 覆盖。仅影响展示，不改变监听或网络路由。                                                                       |
+| **`publicBaseUrl`**          | 对外展示的完整 HTTP(S) 基础地址，例如 `https://api.example.com`；可被 **`MODEL_DB_PUBLIC_BASE_URL`** 或 CLI **`--public-base-url`** 覆盖。未配置且绑定到 `0.0.0.0`/`::` 时，会自动复用启动日志中的非回环网卡地址；不改变监听。 |
+| **`workspace`**              | **首选**：逻辑库根；每个库 **`{workspace}/{dbName}/atlas.mld`**。                                                                                                                                                              |
+| **`storageRoot` / `dbPath`** | 与 **`workspace`** 同一条合并链上的别名（见 loader）。                                                                                                                                                                         |
+| **`logDir`**                 | 日志目录；**相对路径时相对 `modeldb.config.json` 所在目录** 解析为 **`serverLogDirectory`**。                                                                                                                                  |
+| **`bufferThreshold`**        | 服务端写缓冲阈值；可被 **`MODEL_DB_BUFFER_THRESHOLD`** 覆盖。                                                                                                                                                                  |
+| **`cacheSize`**              | 当前为预留提示，不参与核心逻辑，也不限制 `cache/` 目录大小。                                                                                                                                                                   |
+| **`mode`**                   | **`"production"`**（不区分大小写）时启用访问日志；也可用 **`MODEL_DB_ACCESS_LOG=true`** 单独启用。                                                                                                                             |
+| **`designerWorkspace`**      | 保存 Query Designer 的 `sys_*` 元数据、接口注册表、发布台账和审计记录的逻辑库名；默认 **`model_designer_workspace`**。文件值优先于 **`MODEL_DB_DESIGNER_WORKSPACE`**。                                                         |
+| **`connectToken`**           | **必填**（文件、环境变量 **`MODEL_DB_CONNECT_TOKEN`** 或 CLI **`--token`** 三选一合并后非空）；否则服务启动失败。                                                                                                              |
+| **`dev`**                    | 开发诊断标志；可被 **`MODEL_DB_DEV`** 或 CLI **`--dev`** 覆盖，生产必须为 `false`。                                                                                                                                            |
+| **`autoBackup`**             | 可选的自动备份调度器；省略或 `enabled: false` 时关闭。间隔最小 **60000ms**，备份写入 **`<workspace>/modeldb/backups/`**。                                                                                                      |
+
+`autoBackup` 的完整字段为：
+
+| 字段                  | 类型     | 说明                                                                      |
+| --------------------- | -------- | ------------------------------------------------------------------------- |
+| **`enabled`**         | boolean  | 是否启用自动备份；只有 `true` 才启动调度器。                              |
+| **`intervalMs`**      | number   | 间隔毫秒数；与 `intervalMinutes` 同时存在时优先使用它，最小值为 `60000`。 |
+| **`intervalMinutes`** | number   | 间隔分钟数；未设置 `intervalMs` 时使用。                                  |
+| **`runOnStart`**      | boolean  | 服务启动后是否立即执行一轮备份，默认 `false`。                            |
+| **`reason`**          | string   | 写入备份文件名的原因标记；非法字符会转成 `_`，默认 `auto`。               |
+| **`databases`**       | string[] | 需要备份的逻辑库白名单；空数组或省略表示 `workspace` 下全部逻辑库。       |
 
 **Vault 磁盘密钥**：当前 **`ModelDBServerFileConfig`** 类型以 **`connectToken`** 与运行时环境为主；若 README 中仍提到 **`vaultSecret`**，请以你使用的 **`@mode-db/server` / 引擎版本** 的 **`config-loader`** 与 README 为准。读 **`atlas.mld`** 的进程通常还需与灌库时一致的 **`MODEL_DB_VAULT_SECRET`** 或 **`MODEL_DB_CONNECT_TOKEN`**（与集成测试 **`test/integration/vault-env.ts`** 一致）。
 
-**配置优先级**（同一键）：**CLI → `modeldb.config.json` → 环境变量 → 默认值**。当 **`host`** 为 **`0.0.0.0`** / **`::`** 时，启动控制台会自动列出机器 hostname 和非回环网卡地址；这些地址才是其它机器应使用的直连地址。
+**配置优先级**（同一键）：**CLI → `modeldb.config.json` → 环境变量 → 默认值**。`workspace`、`logDir`、`cacheSize`、`mode`、`autoBackup` 等文件专属字段没有对应 CLI 覆盖项；`MODEL_DB_ACCESS_LOG` 是只通过环境变量提供的访问日志开关。当 **`host`** 为 **`0.0.0.0`** / **`::`** 时，启动控制台会自动列出机器 hostname 和非回环网卡地址；这些地址才是其它机器应使用的直连地址。
+
+`publicBaseUrl` 与 `host` 是两个不同概念：`host` 决定服务绑定在哪些网卡上，`publicBaseUrl` 告诉接口消费者应该复制哪个 HTTP(S) 地址。它可以是局域网地址（如 `http://192.168.1.20:9091`），也可以是反向代理后的公网地址（如 `https://api.example.com`）。留空时，绑定 `0.0.0.0`/`::` 的服务会从启动时列出的非回环网卡中自动选择一个地址；多网卡、VPN、容器或反向代理场景仍建议显式填写。它必须是绝对的 `http` 或 `https` URL，不能包含用户名、密码、查询参数或片段；服务不会因为配置了它而自动打开防火墙、端口映射或 TLS。
 
 ---
 
@@ -153,15 +171,29 @@ D:\opt\modeldb-srv\
 
 ```json
 {
-  "port": 9090,
-  "host": "127.0.0.1",
+  "port": 9091,
+  "host": "0.0.0.0",
+  "advertisedHost": "192.168.1.20",
+  "publicBaseUrl": "http://192.168.1.20:9091",
   "logDir": "./logs",
   "workspace": "D:/opt/modeldb-srv/vault",
+  "bufferThreshold": 50000,
+  "cacheSize": "2GB",
+  "mode": "production",
+  "designerWorkspace": "model_designer_workspace",
   "connectToken": "在此填入长随机串-勿提交git",
-  "mode": "development",
+  "autoBackup": {
+    "enabled": false,
+    "intervalMinutes": 60,
+    "runOnStart": false,
+    "reason": "auto",
+    "databases": []
+  },
   "dev": false
 }
 ```
+
+带逐项中文注释的 JSONC 模板见仓库根目录 **`modeldb.config.example.jsonc`**。标准 JSON 文件不能包含注释；实际启动文件请使用合法 JSON，或先删除 JSONC 中的注释。
 
 ### 5.3 启动方式（避免相对路径踩坑）
 
@@ -209,10 +241,22 @@ modeldb-server start -c D:\opt\modeldb-srv\modeldb.config.json
 {
   "port": 9090,
   "host": "0.0.0.0",
+  "advertisedHost": "db.example.internal",
+  "publicBaseUrl": "https://db.example.com",
   "logDir": "./logs",
   "workspace": "/opt/modeldb/vault",
-  "connectToken": "在此填入长随机串",
+  "bufferThreshold": 50000,
+  "cacheSize": "2GB",
   "mode": "production",
+  "designerWorkspace": "model_designer_workspace",
+  "connectToken": "在此填入长随机串",
+  "autoBackup": {
+    "enabled": false,
+    "intervalMinutes": 60,
+    "runOnStart": false,
+    "reason": "auto",
+    "databases": []
+  },
   "dev": false
 }
 ```
@@ -250,9 +294,22 @@ modeldb-server start
 {
   "port": 9090,
   "host": "127.0.0.1",
+  "advertisedHost": "127.0.0.1",
+  "publicBaseUrl": "http://127.0.0.1:9090",
   "logDir": "./logs",
   "workspace": "/Users/yourname/Library/Application Support/MyApp/modeldb_vault",
+  "bufferThreshold": 50000,
+  "cacheSize": "2GB",
+  "mode": "development",
+  "designerWorkspace": "model_designer_workspace",
   "connectToken": "在此填入长随机串",
+  "autoBackup": {
+    "enabled": false,
+    "intervalMinutes": 60,
+    "runOnStart": false,
+    "reason": "auto",
+    "databases": []
+  },
   "dev": false
 }
 ```

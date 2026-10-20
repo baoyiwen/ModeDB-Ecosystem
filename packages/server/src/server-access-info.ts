@@ -98,6 +98,45 @@ function wsUrl(host: string, port: number, path = '/'): string {
   return `ws://${formatUrlHost(host)}:${port}${path}`;
 }
 
+function preferIpv4(hosts: readonly string[]): string | undefined {
+  return hosts.find((host) => !host.includes(':')) ?? hosts[0];
+}
+
+/**
+ * Resolves the base URL that can be shown to HTTP API consumers.
+ *
+ * An explicitly configured `publicBaseUrl` always wins. When the server binds
+ * to all interfaces and no public URL was configured, reuse the same
+ * non-loopback interface list shown in the startup `Network` section. A
+ * loopback bind deliberately returns `undefined`, because no network address
+ * is reachable from another machine in that mode.
+ */
+export function resolveModelDBPublicBaseUrl(
+  cfg: ResolvedModelDBServerConfig,
+  port: number,
+): string | undefined {
+  if (cfg.publicBaseUrl) {
+    return cfg.publicBaseUrl;
+  }
+
+  if (isLoopbackHost(cfg.host)) {
+    return undefined;
+  }
+
+  const preferred = cfg.advertisedHost?.trim();
+  if (preferred && !isLoopbackHost(preferred) && !isWildcardHost(preferred)) {
+    return httpUrl(preferred, port);
+  }
+
+  const candidate = isWildcardHost(cfg.host)
+    ? preferIpv4(getModelDBNetworkHosts(cfg))
+    : cfg.host.trim();
+  if (!candidate || isLoopbackHost(candidate) || isWildcardHost(candidate)) {
+    return undefined;
+  }
+  return httpUrl(candidate, port);
+}
+
 function shellQuote(value: string): string {
   return `"${value.replaceAll('"', '\\"')}"`;
 }
@@ -113,6 +152,7 @@ function commandWithConfig(command: string, configFilePath: string): string {
 export function formatModelDBStartupInfo(cfg: ResolvedModelDBServerConfig, port: number): string {
   const hosts = getModelDBClientHosts(cfg);
   const lines = ['[ModelDB] Engine is running', `  Listen: ${cfg.host}:${port}`];
+  const publicBaseUrl = resolveModelDBPublicBaseUrl(cfg, port);
 
   if (isLoopbackHost(cfg.host) || isWildcardHost(cfg.host)) {
     lines.push(`  ➜ Local:   ${httpUrl('localhost', port, '/')} (本机访问)`);
@@ -122,6 +162,12 @@ export function formatModelDBStartupInfo(cfg: ResolvedModelDBServerConfig, port:
   }
 
   lines.push('  Direct client addresses:');
+
+  if (publicBaseUrl) {
+    lines.push(
+      `    Public base URL: ${publicBaseUrl} (${cfg.publicBaseUrl ? '配置的' : '自动选择的'} HTTP 地址)`,
+    );
+  }
 
   if (hosts.length === 0) {
     lines.push('    (no client address detected)');

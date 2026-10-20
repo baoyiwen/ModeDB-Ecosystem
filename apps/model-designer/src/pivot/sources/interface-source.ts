@@ -46,6 +46,7 @@ export async function invokeInterfacePivot(
     source: options.source,
     rows: result.rows,
     page: {
+      ...(options.limit !== undefined ? { limit: options.limit } : {}),
       mode:
         options.cursor !== undefined || result.nextCursor
           ? 'cursor'

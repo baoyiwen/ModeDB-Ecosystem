@@ -1,4 +1,10 @@
 export { collectPivotLeafNodes, normalizePivotResult } from './normalizer.js';
+export {
+  formatDateTimeForDisplay,
+  isValidDateOnly,
+  toStoredDateOnly,
+  toStoredDateTime,
+} from './date-time.js';
 export { executeInterfacePivot, executeModelPivot } from './execute.js';
 export type {
   PivotDocument,
