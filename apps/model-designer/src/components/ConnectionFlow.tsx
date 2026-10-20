@@ -11,6 +11,7 @@ import {
   getStoredToken,
   persistConnectionFields,
   persistLastLibrary,
+  persistPublicBaseUrl,
   persistSessionToken,
   persistToken,
   setRememberToken,
@@ -134,6 +135,15 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
         CONNECT_MS,
         i18n.t('errors', 'connectTimeout'),
       );
+      void RClient.getManagementStatus({
+        host: host.trim(),
+        port,
+        token: token.trim(),
+      })
+        .then((status) => persistPublicBaseUrl(status.publicBaseUrl ?? ''))
+        .catch(() => {
+          // Older servers do not expose publicBaseUrl; host/port remains the fallback.
+        });
       const dbNames = list
         .filter((d) => d.name !== FIXED_MODEL_DESIGNER_DATABASE)
         .map((d) => d.name);

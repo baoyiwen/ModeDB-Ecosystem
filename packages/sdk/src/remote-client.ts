@@ -1543,6 +1543,7 @@ export class RemoteModelDBClient {
     readonly token: string;
     readonly database: string;
     readonly reason?: string;
+    readonly name?: string;
   }): Promise<ManagementBackupInfo> {
     const origin = `http://${options.host}:${options.port}`;
     const enc = encodeURIComponent(options.database.trim());
@@ -1550,7 +1551,7 @@ export class RemoteModelDBClient {
       origin,
       options.token,
       `/api/v1/management/databases/${enc}/backup`,
-      { reason: options.reason ?? 'manual' },
+      { reason: options.reason ?? 'manual', name: options.name },
     );
     return json.backup;
   }

@@ -36,6 +36,45 @@ export function getStoredPort(fallback: number): number {
   return Number.isFinite(n) && n > 0 && n < 65536 ? Math.floor(n) : fallback;
 }
 
+/** Public HTTP(S) origin advertised by the server; empty means use host/port. */
+export function getStoredPublicBaseUrl(fallback = ''): string {
+  const v = safeGet('publicBaseUrl');
+  const candidate = v != null && v.trim() !== '' ? v.trim() : fallback.trim();
+  if (!candidate) {
+    return '';
+  }
+  try {
+    const parsed = new URL(candidate);
+    if (
+      (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') ||
+      parsed.username ||
+      parsed.password ||
+      parsed.search ||
+      parsed.hash
+    ) {
+      return '';
+    }
+    return candidate.replace(/\/+$/, '');
+  } catch {
+    return '';
+  }
+}
+
+export function persistPublicBaseUrl(value: string): void {
+  const normalized = getStoredPublicBaseUrl(value);
+  if (normalized) {
+    safeSet('publicBaseUrl', normalized);
+  } else {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(PREFIX + 'publicBaseUrl');
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 /** 与服务器工作区下的逻辑库目录名一致；可被用户在门页修改并缓存。 */
 export function getStoredWorkspace(fallback: string): string {
   const v = safeGet('workspace');

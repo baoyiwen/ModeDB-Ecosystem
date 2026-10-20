@@ -73,13 +73,18 @@ export class ModelDB {
   }
 
   /** Create a server-side backup file under workspace/modeldb/backups. */
-  async createBackup(database: string, reason?: string): Promise<ManagementBackupInfo> {
+  async createBackup(
+    database: string,
+    reason?: string,
+    name?: string,
+  ): Promise<ManagementBackupInfo> {
     return RemoteModelDBClient.createBackup({
       host: this.host,
       port: this.port,
       token: this.token,
       database,
       reason,
+      name,
     });
   }
 

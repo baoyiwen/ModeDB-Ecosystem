@@ -12,7 +12,10 @@ import { useAppConfirm } from '@mode-db/data-ui';
 import { QueryInterfaceInvocationError, queryInterfaceAccessKeyDigest } from '@mode-db/sdk';
 import type { EngineModelNode, EngineRelationEdge } from '../types/engine-schema.js';
 import { useDesigner } from '../context/designer-context.js';
-import { withBusinessLibrarySession } from '../engine/business-library-session.js';
+import {
+  resolveBusinessConnectionParams,
+  withBusinessLibrarySession,
+} from '../engine/business-library-session.js';
 import { DesignerTooltip } from './base/designer-tooltip.js';
 import { IconGrid, IconLink } from './designer-icons.js';
 import { resolveI18nForLocale } from '../utils/i18n-resolve.js';
@@ -1137,6 +1140,7 @@ function QueryPreviewTable(props: { rows: readonly Record<string, unknown>[] }):
 
 export function QueryInterfaceManagerPanel(props: {
   savedQueryInterfaces: readonly SavedQueryInterfaceView[];
+  expandedInterfaceId?: string;
   onOpenQueryInterface: (id: string) => void;
   onEditQueryInterface: (id: string) => void;
   onOpenPivot: (id: string) => void;
@@ -1188,6 +1192,7 @@ export function QueryInterfaceManagerPanel(props: {
             props.savedQueryInterfaces.map((item) => (
               <QueryInterfaceDocCard
                 key={item.id}
+                defaultExpanded={item.id === props.expandedInterfaceId}
                 item={{
                   ...item,
                   auditSummary:
@@ -1198,8 +1203,8 @@ export function QueryInterfaceManagerPanel(props: {
                 locale={i18n.locale}
                 libraryCode={config.activeLibraryName ?? ''}
                 pivotLabel={i18n.t('ui', 'pivotOpenViewer')}
-                editLabel={i18n.t('ui', 'queryEditInDesigner')}
-                configureLabel={i18n.t('ui', 'queryConfigureInterface')}
+                httpEndpointLabel={i18n.t('ui', 'queryInterfaceHttpEndpoint')}
+                httpExampleLabel={i18n.t('ui', 'queryInterfaceHttpExample')}
                 onRefreshAudit={refreshAudit}
                 onOpen={() => props.onOpenQueryInterface(item.id)}
                 onEdit={() => props.onEditQueryInterface(item.id)}
@@ -1222,13 +1227,14 @@ export function QueryInterfaceManagerPanel(props: {
 
 function QueryInterfaceDocCard(props: {
   item: SavedQueryInterfaceView;
+  defaultExpanded?: boolean;
   models: readonly EngineModelNode[];
   relations: readonly EngineRelationEdge[];
   locale: string;
   libraryCode: string;
   pivotLabel: string;
-  editLabel: string;
-  configureLabel: string;
+  httpEndpointLabel: string;
+  httpExampleLabel: string;
   onRefreshAudit: () => Promise<void>;
   onOpen: () => void;
   onEdit: () => void;
@@ -1239,7 +1245,7 @@ function QueryInterfaceDocCard(props: {
   onDeprecate: () => void;
   onDelete: () => void;
 }): ReactElement {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(props.defaultExpanded ?? false);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(props.item.name);
   const [testing, setTesting] = useState(false);
@@ -1267,6 +1273,14 @@ function QueryInterfaceDocCard(props: {
     queryInterface.contract.invocation.endpoint ||
     queryInterface.contract.invocation.callableName ||
     queryInterface.name;
+  const httpEndpoint =
+    publishedRelease?.queryInterface.status === 'active'
+      ? publishedQueryInterfaceHttpEndpoint(props.libraryCode, publishedRelease.callableName)
+      : undefined;
+  const httpExample =
+    publishedRelease && httpEndpoint
+      ? publishedInterfaceHttpExample(publishedRelease, httpEndpoint)
+      : undefined;
   const primaryPath = queryInterface.query.traversal.primaryPath
     .map((nodeId) => queryInterface.designGraph.nodes.find((node) => node.id === nodeId))
     .filter((node): node is NonNullable<typeof node> => Boolean(node));
@@ -1455,9 +1469,15 @@ function QueryInterfaceDocCard(props: {
           </div>
 
           <div className="query-interface-doc-call">
-            <span>{TEXT_CALL_ENTRY}</span>
-            <code>{invocation}</code>
+            <span>{props.httpEndpointLabel || TEXT_CALL_ENTRY}</span>
+            <code>{httpEndpoint ?? invocation}</code>
           </div>
+          {httpExample ? (
+            <details className="query-execution-request query-interface-http-example">
+              <summary>{props.httpExampleLabel}</summary>
+              <pre>{httpExample}</pre>
+            </details>
+          ) : null}
 
           {hasDraftChanges && releaseImpact ? (
             <QueryReleaseImpactSummary impact={releaseImpact} />
@@ -2045,6 +2065,36 @@ function publishedInterfaceSdkExample(release: QueryInterfaceRelease): string {
     null,
     2,
   )});`;
+}
+
+function publishedQueryInterfaceHttpEndpoint(libraryCode: string, callableName: string): string {
+  const { host, port, publicBaseUrl } = resolveBusinessConnectionParams();
+  if (publicBaseUrl) {
+    return `${publicBaseUrl}/api/v1/databases/${encodeURIComponent(
+      libraryCode,
+    )}/query-interfaces/${encodeURIComponent(callableName)}`;
+  }
+  const normalizedHost = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
+  return `http://${normalizedHost}:${port}/api/v1/databases/${encodeURIComponent(
+    libraryCode,
+  )}/query-interfaces/${encodeURIComponent(callableName)}`;
+}
+
+function publishedInterfaceHttpExample(release: QueryInterfaceRelease, endpoint: string): string {
+  const parameters = Object.fromEntries(
+    release.queryInterface.contract.parameters.map((parameter) => [
+      parameter.name,
+      `<${parameter.type}>`,
+    ]),
+  );
+  const body = {
+    version: release.version,
+    parameters,
+    ...(release.queryInterface.contract.permissions?.mode === 'key'
+      ? { accessKey: '<ACCESS_KEY>' }
+      : {}),
+  };
+  return `curl -X POST ${JSON.stringify(endpoint)} \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-ModelDB-Connect-Token: <CONNECT_TOKEN>' \\\n  -d ${JSON.stringify(JSON.stringify(body, null, 2))}`;
 }
 
 const TEXT_INHERITED_FROM = '\u7ee7\u627f\u81ea';

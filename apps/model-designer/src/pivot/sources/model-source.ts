@@ -1,5 +1,11 @@
 import type { PivotDocument, PivotPageInfo, PivotSource } from '../types.js';
 import { normalizePivotResult } from '../normalizer.js';
+import { TransferError, type TransferModel } from '@mode-db/data-kit';
+import {
+  applyTransferFilters,
+  type TransferFilter,
+  type TransferFilterQuery,
+} from '../../data-transfer/filters.js';
 
 type ModelPivotSource = Extract<PivotSource, { readonly kind: 'model' }>;
 
@@ -8,6 +14,10 @@ export interface PivotModelQueryOptions {
   readonly source: ModelPivotSource;
   /** Model properties allowed in the viewer; relation children can use their relation key. */
   readonly fieldPolicy?: PivotModelFieldPolicy;
+  readonly filter?: {
+    readonly model: TransferModel;
+    readonly conditions: readonly TransferFilter[];
+  };
   readonly page?: number;
   readonly cursor?: string | null;
   readonly limit?: number;
@@ -22,7 +32,7 @@ export interface PivotModelFieldPolicy {
 /** Minimal client surface used by Pivot so the source adapter stays testable. */
 export interface PivotModelQueryClient {
   model(name: string): {
-    query(): {
+    query(): TransferFilterQuery & {
       execute(options?: {
         readonly includeRelates?: boolean;
         readonly page?: number;
@@ -118,6 +128,7 @@ function pageFromResult(
     rows: rowsFromResult(rawItems),
     page: {
       mode,
+      ...(options.limit !== undefined ? { limit: options.limit } : {}),
       ...(typeof result.page === 'number' ? { page: result.page } : {}),
       ...(typeof result.total === 'number' ? { total: result.total } : {}),
       ...(typeof result.pageCount === 'number' ? { pageCount: result.pageCount } : {}),
@@ -131,6 +142,10 @@ function pageFromResult(
 /** Execute one model query and normalize its rows for Pivot views. */
 export async function queryModelPivot(options: PivotModelQueryOptions): Promise<PivotDocument> {
   const query = options.client.model(options.source.modelName).query();
+  if (options.filter) {
+    if (options.filter.model.name !== options.source.modelName) throw new TransferError('filter');
+    applyTransferFilters(query, options.filter.model, options.filter.conditions);
+  }
   const executeOptions = {
     includeRelates: true,
     ...(options.page !== undefined ? { page: options.page } : {}),

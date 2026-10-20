@@ -99,6 +99,7 @@ function normalizePage(page: Partial<PivotResultInput['page']> | undefined) {
     ...(page?.total !== undefined ? { total: page.total } : {}),
     ...(page?.pageCount !== undefined ? { pageCount: page.pageCount } : {}),
     ...(page?.nextCursor ? { nextCursor: page.nextCursor } : {}),
+    ...(page?.limit !== undefined ? { limit: page.limit } : {}),
   } as PivotDocument['page'];
 }
 

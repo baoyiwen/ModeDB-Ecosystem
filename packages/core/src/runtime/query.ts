@@ -1908,16 +1908,13 @@ export class QueryChain<
     return out;
   }
 
-  /** Build a FieldMatchContext for a specific model, merging global locale with per-model fieldTypes. */
+  /** Field types are needed for date/numeric comparison even without a global locale. */
   private _fieldCtxForModel(modelName: string): FieldMatchContext | undefined {
-    if (!this.fieldCtx?.locale) {
-      return this.fieldCtx;
-    }
     const def = this.registry.getModel(modelName);
     if (!def || def.fieldTypes.size === 0) {
       return this.fieldCtx;
     }
-    return { locale: this.fieldCtx.locale, fieldTypes: def.fieldTypes };
+    return { locale: this.fieldCtx?.locale, fieldTypes: def.fieldTypes };
   }
 
   private async matchesPredicate(

@@ -1,6 +1,7 @@
 import type { RemoteModelDBClient } from '@mode-db/sdk';
 import {
   getSessionToken,
+  getStoredPublicBaseUrl,
   getStoredHost,
   getStoredPort,
   getStoredToken,
@@ -11,6 +12,7 @@ export interface BusinessConnectionParams {
   readonly host: string;
   readonly port: number;
   readonly token: string;
+  readonly publicBaseUrl: string;
 }
 
 /**
@@ -21,6 +23,7 @@ export function resolveBusinessConnectionParams(): BusinessConnectionParams {
     host: getStoredHost(import.meta.env.VITE_MODE_DB_HOST ?? '127.0.0.1'),
     port: getStoredPort(Number(import.meta.env.VITE_MODE_DB_PORT ?? 9090) || 9090),
     token: getSessionToken() ?? getStoredToken(import.meta.env.VITE_MODE_DB_TOKEN ?? ''),
+    publicBaseUrl: getStoredPublicBaseUrl(import.meta.env.VITE_MODE_DB_PUBLIC_BASE_URL ?? ''),
   };
 }
 

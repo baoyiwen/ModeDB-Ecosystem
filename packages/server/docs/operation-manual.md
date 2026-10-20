@@ -24,18 +24,19 @@ modeldb-server start -c modeldb.config.json --host 0.0.0.0
 pnpm run start:server:network
 ```
 
-启动成功后，控制台会按 `Local: http://localhost:<port>/`、`Network: http://<网卡 IP>:<port>/` 的形式打印本机和每个可用网卡地址，并继续打印完整 **HTTP**、**`/health`**、管理状态、**WebSocket** 和 **`/v2/stream`** 地址，以及 `info`、`ls`、`create-db`、`backup` 等常用命令。`0.0.0.0` 只表示监听所有网卡，不能直接作为客户端地址；跨机器连接时应使用控制台列出的 IP、hostname 或配置的 `advertisedHost`。
+启动成功后，控制台会按 `Local: http://localhost:<port>/`、`Network: http://<网卡 IP>:<port>/` 的形式打印本机和每个可用网卡地址，并继续打印完整 **HTTP**、**`/health`**、管理状态、**WebSocket** 和 **`/v2/stream`** 地址，以及 `info`、`ls`、`create-db`、`backup` 等常用命令。`0.0.0.0` 只表示监听所有网卡，不能直接作为客户端地址；跨机器连接时应使用控制台列出的 IP、hostname 或配置的 `advertisedHost`。如果接口位于反向代理后面，则配置 `publicBaseUrl` 为代理的 `https://` 地址。
 
 如果机器有固定域名或外部可达地址，可在配置中指定展示地址：
 
 ```json
 {
   "host": "0.0.0.0",
-  "advertisedHost": "db.example.com"
+  "advertisedHost": "db.example.com",
+  "publicBaseUrl": "https://api.example.com"
 }
 ```
 
-也可以临时使用 `--advertised-host db.example.com`。该配置只决定控制台展示的主机名，不会创建网络路由；两台服务器之间仍需有可达网络并放行对应端口。
+也可以临时使用 `--advertised-host db.example.com --public-base-url https://api.example.com`。`advertisedHost` 只决定控制台展示的主机名，`publicBaseUrl` 只决定公开 API 文档地址；两者都不会创建网络路由。
 
 局域网访问需放行防火墙对应端口；**公网**必须置于 **TLS 反向代理（WSS）** 之后，不要以明文 `ws://` 暴露到公网。
 

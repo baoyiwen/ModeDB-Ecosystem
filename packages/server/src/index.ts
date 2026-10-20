@@ -22,6 +22,7 @@ export {
   formatModelDBStartupInfo,
   getModelDBClientHosts,
   getModelDBNetworkHosts,
+  resolveModelDBPublicBaseUrl,
 } from './server-access-info.js';
 export { WriteSerializationGate } from './write-serialization-gate.js';
 export { WireRequestDispatcher } from './request-dispatcher.js';

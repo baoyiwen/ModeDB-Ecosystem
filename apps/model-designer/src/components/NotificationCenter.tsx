@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactElement } from 'react';
 import { AppNotificationCenter } from '@mode-db/data-ui';
 import { useDesigner } from '../context/designer-context.js';
 import type { NotificationLevel } from '../managers/notification-manager.js';
+import { NotificationLevelIcon } from './notification-level-icon.js';
 
 function levelLabel(
   i18n: ReturnType<typeof useDesigner>['i18n'],
@@ -31,6 +32,7 @@ export function NotificationCenter(): ReactElement {
       items={notifications.items}
       unreadCount={notifications.unreadCount}
       locale={i18n.locale}
+      renderIcon={(level) => <NotificationLevelIcon level={level} />}
       labels={{
         dismiss: i18n.t('ui', 'notifyDismiss'),
         centerTitle: i18n.t('ui', 'notifyCenterTitle'),

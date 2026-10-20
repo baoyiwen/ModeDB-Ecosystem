@@ -40,6 +40,47 @@ export interface AppSelectOptions {
   readonly emptyLabel?: ReactNode;
 }
 
+/** Themed selection list, shared by dialogs and full-page management views. */
+export function AppSelectList(props: {
+  readonly items: readonly AppSelectItem[];
+  readonly value: string | null;
+  readonly onChange: (value: string) => void;
+  readonly onActivate?: (value: string) => void;
+  readonly label?: string;
+  readonly emptyLabel: ReactNode;
+}): ReactElement {
+  return (
+    <div className="mode-ui-select-list" role="listbox" aria-label={props.label}>
+      {props.items.length === 0 ? (
+        <div className="mode-ui-select-empty">{props.emptyLabel}</div>
+      ) : (
+        props.items.map((item) => {
+          const selected = item.value === props.value;
+          return (
+            <button
+              key={item.value}
+              type="button"
+              className="mode-ui-select-option"
+              data-selected={selected ? 'true' : 'false'}
+              role="option"
+              aria-selected={selected}
+              disabled={item.disabled}
+              onClick={() => props.onChange(item.value)}
+              onDoubleClick={() => props.onActivate?.(item.value)}
+            >
+              <span className="mode-ui-select-option-copy">
+                <strong>{item.label}</strong>
+                {item.description ? <small>{item.description}</small> : null}
+              </span>
+              {item.meta ? <span className="mode-ui-select-option-meta">{item.meta}</span> : null}
+            </button>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 interface ActiveConfirm extends AppConfirmOptions {
   readonly id: number;
   readonly resolve: (value: boolean) => void;
@@ -211,42 +252,17 @@ export function AppConfirmProvider(props: {
               {activeSelect.message ? (
                 <div className="mode-ui-confirm-message">{activeSelect.message}</div>
               ) : null}
-              <div className="mode-ui-select-list" role="listbox">
-                {activeSelect.items.length === 0 ? (
-                  <div className="mode-ui-select-empty">
-                    {activeSelect.emptyLabel ?? 'No options'}
-                  </div>
-                ) : (
-                  activeSelect.items.map((item) => {
-                    const selected = item.value === activeSelect.selectedValue;
-                    return (
-                      <button
-                        key={item.value}
-                        type="button"
-                        className="mode-ui-select-option"
-                        data-selected={selected ? 'true' : 'false'}
-                        role="option"
-                        aria-selected={selected}
-                        disabled={item.disabled}
-                        onClick={() =>
-                          setActiveSelect((current) =>
-                            current ? { ...current, selectedValue: item.value } : current,
-                          )
-                        }
-                        onDoubleClick={() => settleSelect(item.value)}
-                      >
-                        <span className="mode-ui-select-option-copy">
-                          <strong>{item.label}</strong>
-                          {item.description ? <small>{item.description}</small> : null}
-                        </span>
-                        {item.meta ? (
-                          <span className="mode-ui-select-option-meta">{item.meta}</span>
-                        ) : null}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
+              <AppSelectList
+                items={activeSelect.items}
+                value={activeSelect.selectedValue}
+                emptyLabel={activeSelect.emptyLabel ?? 'No options'}
+                onChange={(value) =>
+                  setActiveSelect((current) =>
+                    current ? { ...current, selectedValue: value } : current,
+                  )
+                }
+                onActivate={(value) => settleSelect(value)}
+              />
               <div className="mode-ui-confirm-actions">
                 <button
                   type="button"

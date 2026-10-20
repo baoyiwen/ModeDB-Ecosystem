@@ -1,15 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import type { QueryInterfaceRelease } from '../query-designer/index.js';
 import {
-  DEFAULT_PIVOT_VIEW,
-  DEFAULT_PIVOT_LANGUAGE,
-  buildInterfacePivotSchema,
-  buildModelPivotSchema,
-  buildPivotModelFieldPolicy,
-  buildPivotTable,
-  formatPivotValue,
-  isPivotI18nValue,
-  resolvePivotPathLabel,
   executeInterfacePivot,
   executeModelPivot,
   type PivotDocument,
@@ -20,8 +11,20 @@ import {
 import { resolveModelDisplayName } from '../utils/i18n-resolve.js';
 import { useDesigner } from '../context/designer-context.js';
 import { DesignerSelect } from './base/designer-select.js';
-import { PivotCompositeTable, type PivotTableLabels } from './PivotCompositeTable.js';
-import { IconLink, IconRestore } from './designer-icons.js';
+import { IconRestore } from './designer-icons.js';
+import { TransferError, type TransferModel } from '@mode-db/data-kit';
+import { currentSchema, loadModelTransferSchema } from '../data-transfer/execute.js';
+import type { TransferFilter } from '../data-transfer/filters.js';
+import { ModelQueryFilters } from './ModelQueryFilters.js';
+import { InterfaceQueryInputs } from './InterfaceQueryInputs.js';
+import { preparePivotParameters, type PivotParameterDraft } from '../pivot/interface-input.js';
+import { buildPivotDisplay, readableDate, type PivotDisplayNode } from '../pivot/display.js';
+import { PivotResultTable } from './PivotResultTable.js';
+import { DataTransferPanel, type PivotTransferFeedback } from './DataTransferPanel.js';
+import '../styles/data-transfer.css';
+
+const NO_FILTERS: readonly TransferFilter[] = [];
+const NO_PARAMETERS: PivotParameterDraft = {};
 
 export interface PivotQueryInterfaceView {
   readonly id: string;
@@ -45,11 +48,50 @@ function safeJson(value: unknown): string {
   }
 }
 
+function formatValue(value: unknown, locale: string, mode: PivotLanguageMode): string {
+  if (value === null) {
+    return 'null';
+  }
+  if (value === undefined) {
+    return 'undefined';
+  }
+  if (mode === 'current' && isI18nMap(value)) {
+    return resolveI18nForLocale(value, locale, Object.values(value)[0] ?? '');
+  }
+  if (typeof value === 'string') {
+    return mode === 'raw' ? value : (readableDate(value) ?? value);
+  }
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+  return safeJson(value);
+}
+
 type PivotTreeTableRow = {
   readonly node: PivotNode;
   readonly depth: number;
   readonly recordIndex: number;
 };
+
+function translatedNodeLabel(node: PivotNode, display: PivotDisplayNode): string {
+  let current = display;
+  let label = node.key;
+  const keys = node.path
+    .filter((segment) => segment.kind === 'field')
+    .map((segment) => segment.key);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]!;
+    const child = current.children.find(
+      (item) => item.key === key || item.key === `${key}.${keys[i + 1]}`,
+    );
+    if (child) {
+      label = child.label;
+      current = child.node;
+      if (child.key.includes('.')) i++;
+    } else label = current.fields.find((field) => field.key === key)?.label ?? key;
+  }
+  return node.path.at(-1)?.kind === 'index' ? String((node.path.at(-1)?.index ?? 0) + 1) : label;
+}
 
 function collectVisibleTreeRows(
   document: PivotDocument,
@@ -97,6 +139,7 @@ function PivotHierarchyTable(props: {
   expandLabel: string;
   collapseLabel: string;
   nodeTypeLabel: (kind: PivotNode['kind']) => string;
+  display: PivotDisplayNode;
 }): ReactElement {
   const {
     document,
@@ -116,10 +159,6 @@ function PivotHierarchyTable(props: {
     () => new Set(rootNodeIds),
   );
 
-  useEffect(() => {
-    setExpandedNodeIds(new Set(rootNodeIds));
-  }, [rootNodeIds]);
-
   const rows = useMemo(
     () => collectVisibleTreeRows(document, expandedNodeIds, languageMode),
     [document, expandedNodeIds, languageMode],
@@ -138,7 +177,12 @@ function PivotHierarchyTable(props: {
   };
 
   return (
-    <div className="pivot-table-wrap pivot-hierarchy-table-wrap">
+    <div
+      className="pivot-table-wrap pivot-hierarchy-table-wrap"
+      tabIndex={0}
+      role="region"
+      aria-label={fieldLabel}
+    >
       <table className="pivot-table pivot-hierarchy-table">
         <thead>
           <tr>
@@ -154,11 +198,9 @@ function PivotHierarchyTable(props: {
               !(languageMode === 'current' && isPivotI18nValue(node.value));
             const expanded = expandedNodeIds.has(node.id);
             const label =
-              schema && node.path.length > 0
-                ? resolvePivotPathLabel(schema, node.path, locale)
-                : node.kind === 'record'
-                  ? recordLabel(String(recordIndex + 1))
-                  : node.key;
+              node.kind === 'record'
+                ? recordLabel(String(recordIndex + 1))
+                : translatedNodeLabel(node, props.display);
             return (
               <tr
                 key={node.id}
@@ -196,6 +238,7 @@ function PivotHierarchyTable(props: {
 }
 
 function PivotDocumentView(props: {
+  display: PivotDisplayNode;
   document: PivotDocument;
   schema?: PivotTableSchema;
   viewMode: PivotViewMode;
@@ -220,7 +263,6 @@ function PivotDocumentView(props: {
     languageMode,
     locale,
     emptyRowsLabel,
-    emptyScalarLabel,
     jsonLabel,
     hierarchyFieldLabel,
     hierarchyTypeLabel,
@@ -246,16 +288,16 @@ function PivotDocumentView(props: {
     if (document.rows.length === 0) {
       return <div className="pivot-empty">{emptyRowsLabel}</div>;
     }
-    if (!table) {
-      return <div className="pivot-empty">{emptyScalarLabel}</div>;
-    }
     return (
-      <PivotCompositeTable
-        key={document.createdAt}
-        table={table}
+      <PivotResultTable
+        rows={document.rawRows}
+        display={props.display}
         locale={locale}
         languageMode={languageMode}
-        labels={props.tableLabels}
+        offset={(document.page.page ?? 0) * (document.page.limit ?? 0)}
+        expandLabel={hierarchyExpandLabel}
+        collapseLabel={hierarchyCollapseLabel}
+        emptyFieldsLabel={props.emptyScalarLabel}
       />
     );
   }
@@ -266,7 +308,7 @@ function PivotDocumentView(props: {
   return (
     <PivotHierarchyTable
       document={document}
-      schema={schema}
+      display={props.display}
       locale={locale}
       languageMode={languageMode}
       fieldLabel={hierarchyFieldLabel}
@@ -282,7 +324,7 @@ function PivotDocumentView(props: {
 
 export function PivotTab(props: {
   savedQueryInterfaces: readonly PivotQueryInterfaceView[];
-  onEditQueryInterface?: (id: string) => void;
+  onBack?: () => void;
   sourceContext?:
     | { readonly kind: 'model'; readonly modelId: string }
     | { readonly kind: 'interface'; readonly interfaceId: string };
@@ -293,13 +335,43 @@ export function PivotTab(props: {
   const [sourceKind, setSourceKind] = useState<PivotSourceKind>('model');
   const [modelId, setModelId] = useState('');
   const [interfaceId, setInterfaceId] = useState('');
-  const [parametersText, setParametersText] = useState('');
-  const [viewMode, setViewMode] = useState<PivotViewMode>(DEFAULT_PIVOT_VIEW);
-  const [languageMode, setLanguageMode] = useState<PivotLanguageMode>(DEFAULT_PIVOT_LANGUAGE);
+  const [interfaceInput, setInterfaceInput] = useState<{
+    key?: string;
+    values: PivotParameterDraft;
+    accessKey: string;
+    validated: boolean;
+  }>({ values: {}, accessKey: '', validated: false });
+  const [viewMode, setViewMode] = useState<PivotViewMode>('table');
+  const [languageMode, setLanguageMode] = useState<PivotLanguageMode>('current');
   const [document, setDocument] = useState<PivotDocument | null>(null);
+  const documentRef = useRef<PivotDocument | null>(null);
   const [busy, setBusy] = useState(false);
+  const [refreshSpinning, setRefreshSpinning] = useState(false);
+  const refreshStartedAt = useRef(0);
   const [error, setError] = useState<string | null>(null);
+  const [transferFeedback, setTransferFeedback] = useState<PivotTransferFeedback | null>(null);
+  const transferBusy = transferFeedback?.busy ?? false;
+  const [filterState, setFilterState] = useState<{
+    key?: string;
+    filters: readonly TransferFilter[];
+  }>({ filters: [] });
+  const [schemaState, setSchemaState] = useState<{
+    key?: string;
+    model?: TransferModel;
+    error?: string;
+  }>({});
+  const [displaySchema, setDisplaySchema] = useState<readonly TransferModel[]>([]);
+  const [paging, setPaging] = useState<{
+    key?: string;
+    enabled: boolean;
+    page: number;
+    limit: number;
+    cursors: (string | null)[];
+  }>({ enabled: false, page: 0, limit: 50, cursors: [null] });
+  const [appliedSignature, setAppliedSignature] = useState('');
   const autoRunKeyRef = useRef<string | undefined>(undefined);
+  const requestRef = useRef(0);
+  const mountedRef = useRef(true);
 
   const modelOptions = useMemo(
     () =>
@@ -329,22 +401,135 @@ export function PivotTab(props: {
   const effectiveInterface = props.savedQueryInterfaces.find(
     (item) => item.id === effectiveInterfaceId,
   );
-  const schema = useMemo(
+  const effectiveModelPolicy = effectiveModel
+    ? modelFieldPolicy(effectiveModel, models, relations)
+    : undefined;
+  const autoRunKey =
+    effectiveSourceKind === 'model'
+      ? effectiveModel
+        ? `library:${config.activeLibraryName ?? ''}:model:${effectiveModel.id}`
+        : undefined
+      : effectiveInterface?.publishedRelease
+        ? `library:${config.activeLibraryName ?? ''}:interface:${effectiveInterface.id}:${effectiveInterface.publishedRelease.version}`
+        : undefined;
+  const sourceKeyRef = useRef(autoRunKey);
+  sourceKeyRef.current = autoRunKey;
+  const filters =
+    autoRunKeyRef.current === autoRunKey && filterState.key === autoRunKey
+      ? filterState.filters
+      : NO_FILTERS;
+  const schema = schemaState.key === autoRunKey ? schemaState.model : undefined;
+  const schemaError = schemaState.key === autoRunKey ? schemaState.error : undefined;
+  const inputIsCurrent = autoRunKeyRef.current === autoRunKey && interfaceInput.key === autoRunKey;
+  const parameterValues = inputIsCurrent ? interfaceInput.values : NO_PARAMETERS;
+  const accessKey = inputIsCurrent ? interfaceInput.accessKey : '';
+  const release = effectiveInterface?.publishedRelease;
+  const pagingCurrent = paging.key === autoRunKey;
+  const paginationMode =
+    effectiveSourceKind === 'interface'
+      ? (release?.executionTemplate.pagination.mode ?? 'none')
+      : pagingCurrent && paging.enabled
+        ? 'offset'
+        : 'none';
+  const pageIndex = pagingCurrent ? paging.page : 0;
+  const pageLimit = pagingCurrent
+    ? paging.limit
+    : effectiveSourceKind === 'interface'
+      ? (release?.executionTemplate.pagination.defaultLimit ?? 20)
+      : 50;
+  const display = useMemo(
     () =>
-      effectiveSourceKind === 'model'
-        ? effectiveModel
-          ? buildModelPivotSchema(effectiveModel.id, models, relations)
-          : undefined
-        : effectiveInterface?.publishedRelease
-          ? buildInterfacePivotSchema(effectiveInterface.publishedRelease, models, relations)
-          : undefined,
-    [effectiveSourceKind, effectiveModel, effectiveInterface, models, relations],
+      buildPivotDisplay({
+        models,
+        relations,
+        schema: displaySchema,
+        locale: i18n.locale,
+        modelId: effectiveModelId,
+        release: effectiveSourceKind === 'interface' ? release : undefined,
+        aggregateLabels: Object.fromEntries(
+          ['count', 'sum', 'avg', 'min', 'max', 'distinct'].map((fn) => [
+            fn,
+            i18n.t('ui', `pivotMetric_${fn}`),
+          ]),
+        ),
+      }),
+    [models, relations, displaySchema, i18n.locale, effectiveModelId, effectiveSourceKind, release],
   );
-  const effectiveModelPolicy = useMemo(
+  const preparedParameters = useMemo(
     () =>
-      effectiveSourceKind === 'model' && schema ? buildPivotModelFieldPolicy(schema) : undefined,
-    [effectiveSourceKind, schema],
+      preparePivotParameters(release?.queryInterface.contract.parameters ?? [], parameterValues),
+    [release, parameterValues],
   );
+  const needsInterfaceInput =
+    preparedParameters.issues.length > 0 ||
+    (release?.queryInterface.contract.permissions?.mode === 'key' && !accessKey);
+  const querySignature = JSON.stringify([
+    autoRunKey,
+    effectiveSourceKind === 'model' ? filters : [parameterValues, accessKey],
+  ]);
+  const pendingConditions = Boolean(document && appliedSignature !== querySignature);
+
+  useEffect(() => {
+    let active = true;
+    setDisplaySchema([]);
+    if (config.activeLibraryName)
+      void currentSchema(config.activeLibraryName, models, i18n.locale)
+        .then((schema) => {
+          if (active) setDisplaySchema(schema.models);
+        })
+        .catch(() => {
+          /* Designer labels remain available when catalog metadata cannot be read. */
+        });
+    return () => {
+      active = false;
+    };
+  }, [autoRunKey, config.activeLibraryName, models, i18n.locale]);
+
+  useEffect(() => {
+    let active = true;
+    if (effectiveSourceKind !== 'model' || !effectiveModel || !config.activeLibraryName) return;
+    const key = autoRunKey;
+    setSchemaState({ key });
+    void loadModelTransferSchema({
+      database: config.activeLibraryName,
+      modelName: effectiveModel.model_name,
+      models,
+      locale: i18n.locale,
+    })
+      .then(({ model }) => {
+        if (active) setSchemaState({ key, model });
+      })
+      .catch((cause: unknown) => {
+        if (active)
+          setSchemaState({
+            key,
+            error:
+              cause instanceof TransferError
+                ? i18n.t('ui', `transferIssue_${cause.code}`)
+                : cause instanceof Error
+                  ? cause.message
+                  : String(cause),
+          });
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    autoRunKey,
+    config.activeLibraryName,
+    effectiveModel,
+    effectiveSourceKind,
+    i18n,
+    i18n.locale,
+    models,
+  ]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!modelId || !models.some((model) => model.id === modelId)) {
@@ -361,278 +546,424 @@ export function PivotTab(props: {
     }
   }, [interfaceId, interfaceOptions]);
 
-  const execute = useCallback(async (): Promise<void> => {
-    const libraryName = config.activeLibraryName;
-    if (!libraryName) {
-      setError(i18n.t('ui', 'pivotNoLibrary'));
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      let parameters: Readonly<Record<string, unknown>> | undefined;
-      if (parametersText.trim()) {
-        const parsed: unknown = JSON.parse(parametersText);
-        if (!isRecord(parsed)) {
-          throw new Error(i18n.t('ui', 'pivotParametersObject'));
-        }
-        parameters = parsed;
+  const execute = useCallback(
+    async (
+      signal?: AbortSignal,
+      navigation?: { page: number; limit: number; enabled?: boolean },
+    ): Promise<boolean> => {
+      const libraryName = config.activeLibraryName;
+      if (!libraryName) {
+        setError(i18n.t('ui', 'pivotNoLibrary'));
+        return false;
       }
-      const next =
-        effectiveSourceKind === 'model'
-          ? effectiveModel
-            ? await executeModelPivot({
-                libraryName,
-                source: {
-                  kind: 'model',
-                  modelId: effectiveModel.id,
-                  modelName: effectiveModel.model_name,
-                },
-                fieldPolicy: effectiveModelPolicy,
-              })
-            : (() => {
-                throw new Error(i18n.t('ui', 'pivotSelectModel'));
-              })()
-          : effectiveInterface?.publishedRelease
-            ? await executeInterfacePivot({
-                libraryName,
-                source: {
-                  kind: 'interface',
-                  interfaceId: effectiveInterface.id,
-                  callableName: effectiveInterface.publishedRelease.callableName,
-                  version: effectiveInterface.publishedRelease.version,
-                },
-                parameters,
-              })
-            : (() => {
-                throw new Error(i18n.t('ui', 'pivotSelectPublishedInterface'));
-              })();
-      setDocument(next);
-    } catch (cause) {
-      setDocument(null);
-      setError(cause instanceof Error ? cause.message : String(cause));
-    } finally {
-      setBusy(false);
-    }
-  }, [
-    config.activeLibraryName,
-    effectiveInterface,
-    effectiveModel,
-    effectiveModelPolicy,
-    effectiveSourceKind,
-    i18n,
-    parametersText,
-  ]);
+      const request = ++requestRef.current;
+      const isCurrent = (): boolean =>
+        mountedRef.current && requestRef.current === request && sourceKeyRef.current === autoRunKey;
+      setBusy(true);
+      setError(null);
+      const mode =
+        effectiveSourceKind === 'model' && navigation?.enabled !== undefined
+          ? navigation.enabled
+            ? 'offset'
+            : 'none'
+          : paginationMode;
+      const conditionsChanged = appliedSignature !== querySignature;
+      const targetPage = navigation?.page ?? (conditionsChanged ? 0 : pageIndex);
+      const limit = navigation?.limit ?? pageLimit;
+      const cursors =
+        conditionsChanged || (navigation?.limit !== undefined && navigation.limit !== pageLimit)
+          ? [null]
+          : pagingCurrent
+            ? [...paging.cursors]
+            : [null];
+      try {
+        if (effectiveSourceKind === 'interface') {
+          setInterfaceInput({
+            key: autoRunKey,
+            values: parameterValues,
+            accessKey,
+            validated: true,
+          });
+          if (preparedParameters.issues.length)
+            throw new Error(i18n.t('ui', 'pivotParameterValidationFailed'));
+          if (release?.queryInterface.contract.permissions?.mode === 'key' && !accessKey)
+            throw new Error(i18n.t('ui', 'pivotAccessKeyRequired'));
+        }
+        if (effectiveSourceKind === 'model' && filters.length && !schema)
+          throw new Error(schemaError ?? i18n.t('ui', 'transferLoadingSchema'));
+        const next =
+          effectiveSourceKind === 'model'
+            ? effectiveModel
+              ? await executeModelPivot({
+                  libraryName,
+                  source: {
+                    kind: 'model',
+                    modelId: effectiveModel.id,
+                    modelName: effectiveModel.model_name,
+                  },
+                  fieldPolicy: effectiveModelPolicy,
+                  filter: schema ? { model: schema, conditions: filters } : undefined,
+                  ...(mode === 'offset' ? { page: targetPage, limit } : {}),
+                })
+              : (() => {
+                  throw new Error(i18n.t('ui', 'pivotSelectModel'));
+                })()
+            : effectiveInterface?.publishedRelease
+              ? await executeInterfacePivot({
+                  libraryName,
+                  source: {
+                    kind: 'interface',
+                    interfaceId: effectiveInterface.id,
+                    callableName: effectiveInterface.publishedRelease.callableName,
+                    version: effectiveInterface.publishedRelease.version,
+                  },
+                  parameters: preparedParameters.values,
+                  accessKey: accessKey || undefined,
+                  ...(mode === 'offset'
+                    ? { page: targetPage, limit }
+                    : mode === 'cursor'
+                      ? { cursor: cursors[targetPage] ?? null, limit }
+                      : {}),
+                })
+              : (() => {
+                  throw new Error(i18n.t('ui', 'pivotSelectPublishedInterface'));
+                })();
+        if (!isCurrent() || signal?.aborted) return false;
+        setDocument(next);
+        documentRef.current = next;
+        setAppliedSignature(querySignature);
+        if (next.page.nextCursor) cursors[targetPage + 1] = next.page.nextCursor;
+        setPaging({ key: autoRunKey, enabled: mode !== 'none', page: targetPage, limit, cursors });
+        return true;
+      } catch (cause) {
+        if (isCurrent() && !signal?.aborted) {
+          setError(
+            cause instanceof TransferError
+              ? i18n.t('ui', `transferIssue_${cause.code}`)
+              : cause instanceof Error
+                ? cause.message
+                : String(cause),
+          );
+        }
+        return false;
+      } finally {
+        if (isCurrent()) setBusy(false);
+      }
+    },
+    [
+      config.activeLibraryName,
+      effectiveInterface,
+      effectiveModel,
+      effectiveModelPolicy,
+      effectiveSourceKind,
+      i18n,
+      parameterValues,
+      preparedParameters,
+      accessKey,
+      release,
+      autoRunKey,
+      filters,
+      schema,
+      schemaError,
+      querySignature,
+      appliedSignature,
+      paginationMode,
+      pageIndex,
+      pageLimit,
+      paging,
+      pagingCurrent,
+      pendingConditions,
+    ],
+  );
 
   const executeRef = useRef(execute);
   useEffect(() => {
     executeRef.current = execute;
   }, [execute]);
 
-  const autoRunKey =
-    effectiveSourceKind === 'model'
-      ? effectiveModel
-        ? `library:${config.activeLibraryName ?? ''}:model:${effectiveModel.id}`
-        : undefined
-      : effectiveInterface?.publishedRelease
-        ? `library:${config.activeLibraryName ?? ''}:interface:${effectiveInterface.id}:${effectiveInterface.publishedRelease.version}`
-        : undefined;
   useEffect(() => {
-    if (!autoRunKey || autoRunKeyRef.current === autoRunKey) {
+    if (busy) {
+      refreshStartedAt.current = performance.now();
+      setRefreshSpinning(true);
+      return;
+    }
+    // Keep quick local queries visible without delaying the query or unlocking controls later.
+    const timer = window.setTimeout(
+      () => setRefreshSpinning(false),
+      Math.max(0, 600 - (performance.now() - refreshStartedAt.current)),
+    );
+    return () => window.clearTimeout(timer);
+  }, [busy]);
+
+  useEffect(() => {
+    if (autoRunKeyRef.current === autoRunKey) {
       return;
     }
     autoRunKeyRef.current = autoRunKey;
-    void executeRef.current();
+    setFilterState({ key: autoRunKey, filters: NO_FILTERS });
+    setInterfaceInput({ key: autoRunKey, values: {}, accessKey: '', validated: false });
+    setDocument(null);
+    documentRef.current = null;
+    setError(null);
+    setBusy(false);
+    setViewMode('table');
+    if (autoRunKey && !(effectiveSourceKind === 'interface' && needsInterfaceInput))
+      void executeRef.current();
+    // Parameter edits apply only on Refresh; automatic loading is scoped to a source/release change.
   }, [autoRunKey]);
+
+  const refreshButton = (
+    <button
+      type="button"
+      className="designer-btn designer-btn-primary pivot-run-button"
+      disabled={busy || transferBusy}
+      aria-busy={busy}
+      data-spinning={refreshSpinning || busy}
+      onClick={() => void execute()}
+    >
+      <span className="pivot-refresh-icon" aria-hidden="true">
+        <IconRestore />
+      </span>
+      <span>{i18n.t('ui', 'pivotRefresh')}</span>
+    </button>
+  );
+  const schemaLoading =
+    effectiveSourceKind === 'model' && effectiveModel && !schema && !schemaError;
+  const statusError = error || schemaError || transferFeedback?.error;
+  const statusText = transferBusy
+    ? transferFeedback?.progress
+      ? `${i18n.t('ui', `transferStage_${transferFeedback.progress.stage}`)}${
+          transferFeedback.progress.total
+            ? ` · ${transferFeedback.progress.completed} / ${transferFeedback.progress.total}`
+            : ''
+        }`
+      : i18n.t('ui', 'transferCancelling')
+    : busy
+      ? i18n.t('ui', 'pivotRefreshing')
+      : statusError
+        ? `${statusError}${error && document ? ` · ${i18n.t('ui', 'pivotPreviousResult')}` : ''}`
+        : pendingConditions
+          ? i18n.t(
+              'ui',
+              effectiveSourceKind === 'interface'
+                ? 'pivotParametersPending'
+                : 'transferFiltersPending',
+            )
+          : schemaLoading
+            ? i18n.t('ui', 'transferLoadingSchema')
+            : transferFeedback?.message || '';
 
   return (
     <div className="pivot-tab">
-      <div className="pivot-tab-header">
-        <div>
-          <div className="designer-panel-section-title">
-            {effectiveSourceKind === 'interface'
-              ? effectiveInterface?.name
-              : effectiveModel
-                ? resolveModelDisplayName(effectiveModel, i18n.locale)
-                : i18n.t('ui', 'pivotTitle')}
-          </div>
-          {effectiveSourceKind === 'interface' && effectiveInterface?.publishedRelease ? (
-            <span className="pivot-release-version">
-              v{effectiveInterface.publishedRelease.version}
-            </span>
+      <div
+        className="pivot-workspace-toolbar"
+        data-busy={busy || transferBusy}
+        role="region"
+        aria-label={i18n.t('ui', 'pivotToolbar')}
+      >
+        <div className="pivot-tab-header">
+          {props.onBack ? (
+            <button type="button" className="designer-btn" onClick={props.onBack}>
+              {i18n.t('ui', 'pivotBack')}
+            </button>
           ) : null}
-        </div>
-        <div className="pivot-header-actions">
+          <div className="pivot-source-identity">
+            <span className="designer-field-label">
+              {i18n.t('ui', effectiveSourceKind === 'model' ? 'pivotModel' : 'pivotInterface')}
+            </span>
+            <strong>
+              {effectiveSourceKind === 'model'
+                ? effectiveModel
+                  ? resolveModelDisplayName(effectiveModel, i18n.locale)
+                  : '-'
+                : (effectiveInterface?.name ?? '-')}
+            </strong>
+            {effectiveSourceKind === 'interface' && release ? (
+              <span className="pivot-source-version">v{release.version}</span>
+            ) : null}
+          </div>
           <span className="pivot-library-badge">{config.activeLibraryName ?? '-'}</span>
-          {effectiveSourceKind === 'interface' &&
-          effectiveInterface &&
-          props.onEditQueryInterface ? (
-            <button
-              type="button"
-              className="designer-btn"
-              onClick={() => props.onEditQueryInterface?.(effectiveInterface.id)}
+        </div>
+
+        <div className="pivot-source-card">
+          {!props.sourceContext ? (
+            <div
+              className="pivot-source-tabs"
+              role="tablist"
+              aria-label={i18n.t('ui', 'pivotSource')}
             >
-              <IconLink />
-              {i18n.t('ui', 'queryEditInDesigner')}
-            </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sourceKind === 'model'}
+                className={sourceKind === 'model' ? 'is-active' : ''}
+                onClick={() => setSourceKind('model')}
+                disabled={busy || transferBusy}
+              >
+                {i18n.t('ui', 'pivotSourceModel')}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={sourceKind === 'interface'}
+                className={sourceKind === 'interface' ? 'is-active' : ''}
+                onClick={() => setSourceKind('interface')}
+                disabled={busy || transferBusy}
+              >
+                {i18n.t('ui', 'pivotSourceInterface')}
+              </button>
+            </div>
           ) : null}
-          <button
-            type="button"
-            className="designer-btn designer-btn-primary pivot-run-button"
-            disabled={busy}
-            onClick={() => void execute()}
-          >
-            <IconRestore />
-            {busy ? i18n.t('ui', 'pivotRunning') : i18n.t('ui', 'pivotRefresh')}
-          </button>
-        </div>
-      </div>
-
-      <div className="pivot-source-card">
-        {!props.sourceContext ? (
-          <div
-            className="pivot-source-tabs"
-            role="tablist"
-            aria-label={i18n.t('ui', 'pivotSource')}
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={sourceKind === 'model'}
-              className={sourceKind === 'model' ? 'is-active' : ''}
-              onClick={() => setSourceKind('model')}
-            >
-              {i18n.t('ui', 'pivotSourceModel')}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={sourceKind === 'interface'}
-              className={sourceKind === 'interface' ? 'is-active' : ''}
-              onClick={() => setSourceKind('interface')}
-            >
-              {i18n.t('ui', 'pivotSourceInterface')}
-            </button>
-          </div>
-        ) : null}
-        {effectiveSourceKind === 'model' ? (
-          props.sourceContext ? null : (
+          {effectiveSourceKind === 'model' ? (
+            props.sourceContext ? null : (
+              <label className="designer-field">
+                <span className="designer-field-label">{i18n.t('ui', 'pivotModel')}</span>
+                <DesignerSelect
+                  value={modelId}
+                  options={modelOptions}
+                  onChange={setModelId}
+                  disabled={busy || transferBusy}
+                  searchable
+                  emptyLabel={i18n.t('ui', 'pivotNoModels')}
+                />
+              </label>
+            )
+          ) : props.sourceContext ? null : (
             <label className="designer-field">
-              <span className="designer-field-label">{i18n.t('ui', 'pivotModel')}</span>
+              <span className="designer-field-label">{i18n.t('ui', 'pivotInterface')}</span>
               <DesignerSelect
-                value={modelId}
-                options={modelOptions}
-                onChange={setModelId}
+                value={interfaceId}
+                options={interfaceOptions}
+                onChange={setInterfaceId}
+                disabled={busy || transferBusy}
                 searchable
-                emptyLabel={i18n.t('ui', 'pivotNoModels')}
+                emptyLabel={i18n.t('ui', 'pivotNoPublishedInterfaces')}
               />
             </label>
-          )
-        ) : props.sourceContext ? null : (
-          <label className="designer-field">
-            <span className="designer-field-label">{i18n.t('ui', 'pivotInterface')}</span>
-            <DesignerSelect
-              value={interfaceId}
-              options={interfaceOptions}
-              onChange={setInterfaceId}
-              searchable
-              emptyLabel={i18n.t('ui', 'pivotNoPublishedInterfaces')}
+          )}
+          {effectiveSourceKind === 'interface' && release ? (
+            <InterfaceQueryInputs
+              key={`interface-input:${autoRunKey}`}
+              release={release}
+              models={models}
+              relations={relations}
+              values={parameterValues}
+              issues={inputIsCurrent && interfaceInput.validated ? preparedParameters.issues : []}
+              accessKey={accessKey}
+              needsInput={Boolean(needsInterfaceInput)}
+              disabled={busy || transferBusy}
+              onChange={(values) =>
+                setInterfaceInput({
+                  key: autoRunKey,
+                  values,
+                  accessKey,
+                  validated: interfaceInput.validated,
+                })
+              }
+              onAccessKeyChange={(value) =>
+                setInterfaceInput({
+                  key: autoRunKey,
+                  values: parameterValues,
+                  accessKey: value,
+                  validated: interfaceInput.validated,
+                })
+              }
             />
-          </label>
-        )}
-        {effectiveSourceKind === 'interface' ? (
-          <details
-            className="pivot-parameter-section"
-            key={effectiveInterfaceId}
-            open={
-              effectiveInterface?.publishedRelease?.queryInterface.contract.parameters.some(
-                (parameter) => parameter.required && parameter.defaultValue === undefined,
-              ) || undefined
-            }
-          >
-            <summary>
-              {i18n.t('ui', 'pivotParameters')}
-              <span>
-                {effectiveInterface?.publishedRelease?.queryInterface.contract.parameters.length ??
-                  0}
-              </span>
-            </summary>
-            <label className="designer-field">
-              <span className="designer-field-label">{i18n.t('ui', 'pivotParameters')}</span>
-              <textarea
-                className="designer-textarea pivot-parameters"
-                value={parametersText}
-                onChange={(event) => setParametersText(event.target.value)}
-                placeholder={'{\n  "id": "..."\n}'}
-                spellCheck={false}
-              />
-            </label>
-          </details>
-        ) : null}
-      </div>
-
-      <div className="pivot-result-toolbar">
-        <div className="pivot-toolbar-group" role="group" aria-label={i18n.t('ui', 'pivotView')}>
-          <span>{i18n.t('ui', 'pivotView')}</span>
-          <button
-            type="button"
-            className={viewMode === 'table' ? 'is-active' : ''}
-            aria-pressed={viewMode === 'table'}
-            onClick={() => setViewMode('table')}
-          >
-            {i18n.t('ui', 'pivotTable')}
-          </button>
-          <button
-            type="button"
-            className={viewMode === 'hierarchy' ? 'is-active' : ''}
-            aria-pressed={viewMode === 'hierarchy'}
-            onClick={() => setViewMode('hierarchy')}
-          >
-            {i18n.t('ui', 'pivotHierarchy')}
-          </button>
-          <button
-            type="button"
-            className={viewMode === 'json' ? 'is-active' : ''}
-            aria-pressed={viewMode === 'json'}
-            onClick={() => setViewMode('json')}
-          >
-            {i18n.t('ui', 'pivotJson')}
-          </button>
+          ) : null}
+          {effectiveSourceKind === 'model' && effectiveModel ? (
+            <ModelQueryFilters
+              key={`model-filters:${autoRunKey}`}
+              schema={schema}
+              filters={filters}
+              disabled={busy || transferBusy}
+              onChange={(next) => setFilterState({ key: autoRunKey, filters: next })}
+            />
+          ) : null}
+          {config.activeLibraryName &&
+          ((effectiveSourceKind === 'model' && effectiveModel) ||
+            (effectiveSourceKind === 'interface' && release)) ? (
+            <DataTransferPanel
+              key={`transfer:${autoRunKey}`}
+              modelName={
+                effectiveSourceKind === 'model' ? effectiveModel!.model_name : release!.callableName
+              }
+              database={config.activeLibraryName}
+              schema={schema}
+              filters={filters}
+              disabled={busy}
+              beforeExport={execute}
+              onFeedbackChange={setTransferFeedback}
+              refreshControl={refreshButton}
+              queryInterface={
+                effectiveSourceKind === 'interface' && release
+                  ? { release, getDocument: () => documentRef.current }
+                  : undefined
+              }
+            />
+          ) : (
+            <div className="pivot-source-actions">{refreshButton}</div>
+          )}
         </div>
-        <div
-          className="pivot-toolbar-group"
-          role="group"
-          aria-label={i18n.t('ui', 'pivotLanguageMode')}
-        >
-          <span>{i18n.t('ui', 'pivotLanguageMode')}</span>
-          {(['current', 'raw', 'all'] as const).map((mode) => (
+
+        <div className="pivot-result-toolbar">
+          <div className="pivot-toolbar-group" role="group" aria-label={i18n.t('ui', 'pivotView')}>
+            <span>{i18n.t('ui', 'pivotView')}</span>
             <button
-              key={mode}
               type="button"
-              className={languageMode === mode ? 'is-active' : ''}
-              aria-pressed={languageMode === mode}
-              onClick={() => setLanguageMode(mode)}
+              className={viewMode === 'table' ? 'is-active' : ''}
+              aria-pressed={viewMode === 'table'}
+              onClick={() => setViewMode('table')}
             >
-              {i18n.t('ui', `pivotLanguage_${mode}`)}
+              {i18n.t('ui', 'pivotTable')}
             </button>
-          ))}
+            <button
+              type="button"
+              className={viewMode === 'hierarchy' ? 'is-active' : ''}
+              aria-pressed={viewMode === 'hierarchy'}
+              onClick={() => setViewMode('hierarchy')}
+            >
+              {i18n.t('ui', 'pivotHierarchy')}
+            </button>
+            <button
+              type="button"
+              className={viewMode === 'json' ? 'is-active' : ''}
+              aria-pressed={viewMode === 'json'}
+              onClick={() => setViewMode('json')}
+            >
+              {i18n.t('ui', 'pivotJson')}
+            </button>
+          </div>
+          <div
+            className="pivot-toolbar-group"
+            role="group"
+            aria-label={i18n.t('ui', 'pivotLanguageMode')}
+          >
+            <span>{i18n.t('ui', 'pivotLanguageMode')}</span>
+            {(['current', 'raw', 'all'] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className={languageMode === mode ? 'is-active' : ''}
+                aria-pressed={languageMode === mode}
+                onClick={() => setLanguageMode(mode)}
+              >
+                {i18n.t('ui', `pivotLanguage_${mode}`)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-
-      {error ? (
-        <div className="pivot-error" role="alert">
-          {error}
-        </div>
-      ) : null}
-      {document ? (
-        <>
-          <div className="pivot-result-meta">
-            <span>{i18n.t('ui', 'pivotRows', { count: String(document.rows.length) })}</span>
-            <span>
-              {document.page.mode === 'none' ? i18n.t('ui', 'pivotUnpaged') : document.page.mode}
-            </span>
-          </div>
+      <div
+        className="pivot-result-scroll"
+        role="region"
+        aria-label={i18n.t('ui', 'pivotResults')}
+        aria-busy={busy}
+        tabIndex={0}
+      >
+        {document ? (
           <PivotDocumentView
+            key={`${autoRunKey}:${appliedSignature}:${document.page.mode}:${document.page.page ?? 0}:${document.page.limit ?? 0}`}
+            display={display}
             document={document}
             schema={schema}
             viewMode={viewMode}
@@ -662,10 +993,130 @@ export function PivotTab(props: {
               rows: (count) => i18n.t('ui', 'pivotRows', { count: String(count) }),
             }}
           />
-        </>
-      ) : (
-        <div className="pivot-empty">{i18n.t('ui', 'pivotEmpty')}</div>
-      )}
+        ) : (
+          <div className="pivot-empty">
+            {busy ? i18n.t('ui', 'pivotRefreshing') : i18n.t('ui', 'pivotEmpty')}
+          </div>
+        )}
+      </div>
+      <footer className="pivot-workspace-footer">
+        <div
+          className={`pivot-workspace-status${!busy && !transferBusy && statusError ? ' is-error' : ''}`}
+        >
+          <span
+            className="pivot-status-text"
+            role={!busy && !transferBusy && statusError ? 'alert' : 'status'}
+            aria-live="polite"
+            tabIndex={statusText ? 0 : undefined}
+            title={statusText}
+          >
+            {statusText}
+          </span>
+          {transferBusy ? (
+            <>
+              <progress
+                aria-label={statusText}
+                {...(transferFeedback?.progress?.total
+                  ? {
+                      value: transferFeedback.progress.completed,
+                      max: transferFeedback.progress.total,
+                    }
+                  : {})}
+              />
+              <button type="button" className="designer-btn" onClick={transferFeedback?.cancel}>
+                {i18n.t('ui', 'transferCancel')}
+              </button>
+            </>
+          ) : null}
+        </div>
+        <div className="pivot-pagination" aria-label={i18n.t('ui', 'pivotPagination')}>
+          <span className="pivot-row-count">
+            {document ? i18n.t('ui', 'pivotRows', { count: String(document.rows.length) }) : '—'}
+            {document?.page.total !== undefined
+              ? ` · ${i18n.t('ui', 'pivotTotal', { count: String(document.page.total) })}`
+              : ''}
+          </span>
+          {effectiveSourceKind === 'model' ? (
+            <label className="pivot-paging-switch">
+              <input
+                type="checkbox"
+                role="switch"
+                checked={paginationMode !== 'none'}
+                disabled={busy || transferBusy || !document}
+                onChange={(event) =>
+                  void execute(undefined, {
+                    page: 0,
+                    limit: pageLimit,
+                    enabled: event.target.checked,
+                  })
+                }
+              />
+              {i18n.t('ui', 'pivotPagination')}
+            </label>
+          ) : null}
+          {paginationMode === 'none' ? <span>{i18n.t('ui', 'pivotUnpaged')}</span> : null}
+          <div className="pivot-page-controls" hidden={paginationMode === 'none'}>
+            <label>
+              {i18n.t('ui', 'pivotPageSize')}{' '}
+              <select
+                className="designer-input"
+                value={pageLimit}
+                disabled={busy || transferBusy || !document}
+                onChange={(event) =>
+                  void execute(undefined, { page: 0, limit: Number(event.target.value) })
+                }
+              >
+                {[...new Set([10, 20, 50, 100, pageLimit])]
+                  .filter(
+                    (value) =>
+                      value <=
+                      (effectiveSourceKind === 'interface'
+                        ? (release?.executionTemplate.pagination.maxLimit ?? 10000)
+                        : 100),
+                  )
+                  .sort((a, b) => a - b)
+                  .map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="designer-btn"
+              disabled={busy || transferBusy || !document || pageIndex === 0 || pendingConditions}
+              onClick={() => void execute(undefined, { page: pageIndex - 1, limit: pageLimit })}
+            >
+              {i18n.t('ui', 'pivotPreviousPage')}
+            </button>
+            <span className="pivot-page-number">
+              {i18n.t('ui', 'pivotPageNumber', { page: String(pageIndex + 1) })}
+              {document?.page.pageCount !== undefined
+                ? ` / ${Math.max(1, document.page.pageCount)}`
+                : ''}
+            </span>
+            <button
+              type="button"
+              className="designer-btn"
+              disabled={
+                busy ||
+                transferBusy ||
+                !document ||
+                pendingConditions ||
+                (paginationMode === 'cursor'
+                  ? !document.page.nextCursor
+                  : document.page.pageCount !== undefined
+                    ? pageIndex + 1 >= document.page.pageCount
+                    : document.rows.length < pageLimit)
+              }
+              onClick={() => void execute(undefined, { page: pageIndex + 1, limit: pageLimit })}
+            >
+              {i18n.t('ui', 'pivotNextPage')}
+            </button>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

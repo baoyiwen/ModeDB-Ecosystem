@@ -138,6 +138,8 @@ modeldb-server start --help
 | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | **`connectToken`**         | 长随机串；与所有合法客户端一致。                                                                                                          |
 | **`port` / `host`**        | 监听地址；公网须配合 **TLS 终结（WSS）** 与防火墙。                                                                                       |
+| **`advertisedHost`**       | 启动输出中展示给客户端的主机名或 IP；只影响提示文字。                                                                                     |
+| **`publicBaseUrl`**        | Query Designer 和接口文档使用的公开 HTTP(S) 基础地址；只影响生成的调用链接，不改变监听。                                                  |
 | **`workspace` / `logDir`** | 一般保持模板中的 **`vault`** / **`logs`** 即可（相对配置文件目录）；高级场景见 **[modeldb-config-guide.md](./modeldb-config-guide.md)**。 |
 | **`vaultSecret`**（可选）  | 若与 **`connectToken`** 派生策略不同，可单独配置 Vault 口令；也可统一用环境变量 **`MODEL_DB_VAULT_SECRET`**。                             |
 

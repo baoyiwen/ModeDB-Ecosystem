@@ -23,6 +23,7 @@ export interface PivotPageInfo {
   readonly total?: number;
   readonly pageCount?: number;
   readonly nextCursor?: string;
+  readonly limit?: number;
 }
 
 export interface PivotPathSegment {

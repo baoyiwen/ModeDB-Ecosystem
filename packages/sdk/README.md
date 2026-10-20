@@ -27,6 +27,8 @@ ModelDB **远程客户端**：通过 WebSocket 连接 **`@mode-db/server`**，�
 ### 备份文件迁移
 
 ```typescript
+const created = await db.createBackup('Asset_Graph', 'manual', '发布前快照');
+// created.name is the optional display name; created.fileName is the safe server identifier.
 const backups = await db.listBackups('Asset_Graph');
 const file = await db.downloadBackup(backups[0].fileName);
 
@@ -36,6 +38,7 @@ await targetDb.restoreBackup('Asset_Graph_Copy', imported.fileName);
 ```
 
 `downloadBackup` 返回原始备份 `Blob`，`importBackup` 会把经过服务端校验的文件放入目标服务器的 `modeldb/backups/` 目录。
+可选备份名称会随创建、列表、下载、导入和恢复保留，旧备份仍兼容。名称支持 1-120 个字符（去除首尾空白后计算），不允许控制字符。
 
 ## 安装与构建
 
@@ -130,6 +133,21 @@ if (first.nextCursor) {
 ```
 
 返回值的 `rows` 已按接口输出契约完成字段筛选和重命名，并包含 `version`、`callableName` 以及适用的分页元数据。
+
+如果调用方不希望安装 SDK，也可以使用服务端提供的普通 JSON HTTP 入口。它仍然只执行已发布的 active release，并保留版本、参数、访问密钥、限流和审计规则：
+
+```bash
+curl -X POST "http://127.0.0.1:9091/api/v1/databases/railway_domain_v1/query-interfaces/itemsByCategory" \
+  -H "Content-Type: application/json" \
+  -H "X-ModelDB-Connect-Token: <CONNECT_TOKEN>" \
+  -d '{
+    "version": "1.0.0",
+    "parameters": { "category": "A" },
+    "accessKey": "<ACCESS_KEY>"
+  }'
+```
+
+HTTP 返回与 SDK 的 `invokeQueryInterface` 相同的接口结果 JSON；调用地址中的数据库名和 callable name 应使用 URL 编码。
 
 调用失败时可以通过结构化异常稳定判断错误类型，不需要解析错误文本：
 

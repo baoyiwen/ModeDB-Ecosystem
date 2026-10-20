@@ -65,7 +65,9 @@ export class AuthoringBridge {
       atlas,
       storageRoot: this.storageRoot,
       connectToken: ct,
-      engineLogger: true as const,
+      // Server startup owns the process-wide logger. Opening a library must
+      // not redirect it into the vault or reset its access-log configuration.
+      engineLogger: false as const,
       ...flushOpt,
     };
 

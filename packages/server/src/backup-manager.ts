@@ -9,6 +9,7 @@ import {
 } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { assertFlatGraphSegment } from '@mode-db/common';
+import { randomUUID } from 'node:crypto';
 
 export interface ModelDbBackupFileEntry {
   readonly path: string;
@@ -18,6 +19,7 @@ export interface ModelDbBackupFileEntry {
 
 export interface ModelDbBackupPayload {
   readonly format: 'modeldb.backup.v1';
+  readonly name?: string;
   readonly database: string;
   readonly createdAt: string;
   readonly kind: 'nested' | 'flat';
@@ -26,6 +28,7 @@ export interface ModelDbBackupPayload {
 
 export interface ModelDbBackupInfo {
   readonly fileName: string;
+  readonly name?: string;
   readonly database: string;
   readonly createdAt: string;
   readonly bytes: number;
@@ -38,6 +41,21 @@ function backupRoot(workspaceRoot: string): string {
 
 function safeTimestamp(date = new Date()): string {
   return date.toISOString().replace(/[:.]/g, '-');
+}
+
+export function normalizeBackupName(value: unknown): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (
+    typeof value !== 'string' ||
+    !value.trim() ||
+    value.trim().length > 120 ||
+    /[\x00-\x1f\x7f]/.test(value)
+  ) {
+    throw new Error('Backup name must contain 1-120 characters without control characters.');
+  }
+  return value.trim();
 }
 
 function safeFilePart(value: string, fallback: string): string {
@@ -65,6 +83,7 @@ function validateBackupPayload(payload: ModelDbBackupPayload): ModelDbBackupPayl
     throw new Error('Invalid ModelDB backup file.');
   }
   assertFlatGraphSegment(payload.database, 'backup database name');
+  normalizeBackupName(payload.name);
   if (!Number.isFinite(Date.parse(payload.createdAt))) {
     throw new Error('Invalid ModelDB backup creation time.');
   }
@@ -180,7 +199,9 @@ export function createDatabaseBackup(
   workspaceRoot: string,
   database: string,
   reason = 'manual',
+  name?: string,
 ): ModelDbBackupInfo {
+  const displayName = normalizeBackupName(name);
   const source = databasePaths(workspaceRoot, database);
   if (!source) {
     throw new Error(`Database "${database}" not found.`);
@@ -190,18 +211,26 @@ export function createDatabaseBackup(
   const fileName = `${safeFilePart(database, 'database')}-${safeTimestamp()}-${safeFilePart(
     reason,
     'manual',
-  )}.modeldb-backup.json`;
+  )}-${randomUUID().slice(0, 8)}.modeldb-backup.json`;
   const abs = join(root, fileName);
   const payload: ModelDbBackupPayload = {
     format: 'modeldb.backup.v1',
+    ...(displayName === undefined ? {} : { name: displayName }),
     database,
     createdAt: new Date().toISOString(),
     kind: source.kind,
     files: collectFiles(source.rootPath, workspaceRoot),
   };
-  writeFileSync(abs, JSON.stringify(payload, null, 2) + '\n', 'utf-8');
+  writeFileSync(abs, JSON.stringify(payload, null, 2) + '\n', { encoding: 'utf-8', flag: 'wx' });
   const st = statSync(abs);
-  return { fileName, database, createdAt: payload.createdAt, bytes: st.size, path: abs };
+  return {
+    fileName,
+    name: payload.name,
+    database,
+    createdAt: payload.createdAt,
+    bytes: st.size,
+    path: abs,
+  };
 }
 
 export function listDatabaseBackups(
@@ -226,6 +255,7 @@ export function listDatabaseBackups(
       const st = statSync(abs);
       out.push({
         fileName: entry.name,
+        name: payload.name,
         database: payload.database,
         createdAt: payload.createdAt,
         bytes: st.size,
@@ -253,6 +283,7 @@ export function readDatabaseBackupFile(
   return {
     info: {
       fileName: backupFileName,
+      name: payload.name,
       database: payload.database,
       createdAt: payload.createdAt,
       bytes: content.byteLength,
@@ -282,13 +313,14 @@ export function importDatabaseBackup(
   mkdirSync(root, { recursive: true });
   let fileName = preferredName;
   if (existsSync(join(root, fileName))) {
-    fileName = `${safeStem}-${safeTimestamp()}-imported.modeldb-backup.json`;
+    fileName = `${safeStem}-${safeTimestamp()}-${randomUUID().slice(0, 8)}-imported.modeldb-backup.json`;
   }
   const abs = join(root, fileName);
-  writeFileSync(abs, Buffer.from(content));
+  writeFileSync(abs, Buffer.from(content), { flag: 'wx' });
   const st = statSync(abs);
   return {
     fileName,
+    name: payload.name,
     database: payload.database,
     createdAt: payload.createdAt,
     bytes: st.size,
@@ -328,6 +360,7 @@ export function restoreDatabaseBackup(
   const st = statSync(abs);
   return {
     fileName: backupFileName,
+    name: payload.name,
     database: payload.database,
     createdAt: payload.createdAt,
     bytes: st.size,
