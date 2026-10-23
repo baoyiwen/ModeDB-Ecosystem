@@ -19,6 +19,8 @@
 
 `scripts/security-recovery-drill.ts prepare|verify` provides a synthetic two-environment Windows acceptance drill. It transfers only an encrypted package, synthetic Vault and manifest, with the passphrase delivered separately. Same-machine/same-user verification fails, and editing the manifest cannot bypass the encrypted environment binding. See [SEC-M6 acceptance instructions](../docs/security-v1-deliveries/SEC-M6.md) for commands, ACL requirements and remaining evidence.
 
+For repeatable manual runs, use `scripts/security-recovery-drill.ps1 -Action Prepare|Receive|Verify`. It builds the four required packages by default; `-SkipBuild` reuses existing outputs. The TypeScript runner creates fresh external session directories and non-overwriting, redacted reports with source/build fingerprints. `security-recovery-drill.test.ts` exercises the actual Windows PowerShell 5.1 wrapper, paths with spaces, independent-environment refusal, manifest tampering, incomplete input, error redaction and existing-file preservation. See [the two-device guide](../docs/security-v1/user-guide.md#41-两台-windows-设备的可重复演练脚本). Local tests do not count as a second-device success.
+
 - **`integration/vault-env.ts`** — shared **network-only** `connectToken`, plus explicit `integrationVaultKeys(root)` backed by the Windows local provider. Tokens no longer derive Vault keys.
 - **`vault-keys.ts`** — in-memory random key provider for isolated unit fixtures; never used by production.
 - **`unit/security-vault-v2.test.ts`** / **`unit/security-windows-keys.test.ts`** — [SEC-M1 format and key contract](../docs/security-v1-vault-contract.md). Fault tests use temporary directories and subprocess exits; ENOSPC is simulated, not physical disk exhaustion.
