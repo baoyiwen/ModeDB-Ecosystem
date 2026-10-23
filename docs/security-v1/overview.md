@@ -34,7 +34,7 @@ v2 包增加所选 Query/Operation Interface、Binding Surface、固定版本依
 
 ## 从哪里开始
 
-- 两台 Windows 设备重复验证：[使用手册 §4.1](user-guide.md#41-两台-windows-设备的可重复演练脚本)，入口为 `scripts/security-recovery-drill.ps1`。
+- 两台 Windows 设备重复验证：[使用手册 §4.1](user-guide.md#41-两台-windows-设备的可重复演练脚本)，入口为 `scripts/security-recovery-drill.ps1`；已补 Windows PowerShell 5.1 中文目录的 UTF-8 解析和明确错误诊断。直接接收成功后可保留目录继续验证。
 - 操作步骤、备份/恢复、迁移命令和故障处理：[安全 V1 使用手册](user-guide.md)。
 - 浏览器邀请、Cookie 与会话行为：[浏览器连接说明](../security-browser-sessions.md)。
 - 应用授权与 Postman：[标准 HTTP 调用](../security-http-invocation.md)。

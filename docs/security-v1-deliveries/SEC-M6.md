@@ -1,13 +1,13 @@
 # SEC-M6 交付记录
 
 - 日期：2026-10-23
-- 修订：D07
+- 修订：D08
 - 范围：S6.1 独立恢复及可重复演练、S6.2 备份/完整受信迁移与 S6.3 模型/Designer 资产子集。
-- 技术状态：S6.2 完成；S6.3 的 v2 Designer 子集与双库分阶段发布见 D05，继承/复杂链兼容及浏览器流程仍待；D06 补充 S6.1 PowerShell 演练工具，异机 Windows 成功证据仍待。SEC-M6 不能作为完整里程碑交付。
+- 技术状态：S6.2 完成；S6.3 的 v2 Designer 子集与双库分阶段发布见 D05，继承/复杂链兼容及浏览器流程仍待；D06—D08 补充 S6.1 演练工具与 Windows 入口修复，B 直接接收已成功，异机恢复成功证据仍待。SEC-M6 不能作为完整里程碑交付。
 - 基线：SEC-M1—SEC-M5 完成，累计 5/7 里程碑、16/20 开发任务。
-- 代码定位：当前工作区，未提交、推送、部署或发布；用户反馈待反馈。
+- 代码定位：当前工作区，未提交、推送、部署或发布；已收到 B 接收成功反馈，异机恢复验收反馈仍待。
 
-最新内容及验证见文末 **D07**；D01/D02 为 S6.1 历史证据，D03 为 S6.2 交付，D04/D05 为 S6.3 局部交付，D06 为演练工具交付，历史状态和计数不覆盖最新修订。
+最新内容及验证见文末 **D08**；D01/D02 为 S6.1 历史证据，D03 为 S6.2 交付，D04/D05 为 S6.3 局部交付，D06—D08 为演练工具与故障修复，历史状态和计数不覆盖最新修订。
 
 ## S6.1 已实现内容（D01/D02）
 
@@ -251,3 +251,33 @@ S6.1 / M6-A1 仍待两台设备的成功报告及构建摘要核对。S6.3 继�
 - 在未提升隔离进程运行 `Prepare -SkipBuild`，复用 D06 已构建四包，得到 `SUCCESS: Prepare` 和 `prepared: true`。本次未改 TypeScript 业务实现，未重复整仓 `check`；D06 已登记的根类型错误仍在。收尾检查限定为 PowerShell 解析、涉及文档格式/本地链接及 `git diff --check`。
 
 原失败目录保留，真实 9091、配置、凭据、密钥、Vault 和业务库均未接触，未提交、推送、部署或发布。下一操作为用户在 A 普通窗口重新准备，并在 B 普通窗口完成接收/验证；两端同步新版脚本后重新生成可比较的代码摘要。用户普通窗口复验和 S6.1 / M6-A1 异机成功均仍待，5/7 里程碑、16/20 任务及 S6.3/SEC-M7 状态不变。
+
+## D08：S6.1 中文路径解析修复与接收结果核对
+
+2026-10-23，用户反馈 B 的 PowerShell 入口在四包构建后返回 `RECOVERY_DRILL_RUNNER_UNAVAILABLE`。用户按诊断命令直接执行 TypeScript runner，回传 Node `v24.14.1`、`ok: true`、`readyToReceive: true` 和退出码 `0`。因此 B 已成功建立接收目录，旧错误不能解读为接收程序不可用，也不能把接收就绪当作异机恢复成功。
+
+### 修复与证据边界
+
+- 本地先以 Node 输出含中文用户路径的 UTF-8 JSON，再用 Windows PowerShell 5.1 / CP936 捕获并 `ConvertFrom-Json`，复现解析失败。该编码组合可能破坏中文后相邻的 JSON 反斜线转义，超过纯显示乱码范围；与 B 中文用户目录的现象吻合，但尚未采集 B 实际控制台代码页，不能声称已直接测得其编码。
+- `.ps1` 只在捕获 runner 输出时显式使用 UTF-8，`finally` 恢复原控制台及管道编码；不永久修改代码页、系统区域设置或目录权限。增加脚本完整性预检，区分 `RECOVERY_DRILL_SCRIPTS_MISSING`、`RECOVERY_DRILL_RUNNER_NO_OUTPUT` 和 `RECOVERY_DRILL_RUNNER_INVALID_OUTPUT`，不回显任意原始输出或异常内容。
+- 另在临时代码目录 junction 上复现 CLI 退出码 `0`、stdout/stderr 均为空。新增 `scripts/security-recovery-drill-entry.ts`，两个 TS 入口按真实代码路径及 Windows 大小写规则判断直接启动，避免 URL/别名差异造成静默退出。这是独立缺陷；用户 B 直接 runner 成功，不能据此把目录别名认定为 B 的根因。恢复材料的 junction/别名拒绝保持不变。
+- 源码摘要清单加入入口辅助文件，完整同步三个 TS 文件及 `.ps1`。功能简介、手册 §4.1、测试说明、专项指南与唯一台账同步更新。B 已成功的接收目录可继续使用；两端更新代码后，A 用新版重新准备，B 接收这一轮材料并执行新版 Verify，再核对 A Prepare/B Verify 的 `runId`、源码/构建摘要及全部结果。
+
+### 隔离验证
+
+新增真实 PowerShell 5.1 / CP936、中文默认临时目录和编码恢复回归，以及代码目录 junction 下两个 CLI/PowerShell 包装器的入口回归，同时确认恢复材料 junction 仍拒绝。首轮脚本 **6/7**：新增拒绝用例误将既有 `SECURITY_INVALID_REQUEST` 预期为不存在的路径错误码；实际保护已生效，修正测试断言后复验。最终结果如下。
+
+- 恢复模块与演练脚本 **34/34 通过，0 skip，约 69.2 秒**，其中脚本 7 项；覆盖 Windows DPAPI、硬退出续跑、独立环境拒绝、错误口令/篡改、报告不覆盖及材料保留。中文路径用例随后换为合成用户名，再定向 **1/1 通过，约 3.4 秒**。
+- `pnpm.cmd run check` 完成源码/SDK 边界和 shared/common/core/server/data-kit/data-ui 构建；根类型检查仍受此前登记的 DOM/ImportMeta.env、旧 fixture、readonly/ws 等错误阻断，本次三个 TS 脚本与测试没有类型诊断。未进入整仓 lint/格式，不能将整仓 check 记为通过。
+- 收尾涉及 TS 源码的限定 ESLint、源码/六份说明文档的 Prettier、PowerShell 语法、50 个本地文档链接、20 项任务/16 项完成计数及 `git diff --check` 通过。`test/` 仍为仓库忽略的 lint/格式路径，不记为测试源码已通过 lint/格式检查。
+
+实际命令：
+
+```powershell
+node node_modules/tsx/dist/cli.mjs --test test/unit/security-recovery-drill.test.ts test/unit/security-recovery.test.ts
+node node_modules/tsx/dist/cli.mjs --test --test-name-pattern="Chinese temp path" test/unit/security-recovery-drill.test.ts
+pnpm.cmd run check
+node node_modules/eslint/bin/eslint.js scripts/security-recovery-drill.ts scripts/security-recovery-drill-runner.ts scripts/security-recovery-drill-entry.ts
+```
+
+所有本地验证使用新建临时目录和合成材料；旧失败现场及工作区无关文件保留。未连接真实 9091，未读取或修改真实配置、凭据、密钥、Vault 或业务库，未提交、推送、部署或外部发布。B 回传的只是接收成功；下一仍需新版 A Prepare 与 B Verify 的成功报告及摘要核对，S6.1 / M6-A1 待验证，累计 **5/7、16/20** 和 S6.3/SEC-M7 状态不变。

@@ -23,6 +23,8 @@ For repeatable manual runs, use `scripts/security-recovery-drill.ps1 -Action Pre
 
 Run the manual drill and its Windows wrapper tests from a normal, non-elevated PowerShell. The wrapper checks the actual process token before building or creating directories and returns `RECOVERY_DRILL_NON_ELEVATED_REQUIRED` for elevated administrator tokens. Elevated file ownership can differ from the strict current-user ownership requirement; the drill does not rewrite ACLs to bypass that check. The token test checks the behavior appropriate to its actual Windows token; a non-elevated test run does not claim that an elevated child process was launched.
 
+The wrapper reads Node JSON as UTF-8 and restores console/pipeline encodings after the call. Regression tests use actual PowerShell 5.1 with CP936 and a Chinese temp path, and exercise both TypeScript CLI entries plus the wrapper through a code-directory junction. Recovery-material junctions remain rejected; resolving a code entry does not relax recovery path validation. Sync all three `security-recovery-drill*.ts` files and the `.ps1` together on both devices.
+
 - **`integration/vault-env.ts`** — shared **network-only** `connectToken`, plus explicit `integrationVaultKeys(root)` backed by the Windows local provider. Tokens no longer derive Vault keys.
 - **`vault-keys.ts`** — in-memory random key provider for isolated unit fixtures; never used by production.
 - **`unit/security-vault-v2.test.ts`** / **`unit/security-windows-keys.test.ts`** — [SEC-M1 format and key contract](../docs/security-v1-vault-contract.md). Fault tests use temporary directories and subprocess exits; ENOSPC is simulated, not physical disk exhaustion.

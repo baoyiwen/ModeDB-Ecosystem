@@ -10,8 +10,8 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { hostname, tmpdir } from 'node:os';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { dirname, isAbsolute, join, relative, sep } from 'node:path';
+import { isRecoveryDrillEntry } from './security-recovery-drill-entry.js';
 import { AtlasSingleVault, readAtlasVaultKeyReference } from '@mode-db/core';
 import { VaultSecurityError } from '@mode-db/common';
 import { LocalVaultKeyProvider } from '../packages/server/src/security/local-vault-key-provider.js';
@@ -255,7 +255,7 @@ export function verifyRecoveryDrill(
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (isRecoveryDrillEntry(import.meta.url)) {
   try {
     const [action, fixtureFlag, fixture, secretFlag, secret] = process.argv.slice(2);
     if (

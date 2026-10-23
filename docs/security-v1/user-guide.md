@@ -101,6 +101,8 @@ modeldb-server security recovery-restore --package <recovery-file> --target-secu
 
 两端准备相同的当前源码（包含尚未提交的安全改造文件）、Node.js ≥20 和已安装的仓库依赖。仅克隆远端可能缺少本轮文件；同步源码时排除真实配置、实例 `security/`、`vault/` 和凭据，不复制 `node_modules`，在另一设备独立安装依赖。默认脚本按顺序构建 shared/common/core/server，任一步失败即停止；不会自动安装依赖或启动服务。
 
+演练源码需完整同步三个 TypeScript 文件 `security-recovery-drill.ts`、`security-recovery-drill-runner.ts`、`security-recovery-drill-entry.ts` 及 PowerShell 入口。新版在读取 Node 的 JSON 时显式使用 UTF-8，随后恢复控制台和管道编码，支持中文 Windows 用户目录，无需修改系统代码页或区域设置。代码入口支持目录联接别名；演练材料路径仍拒绝目录联接，不用别名绕过路径保护。
+
 在普通 Windows 登录账号下打开 PowerShell，进入各自的项目根目录。以下 `ExecutionPolicy Bypass` 仅作用于本次子进程，不修改系统或用户执行策略；组织策略仍可能限制脚本运行。
 
 两端均须使用**未以管理员身份运行**的 PowerShell。从开始菜单正常打开 Windows PowerShell，不选择“以管理员身份运行”；在管理员窗口中再输入 `powershell.exe` 仍会继承提升权限。可执行以下检查，结果必须为 `False`：
@@ -143,24 +145,39 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\security-recov
 
 成功必须同时满足退出码 `0`、`SUCCESS: Verify`、`runId` 与 A 一致，且 `independentOsEnvironment`、`restored`、`emptyAccessLedger`、`wrongPassphraseRejected`、`tamperedPackageRejected` 全为 `true`。验证后的临时恢复目标自动清除，接收材料保留。只有这些异机成功证据经过核对后，才可补登记 S6.1；脚本准备成功或本机测试通过不算异机验收。
 
-每次操作生成独立的 `<action>-<时间>-<随机值>.json` 报告，记录成功/失败、步骤、稳定错误码、Windows/Node 版本和源代码/构建摘要；不包含口令、密钥、原始异常或业务数据。源码摘要范围是两个演练 TypeScript 文件、PowerShell 入口、根依赖/类型配置、相关包描述，以及 shared/common/core/server 的实现目录；构建摘要覆盖四包的 `dist/**/*.js`，忽略 CRLF/LF 差异与 source map。核对两端报告的 `sourceFingerprint`、`buildFingerprint`，保留 A 的准备报告和 B 的验证报告。回传脱敏 JSON 即可，不回传恢复材料。
+每次操作生成独立的 `<action>-<时间>-<随机值>.json` 报告，记录成功/失败、步骤、稳定错误码、Windows/Node 版本和源代码/构建摘要；不包含口令、密钥、原始异常或业务数据。源码摘要范围是上述三个演练 TypeScript 文件、PowerShell 入口、根依赖/类型配置、相关包描述，以及 shared/common/core/server 的实现目录；构建摘要覆盖四包的 `dist/**/*.js`，忽略 CRLF/LF 差异与 source map。核对两端报告的 `sourceFingerprint`、`buildFingerprint`，保留 A 的准备报告和 B 的验证报告。回传脱敏 JSON 即可，不回传恢复材料。
 
 重复验证可对同一个 B 目录执行 `Verify`，报告不会覆盖；重复 `Prepare` 或 `Receive` 总是新建目录。可通过 `-DrillRoot <尚不存在的绝对路径>` 指定源码目录之外、父目录已存在的全新演练目录；不接受仓库内或已有目录。两端代码和构建均未改变时，可加 `-SkipBuild` 加快重复操作。
 
-| 输出/错误码                                                           | 处理方式                                                                                  |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `RECOVERY_DRILL_NON_ELEVATED_REQUIRED`                                | 两端都重新打开普通 PowerShell，不选择管理员运行，再执行原操作；本次尚未构建或创建演练目录 |
-| `FAILED` / 非零退出码                                                 | 本次未通过；查看 `Step` 和 `Report`，保留现场，不传递不完整材料                           |
-| `RECOVERY_DRILL_DEPENDENCIES_MISSING` / `RECOVERY_DRILL_BUILD_FAILED` | 在该设备补齐依赖或处理构建错误；构建失败不开始演练                                        |
-| `EEXIST`                                                              | 准备/接收目录已有内容，改用新目录，不覆盖原文件                                           |
-| `ENOENT`                                                              | 核对是否复制齐三个 fixture 文件及单独口令文件，检查 `Step`                                |
-| `VAULT_PROTECTION_UNAVAILABLE` / `EACCES` / `EPERM`                   | 核对当前 Windows 账号及专用目录权限，不沿用源设备 ACL；不要放宽安全目录权限               |
-| `SECURITY_INSTANCE_BUSY`                                              | 查看报告步骤；隔离演练的维护租约或保护检查未通过，保留现场后使用新目录重试                |
-| `RECOVERY_DRILL_REQUIRES_INDEPENDENT_WINDOWS_ENVIRONMENT`             | 检测到同机同账号，需在另一台设备验证                                                      |
-| `RECOVERY_DRILL_RECEIVER_REQUIRED`                                    | 使用 B 的 `Receive` 输出目录，不能把 A 的源目录直接当作接收目录                           |
-| `RECOVERY_DRILL_DATA_MISMATCH` / `RECOVERY_DRILL_FAILED`              | 保留报告和材料，不改写 manifest 或删除标记绕过验证                                        |
+| 输出/错误码                                                                       | 处理方式                                                                                  |
+| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `RECOVERY_DRILL_NON_ELEVATED_REQUIRED`                                            | 两端都重新打开普通 PowerShell，不选择管理员运行，再执行原操作；本次尚未构建或创建演练目录 |
+| `FAILED` / 非零退出码                                                             | 本次未通过；查看 `Step` 和 `Report`，保留现场，不传递不完整材料                           |
+| `RECOVERY_DRILL_DEPENDENCIES_MISSING` / `RECOVERY_DRILL_BUILD_FAILED`             | 在该设备补齐依赖或处理构建错误；构建失败不开始演练                                        |
+| `RECOVERY_DRILL_SCRIPTS_MISSING`                                                  | 同步同一修订的三个 TypeScript 演练文件及 PowerShell 入口，不只复制 `.ps1`                 |
+| `RECOVERY_DRILL_RUNNER_NO_OUTPUT`                                                 | Node 未返回内容，记录退出码；核对源码是否完整，更新支持代码目录别名的入口                 |
+| `RECOVERY_DRILL_RUNNER_INVALID_OUTPUT` / 旧版 `RECOVERY_DRILL_RUNNER_UNAVAILABLE` | 包装层未取得有效 JSON；先同步 UTF-8 修复，再按下面命令直接检查 runner                     |
+| `EEXIST`                                                                          | 准备/接收目录已有内容，改用新目录，不覆盖原文件                                           |
+| `ENOENT`                                                                          | 核对是否复制齐三个 fixture 文件及单独口令文件，检查 `Step`                                |
+| `VAULT_PROTECTION_UNAVAILABLE` / `EACCES` / `EPERM`                               | 核对当前 Windows 账号及专用目录权限，不沿用源设备 ACL；不要放宽安全目录权限               |
+| `SECURITY_INSTANCE_BUSY`                                                          | 查看报告步骤；隔离演练的维护租约或保护检查未通过，保留现场后使用新目录重试                |
+| `RECOVERY_DRILL_REQUIRES_INDEPENDENT_WINDOWS_ENVIRONMENT`                         | 检测到同机同账号，需在另一台设备验证                                                      |
+| `RECOVERY_DRILL_RECEIVER_REQUIRED`                                                | 使用 B 的 `Receive` 输出目录，不能把 A 的源目录直接当作接收目录                           |
+| `RECOVERY_DRILL_DATA_MISMATCH` / `RECOVERY_DRILL_FAILED`                          | 保留报告和材料，不改写 manifest 或删除标记绕过验证                                        |
 
 早先手动准备失败的目录不自动接管或删除。旧 CLI 将部分异常统一显示为 `RECOVERY_DRILL_FAILED`；新版会保留公开安全错误码，托管脚本另提供失败步骤。历史那次失败的根因仍需以新报告核对，不能仅凭后续准备成功认定已经修复。
+
+若旧 PowerShell 入口只显示 `RECOVERY_DRILL_RUNNER_UNAVAILABLE`，可在普通窗口、项目根目录直接执行以下诊断，不输出口令或恢复材料：
+
+```powershell
+node --version
+node node_modules/tsx/dist/cli.mjs scripts/security-recovery-drill-runner.ts receive
+$LASTEXITCODE
+```
+
+返回 `ok: true`、`readyToReceive: true` 且退出码为 `0`，说明已创建可用的 B 接收目录，保留输出的 `drillRoot`，无需反复 `Receive`。Windows PowerShell 5.1 用 CP936 读取 Node UTF-8 输出时，中文路径可能损坏 JSON 转义；本地已复现并由新版修复。若直接入口也失败，按其稳定错误码处理，不把所有失败都归于编码。
+
+同步本次脚本后，两端默认重新构建；A 用新版重新 `Prepare`，使准备报告和 B 后续验证报告的源码/构建摘要可比较。B 可继续使用之前已成功创建的接收目录，将这一轮 A 材料完整复制进去后，用新版 `Verify -DrillRoot <已有B目录>` 验证。B 的接收成功仅表示目录就绪，不能代替异机恢复成功。
 
 ## 5. 向受信任实例完整迁移
 

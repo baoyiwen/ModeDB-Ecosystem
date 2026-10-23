@@ -11,8 +11,9 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { arch, release, tmpdir } from 'node:os';
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { isAbsolute, join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { isRecoveryDrillEntry } from './security-recovery-drill-entry.js';
 import {
   prepareRecoveryDrill,
   recoveryDrillErrorCode,
@@ -82,6 +83,7 @@ function evidence() {
       [
         'scripts/security-recovery-drill.ts',
         'scripts/security-recovery-drill-runner.ts',
+        'scripts/security-recovery-drill-entry.ts',
         'scripts/security-recovery-drill.ps1',
         'packages/core/index.ts',
         'package.json',
@@ -198,7 +200,7 @@ export function runManagedRecoveryDrill(action: Action, requestedRoot?: string) 
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (isRecoveryDrillEntry(import.meta.url)) {
   const [action, flag, root] = process.argv.slice(2);
   if (
     !['prepare', 'receive', 'verify'].includes(action) ||

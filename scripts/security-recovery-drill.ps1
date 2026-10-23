@@ -49,6 +49,15 @@ try {
             throw 'RECOVERY_DRILL_DEPENDENCIES_MISSING'
         }
     }
+    foreach ($requiredScript in @(
+        'scripts/security-recovery-drill.ts',
+        'scripts/security-recovery-drill-runner.ts',
+        'scripts/security-recovery-drill-entry.ts'
+    )) {
+        if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
+            throw 'RECOVERY_DRILL_SCRIPTS_MISSING'
+        }
+    }
     if (-not $SkipBuild) {
         foreach ($buildConfig in @(
             'packages/shared/tsconfig.build.json',
@@ -69,11 +78,29 @@ try {
     if (-not [string]::IsNullOrWhiteSpace($DrillRoot)) {
         $runnerArguments += @('--root', $DrillRoot)
     }
-    $runnerOutput = & $nodeCommand.Source @runnerArguments
-    $drillExitCode = $LASTEXITCODE
+    # Node emits UTF-8 JSON. PowerShell 5.1 otherwise decodes it using the
+    # console code page, which can corrupt JSON escapes after Chinese paths.
+    $drillPreviousConsoleEncoding = [Console]::OutputEncoding
+    $drillPreviousPipelineEncoding = $OutputEncoding
+    try {
+        $drillUtf8Encoding = New-Object System.Text.UTF8Encoding($false)
+        [Console]::OutputEncoding = $drillUtf8Encoding
+        $OutputEncoding = $drillUtf8Encoding
+        $runnerOutput = & $nodeCommand.Source @runnerArguments
+        $drillExitCode = $LASTEXITCODE
+    } finally {
+        [Console]::OutputEncoding = $drillPreviousConsoleEncoding
+        $OutputEncoding = $drillPreviousPipelineEncoding
+    }
+    if ([string]::IsNullOrWhiteSpace(($runnerOutput -join "`n"))) {
+        Write-Host "Runner exit code: $drillExitCode"
+        throw 'RECOVERY_DRILL_RUNNER_NO_OUTPUT'
+    }
     try { $result = ($runnerOutput -join "`n") | ConvertFrom-Json }
-    catch { throw 'RECOVERY_DRILL_RUNNER_UNAVAILABLE' }
-    if ($null -eq $result) { throw 'RECOVERY_DRILL_RUNNER_UNAVAILABLE' }
+    catch { throw 'RECOVERY_DRILL_RUNNER_INVALID_OUTPUT' }
+    if ($null -eq $result -or $result.ok -isnot [bool]) {
+        throw 'RECOVERY_DRILL_RUNNER_INVALID_OUTPUT'
+    }
     if ($result.drillRoot) { Write-Host "DrillRoot: $($result.drillRoot)" }
     if ($result.report) { Write-Host "Report: $($result.report)" }
     if ($drillExitCode -ne 0 -or $result.ok -ne $true) {
@@ -99,6 +126,13 @@ try {
     if ($safeMessage -eq 'RECOVERY_DRILL_NON_ELEVATED_REQUIRED') {
         Write-Host 'Open a normal PowerShell window without Run as administrator, then run this command again.'
         Write-Host 'Use a normal window for Prepare, Receive and Verify on both devices.'
+    }
+    if ($safeMessage -eq 'RECOVERY_DRILL_SCRIPTS_MISSING') {
+        Write-Host 'Sync all recovery drill scripts from the same source revision on both devices.'
+    }
+    if ($safeMessage -eq 'RECOVERY_DRILL_RUNNER_NO_OUTPUT' -or $safeMessage -eq 'RECOVERY_DRILL_RUNNER_INVALID_OUTPUT') {
+        Write-Host 'Run in the project directory: node node_modules/tsx/dist/cli.mjs scripts/security-recovery-drill-runner.ts receive'
+        Write-Host 'Share only the terminal diagnostic output. Do not share passphrases or recovery material.'
     }
     $drillExitCode = 1
 } finally {

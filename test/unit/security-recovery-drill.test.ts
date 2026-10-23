@@ -9,6 +9,8 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -21,6 +23,7 @@ import { runManagedRecoveryDrill } from '../../scripts/security-recovery-drill-r
 import { SecurityError } from '../../packages/server/src/security/security-errors.js';
 
 const wrapper = fileURLToPath(new URL('../../scripts/security-recovery-drill.ps1', import.meta.url));
+const repository = fileURLToPath(new URL('../../', import.meta.url));
 const powershell = join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
 const windowsOnly = { skip: process.platform !== 'win32' };
 const digest = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
@@ -118,6 +121,86 @@ it('runs PowerShell from another directory, preserves runs and records independe
       assert.equal(output.includes('protectedKey'), false);
     }
   } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+it('receives in a Chinese temp path under PowerShell 5.1 CP936 and restores both encodings', windowsOnly, () => {
+  const root = mkdtempSync(join(tmpdir(), 'modedb-drill-encoding-'));
+  const chineseTemp = join(root, '中文用户', '临时目录');
+  mkdirSync(chineseTemp, { recursive: true });
+  try {
+    const command = `
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [Text.Encoding]::GetEncoding(936)
+$OutputEncoding = [Text.Encoding]::GetEncoding(936)
+& '${wrapper.replace(/'/g, "''")}' -Action Receive -SkipBuild
+$drillStatus = $LASTEXITCODE
+Write-Output ('CONSOLE_CODEPAGE:' + [Console]::OutputEncoding.CodePage)
+Write-Output ('PIPELINE_CODEPAGE:' + $OutputEncoding.CodePage)
+exit $drillStatus
+`;
+    const result = spawnSync(powershell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-EncodedCommand',
+      Buffer.from(command, 'utf16le').toString('base64')], {
+      env: { ...process.env, TEMP: chineseTemp, TMP: chineseTemp },
+      encoding: 'buffer', windowsHide: true, timeout: 30000, maxBuffer: 1024 * 1024,
+    });
+    const output = new TextDecoder('gbk').decode(result.stdout);
+    assert.equal(result.status, 0, output + result.stderr.toString());
+    assert.match(output, /SUCCESS: Receive/);
+    assert.match(output, /CONSOLE_CODEPAGE:936/);
+    assert.match(output, /PIPELINE_CODEPAGE:936/);
+    const sessions = readdirSync(chineseTemp).filter(name => name.startsWith('ModeDB-Recovery-Drill-'));
+    assert.equal(sessions.length, 1);
+    const receiver = join(chineseTemp, sessions[0]);
+    assert.ok(output.includes(`DrillRoot: ${receiver}`), 'the returned path must round-trip without corruption');
+    assert.equal(existsSync(join(receiver, 'drill-session.json')), true);
+    assert.equal(existsSync(join(receiver, 'secret', 'phrase.txt')), false);
+    const reports = readdirSync(receiver).filter(name => name.startsWith('receive-'));
+    assert.equal(reports.length, 1);
+    const report = JSON.parse(readFileSync(join(receiver, reports[0]), 'utf8'));
+    assert.equal(report.status, 'succeeded');
+    assert.equal(report.result.readyToReceive, true);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+it('runs both CLI entries and the PowerShell wrapper through a code-directory junction', windowsOnly, () => {
+  const root = mkdtempSync(join(tmpdir(), 'modedb-drill-entry-'));
+  const alias = join(root, 'source alias');
+  try {
+    symlinkSync(repository, alias, 'junction');
+    const runner = spawnSync(process.execPath, [join(alias, 'node_modules/tsx/dist/cli.mjs'),
+      join(alias, 'scripts/security-recovery-drill-runner.ts'), 'receive', '--root', join(root, 'cli receiver')], {
+      cwd: root, encoding: 'utf8', windowsHide: true, timeout: 30000,
+    });
+    assert.equal(runner.status, 0, runner.stdout + runner.stderr);
+    const result = JSON.parse(runner.stdout);
+    assert.equal(result.ok, true);
+    assert.equal(result.result.readyToReceive, true);
+    const legacy = spawnSync(process.execPath, [join(alias, 'node_modules/tsx/dist/cli.mjs'),
+      join(alias, 'scripts/security-recovery-drill.ts'), 'invalid'], {
+      cwd: root, encoding: 'utf8', windowsHide: true, timeout: 30000,
+    });
+    assert.equal(legacy.status, 1, legacy.stdout + legacy.stderr);
+    assert.match(legacy.stderr, /RECOVERY_DRILL_INVALID_ARGUMENTS/);
+    const wrapped = spawnSync(powershell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+      join(alias, 'scripts/security-recovery-drill.ps1'), '-Action', 'Receive',
+      '-DrillRoot', join(root, 'wrapped receiver'), '-SkipBuild'], {
+      cwd: root, encoding: 'utf8', windowsHide: true, timeout: 30000,
+    });
+    assert.equal(wrapped.status, 0, wrapped.stdout + wrapped.stderr);
+    assert.match(wrapped.stdout, /SUCCESS: Receive/);
+    // Code aliases may resolve, but recovery-material aliases must still be rejected.
+    const linkedData = join(root, 'linked receiver');
+    symlinkSync(result.drillRoot, linkedData, 'junction');
+    try {
+      const refused = runManagedRecoveryDrill('verify', linkedData);
+      assert.equal(refused.ok, false);
+      if (refused.ok) throw new Error('expected refusal');
+      assert.equal(refused.errorCode, 'SECURITY_INVALID_REQUEST');
+    } finally { unlinkSync(linkedData); }
+  } finally {
+    if (existsSync(alias)) unlinkSync(alias);
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 it('preserves incomplete receiver files and reports the precise verification stage', windowsOnly, () => {
