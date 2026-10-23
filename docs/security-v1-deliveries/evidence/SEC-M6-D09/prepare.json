@@ -1,0 +1,18 @@
+{
+  "format": "modeldb.recovery-drill-report.v1",
+  "action": "prepare",
+  "status": "succeeded",
+  "step": "report.write",
+  "timestampUtc": "2026-10-23T07:37:06.181Z",
+  "platform": "win32",
+  "windowsRelease": "10.0.26300",
+  "architecture": "x64",
+  "nodeVersion": "v24.15.0",
+  "fingerprintScope": "recovery-source-and-build-v1",
+  "sourceFingerprint": "fc45a78c115063c9fb0ff841bfcdb65274f2c87c55594eae58b42a6bc8088f6e",
+  "buildFingerprint": "4de32c02ce28d8c17a5a69c937f7eaab546183d3aed9e29fe809b1a55a176a7f",
+  "result": {
+    "prepared": true,
+    "runId": "a56bbf98-3b74-4647-80ae-c3f5416da51d"
+  }
+}

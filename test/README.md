@@ -25,6 +25,8 @@ Run the manual drill and its Windows wrapper tests from a normal, non-elevated P
 
 The wrapper reads Node JSON as UTF-8 and restores console/pipeline encodings after the call. Regression tests use actual PowerShell 5.1 with CP936 and a Chinese temp path, and exercise both TypeScript CLI entries plus the wrapper through a code-directory junction. Recovery-material junctions remain rejected; resolving a code entry does not relax recovery path validation. Sync all three `security-recovery-drill*.ts` files and the `.ps1` together on both devices.
 
+If the supplied Prepare/Verify reports agree on the run and source but disagree on the build, run `node scripts/security-recovery-build-check.mjs`. It reads only compiled code, source-file existence, fixed compiler configurations and the installed TypeScript version, and writes a fresh temporary redacted JSON report with per-file hashes. It does not import server modules, read instance secrets, rebuild, remove stale artifacts or rerun recovery. `extra` is a missing-source diagnostic, not an automatic deletion list. See [the build comparison guide](../docs/security-v1/user-guide.md#42-构建摘要不同的诊断).
+
 - **`integration/vault-env.ts`** — shared **network-only** `connectToken`, plus explicit `integrationVaultKeys(root)` backed by the Windows local provider. Tokens no longer derive Vault keys.
 - **`vault-keys.ts`** — in-memory random key provider for isolated unit fixtures; never used by production.
 - **`unit/security-vault-v2.test.ts`** / **`unit/security-windows-keys.test.ts`** — [SEC-M1 format and key contract](../docs/security-v1-vault-contract.md). Fault tests use temporary directories and subprocess exits; ENOSPC is simulated, not physical disk exhaustion.

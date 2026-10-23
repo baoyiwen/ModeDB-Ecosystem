@@ -93,7 +93,7 @@ modeldb-server security recovery-restore --package <recovery-file> --target-secu
 
 该命令保留源 Vault key domain，以目标 OS 保护和新主密钥重新封装。随后在新 home 中建立匹配配置，普通首次启动建立空访问台账，重新授权；再通过上传 API 或第 3 节离线恢复业务备份。不要覆盖已有实例的 `security/`，不要拷回旧 registry、Token 或网络策略。已初始化的恢复目标不能重复覆盖；只允许严格匹配同一恢复 receipt 且未初始化台账的幂等确认。
 
-**异机恢复仍待第二台 Windows 设备或独立 OS 身份验收。** 演练步骤、拒绝条件和证据格式见 [SEC-M6 / D02](../security-v1-deliveries/SEC-M6.md)。同机新目录或新进程通过，不能登记成异机验收。
+**已收到两台 Windows 的恢复功能成功报告，构建摘要差异仍待核对，S6.1 尚未关闭。** 最新证据与范围见 [SEC-M6 / D09](../security-v1-deliveries/SEC-M6.md#d09s61-用户异机报告核对与构建差异)。同机新目录或新进程通过，不能登记成异机验收。
 
 ### 4.1 两台 Windows 设备的可重复演练脚本
 
@@ -178,6 +178,22 @@ $LASTEXITCODE
 返回 `ok: true`、`readyToReceive: true` 且退出码为 `0`，说明已创建可用的 B 接收目录，保留输出的 `drillRoot`，无需反复 `Receive`。Windows PowerShell 5.1 用 CP936 读取 Node UTF-8 输出时，中文路径可能损坏 JSON 转义；本地已复现并由新版修复。若直接入口也失败，按其稳定错误码处理，不把所有失败都归于编码。
 
 同步本次脚本后，两端默认重新构建；A 用新版重新 `Prepare`，使准备报告和 B 后续验证报告的源码/构建摘要可比较。B 可继续使用之前已成功创建的接收目录，将这一轮 A 材料完整复制进去后，用新版 `Verify -DrillRoot <已有B目录>` 验证。B 的接收成功仅表示目录就绪，不能代替异机恢复成功。
+
+### 4.2 构建摘要不同的诊断
+
+`SUCCESS: Verify` 且五项为 `true` 表示该次恢复功能成功；如果 A/B 的 `buildFingerprint` 不同，保留成功证据，先查明编译目录差异。`tsc` 不自动清除已删除源码的旧产物，源码摘要相同也不能单独证明两个 `dist` 等价。不要删除原报告、直接忽略不明文件或为对齐摘要复制对端整个 `dist`。
+
+将 [构建诊断脚本](../../scripts/security-recovery-build-check.mjs) 同步或复制到 B 项目的 `scripts` 目录，在项目根目录执行这一行：
+
+```powershell
+node .\scripts\security-recovery-build-check.mjs
+```
+
+脚本无需安装新依赖，不重新构建或运行恢复。它只读取 shared/common/core/server 的编译代码、对应源码路径是否存在、固定构建配置和已安装 TypeScript 版本，不加载实例配置或服务。输出 `ok: true`、四包概要和 `report` 路径；把该路径指向的 `build-check.json` 发回核对即可。报告包含相对代码路径、逐文件/配置摘要和工具版本，不包含代码正文或秘密，写入全新 `ModeDB-Build-Check-*` 临时目录，不覆盖现有报告或构建。`extra` 只表示按既定映射未找到 `.ts` 源文件，仍需结合实际清单解释，不能据此自动删除。
+
+报告的构建摘要沿用演练报告中规范化 CRLF/LF、按排序路径聚合全部 `.js` 的规则；同步这个独立诊断脚本不改变原演练摘要范围，不需要重做已成功的演练。收到两端完整清单后，再判断是旧产物、编译配置/工具链还是代码内容的差异，并登记处置结果。
+
+若复制长命令时遇到 `UnexpectedCharactersAfterHereStringHeader`，说明 PowerShell 的 `@'` 起始标记后没有立即换行，诊断程序尚未执行。这不影响此前恢复结果；使用上面单行脚本入口即可。
 
 ## 5. 向受信任实例完整迁移
 

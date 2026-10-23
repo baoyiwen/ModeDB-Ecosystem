@@ -1,0 +1,23 @@
+{
+  "format": "modeldb.recovery-drill-report.v1",
+  "action": "verify",
+  "status": "succeeded",
+  "step": "report.write",
+  "timestampUtc": "2026-10-23T07:42:05.401Z",
+  "platform": "win32",
+  "windowsRelease": "10.0.26300",
+  "architecture": "x64",
+  "nodeVersion": "v24.14.1",
+  "fingerprintScope": "recovery-source-and-build-v1",
+  "sourceFingerprint": "fc45a78c115063c9fb0ff841bfcdb65274f2c87c55594eae58b42a6bc8088f6e",
+  "buildFingerprint": "159c636d2a5c7574e52cce0ddb0667ef7f435baa10e40277f95be0510a4330d7",
+  "result": {
+    "format": "modeldb.recovery-drill-result.v1",
+    "runId": "a56bbf98-3b74-4647-80ae-c3f5416da51d",
+    "independentOsEnvironment": true,
+    "restored": true,
+    "emptyAccessLedger": true,
+    "wrongPassphraseRejected": true,
+    "tamperedPackageRejected": true
+  }
+}
