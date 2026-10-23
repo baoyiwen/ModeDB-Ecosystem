@@ -11,13 +11,14 @@ import type {
   BindOptions,
   IndexReader,
   PathResolver,
+  VaultKeyMaterial,
 } from '@mode-db/common';
 import { IndexerError, DiskAdapter } from '@mode-db/common';
 import { AtlasSingleVault } from './atlas-single-vault.js';
 
 export interface RelationIndexerVaultOptions {
   readonly vault: AtlasSingleVault;
-  readonly vaultSecret: string;
+  readonly vaultKey: VaultKeyMaterial;
   readonly loadModelRecords: (modelName: string) => Promise<ModelRecord[]>;
 }
 
@@ -53,7 +54,7 @@ export class RelationIndexer implements IndexReader {
     if (this.vaultOptions) {
       this.vaultOptions.vault.saveSync(
         this.paths.atlasSingleVaultPath(),
-        this.vaultOptions.vaultSecret,
+        this.vaultOptions.vaultKey,
       );
     }
   }

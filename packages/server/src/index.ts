@@ -25,6 +25,22 @@ export {
   resolveModelDBPublicBaseUrl,
 } from './server-access-info.js';
 export { WriteSerializationGate } from './write-serialization-gate.js';
+export {
+  createDatabaseBackup,
+  listDatabaseBackups,
+  readDatabaseBackupFile,
+  importDatabaseBackup,
+  verifyDatabaseBackup,
+  restoreDatabaseBackup,
+  importMigrationBackup,
+  type ModelDbBackupInfo,
+} from './backup-manager.js';
+export {
+  backupRecipientId,
+  openBackupPackage,
+  type BackupManifest,
+  type BackupStatistics,
+} from './security/backup-package.js';
 export { WireRequestDispatcher } from './request-dispatcher.js';
 export {
   getModelDbHome,
@@ -37,3 +53,28 @@ export {
   readPersistedModelDbHomePath,
   setPersistedModelDbHomePath,
 } from './modeldb-persisted-home.js';
+export { LocalVaultKeyProvider } from './security/local-vault-key-provider.js';
+export {
+  createRecoveryPackageFile,
+  verifyRecoveryPackageFile,
+  checkRecoveryPackageDependencies,
+  restoreRecoveryPackageFile,
+  rotateDatabaseVaultKey,
+  type RecoveryPackageV1,
+} from './security/recovery-material.js';
+export {
+  SecurityRegistry,
+  type SecurityRegistryOptions,
+  type VerifiedCredential,
+} from './security/security-registry.js';
+export { SecurityError, type SecurityErrorCode } from './security/security-errors.js';
+export type {
+  SecurityNetworkConfig,
+  SourcePolicy,
+  SourceRule,
+  NetworkSource,
+} from './security/network-policy.js';
+export {
+  WindowsSecretProtector,
+  type SecretProtector,
+} from './security/windows-secret-protector.js';

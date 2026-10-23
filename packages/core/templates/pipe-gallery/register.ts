@@ -8,7 +8,7 @@ export type PipeGalleryModelNames = 'Pipe' | 'Node' | 'Monitor';
  * 含 **required**、**Unit**（压力 Pa、管径 mm）、**Color**（管段色 / 状态色）。
  *
  * 调用方在 **`registerPipeGalleryModels(engine)`** 之后可 **`writeAtlasManifest`** / **`flushAll`**；
- * 千万级压测使用单文件 **`atlas.mld`** vault；密钥由 **`connectToken`** 派生。
+ * 千万级压测使用单文件 **`atlas.mld`** vault；密钥由独立 **`keyProvider`** 提供。
  */
 export function registerPipeGalleryModels(engine: AuthoringEngine): void {
   engine.registerModel('Pipe', {

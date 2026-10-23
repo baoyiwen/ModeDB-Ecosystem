@@ -14,8 +14,8 @@ import type { InterfaceParameter } from '../../apps/model-designer/src/query-des
 
 it('invokes a published interface through HTTP with typed inputs, defaults, keys and projection intact', async () => {
   const root = mkdtempSync(join(tmpdir(), 'modedb-pivot-input-'));
-  const business = new AuthoringEngine({ atlas: 'business', storageRoot: root, connectToken: 'fixture' });
-  const designer = new AuthoringEngine({ atlas: 'designer', storageRoot: root, connectToken: 'fixture' });
+  const business = new AuthoringEngine({ atlas: 'business', storageRoot: root, keyProvider: fixtureVaultKeys(root) });
+  const designer = new AuthoringEngine({ atlas: 'designer', storageRoot: root, keyProvider: fixtureVaultKeys(root) });
   const parameters: InterfaceParameter[] = [
     { id: 'p_score', name: 'score', type: 'number', required: true, defaultValue: 0 },
     { id: 'p_active', name: 'active', type: 'boolean', required: true, defaultValue: false },
@@ -67,7 +67,7 @@ it('invokes a published interface through HTTP with typed inputs, defaults, keys
   await designer.flushAll();
   const hash = (): string => createHash('sha256').update(readFileSync(join(root, 'business', 'atlas.mld'))).digest('hex');
   const before = hash();
-  const app = await buildDualTrackFastify({ host: '127.0.0.1', port: 0, storageRoot: root, designerWorkspace: 'designer', connectToken: 'fixture', dev: false, configFilePath: join(root, 'config.json') });
+  const app = await buildDualTrackFastify({ host: '127.0.0.1', port: 0, storageRoot: root, vaultKeyProvider: fixtureVaultKeys(root), designerWorkspace: 'designer', connectToken: 'fixture', dev: false, configFilePath: join(root, 'config.json') });
   let client: RemoteModelDBClient | undefined;
   try {
     const address = app.server.address();
@@ -126,3 +126,4 @@ it('invokes a published interface through HTTP with typed inputs, defaults, keys
     rmSync(root, { recursive: true, force: true });
   }
 });
+import { fixtureVaultKeys } from '../vault-keys.js';

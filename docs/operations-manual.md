@@ -284,6 +284,8 @@ sequenceDiagram
 
 生产部署建议把 `workspace` 所在磁盘纳入系统级快照或异地备份；ModelDB Server 也提供逻辑库级备份文件，用于日常回滚和损坏恢复。
 
+安全 V1 的 `modeldb.backup.v2` 是单库加密包，旧 JSON v1 明确拒绝且保留原件。下面维护命令均要求显式配置；registry 实例离线时持有独占锁执行。独立恢复材料、接收方完整迁移、权限、容量与中断处理见[安全 V1 使用手册](security-v1/user-guide.md)，不要仅备份业务文件而丢失密钥恢复材料。
+
 ### 9.1 主动备份
 
 ```bash
@@ -300,13 +302,13 @@ modeldb-server backups [db-name] -c <session-root|modeldb.config.json>
 ### 9.2 恢复与清除
 
 ```bash
-modeldb-server restore <db-name> <backup-file> --yes
-modeldb-server clear-data <db-name> --yes
-modeldb-server force-reset <db-name> --yes
+modeldb-server restore <db-name> <backup-file> --yes -c <config>
+modeldb-server clear-data <db-name> --yes -c <config>
+modeldb-server force-reset <db-name> --yes -c <config>
 ```
 
-- `restore`：从备份文件恢复当前库，恢复前尽量创建 `pre-restore` 安全备份。
-- `clear-data`：清除所有行数据但保留 schema / relation，执行前尽量创建 `pre-clear` 安全备份。
+- `restore`：从已验证备份恢复单库；已有目标必须先成功创建安全备份，只替换 Vault，不回滚权限/会话/策略。
+- `clear-data`：清除所有行数据但保留 schema / relation，执行前必须成功创建安全备份。
 - `force-reset`：后门恢复命令，适合库文件损坏或无法正常打开时重建物理库，执行前尽量创建 `pre-reset` 安全备份。
 
 ### 9.3 自动备份

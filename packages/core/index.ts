@@ -16,6 +16,8 @@ export { RelationIndexer } from './authoring/indexer.js';
 export {
   AtlasSingleVault,
   fileLooksLikeAtlasSingleVault,
+  readAtlasVaultKeyReference,
+  readAtlasVaultKeyReferenceFromBytes,
   ATLAS_SINGLE_VAULT_MAGIC,
 } from './authoring/atlas-single-vault.js';
 
@@ -135,7 +137,10 @@ export {
 } from '@mode-db/common';
 export {
   configureModelDBStorageRoot,
-  deriveAtlasVaultSecretFromConnectToken,
+  type VaultKeyProvider,
+  type VaultKeyMaterial,
+  type VaultKeyReference,
+  VaultSecurityError,
   type ModelDBStorageRootConfig,
 } from '@mode-db/common';
 export {
@@ -201,6 +206,14 @@ export type {
 } from '@mode-db/common';
 export { EngineLogger, type EngineLoggerConfigureOptions } from '@mode-db/common';
 export { DiskAdapter } from '@mode-db/common';
+export {
+  collectAssetGraph,
+  validateAssetGraph,
+  assetGraphVault,
+  assetGraphStatistics,
+  type AssetGraph,
+  type AssetSelection,
+} from './authoring/asset-graph.js';
 export type { EngineLogLevel } from '@mode-db/common';
 export { InternalVault } from '@mode-db/common';
 export { SmartCache } from '@mode-db/common';
@@ -244,3 +257,4 @@ export type {
   BindOptions,
   ConditionFn,
 } from '@mode-db/common';
+export * from './authoring/designer-asset.js';

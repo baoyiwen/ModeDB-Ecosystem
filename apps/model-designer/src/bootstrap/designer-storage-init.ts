@@ -34,6 +34,7 @@ type RelationLogicWire = 'one-to-one' | 'one-to-many' | 'many-to-one' | 'many-to
 const M2M: RelationLogicWire = 'many-to-many';
 const O2M: RelationLogicWire = 'one-to-many';
 const M2O: RelationLogicWire = 'many-to-one';
+const initialized = new WeakMap<RemoteModelDBClient, Promise<void>>();
 
 export type DesignerBootstrapProgress = {
   readonly stepIndex: number;
@@ -46,6 +47,22 @@ export type DesignerBootstrapProgress = {
  * 关系语义见仓库 `AGENTS.md` / 产品建模说明；此处字段类型对齐 `@mode-db/common` DataType 字面量。
  */
 export async function ensureDesignerCatalog(
+  client: RemoteModelDBClient,
+  onProgress?: (p: DesignerBootstrapProgress) => void,
+): Promise<void> {
+  const existing = initialized.get(client);
+  if (existing) return existing;
+  const work = initializeDesignerCatalog(client, onProgress);
+  initialized.set(client, work);
+  try {
+    await work;
+  } catch (error) {
+    initialized.delete(client);
+    throw error;
+  }
+}
+
+async function initializeDesignerCatalog(
   client: RemoteModelDBClient,
   onProgress?: (p: DesignerBootstrapProgress) => void,
 ): Promise<void> {
@@ -343,21 +360,6 @@ export async function ensureDesignerCatalog(
     },
   ];
 
-  const total = models.length + relations.length;
-  let step = 0;
-
-  for (const m of models) {
-    step += 1;
-    onProgress?.({ stepIndex: step, stepTotal: total, detail: m.name });
-    await client.registerModel(m.name, m.schema);
-  }
-
-  for (const r of relations) {
-    step += 1;
-    onProgress?.({ stepIndex: step, stepTotal: total, detail: r.forward });
-    await client.registerRelation(r.source, r.target, r.forward, r.reverse, r.logic);
-  }
-
   // 旧库升级路径（patch: true 时缺则补，已存在则一律忽略）。
   const patches: Array<{ model: string; fields: Record<string, string> }> = [
     { model: SYS_MODEL, fields: { canvas_meta: 'String' } },
@@ -392,11 +394,18 @@ export async function ensureDesignerCatalog(
     { model: SYS_BINDING_SURFACE_CALL_LOG, fields: { status: 'String' } },
     { model: SYS_BINDING_SURFACE_CALL_LOG, fields: { error_code: 'String' } },
   ];
-  for (const p of patches) {
-    try {
-      await client.alterModel(p.model, p.fields, { patch: true });
-    } catch {
-      /* 已存在或非 patch 场景可忽略 */
-    }
+  const byModel = new Map<string, Record<string, string>>();
+  for (const patch of patches) {
+    byModel.set(patch.model, { ...byModel.get(patch.model), ...patch.fields });
+  }
+  for (const model of models) Object.assign(model.schema, byModel.get(model.name));
+  // One authorized DDL request instead of dozens of independently audited round trips.
+  const result = await client.batchRegister({ models, relations });
+  const upgrades = [...byModel].filter(([model]) => result.skipped.models.includes(model));
+  onProgress?.({ stepIndex: 1, stepTotal: upgrades.length + 1, detail: SYS_DATA_ASSET_MAP });
+  let step = 1;
+  for (const [model, fields] of upgrades) {
+    await client.alterModel(model, fields, { patch: true });
+    onProgress?.({ stepIndex: ++step, stepTotal: upgrades.length + 1, detail: model });
   }
 }

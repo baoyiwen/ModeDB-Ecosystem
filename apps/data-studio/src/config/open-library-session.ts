@@ -13,6 +13,7 @@ export async function openLibrarySession(session: RestorableSession): Promise<Op
     host: session.host.trim(),
     port: session.port,
     token: session.token.trim(),
+    browserSession: session.browserSession,
   });
   const library = session.library.trim();
   const client = await db.use(library);
@@ -22,6 +23,7 @@ export async function openLibrarySession(session: RestorableSession): Promise<Op
       host: session.host.trim(),
       port: session.port,
       token: session.token.trim(),
+      browserSession: session.browserSession,
     }),
   ]);
   const databaseInfo = databases.find((info) => info.name === library);

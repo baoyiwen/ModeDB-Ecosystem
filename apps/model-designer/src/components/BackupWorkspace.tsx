@@ -5,6 +5,7 @@ import { RemoteModelDBClient, type ManagementBackupInfo } from '@mode-db/sdk';
 import { useDesigner } from '../context/designer-context.js';
 import {
   getSessionToken,
+  isBrowserSessionMode,
   getStoredHost,
   getStoredPort,
   getStoredToken,
@@ -53,6 +54,7 @@ export function BackupWorkspace({ onClose, onRestored }: BackupWorkspaceProps): 
       host: getStoredHost('127.0.0.1'),
       port: getStoredPort(9090),
       token: getSessionToken() ?? getStoredToken(''),
+      browserSession: isBrowserSessionMode(),
     }),
     [],
   );
@@ -83,7 +85,9 @@ export function BackupWorkspace({ onClose, onRestored }: BackupWorkspaceProps): 
     setLoading(true);
     setError('');
     try {
-      const items = await RemoteModelDBClient.listBackups(connection);
+      const items = database
+        ? await RemoteModelDBClient.listBackups({ ...connection, database })
+        : [];
       if (!mounted.current) return;
       setBackups(items);
       try {
@@ -100,7 +104,7 @@ export function BackupWorkspace({ onClose, onRestored }: BackupWorkspaceProps): 
     } finally {
       if (mounted.current) setLoading(false);
     }
-  }, [config, connection]);
+  }, [config, connection, database]);
   useEffect(() => {
     void refresh();
   }, [refresh]);

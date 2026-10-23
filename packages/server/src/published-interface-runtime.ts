@@ -14,6 +14,7 @@ import {
   enforcePublishedInterfaceAccess,
   enforcePublishedInterfaceRateLimit,
 } from './published-interface-policy.js';
+import type { AuthorizationService } from './security/authorization-service.js';
 
 const QUERY_INTERFACE_MODEL = 'sys_query_interface';
 const QUERY_INTERFACE_CALL_LOG_MODEL = 'sys_query_interface_call_log';
@@ -43,6 +44,7 @@ interface StoredRelease {
 }
 
 export async function executePublishedQueryInterface(input: {
+  authorization?: AuthorizationService;
   atlas: string;
   designerWorkspace: string;
   body: ExecuteInterfaceBody;
@@ -74,6 +76,7 @@ export async function executePublishedQueryInterface(input: {
 }
 
 async function executePublishedQueryInterfaceCore(input: {
+  authorization?: AuthorizationService;
   atlas: string;
   designerWorkspace: string;
   body: ExecuteInterfaceBody;
@@ -109,6 +112,7 @@ async function executePublishedQueryInterfaceCore(input: {
     throw new Error(`INTERFACE_RELEASE_AMBIGUOUS:${callableName}`);
   }
   const release = matches[0]!;
+  input.authorization?.release(input.atlas, 'callable.query', callableName, release);
   const policyRelease = {
     version: release.version,
     callableName: release.callableName,
@@ -122,6 +126,7 @@ async function executePublishedQueryInterfaceCore(input: {
     input.body,
   );
   const target = await input.getEngine(input.atlas);
+  input.authorization?.release(input.atlas, 'callable.query', callableName, release);
   const raw = await executeDatabaseOperation(
     { runtime: target.createRuntime(), atlas: input.atlas },
     { op: 'executeQuery', snapshot },

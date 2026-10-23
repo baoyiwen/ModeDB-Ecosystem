@@ -11,6 +11,38 @@ export const LOCALE_LABEL: Record<LocaleId, string> = {
 };
 
 const en = {
+  'session.authMode': 'Authentication',
+  'session.browserMode': 'Browser session (recommended)',
+  'session.tokenMode': 'Service credential (advanced)',
+  'session.pairingCode': 'One-time pairing code (optional for an existing session)',
+  'session.pairingHint':
+    'Use the local launcher or an administrator-issued pairing code. Sessions renew while in use, last at most 8 hours, and can be restored after reloading.',
+  'session.logoutFailed':
+    'Server logout could not be confirmed. Retry logout or ask the administrator to revoke the session.',
+  'security.transport':
+    'Remote security connections require HTTPS. Check the address, port and certificate trust; loopback HTTP is allowed.',
+  'security.source':
+    'The source network, browser Origin or proxy chain is not allowed. Check the server source policy.',
+  'security.transportHint':
+    'Use 127.0.0.1 locally, or https://hostname remotely with the HTTPS listening port.',
+  'security.unconfirmed':
+    'The operation may have completed, but its audit outcome could not be saved. Check its actual result before retrying.',
+  'security.credentials':
+    'The credential is invalid, expired or revoked. Obtain a new credential from the instance owner.',
+  'security.forbidden':
+    'This credential does not permit this database or operation. Model Designer also needs separate permissions for its designer workspace.',
+  'security.scopeChanged':
+    'The published interface changed. Review its release and authorize the new release digest.',
+  'security.protocol':
+    'Client credentials and server security protocol do not match. Upgrade the client and use the correct credential type.',
+  'security.legacyVault':
+    'This database uses the old Vault format. Continuing the security upgrade will not migrate it automatically.',
+  'security.unavailable':
+    'The security service is unavailable or cannot persist its audit. Check the server diagnostics.',
+  'security.closed':
+    'The secure connection closed or timed out. Reconnect with a valid credential.',
+  'security.memoryOnly':
+    'Credentials are kept only in memory. After refreshing this page, enter them again.',
   'app.title': 'ModeDB playground',
   'app.lang': 'Language',
   'meta.endpoint': '{endpoint} · WebGPU: {webGpu}',
@@ -267,6 +299,28 @@ const en = {
 } as const;
 
 const zhCN: Record<keyof typeof en, string> = {
+  'session.authMode': '连接验证方式',
+  'session.browserMode': '浏览器会话（推荐）',
+  'session.tokenMode': '服务凭证（高级）',
+  'session.pairingCode': '一次性配对码（已有会话可留空）',
+  'session.pairingHint':
+    '使用本机启动器或管理员提供的一次性配对码。会话在使用期间自动续期，最长 8 小时，刷新页面可恢复。',
+  'session.logoutFailed': '未能确认服务端注销，请重试或由管理员撤销会话。',
+  'security.transport':
+    '远程安全连接需要 HTTPS。请检查主机地址、端口和证书信任；本机可使用 loopback HTTP。',
+  'security.source': '来源网段、浏览器 Origin 或代理链未获允许，请检查服务端安全来源配置。',
+  'security.transportHint':
+    '本机填写 127.0.0.1；远程填写 https://域名，并将端口设为 HTTPS 监听端口。',
+  'security.unconfirmed': '操作可能已执行，但审计结果未能确认。请先核对实际结果，避免重复提交。',
+  'security.credentials': '凭据无效、已过期或已撤销，请向实例维护者获取新凭据。',
+  'security.forbidden':
+    '当前凭据没有该库或操作的权限。Model Designer 还需要设计器专属库的独立权限。',
+  'security.scopeChanged': '接口发布内容已变更，请审核后重新授权新的发布摘要。',
+  'security.protocol': '客户端凭据与服务端安全协议不匹配，请升级客户端并使用对应类型的凭据。',
+  'security.legacyVault': '该库仍是旧版 Vault 格式，继续安全改造不会自动迁移它。',
+  'security.unavailable': '安全服务不可用或无法保存审计记录，请检查服务端诊断。',
+  'security.closed': '安全连接已关闭或超时，请使用有效凭据重新连接。',
+  'security.memoryOnly': '凭据仅保存在内存中，刷新页面后需要重新输入。',
   'app.title': 'ModeDB 演练场',
   'app.lang': '语言',
   'meta.endpoint': '{endpoint} · WebGPU：{webGpu}',

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { AuthoringEngine } from '@mode-db/core';
 import { assertFlatGraphSegment } from '@mode-db/common';
 import { loadModelDBServerConfig } from './config-loader.js';
+import { serverVaultKeys } from './security/server-vault-keys.js';
 
 export function parseCreateDbArgv(argv: string[]): {
   config?: string;
@@ -27,9 +28,9 @@ export function parseCreateDbArgv(argv: string[]): {
 function printAuthGuide(cfg: { storageRoot: string; configFilePath: string }): void {
   console.error('');
   console.error('── 认证与连接（必读）────────────────────────────────────');
-  console.error('1) connectToken：与磁盘 Vault 密钥同源，须与下列之一完全一致：');
+  console.error('1) connectToken：仅用于网络认证，不再参与磁盘 Vault 解密：');
   console.error(`   • 配置文件：${cfg.configFilePath} 中的 "connectToken"`);
-  console.error('   • 环境变量：MODEL_DB_CONNECT_TOKEN（治理端 / ModelDBClient.connect 同值）');
+  console.error('   • 环境变量：MODEL_DB_CONNECT_TOKEN（仅网络连接）');
   console.error('   • 命令行：create-db 时可用 -t / --token（与上两项择一即可，勿多处互斥）');
   console.error('');
   console.error('2) 导出环境变量（与本机配置一致）：');
@@ -67,7 +68,7 @@ export async function runCreateDb(dbName: string, argv: string[]): Promise<void>
   const engine = new AuthoringEngine({
     atlas: dbName,
     storageRoot: cfg.storageRoot,
-    connectToken: cfg.connectToken,
+    keyProvider: serverVaultKeys(cfg),
   });
   await engine.flushAll();
 

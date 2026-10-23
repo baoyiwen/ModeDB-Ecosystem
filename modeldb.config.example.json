@@ -9,7 +9,18 @@
   "cacheSize": "2GB",
   "mode": "development",
   "designerWorkspace": "model_designer_workspace",
-  "connectToken": "replace-with-long-random-secret",
+  "security": {
+    "version": 1,
+    "audit": {
+      "retentionDays": 365,
+      "maxEvents": 10000
+    },
+    "network": {
+      "transport": {
+        "mode": "loopback"
+      }
+    }
+  },
   "autoBackup": {
     "enabled": false,
     "intervalMinutes": 60,

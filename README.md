@@ -7,12 +7,18 @@
 代码库在 **2.0** 之后分为三条交付线：
 
 - **Authoring（治理端）**：建模、插入、显式绑定索引；落盘为加密 **单文件 Vault `atlas.mld`**（包内 **`__manifest__`**、**`m:<Model>`**、**`r:<…>`** 等逻辑键），**不再**使用根级 **`atlas-manifest.json`** 或 **`models/`**、**`relations/`** 分路径树。
-- **Runtime（客户端）**：按图谱名只读打开 **`atlas.mld`**，经 **`VaultModelFileReader` / `VaultRelationIndexReader`** 与包内 **`__manifest__`** 工作（密钥与治理端一致，常见为 **`MODEL_DB_VAULT_SECRET`** 或与 **`connectToken`** 派生的集成配置）。不依赖写入路径，适合独立交付。
+- **Runtime（客户端）**：按图谱名只读打开 **`atlas.mld`**，经 **`VaultModelFileReader` / `VaultRelationIndexReader`** 与包内 **`__manifest__`** 工作（通过显式 keyProvider 读取独立随机数据密钥）。不依赖写入路径，适合独立交付。
 - **Network（可选）**：**`ModelDB WebSocket Server`** 在指定存储根上托管只读查询；**`@mode-db/sdk`** 通过 **`connectRemote`** 提供与本地 **`model.query()…execute()`** 相同的链式 API，查询体经 **ConnectToken 握手** 与 **会话密钥混淆** 传输（详见下文 **「网络服务与远程客户端 SDK」**）。
 
 **运维入口**：**`modeldb.config.json`**、**`pnpm run start:server`**、**`pnpm run ignition`** 与全部参数说明见下文 **「运行与配置（工作区、启动命令、参数与环境）」**。从零到跑通服务见 **[docs/user-handbook.md](docs/user-handbook.md)**；**类与方法级 API 索引**（Authoring / Runtime / QueryChain / SDK）见 **[docs/developer-handbook.md](docs/developer-handbook.md)**。
 
 > 本项目处于早期设计与实现阶段。
+
+> 安全改造 SEC-M1：本地 `AuthoringEngine` 与 `ModelDBClient.connect` 现在必须显式传入 `keyProvider`；Windows Server 自动使用配置目录下的 `security/`（DPAPI + ACL）。网络 Token 不再派生磁盘密钥。新 Vault 为 `MDB5SVLT`，旧 `MDB4SVLT` 明确拒绝并保留文件。升级、恢复限制及可运行示例见[密钥与 Vault 契约](docs/security-v1-vault-contract.md)；完整安全 V1 进度见[里程碑](docs/security-v1-milestones.md)。
+
+> SEC-M4 已交付：新安装默认生成 `security: { version: 1 }`，使用限权 Bearer、统一授权 JSON RPC / WS 和本机维护 CLI；支持 HTTPS/WSS、来源策略、可信启动器和短期 HttpOnly 浏览器会话。三个前端均可配对与刷新恢复，不持久化长期 Token。Query Designer 提供完整 POST 地址和无真实凭据的 Postman 模板。现有无 `security` 配置的网络示例属于 legacy 模式；不会自动切换进程、配置或转换旧库。见[浏览器连接](docs/security-browser-sessions.md)、[标准 HTTP 调用](docs/security-http-invocation.md)与[授权契约](docs/security-v1-authorization-contract.md)。
+
+> 安全 V1 用户文档：[功能简介](docs/security-v1/overview.md)、[使用手册](docs/security-v1/user-guide.md)。S6.2 新增单库加密备份与受信接收方完整迁移；独立异机恢复和整体交付状态仍以[台账](docs/security-v1-milestones.md)为准。
 
 ---
 
@@ -114,7 +120,7 @@
 
 默认存储根为 **`<cwd>/data`**（与 **`packages/common/src/default-storage-root.ts`** 中 **`DEFAULT_STORAGE_ROOT`** 一致；可通过 **`MODEL_DB_STORAGE_ROOT`** / **`STORAGE_ROOT`** 或 **`configureModelDBStorageRoot`** 覆盖）。
 
-每个 **Atlas（图谱）** 对应 **`STORAGE_ROOT/<atlasName>/`** 一级目录。**引擎仅支持单文件 Vault**：磁盘上为加密 **`atlas.mld`**；**`ModelDBClient.connect`** 通过文件头魔数 **`MDB4SVLT`**（**`fileLooksLikeAtlasSingleVault`**）识别 Vault，并使用 **`VaultModelFileReader` + `VaultRelationIndexReader`** 解密包内条目。
+每个 Atlas 对应 `STORAGE_ROOT/<atlasName>/atlas.mld`（也支持工作区扁平 `<name>.mld`）。新 Vault 魔数为 `MDB5SVLT`，完整头部及密文须通过认证后才能读取。旧 `MDB4SVLT` 仅识别后明确拒绝；格式见[Vault 契约](docs/security-v1-vault-contract.md)。
 
 ### 目录示例
 
@@ -130,20 +136,20 @@ data/
 - **逻辑关系索引**：键 **`r:<Source>-<Target>-<Forward>`**，值为 JSON **`fwd` / `rev`**，由 **`RelationIndexer`** 与 **`flushAll()`** 维护并写入 Vault。
 - **清单**：键 **`__manifest__`**；**不再**使用根级 **`atlas-manifest.json`** 或 **`models/`**、**`relations/`** 分路径树。
 
-治理端写入或更新图谱后，应调用 **`await engine.flushAll()`**，将缓冲、关系索引与 **`__manifest__`** 经 **`AtlasSingleVault.saveSync`** 写回加密包，以便 **`ModelDBClient.connect('图谱名')`** 读到最新数据。
+治理端写入或更新图谱后，应调用 **`await engine.flushAll()`**，将缓冲、关系索引与 **`__manifest__`** 经 **`AtlasSingleVault.saveSync`** 写回加密包，以便 **`ModelDBClient.connect('图谱名', { keyProvider })`** 读到最新数据。
 
 ### Vault 密钥与行为
 
-| 项                 | 说明                                                                                                                                                                                                                                                                                   |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **治理端密钥**     | 构造 `new AuthoringEngine({ connectToken: '...' })`（由 **`deriveAtlasVaultSecretFromConnectToken`** 派生盘密钥），或显式 **`vaultSecret`** / **`process.env.MODEL_DB_VAULT_SECRET`**（须与 Runtime 一致）。                                                                           |
-| **Runtime 密钥**   | **`ModelDBClient.connect(atlas)`** 使用 **`MODEL_DB_VAULT_SECRET`** 或与集成测试一致的 **`MODEL_DB_CONNECT_TOKEN`** 派生密钥（见 **`test/integration/vault-env.ts`**）。                                                                                                               |
-| **磁盘混淆**       | Vault 模式下 **`shadowDiskEncoding` 强制关闭**（内层已是密文包，不再对 JSONL 行做 shadow 编码）。                                                                                                                                                                                      |
-| **透明 API**       | `getData()` / `getValue()` / `QueryEngine` 与链式查询仍返回**已解码的明文**；开发者不处理偏移或密文块。                                                                                                                                                                                |
-| **内存隐匿**       | 可选 **`memoryShadowHydration`**：实体内部可存字段指针，`getValue` 按需解析；**`getData()` 仍返回明文行**（与对外 API 一致）。                                                                                                                                                         |
-| **损坏与密钥错误** | 解密失败、截断或魔数不匹配时，`AtlasSingleVault` 经 **`DiagnosticCenter`** 上报 **`E3002`（`PHYSICAL_ADDRESS_CORRUPT` / `ErrorCodes.PHYSICAL_ADDRESS_CORRUPT`）**；`AuthoringEngine` 构造或 `connect` 会抛出 **`AtlasManifestError`**。若启用 **`engineLogger`**，诊断会异步写入日志。 |
-| **冷启动**         | 治理端再次打开已有 Vault 时，从包内 **`__manifest__`** 解析并 **hydrate** `ModelRegistry` 与 `ModelStorage` schema（需默认 `AtlasRegistry`，勿与自定义 `registry` 混用）。                                                                                                             |
-| **导出类型**       | 包入口另导出 **`AtlasSingleVault`**、**`fileLooksLikeAtlasSingleVault`**、**`ATLAS_SINGLE_VAULT_MAGIC`**，供工具或 CI 探测。                                                                                                                                                           |
+| 项                 | 说明                                                                                                                                                                       |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **治理端密钥**     | `new AuthoringEngine({ atlas, keyProvider })`；由 provider 提供随机 DEK，不能从网络 Token 派生。                                                                           |
+| **Runtime 密钥**   | `ModelDBClient.connect(atlas, { keyProvider })` 使用同一密钥提供器；不读取密钥环境变量。                                                                                   |
+| **磁盘混淆**       | Vault 模式下 **`shadowDiskEncoding` 强制关闭**（内层已是密文包，不再对 JSONL 行做 shadow 编码）。                                                                          |
+| **透明 API**       | `getData()` / `getValue()` / `QueryEngine` 与链式查询仍返回**已解码的明文**；开发者不处理偏移或密文块。                                                                    |
+| **内存隐匿**       | 可选 **`memoryShadowHydration`**：实体内部可存字段指针，`getValue` 按需解析；**`getData()` 仍返回明文行**（与对外 API 一致）。                                             |
+| **损坏与密钥错误** | 抛出固定码 `VaultSecurityError`，保留源文件；旧格式、认证失败、密钥缺失、提交冲突分别诊断。                                                                                |
+| **冷启动**         | 治理端再次打开已有 Vault 时，从包内 **`__manifest__`** 解析并 **hydrate** `ModelRegistry` 与 `ModelStorage` schema（需默认 `AtlasRegistry`，勿与自定义 `registry` 混用）。 |
+| **导出类型**       | 包入口另导出 **`AtlasSingleVault`**、**`fileLooksLikeAtlasSingleVault`**、**`ATLAS_SINGLE_VAULT_MAGIC`**，供工具或 CI 探测。                                               |
 
 下文 **「治理端持久化与开发者体验（DX）」** 描述写缓冲、定时调度与合并读；若仅需快速上手，可跳到 **「使用指南」**。
 
@@ -202,7 +208,7 @@ engine.registerModel('Task', {
 
 **I18N 特殊处理**：
 
-- 引擎配置 `currentLocale`（如 `new AuthoringEngine({ atlas: 'x', currentLocale: 'zh' })`）。
+- 引擎配置 `currentLocale`（如 `new AuthoringEngine({ keyProvider, atlas: 'x', currentLocale: 'zh' })`）。
 - **插入时**：若 I18N 字段传入 plain string，自动包装为 `{ [currentLocale]: value }`。
 - **查询时**：`where('name', 'eq', '苹果')` 自动按 `currentLocale` 解析 `row.name[locale]` 进行比较。
 
@@ -305,7 +311,7 @@ streamReport.allDiagnostics(); // [Diagnostic]
 ```typescript
 import { AuthoringEngine, DataType, I18NValue, ColorValue, UnitValue } from '@mode-db/core';
 
-const engine = new AuthoringEngine({ atlas: 'typed', currentLocale: 'zh' });
+const engine = new AuthoringEngine({ keyProvider, atlas: 'typed', currentLocale: 'zh' });
 
 // 方式 A：registerModel 时直接传入类型化字段
 engine.registerModel('Product', {
@@ -404,7 +410,7 @@ weightVO.convertTo('g'); // 200
 ```typescript
 import { AuthoringEngine } from '@mode-db/core';
 
-const engine = new AuthoringEngine({ atlas: 'my_atlas' });
+const engine = new AuthoringEngine({ keyProvider, atlas: 'my_atlas' });
 engine.registerModel('Item', new Set(['id', 'name', 'status', 'score']));
 
 const Item = engine.model('Item');
@@ -499,20 +505,21 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 
 将根目录 **[modeldb.config.example.json](modeldb.config.example.json)** 复制为 **`modeldb.config.json`** 并按环境修改（**勿**提交真实令牌与密钥）。**默认 `MODELDB_HOME`、`-c`、相对路径与配置文件目录的关系、各操作系统注意点** 见 **[docs/modeldb-config-guide.md](docs/modeldb-config-guide.md)**。
 
-| 字段                               | 类型      | 说明                                                                                                                                                                                                       |
-| ---------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`port`**                         | `number`  | 监听端口；默认 **9090**（可被 CLI / **`MODEL_DB_PORT`** 覆盖）。                                                                                                                                           |
-| **`host`**                         | `string`  | 绑定地址；默认 **127.0.0.1**。                                                                                                                                                                             |
-| **`workspace`**                    | `string`  | **首选**：逻辑库工作区根目录；每个逻辑库为 **`<workspace>/<dbName>/`**（内含 **`atlas.mld`** 等）。合并顺序见 **`packages/server/src/config-loader.ts`**（**`workspace` → `storageRoot` → `dbPath`** …）。 |
-| **`dbPath`**                       | `string`  | **兼容**：与 **`workspace`** 同语义（目录或 **`*.mld` 文件路径**）；为 **`.mld` 文件**时父目录为根，**`defaultAtlas`** = basename 去扩展名。                                                               |
-| **`storageRoot`**                  | `string`  | **兼容**：显式存储根；与 **`workspace` / `dbPath`** 同一合并链。                                                                                                                                           |
-| **`logDir`**                       | `string`  | 相对 **正在加载的 `modeldb.config.json` 所在目录** 解析的日志目录；写入 **`system.log`**、**`access.log`**（当 **`accessLog`** 开启时）。                                                                  |
-| **`bufferThreshold`**              | `number`  | 某模型暂存行数 ≥ 该值时触发该模型的 **`flushModelToDisk`**（服务端 **`AuthoringEngine`**）；可被 **`MODEL_DB_BUFFER_THRESHOLD`** 覆盖。                                                                    |
-| **`cacheSize`**                    | `string`  | 当前版本为预留/提示（如 **`2GB`**），不参与核心逻辑。                                                                                                                                                      |
-| **`mode`**                         | `string`  | 设为 **`"production"`**（不区分大小写）时启用 **`access.log`** 中的请求/解码/写门控等访问日志；等价于环境变量 **`MODEL_DB_ACCESS_LOG=true`**。                                                             |
-| **`connectToken`**                 | `string`  | **必填（文件或环境或 CLI 其一）**：客户端握手 **`connectToken`** 须一致，否则断开。                                                                                                                        |
-| **`vaultSecret`** / **`vaultKey`** | `string`  | 单文件 **`atlas.mld`** Vault 解密口令；可与 **`MODEL_DB_VAULT_SECRET`** 混用（别名 **`vaultKey`** 与 CLI **`--vault-key`** 相同语义）。                                                                    |
-| **`dev`**                          | `boolean` | **`true`** 时与 CLI **`--dev`** 类似语义空间（详见 server 实现）；另 **`MODEL_DB_DEV`** 可参与解析。                                                                                                       |
+| 字段                              | 类型      | 说明                                                                                                                                                                                                       |
+| --------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`port`**                        | `number`  | 监听端口；默认 **9090**（可被 CLI / **`MODEL_DB_PORT`** 覆盖）。                                                                                                                                           |
+| **`host`**                        | `string`  | 绑定地址；默认 **127.0.0.1**。                                                                                                                                                                             |
+| **`workspace`**                   | `string`  | **首选**：逻辑库工作区根目录；每个逻辑库为 **`<workspace>/<dbName>/`**（内含 **`atlas.mld`** 等）。合并顺序见 **`packages/server/src/config-loader.ts`**（**`workspace` → `storageRoot` → `dbPath`** …）。 |
+| **`dbPath`**                      | `string`  | **兼容**：与 **`workspace`** 同语义（目录或 **`*.mld` 文件路径**）；为 **`.mld` 文件**时父目录为根，**`defaultAtlas`** = basename 去扩展名。                                                               |
+| **`storageRoot`**                 | `string`  | **兼容**：显式存储根；与 **`workspace` / `dbPath`** 同一合并链。                                                                                                                                           |
+| **`logDir`**                      | `string`  | 相对 **正在加载的 `modeldb.config.json` 所在目录** 解析的日志目录；写入 **`system.log`**、**`access.log`**（当 **`accessLog`** 开启时）。                                                                  |
+| **`bufferThreshold`**             | `number`  | 某模型暂存行数 ≥ 该值时触发该模型的 **`flushModelToDisk`**（服务端 **`AuthoringEngine`**）；可被 **`MODEL_DB_BUFFER_THRESHOLD`** 覆盖。                                                                    |
+| **`cacheSize`**                   | `string`  | 当前版本为预留/提示（如 **`2GB`**），不参与核心逻辑。                                                                                                                                                      |
+| **`mode`**                        | `string`  | 设为 **`"production"`**（不区分大小写）时启用 **`access.log`** 中的请求/解码/写门控等访问日志；等价于环境变量 **`MODEL_DB_ACCESS_LOG=true`**。                                                             |
+| **`security`**                    | `object`  | 新安装默认 `{ "version": 1 }`；启用独立凭据台账，不接受旧 Token。当前网络入口待 SEC-M3/M4 接入。                                                                                                           |
+| **`connectToken`**                | `string`  | 仅 legacy 模式必填（文件或环境或 CLI 其一），客户端须一致。新 registry 模式禁止配置。                                                                                                                      |
+| **旧 `vaultSecret` / `vaultKey`** | —         | 新格式不支持字符串口令配置；Windows Server 自动使用配置目录的 `security/`。                                                                                                                                |
+| **`dev`**                         | `boolean` | **`true`** 时与 CLI **`--dev`** 类似语义空间（详见 server 实现）；另 **`MODEL_DB_DEV`** 可参与解析。                                                                                                       |
 
 解析后的 **`ResolvedModelDBServerConfig`** 另含 **`workspace`**（与 **`storageRoot`** 同路径，便于新代码命名）、**`defaultAtlas`**（仅当原始串指向 **`.mld`** 文件时）、**`bufferFlushRowThreshold`**、**`accessLog`**、**`serverLogDirectory`** 等派生字段。
 
@@ -520,7 +527,7 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 
 **同一键的合并顺序**为：**命令行（`commander` 传入的 overrides）→ `modeldb.config.json` → 环境变量 → 内置默认值**。
 
-示例：**`port`** = `cli.port ?? file.port ?? MODEL_DB_PORT ?? 9090`；**`connectToken`** = `cli.connectToken ?? file.connectToken ?? MODEL_DB_CONNECT_TOKEN`（再 **trim**），若仍为空则 **抛错**。
+示例：**`port`** = `cli.port ?? file.port ?? MODEL_DB_PORT ?? 9090`；legacy 模式的 **`connectToken`** = `cli.connectToken ?? file.connectToken ?? MODEL_DB_CONNECT_TOKEN`（再 **trim**），若仍为空则 **抛错**。registry 模式不使用此凭据。
 
 未在 CLI 暴露的项（如 **`bufferThreshold`**）仅来自 **配置文件** 或 **`MODEL_DB_BUFFER_THRESHOLD`**。
 
@@ -528,14 +535,14 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 
 入口：**`node ./packages/server/dist/cli.js`** 或 **`pnpm run start:server`** 或 **`pnpm exec modeldb-server`**（见根 **`package.json` → `bin`**）。
 
-| 选项                                     | 说明                                                                                                                                                                                                                                              |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`-c, --config <path>`**                | **会话数据根目录**（其下为 **`modeldb.config.json`**、**`logs/`**、**`cache/`**、**`vault/`**），或兼容旧版：指向已存在的 **`.json`** 配置文件；省略时见 **`MODELDB_HOME` / `~/.modeldb/home` / OS 默认**（**`docs/modeldb-config-guide.md`**）。 |
-| **`-p, --port <number>`**                | 监听端口。                                                                                                                                                                                                                                        |
-| **`-H, --host <host>`**                  | 绑定 host。                                                                                                                                                                                                                                       |
-| **`-t, --token <secret>`**               | **`connectToken`**。                                                                                                                                                                                                                              |
-| **`--vault-secret`** / **`--vault-key`** | Vault 口令。                                                                                                                                                                                                                                      |
-| **`--dev`**                              | 开发模式（如打印解密后的 RPC 摘要，**勿**用于生产）。                                                                                                                                                                                             |
+| 选项                                    | 说明                                                                                                                                                                                                                                              |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`-c, --config <path>`**               | **会话数据根目录**（其下为 **`modeldb.config.json`**、**`logs/`**、**`cache/`**、**`vault/`**），或兼容旧版：指向已存在的 **`.json`** 配置文件；省略时见 **`MODELDB_HOME` / `~/.modeldb/home` / OS 默认**（**`docs/modeldb-config-guide.md`**）。 |
+| **`-p, --port <number>`**               | 监听端口。                                                                                                                                                                                                                                        |
+| **`-H, --host <host>`**                 | 绑定 host。                                                                                                                                                                                                                                       |
+| **`-t, --token <secret>`**              | **`connectToken`**。                                                                                                                                                                                                                              |
+| **旧 `--vault-secret` / `--vault-key`** | 不支持；数据密钥由本机 provider 管理。                                                                                                                                                                                                            |
+| **`--dev`**                             | 开发模式（如打印解密后的 RPC 摘要，**勿**用于生产）。                                                                                                                                                                                             |
 
 ### 环境变量一览
 
@@ -547,14 +554,14 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 | **`MODEL_DB_WORKSPACE`**                         | 逻辑库工作区根（**仅**在已用 **`-c`** 载入 **`modeldb.config.json`** 时参与合并；无 **`-c`**、走 **`MODELDB_HOME`** 默认配置时**忽略**，避免与默认主目录串线）。                          |
 | **`MODEL_DB_STORAGE_ROOT`** / **`STORAGE_ROOT`** | 同上：**仅**在 **`-c`** 模式下与文件内字段一并参与 **`workspace`/`dbPath`** 合并链。                                                                                                      |
 | **`MODEL_DB_CONNECT_TOKEN`**                     | 连接令牌。                                                                                                                                                                                |
-| **`MODEL_DB_VAULT_SECRET`**                      | Vault 口令（运行时 **`ModelDBClient.connect`** 读 Vault atlas **同样**依赖此变量）。                                                                                                      |
+| **旧 `MODEL_DB_VAULT_SECRET`**                   | 不再用于新格式解密；本地 Core 必须显式传入 provider。                                                                                                                                     |
 | **`MODEL_DB_BUFFER_THRESHOLD`**                  | 同 **`bufferThreshold`**。                                                                                                                                                                |
 | **`MODEL_DB_DEV`**                               | 开发标志。                                                                                                                                                                                |
 | **`MODEL_DB_ACCESS_LOG`**                        | 设为 **`true`** 等效强制打开访问日志（与 **`mode: production`** 二选一或叠加，见 **`config-loader.ts`**）。                                                                               |
 
 ### ConnectToken（连接令牌）：从哪里来、如何用、与 Vault 密钥的区别
 
-**`connectToken`** 是由**运维 / 开发者**配置的**共享口令字符串**（类似 API Key）：**服务端**保存一份期望值，**客户端**在连接时出示**完全相同**的字符串，通过后才进入会话。若使用 **无 `-c` 的首次启动**，**`MODELDB_HOME`** 下自动生成的 **`modeldb.config.json`** 会写入**随机** **`connectToken`**；生产环境仍应替换为你管控的密钥并备份配置。
+以下说明仅适用于 legacy 模式：**`connectToken`** 是由运维配置的共享口令，客户端出示相同值完成旧协议握手。SEC-M2 后首次生成的配置改用 `security: { version: 1 }`，不再写入随机共享 Token；新凭据经本机 CLI 一次性交付，不从配置中取回。
 
 #### 服务端在哪里配置（三选一或组合，按优先级合并）
 
@@ -581,18 +588,18 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 2. **握手通过后**，双方用 **`deriveWireSessionKey(connectToken, atlas)`**（**`@mode-db/shared`** **`wire-codec.ts`**：`sha256(\`${connectToken}:${atlas}:mode-db-wire-v2\`)` 的 **hex**）作为后续 **RPC 载荷** XOR 混淆的会话密钥材料（**不是** TLS；公网仍需 **WSS / 反向代理**）。
 3. **外层二进制帧**（若走 **`MDBX` 魔数** 路径）的 XOR 材料还与 **`connectToken`** 相关（**`@mode-db/shared`** **`mdb2-outer:${connectToken}:v1`**），与服务端 **`decodeInboundTransportBuffer`** 一致。
 
-#### 与 **`vaultSecret` / `MODEL_DB_VAULT_SECRET`** 不要混淆
+#### 网络凭证与独立数据密钥
 
-| 项                                          | 作用                                                                                                       |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **`connectToken`**                          | **谁可以连上这个 WebSocket/HTTP 服务**；与磁盘 **`atlas.mld`** 是否加密**无关**。                          |
-| **`vaultSecret` / `MODEL_DB_VAULT_SECRET`** | **磁盘上单文件 Vault 图谱**的加解密口令；**`ModelDBClient.connect`** 读 **`atlas.mld`** 时也需要同一变量。 |
+| 项                 | 作用                                                                              |
+| ------------------ | --------------------------------------------------------------------------------- |
+| **`connectToken`** | **谁可以连上这个 WebSocket/HTTP 服务**；与磁盘 **`atlas.mld`** 是否加密**无关**。 |
+| **`keyProvider`**  | 通过受保护的 IMK/DEK 解密磁盘 Vault，不向网络客户端提供数据密钥。                 |
 
-两者独立：**`connectToken`** 只控制网络会话是否准入；**`vaultSecret` / `MODEL_DB_VAULT_SECRET`** 只控制磁盘 **`atlas.mld`** 能否解密。生产环境通常两者都需要。
+网络认证沿用当前 Token 方案；数据加密已在 SEC-M1 独立。更换网络凭证不重写 Vault。凭证注册、轮换 CLI 与浏览器配对仍由后续里程碑交付。
 
 ### 启动 WebSocket 服务的推荐流程
 
-1. **`cp modeldb.config.example.json modeldb.config.json`**（Windows 可手动复制），编辑 **`connectToken`**；若使用加密 **`atlas.mld`**，填写 **`vaultSecret`** 或导出 **`MODEL_DB_VAULT_SECRET`**。
+1. 复制 `modeldb.config.example.json` 为配置并设置网络 `connectToken`。Windows Server 自动在配置目录下创建受保护的 `security/`；保留旧库，按切换计划创建新格式库。
 2. 执行 **`pnpm run start:server -- -c modeldb.config.json`**：已内含 **`pnpm run build:server`**，会生成 **`packages/server/dist/cli.js`** 再启动；**无 `-c`** 时使用 **`MODELDB_HOME`** 下默认配置（见配置指南）。也可 **`node ./packages/server/dist/cli.js -c modeldb.config.json`**（须事先已 **`build:server`**）。若还要跑 **`pnpm test`**、**`pnpm run dev:web`** 或消费 **`@mode-db/sdk`** 的本地 **`dist`**，另执行一次 **`pnpm run build`** 或至少 **`pnpm run build:sdk`**。
 3. 若报 **`EADDRINUSE`**，更换 **`port`** 或结束占用端口的进程。
 4. 修改磁盘上的 Vault（或包内 **`__manifest__`** 所描述拓扑）后，**已运行的进程**不会自动重载全部缓存；需**重启 server** 再接受客户端。
@@ -620,7 +627,7 @@ pnpm run build    # shared → common → core（packages/core/dist）→ server
 | **传输**         | 基于 **`ws`** 的 **WebSocket**；握手后 RPC 的 JSON 经 **`deriveWireSessionKey(connectToken, atlas)`** 与 **`encodeWirePayload` / `decodeWirePayload`**（**`@mode-db/shared`** **`wire-codec.ts`**）做 **XOR 混淆**，载荷非明文 JSON。 |
 | **ConnectToken** | 首条消息 **`{ type: 'handshake', connectToken, atlas }`** 与服务器配置的令牌比对；失败则 **`{ type: 'error' }`** 并断开。                                                                                                             |
 | **查询回放**     | 客户端 **`getRemoteExecuteSnapshot()`** 生成 **`RemoteExecuteSnapshot`**（含 **`QueryPlanASTv2`** 与分析分页元数据）；服务端 **`QueryChain.fromWirePlan`** + **`applyRemoteAnalysisSnapshot`** 后 **`execute()`**。                   |
-| **Vault**        | 服务端 **`modeldb.config.json`** 可提供 **`vaultSecret`**，或依赖 **`MODEL_DB_VAULT_SECRET`**，与本地 **`ModelDBClient.connect`** 一致。                                                                                              |
+| **Vault**        | Windows Server 在 `<config-directory>/security` 保存受 DPAPI/ACL 保护的独立密钥。密钥丢失不会自动建空库。                                                                                                                             |
 
 **重要**：线协议混淆 **不是** TLS，也 **不能** 替代 HTTPS/WSS。公网部署请务必置于 **TLS 终结**（反向代理终止 **`wss://`**）之后；令牌与密钥仍须按运维规范轮换。
 
@@ -690,31 +697,32 @@ Runtime 的 `ModelDBClient.connect()` 使用同一套 `resolveModelDBStorageRoot
 ```typescript
 import { AuthoringEngine } from '@mode-db/core';
 
-const pipe = new AuthoringEngine({ atlas: 'pipe' });
-const tran = new AuthoringEngine({ atlas: 'tran' });
+const pipe = new AuthoringEngine({ keyProvider, atlas: 'pipe' });
+const tran = new AuthoringEngine({ keyProvider, atlas: 'tran' });
 
 // 也可显式指定 storageRoot（集成测试常用）
-// new AuthoringEngine({ atlas: 'pipe', storageRoot: '/var/model-db' });
+// new AuthoringEngine({ keyProvider, atlas: 'pipe', storageRoot: '/var/model-db' });
 ```
 
-**Vault 图谱示例**（目录下仅有 **`atlas.mld`**；Runtime 与治理端须使用**同一** Vault 密钥材料，常见为 **`connectToken` → 派生密钥** 或 **`MODEL_DB_VAULT_SECRET`**）：
+**Vault 图谱示例**：Windows 本机 provider 在独立安全目录保存密钥，跨进程使用相同目录和 Windows 身份；网络 Token 不参与解密。
 
 ```typescript
 import { AuthoringEngine, ModelDBClient } from '@mode-db/core';
+import { LocalVaultKeyProvider } from '@mode-db/server';
 
-const CONNECT = 'your-long-random-connect-token';
+const keyProvider = new LocalVaultKeyProvider('C:/modeldb-instance/security');
 
 const engine = new AuthoringEngine({
   atlas: 'secure_atlas',
-  connectToken: CONNECT,
+  keyProvider,
 });
 engine.registerModel('Note', new Set(['text']));
 await engine.model('Note').insert({ text: 'hello' });
 await engine.flushAll();
 
 // 另一进程 / 只读客户端：
-process.env.MODEL_DB_CONNECT_TOKEN = CONNECT;
-const client = await ModelDBClient.connect('secure_atlas');
+// 同一运行账号下，用相同安全目录创建 provider。
+const client = await ModelDBClient.connect('secure_atlas', { keyProvider });
 ```
 
 ### 2. 注册模型与关系
@@ -976,7 +984,7 @@ if (isAnalysisResult(report)) {
 ```typescript
 import { ModelDBClient } from '@mode-db/core';
 
-const client = await ModelDBClient.connect('pipe');
+const client = await ModelDBClient.connect('pipe', { keyProvider });
 const PumpRO = client.model('Pump');
 
 const rows = (await PumpRO.query([somePumpId]).relate('located_in').execute()).map((h) =>
@@ -984,7 +992,7 @@ const rows = (await PumpRO.query([somePumpId]).relate('located_in').execute()).m
 );
 ```
 
-- **`connect(atlasName)`**：要求 **`STORAGE_ROOT/<atlas>/atlas.mld`** 存在且文件头为 Vault 魔数 **`MDB4SVLT`**；使用与治理端一致的密钥（**`MODEL_DB_VAULT_SECRET`** 或 **`MODEL_DB_CONNECT_TOKEN`** 派生等）解密后，经 **`VaultModelFileReader` / `VaultRelationIndexReader`** 与包内 **`__manifest__`** 提供只读数据。
+- **`connect(atlasName, { keyProvider })`**：读取嵌套或扁平 `MDB5SVLT` 文件，先定位已有密钥再验证完整认证加密；不创建数据库。旧格式/损坏/缺失密钥明确失败。
 - **返回的 `ModelEntity`（Runtime）**：仅提供查询与 Schema 自省，**没有** `insert`、`updateFields`、`bind` 等写入 API。
 - **`ModelDBClient.fromContext(runtimeContext)`**：同进程内可由 `AuthoringEngine.createRuntime()` + `ModelDBAdmin.client()` 桥接（仍建议第三方只用 `connect`）。
 
@@ -1000,7 +1008,7 @@ const rows = (await PumpRO.query([somePumpId]).relate('located_in').execute()).m
 
 路径：`STORAGE_ROOT/<atlas>/atlas.mld`
 
-二进制布局（概念）：**魔数** + **固定长度随机填充** + **密文长度** + **AES-GCM 密文**（内含 JSON 目录 **`{ v:1, entries: Record<string,string> }`**）。条目中 **`__manifest__`** 为图谱清单的 UTF-8 字符串；**`m:ModelName`** 为模型 **JSONL** 文本块；**`r:Source-Target-forward`** 为关系邻接表 JSON（**`fwd` / `rev`** 双向映射）。密钥由调用方字符串经 **scrypt** 派生，**切勿**将生产密钥提交到仓库。
+布局：8 字节魔数 `MDB5SVLT` + 4 字节大端 JSON 头长度 + JSON 头（版本/算法/密钥引用）+ 12 字节 IV + 16 字节 tag + AES-256-GCM 密文。前缀和头部整体作为 AAD；DEK 为独立随机 32 字节。目录仍是 `{v:1,entries}`，保留 `__manifest__`、`m:*` 和 `r:*`。提交使用同目录 stage/intent/rename 与冲突检测；详细格式、恢复规则及 Windows 断电验证边界见[契约](docs/security-v1-vault-contract.md)。
 
 ### 包内模型 JSONL（`m:<Model>`）
 
@@ -1202,7 +1210,7 @@ pnpm run dev
 ### 部署 WebSocket 服务（运维摘要）
 
 1. 将 **`packages/core/dist/`** 随 **`@mode-db/core`** 安装结果部署，或从 registry **`pnpm add @mode-db/core`**（以实际包名为准）。
-2. 准备 **`modeldb.config.json`**（或由环境变量 **`MODEL_DB_CONNECT_TOKEN`**、**`MODEL_DB_STORAGE_ROOT`**、**`MODEL_DB_VAULT_SECRET`** 注入），**不要**在仓库中保存生产密钥。
+2. 准备 `modeldb.config.json` 或网络连接相关环境变量；磁盘密钥不通过 Token/环境变量注入。保管好配置目录中的 `security/`，独立恢复工具以 SEC-M6 为准。
 3. 使用 **`node ./packages/server/dist/cli.js`** 或 **`pnpm exec modeldb-server`** 启动；生产环境前置 **Nginx / Caddy / 云 LB** 做 **TLS** 与限流。
 4. **进程管理**：使用 **systemd**、**PM2** 或容器编排重启策略，确保异常退出后自动拉起。
 

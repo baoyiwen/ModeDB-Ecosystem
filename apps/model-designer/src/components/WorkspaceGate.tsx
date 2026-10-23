@@ -6,6 +6,7 @@ import { seedDefaultWorkspaceRecords } from '../bootstrap/seed-workspace-rows.js
 import {
   getStoredHost,
   getStoredPort,
+  getStoredToken,
   getStoredWorkspace,
   persistConnectionFields,
 } from '../config/connection-prefs.js';
@@ -42,7 +43,7 @@ export class WorkspaceGate extends DesignerComponent<WorkspaceGateProps, Workspa
       host: getStoredHost(import.meta.env.VITE_MODE_DB_HOST ?? '127.0.0.1'),
       port: getStoredPort(Number(import.meta.env.VITE_MODE_DB_PORT ?? 9090) || 9090),
       workspace: getStoredWorkspace(FIXED_MODEL_DESIGNER_DATABASE),
-      token: import.meta.env.VITE_MODE_DB_TOKEN ?? '',
+      token: getStoredToken(''),
       busy: false,
       bootstrapProgress: null,
     };

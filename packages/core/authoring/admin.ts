@@ -7,7 +7,7 @@ import { AuthoringEngine, type AuthoringEngineOptions } from './engine.js';
  * Use {@link ModelDBAdmin.client} to obtain a {@link ModelDBClient} for query-only embedding.
  */
 export class ModelDBAdmin extends AuthoringEngine {
-  constructor(options: AuthoringEngineOptions = { atlas: 'default' }) {
+  constructor(options: AuthoringEngineOptions) {
     super(options);
   }
 

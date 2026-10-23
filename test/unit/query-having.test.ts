@@ -121,7 +121,7 @@ describe('QueryChain HAVING', () => {
     const engine = new AuthoringEngine({
       atlas: 'query-having',
       storageRoot: root,
-      connectToken: 'test-token',
+      keyProvider: fixtureVaultKeys(root),
     });
     try {
       engine.registerModel('Item', { group: 'String', score: 'Int' });
@@ -182,3 +182,4 @@ describe('QueryChain HAVING', () => {
     );
   });
 });
+import { fixtureVaultKeys } from '../vault-keys.js';

@@ -1,10 +1,23 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
+import type { VaultKeyProvider } from '@mode-db/common';
+import type { SecurityNetworkConfig } from './security/network-policy.js';
 
 import { resolveModelDbConfigPathFromCli } from './modeldb-default-home.js';
 
 export interface ModelDBServerFileConfig {
+  /** Independent credential registry; never accepts raw secrets in this block. */
+  readonly security?: {
+    readonly version: 1;
+    readonly network?: SecurityNetworkConfig;
+    readonly audit?: {
+      /** Audit event retention period; defaults to 365 days. */
+      readonly retentionDays?: number;
+      /** Encrypted audit ledger capacity; defaults to 10,000 events. */
+      readonly maxEvents?: number;
+    };
+  };
   readonly port?: number;
   readonly host?: string;
   /** Hostname or IP to print as the preferred client address when the server binds broadly. */
@@ -64,6 +77,13 @@ export interface ResolvedModelDBServerAutoBackupConfig {
 }
 
 export interface ResolvedModelDBServerConfig {
+  /** New installations use registry; legacy is a temporary transition mode. */
+  readonly securityMode?: 'registry' | 'legacy';
+  /** Registry transport/source policy; legacy does not opt into this contract. */
+  readonly securityNetwork?: SecurityNetworkConfig;
+  readonly securityAudit: { readonly retentionDays: number; readonly maxEvents: number };
+  /** Local embedding/test injection; never loaded from JSON or exposed to clients. */
+  readonly vaultKeyProvider?: VaultKeyProvider;
   readonly port: number;
   readonly host: string;
   /** Optional externally reachable hostname or IP shown in startup connection details. */
@@ -286,7 +306,25 @@ export async function loadModelDBServerConfig(
     'model_designer_workspace';
   const autoBackup = resolveAutoBackupConfig(file.autoBackup);
 
-  if (!connectToken) {
+  const securityMode = file.security === undefined ? 'legacy' : 'registry';
+  if (securityMode === 'registry' && (file.security?.version !== 1 || connectToken)) {
+    throw new Error('SECURITY_INVALID_CONFIG: registry mode rejects legacy credentials.');
+  }
+  const securityAudit = {
+    retentionDays: file.security?.audit?.retentionDays ?? 365,
+    maxEvents: file.security?.audit?.maxEvents ?? 10000,
+  };
+  if (
+    !Number.isSafeInteger(securityAudit.retentionDays) ||
+    securityAudit.retentionDays < 1 ||
+    securityAudit.retentionDays > 3650 ||
+    !Number.isSafeInteger(securityAudit.maxEvents) ||
+    securityAudit.maxEvents < 100 ||
+    securityAudit.maxEvents > 50000
+  ) {
+    throw new Error('SECURITY_INVALID_CONFIG: invalid security.audit retention or capacity.');
+  }
+  if (!connectToken && securityMode !== 'registry') {
     throw new Error(
       'ModelDB server: missing connectToken. ' +
         `config file: ${path} (exists=${fileExists}). ` +
@@ -296,6 +334,9 @@ export async function loadModelDBServerConfig(
   }
 
   return {
+    securityMode,
+    ...(file.security?.network ? { securityNetwork: file.security.network } : {}),
+    securityAudit,
     port,
     host,
     ...(advertisedHost?.trim() ? { advertisedHost: advertisedHost.trim() } : {}),

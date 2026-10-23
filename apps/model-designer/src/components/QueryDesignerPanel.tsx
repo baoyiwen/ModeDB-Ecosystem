@@ -9,7 +9,11 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppConfirm } from '@mode-db/data-ui';
-import { QueryInterfaceInvocationError, queryInterfaceAccessKeyDigest } from '@mode-db/sdk';
+import {
+  connectionOrigin,
+  QueryInterfaceInvocationError,
+  queryInterfaceAccessKeyDigest,
+} from '@mode-db/sdk';
 import type { EngineModelNode, EngineRelationEdge } from '../types/engine-schema.js';
 import { useDesigner } from '../context/designer-context.js';
 import {
@@ -81,6 +85,11 @@ import {
   type QuerySort,
 } from '../query-designer/index.js';
 import { interfaceDiagnosticMessage } from '../utils/interface-diagnostic-i18n.js';
+import { connectionErrorMessage } from '../config/connection-error.js';
+import {
+  buildInterfaceCallDocs,
+  publishedInterfaceCallBody,
+} from '../query-designer/interface-call-docs.js';
 import { createUuid } from '../utils/random-id.js';
 import {
   listQueryInterfaceAuditSummaries,
@@ -1242,6 +1251,7 @@ function QueryInterfaceDocCard(props: {
   onDelete: () => void;
 }): ReactElement {
   const [expanded, setExpanded] = useState(props.defaultExpanded ?? false);
+  const { i18n } = useDesigner();
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(props.item.name);
   const [testing, setTesting] = useState(false);
@@ -1269,14 +1279,32 @@ function QueryInterfaceDocCard(props: {
     queryInterface.contract.invocation.endpoint ||
     queryInterface.contract.invocation.callableName ||
     queryInterface.name;
-  const httpEndpoint =
+  const connection = resolveBusinessConnectionParams();
+  const callDocs =
     publishedRelease?.queryInterface.status === 'active'
-      ? publishedQueryInterfaceHttpEndpoint(props.libraryCode, publishedRelease.callableName)
+      ? buildInterfaceCallDocs({
+          release: publishedRelease,
+          libraryCode: props.libraryCode,
+          baseUrl: connection.publicBaseUrl || connectionOrigin(connection),
+          authMode:
+            connection.browserSession || connection.token.startsWith('mdbt_v1_')
+              ? 'registry'
+              : 'legacy',
+        })
       : undefined;
-  const httpExample =
-    publishedRelease && httpEndpoint
-      ? publishedInterfaceHttpExample(publishedRelease, httpEndpoint)
-      : undefined;
+  const downloadPostman = (): void => {
+    if (!callDocs) return;
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(callDocs.postman, null, 2)], { type: 'application/json' }),
+    );
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${publishedRelease!.callableName.replace(/[^a-zA-Z0-9_-]/g, '_')}.postman_collection.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
   const primaryPath = queryInterface.query.traversal.primaryPath
     .map((nodeId) => queryInterface.designGraph.nodes.find((node) => node.id === nodeId))
     .filter((node): node is NonNullable<typeof node> => Boolean(node));
@@ -1447,12 +1475,33 @@ function QueryInterfaceDocCard(props: {
 
           <div className="query-interface-doc-call">
             <span>{props.httpEndpointLabel || TEXT_CALL_ENTRY}</span>
-            <code>{httpEndpoint ?? invocation}</code>
+            <code>{callDocs ? `POST ${callDocs.endpoint}` : invocation}</code>
           </div>
-          {httpExample ? (
+          {callDocs ? (
             <details className="query-execution-request query-interface-http-example">
               <summary>{props.httpExampleLabel}</summary>
-              <pre>{httpExample}</pre>
+              <div className="query-interface-call-tools">
+                <span>
+                  {i18n.t(
+                    'ui',
+                    callDocs.grant ? 'queryInterfaceBearerHint' : 'queryInterfaceLegacyHint',
+                  )}
+                </span>
+                <span>{i18n.t('ui', 'queryInterfaceParameterExampleHint')}</span>
+                <button type="button" className="query-designer-button" onClick={downloadPostman}>
+                  {i18n.t('ui', 'queryInterfaceDownloadPostman')}
+                </button>
+              </div>
+              <pre>{callDocs.curl}</pre>
+              {callDocs.grant ? (
+                <details>
+                  <summary>{i18n.t('ui', 'queryInterfaceReleaseGrant')}</summary>
+                  <div className="query-interface-call-tools">
+                    {i18n.t('ui', 'queryInterfaceReleaseGrantHint')}
+                  </div>
+                  <pre>{JSON.stringify([callDocs.grant], null, 2)}</pre>
+                </details>
+              ) : null}
             </details>
           ) : null}
 
@@ -1891,6 +1940,7 @@ function PublishedInterfaceTester(props: {
   history: readonly QueryInterfaceRelease[];
   onExecuted: () => Promise<void>;
 }): ReactElement {
+  const { i18n } = useDesigner();
   const releases = [props.release, ...props.history].filter(
     (release) => release.queryInterface.status === 'active',
   );
@@ -1945,9 +1995,7 @@ function PublishedInterfaceTester(props: {
       setError(
         cause instanceof QueryInterfaceInvocationError
           ? `${cause.code}${cause.details ? ` ${JSON.stringify(cause.details)}` : ''}`
-          : cause instanceof Error
-            ? cause.message
-            : String(cause),
+          : connectionErrorMessage(cause, i18n),
       );
       setStatus('error');
     } finally {
@@ -2026,52 +2074,11 @@ function interfaceTestParameterValue(parameter: InterfaceParameter, value: strin
 }
 
 function publishedInterfaceSdkExample(release: QueryInterfaceRelease): string {
-  const parameters = Object.fromEntries(
-    release.queryInterface.contract.parameters.map((parameter) => [
-      parameter.name,
-      `<${parameter.type}>`,
-    ]),
-  );
-  const needsAccessKey = release.queryInterface.contract.permissions?.mode === 'key';
   return `const result = await client.invokeQueryInterface(${JSON.stringify(release.callableName)}, ${JSON.stringify(
-    {
-      version: release.version,
-      parameters,
-      ...(needsAccessKey ? { accessKey: '<ACCESS_KEY>' } : {}),
-    },
+    publishedInterfaceCallBody(release),
     null,
     2,
   )});`;
-}
-
-function publishedQueryInterfaceHttpEndpoint(libraryCode: string, callableName: string): string {
-  const { host, port, publicBaseUrl } = resolveBusinessConnectionParams();
-  if (publicBaseUrl) {
-    return `${publicBaseUrl}/api/v1/databases/${encodeURIComponent(
-      libraryCode,
-    )}/query-interfaces/${encodeURIComponent(callableName)}`;
-  }
-  const normalizedHost = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
-  return `http://${normalizedHost}:${port}/api/v1/databases/${encodeURIComponent(
-    libraryCode,
-  )}/query-interfaces/${encodeURIComponent(callableName)}`;
-}
-
-function publishedInterfaceHttpExample(release: QueryInterfaceRelease, endpoint: string): string {
-  const parameters = Object.fromEntries(
-    release.queryInterface.contract.parameters.map((parameter) => [
-      parameter.name,
-      `<${parameter.type}>`,
-    ]),
-  );
-  const body = {
-    version: release.version,
-    parameters,
-    ...(release.queryInterface.contract.permissions?.mode === 'key'
-      ? { accessKey: '<ACCESS_KEY>' }
-      : {}),
-  };
-  return `curl -X POST ${JSON.stringify(endpoint)} \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-ModelDB-Connect-Token: <CONNECT_TOKEN>' \\\n  -d ${JSON.stringify(JSON.stringify(body, null, 2))}`;
 }
 
 const TEXT_INHERITED_FROM = '\u7ee7\u627f\u81ea';

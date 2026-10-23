@@ -17,7 +17,10 @@ import {
 export interface ModelDBConfig {
   readonly host: string;
   readonly port: number;
-  readonly token: string;
+  readonly secure?: boolean;
+  readonly token?: string;
+  /** Use the browser's HttpOnly session cookie for database RPCs. */
+  readonly browserSession?: boolean;
   readonly mode?: 'short' | 'stream';
   readonly webSocketCtor?: WebSocketCtor;
 }
@@ -25,7 +28,9 @@ export interface ModelDBConfig {
 export class ModelDB {
   private readonly host: string;
   private readonly port: number;
+  private readonly secure?: boolean;
   private readonly token: string;
+  private readonly browserSession?: boolean;
   private readonly mode?: 'short' | 'stream';
   private readonly webSocketCtor?: WebSocketCtor;
 
@@ -35,7 +40,9 @@ export class ModelDB {
   constructor(config: ModelDBConfig) {
     this.host = config.host;
     this.port = config.port;
-    this.token = config.token;
+    this.secure = config.secure;
+    this.token = config.token ?? '';
+    this.browserSession = config.browserSession;
     this.mode = config.mode;
     this.webSocketCtor = config.webSocketCtor;
   }
@@ -47,7 +54,9 @@ export class ModelDB {
     const infos = await RemoteModelDBClient.listDatabases({
       host: this.host,
       port: this.port,
+      secure: this.secure,
       token: this.token,
+      browserSession: this.browserSession,
     });
     return infos.map((d) => d.name);
   }
@@ -57,7 +66,9 @@ export class ModelDB {
     return RemoteModelDBClient.getDatabaseCatalog({
       host: this.host,
       port: this.port,
+      secure: this.secure,
       token: this.token,
+      browserSession: this.browserSession,
       database,
     });
   }
@@ -67,7 +78,9 @@ export class ModelDB {
     return RemoteModelDBClient.listBackups({
       host: this.host,
       port: this.port,
+      secure: this.secure,
       token: this.token,
+      browserSession: this.browserSession,
       database,
     });
   }
@@ -81,7 +94,9 @@ export class ModelDB {
     return RemoteModelDBClient.createBackup({
       host: this.host,
       port: this.port,
+      secure: this.secure,
       token: this.token,
+      browserSession: this.browserSession,
       database,
       reason,
       name,
@@ -93,7 +108,9 @@ export class ModelDB {
     return RemoteModelDBClient.downloadBackup({
       host: this.host,
       port: this.port,
+      secure: this.secure,
       token: this.token,
+      browserSession: this.browserSession,
       backupFile,
     });
   }
@@ -103,7 +120,9 @@ export class ModelDB {
     return RemoteModelDBClient.importBackup({
       host: this.host,
       port: this.port,
+      secure: this.secure,
       token: this.token,
+      browserSession: this.browserSession,
       fileName,
       file,
     });
@@ -118,7 +137,9 @@ export class ModelDB {
     return RemoteModelDBClient.restoreBackup({
       host: this.host,
       port: this.port,
+      secure: this.secure,
       token: this.token,
+      browserSession: this.browserSession,
       database,
       backupFile,
     });
@@ -133,7 +154,9 @@ export class ModelDB {
     return RemoteModelDBClient.clearDatabaseData({
       host: this.host,
       port: this.port,
+      secure: this.secure,
       token: this.token,
+      browserSession: this.browserSession,
       database,
       forceReset: opts?.forceReset,
     });
@@ -144,7 +167,9 @@ export class ModelDB {
     return RemoteModelDBClient.createDatabase({
       host: this.host,
       port: this.port,
+      secure: this.secure,
       token: this.token,
+      browserSession: this.browserSession,
       name,
     });
   }
@@ -154,7 +179,9 @@ export class ModelDB {
     return RemoteModelDBClient.deleteDatabase({
       host: this.host,
       port: this.port,
+      secure: this.secure,
       token: this.token,
+      browserSession: this.browserSession,
       name,
     });
   }
@@ -177,15 +204,22 @@ export class ModelDB {
       inflight = RemoteModelDBClient.connectNetwork({
         host: this.host,
         port: this.port,
+        secure: this.secure,
         token: this.token,
+        browserSession: this.browserSession,
         database: name,
         mode: this.mode,
         webSocketCtor: this.webSocketCtor,
-      }).then((c) => {
-        this.clients.set(name, c);
-        this.pending.delete(name);
-        return c;
-      });
+      })
+        .then((c) => {
+          this.clients.set(name, c);
+          this.pending.delete(name);
+          return c;
+        })
+        .catch((error: unknown) => {
+          this.pending.delete(name);
+          throw error;
+        });
       this.pending.set(name, inflight);
     }
     return inflight;
@@ -212,7 +246,9 @@ export class ModelDB {
           const databases = await RemoteModelDBClient.listDatabases({
             host: this.host,
             port: this.port,
+            secure: this.secure,
             token: this.token,
+            browserSession: this.browserSession,
           });
           return { kind: 'databases', databases };
         }

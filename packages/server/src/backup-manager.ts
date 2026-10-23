@@ -1,31 +1,47 @@
 import {
+  closeSync,
   existsSync,
+  fstatSync,
+  fsyncSync,
+  lstatSync,
   mkdirSync,
+  openSync,
+  readSync,
   readdirSync,
-  readFileSync,
   rmSync,
-  statSync,
+  statfsSync,
   writeFileSync,
 } from 'node:fs';
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { assertFlatGraphSegment } from '@mode-db/common';
-import { randomUUID } from 'node:crypto';
+import { join } from 'node:path';
+import { randomUUID, type KeyObject } from 'node:crypto';
+import {
+  assertFlatGraphSegment,
+  acquireFileLeaseSync,
+  fileDigest,
+  readAtomicFileSync,
+  type AtomicCommitPoint,
+  type VaultKeyMaterial,
+  type VaultKeyProvider,
+} from '@mode-db/common';
+import {
+  AtlasSingleVault,
+  readAtlasVaultKeyReference,
+  readAtlasVaultKeyReferenceFromBytes,
+} from '@mode-db/core';
+import { assertRecoveryPath } from './security/recovery-material.js';
+import { SecurityError } from './security/security-errors.js';
+import {
+  MAX_BACKUP_BYTES,
+  MAX_BACKUP_VAULT_BYTES,
+  normalizeSecureBackupName,
+  openBackupPackage,
+  sealBackupPackage,
+  type BackupManifest,
+  type BackupStatistics,
+  type BackupUnlock,
+} from './security/backup-package.js';
 
-export interface ModelDbBackupFileEntry {
-  readonly path: string;
-  readonly encoding: 'base64';
-  readonly data: string;
-}
-
-export interface ModelDbBackupPayload {
-  readonly format: 'modeldb.backup.v1';
-  readonly name?: string;
-  readonly database: string;
-  readonly createdAt: string;
-  readonly kind: 'nested' | 'flat';
-  readonly files: readonly ModelDbBackupFileEntry[];
-}
-
+export { normalizeSecureBackupName as normalizeBackupName } from './security/backup-package.js';
 export interface ModelDbBackupInfo {
   readonly fileName: string;
   readonly name?: string;
@@ -33,344 +49,389 @@ export interface ModelDbBackupInfo {
   readonly createdAt: string;
   readonly bytes: number;
   readonly path: string;
+  readonly format: 'modeldb.backup.v2';
+  readonly packageId: string;
+  readonly statistics: BackupStatistics;
 }
-
-function backupRoot(workspaceRoot: string): string {
-  return join(workspaceRoot, 'modeldb', 'backups');
-}
-
-function safeTimestamp(date = new Date()): string {
-  return date.toISOString().replace(/[:.]/g, '-');
-}
-
-export function normalizeBackupName(value: unknown): string | undefined {
-  if (value === undefined) {
-    return undefined;
+const invalid = (): never => {
+  throw new SecurityError('SECURITY_INVALID_REQUEST');
+};
+function providerRequired(provider?: VaultKeyProvider): VaultKeyProvider {
+  if (!provider) {
+    throw new SecurityError('SECURITY_INVALID_CONFIG');
   }
-  if (
-    typeof value !== 'string' ||
-    !value.trim() ||
-    value.trim().length > 120 ||
-    /[\x00-\x1f\x7f]/.test(value)
-  ) {
-    throw new Error('Backup name must contain 1-120 characters without control characters.');
-  }
-  return value.trim();
+  return provider;
 }
-
-function safeFilePart(value: string, fallback: string): string {
-  const safe = value
-    .trim()
-    .replace(/[^A-Za-z0-9_.-]/g, '_')
-    .replace(/_+/g, '_');
-  return safe || fallback;
+function backupRoot(workspace: string): string {
+  return assertRecoveryPath(join(workspace, 'modeldb', 'backups'));
 }
-
-function assertSafeBackupFileName(fileName: string): void {
-  if (!/^[A-Za-z0-9_.-]+\.modeldb-backup\.json$/.test(fileName)) {
-    throw new Error('Invalid backup file name.');
+function backupPath(workspace: string, fileName: string): string {
+  if (!/^[A-Za-z0-9_-][A-Za-z0-9_.-]{0,240}\.modeldb-backup\.json$/.test(fileName)) {
+    return invalid();
   }
+  return assertRecoveryPath(join(backupRoot(workspace), fileName));
 }
-
-function validateBackupPayload(payload: ModelDbBackupPayload): ModelDbBackupPayload {
-  if (
-    payload.format !== 'modeldb.backup.v1' ||
-    typeof payload.database !== 'string' ||
-    typeof payload.createdAt !== 'string' ||
-    (payload.kind !== 'nested' && payload.kind !== 'flat') ||
-    !Array.isArray(payload.files)
-  ) {
-    throw new Error('Invalid ModelDB backup file.');
+/** Bounded reads reject aliases and non-regular files before allocating. */
+export function readBackupBytes(path: string, max = MAX_BACKUP_BYTES): Buffer {
+  const file = assertRecoveryPath(path),
+    before = lstatSync(file);
+  if (!before.isFile() || before.nlink !== 1 || before.size > max) {
+    return invalid();
   }
-  assertFlatGraphSegment(payload.database, 'backup database name');
-  normalizeBackupName(payload.name);
-  if (!Number.isFinite(Date.parse(payload.createdAt))) {
-    throw new Error('Invalid ModelDB backup creation time.');
-  }
-  for (const file of payload.files) {
-    if (
-      !file ||
-      typeof file.path !== 'string' ||
-      file.encoding !== 'base64' ||
-      typeof file.data !== 'string'
-    ) {
-      throw new Error('Invalid ModelDB backup file entry.');
-    }
-    targetRelativePath(file.path, payload.database, payload.database);
-  }
-  return payload;
-}
-
-function parseBackupPayload(text: string): ModelDbBackupPayload {
+  const fd = openSync(file, 'r');
   try {
-    return validateBackupPayload(JSON.parse(text) as ModelDbBackupPayload);
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new Error('Invalid ModelDB backup JSON.');
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.size > max || stat.ino !== before.ino) {
+      return invalid();
     }
+    const bytes = Buffer.alloc(stat.size);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const count = readSync(fd, bytes, offset, bytes.length - offset, null);
+      if (!count) {
+        return invalid();
+      }
+      offset += count;
+    }
+    if (readSync(fd, Buffer.alloc(1), 0, 1, null)) {
+      return invalid();
+    }
+    return bytes;
+  } finally {
+    closeSync(fd);
+  }
+}
+function info(
+  workspace: string,
+  fileName: string,
+  manifest: BackupManifest,
+  bytes: number,
+): ModelDbBackupInfo {
+  return {
+    fileName,
+    name: manifest.name,
+    database: manifest.database,
+    createdAt: manifest.createdAt,
+    bytes,
+    path: backupPath(workspace, fileName),
+    format: 'modeldb.backup.v2',
+    packageId: manifest.packageId,
+    statistics: manifest.statistics,
+  };
+}
+function vaultPath(
+  workspace: string,
+  database: string,
+  creating = false,
+): { path: string; kind: 'nested' | 'flat' } {
+  assertFlatGraphSegment(database, 'database');
+  assertRecoveryPath(workspace);
+  const nested = assertRecoveryPath(join(workspace, database, 'atlas.mld'));
+  const flat = assertRecoveryPath(join(workspace, `${database}.mld`));
+  const present = (path: string) =>
+    ['', '.pending', '.commit', '.lock', '.reclaim'].some((suffix) => existsSync(path + suffix));
+  if (present(nested) && present(flat)) {
+    return invalid();
+  }
+  if (present(nested)) {
+    return { path: nested, kind: 'nested' };
+  }
+  if (present(flat)) {
+    return { path: flat, kind: 'flat' };
+  }
+  if (!creating) {
+    throw new SecurityError('SECURITY_NOT_FOUND');
+  }
+  return { path: nested, kind: 'nested' };
+}
+function assertVaultArtifacts(path: string): void {
+  for (const suffix of ['', '.pending', '.commit', '.lock', '.reclaim']) {
+    assertRecoveryPath(path + suffix);
+    if (existsSync(path + suffix)) {
+      const stat = lstatSync(path + suffix);
+      if (
+        !stat.isFile() ||
+        stat.nlink !== 1 ||
+        stat.size > (suffix === '' || suffix === '.pending' ? MAX_BACKUP_VAULT_BYTES : 1024)
+      ) {
+        return invalid();
+      }
+    }
+  }
+}
+function snapshot(
+  path: string,
+  database: string,
+  provider: VaultKeyProvider,
+): { bytes: Buffer; material: VaultKeyMaterial } {
+  assertVaultArtifacts(path);
+  const reference = readAtlasVaultKeyReferenceFromBytes(
+    readBackupBytes(existsSync(path) ? path : path + '.pending', MAX_BACKUP_VAULT_BYTES),
+  );
+  const material = { reference, key: Buffer.from(provider.resolveKey(database, reference).key) };
+  try {
+    const bytes = readAtomicFileSync(path, (candidate) => {
+      if (candidate.length > MAX_BACKUP_VAULT_BYTES) {
+        throw new SecurityError('SECURITY_RESPONSE_LIMIT');
+      }
+      new AtlasSingleVault().loadBytes(candidate, material);
+    });
+    if (!bytes) {
+      throw new SecurityError('SECURITY_NOT_FOUND');
+    }
+    return { bytes, material };
+  } catch (error) {
+    material.key.fill(0);
     throw error;
   }
 }
-
-function databasePaths(
-  workspaceRoot: string,
-  database: string,
-): {
-  readonly kind: 'nested' | 'flat';
-  readonly rootPath: string;
-} | null {
-  const nested = join(workspaceRoot, database);
-  const nestedVault = join(nested, 'atlas.mld');
-  if (existsSync(nestedVault)) {
-    return { kind: 'nested', rootPath: nested };
-  }
-  const flat = join(workspaceRoot, `${database}.mld`);
-  if (existsSync(flat)) {
-    return { kind: 'flat', rootPath: flat };
-  }
-  return null;
-}
-
-function collectFiles(absPath: string, workspaceRoot: string): ModelDbBackupFileEntry[] {
-  const st = statSync(absPath);
-  if (st.isFile()) {
-    const rel = relative(workspaceRoot, absPath).split(sep).join('/');
-    return [{ path: rel, encoding: 'base64', data: readFileSync(absPath).toString('base64') }];
-  }
-
-  const out: ModelDbBackupFileEntry[] = [];
-  const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const abs = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walk(abs);
-      } else if (entry.isFile()) {
-        const rel = relative(workspaceRoot, abs).split(sep).join('/');
-        out.push({ path: rel, encoding: 'base64', data: readFileSync(abs).toString('base64') });
-      }
+/** A first restore may crash before its intent is written. Only the exact authenticated content
+ * requested again may complete that initial intent; other/invalid stages remain untouched. */
+function resumeInitialRestore(
+  path: string,
+  material: VaultKeyMaterial,
+  requested: AtlasSingleVault,
+): void {
+  const release = acquireFileLeaseSync(path);
+  try {
+    if (existsSync(path) || existsSync(path + '.commit') || !existsSync(path + '.pending')) {
+      return;
     }
-  };
-  walk(absPath);
-  out.sort((a, b) => a.path.localeCompare(b.path));
-  return out;
-}
-
-function readBackupPayload(absPath: string): ModelDbBackupPayload {
-  return parseBackupPayload(readFileSync(absPath, 'utf-8'));
-}
-
-function targetRelativePath(
-  entryPath: string,
-  sourceDatabase: string,
-  targetDatabase: string,
-): string {
-  const normalized = entryPath.replace(/\\/g, '/');
-  if (normalized === `${sourceDatabase}.mld`) {
-    return `${targetDatabase}.mld`;
-  }
-  const prefix = `${sourceDatabase}/`;
-  if (normalized.startsWith(prefix)) {
-    const suffix = normalized.slice(prefix.length);
-    const segments = suffix.split('/');
+    const bytes = readBackupBytes(path + '.pending', MAX_BACKUP_VAULT_BYTES);
+    const staged = new AtlasSingleVault();
+    staged.loadBytes(bytes, material);
+    const keys = [...requested.keys()];
     if (
-      segments.length === 0 ||
-      segments.some(
-        (segment) => !segment || segment === '.' || segment === '..' || segment.includes('\0'),
-      )
+      [...staged.keys()].length !== keys.length ||
+      keys.some((key) => requested.get(key) !== staged.get(key))
     ) {
-      throw new Error(`Backup entry "${entryPath}" contains an invalid relative path.`);
+      return invalid();
     }
-    return `${targetDatabase}/${segments.join('/')}`;
+    const fd = openSync(path + '.commit', 'wx', 0o600);
+    try {
+      writeFileSync(fd, JSON.stringify({ version: 1, previous: null, next: fileDigest(bytes) }));
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
+  } finally {
+    release();
   }
-  throw new Error(`Backup entry "${entryPath}" does not belong to database "${sourceDatabase}".`);
 }
-
-function assertInsideWorkspace(workspaceRoot: string, target: string): void {
-  const root = resolve(workspaceRoot);
-  const abs = resolve(target);
-  const rel = relative(root, abs);
-  if (rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))) {
-    return;
+function store(workspace: string, content: Buffer, unlock: BackupUnlock): ModelDbBackupInfo {
+  const verified = openBackupPackage(content, unlock);
+  try {
+    const root = backupRoot(workspace);
+    mkdirSync(root, { recursive: true });
+    const fileName = `backup-${randomUUID()}.modeldb-backup.json`;
+    const path = backupPath(workspace, fileName);
+    if (statfsSync(root).bavail * statfsSync(root).bsize < content.length * 2 + 1024 * 1024) {
+      throw new SecurityError('SECURITY_RESPONSE_LIMIT');
+    }
+    const fd = openSync(path, 'wx', 0o600);
+    try {
+      writeFileSync(fd, content);
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
+    const reread = openBackupPackage(readBackupBytes(path), unlock);
+    reread.material.key.fill(0);
+    return info(workspace, fileName, verified.manifest, content.length);
+  } finally {
+    verified.material.key.fill(0);
   }
-  throw new Error('Backup restore target escapes workspace root.');
 }
-
+/** Call under the database write gate after flushAll, or while holding the offline instance lease. */
 export function createDatabaseBackup(
-  workspaceRoot: string,
+  workspace: string,
   database: string,
-  reason = 'manual',
+  _reason = 'manual',
   name?: string,
+  provider?: VaultKeyProvider,
+  recipient?: KeyObject,
 ): ModelDbBackupInfo {
-  const displayName = normalizeBackupName(name);
-  const source = databasePaths(workspaceRoot, database);
-  if (!source) {
-    throw new Error(`Database "${database}" not found.`);
+  normalizeSecureBackupName(name);
+  const source = vaultPath(workspace, database),
+    keys = providerRequired(provider);
+  const current = snapshot(source.path, database, keys);
+  try {
+    const content = sealBackupPackage(
+      current.bytes,
+      current.material,
+      { database, name, kind: source.kind },
+      recipient,
+    );
+    return store(workspace, content, { provider: keys });
+  } finally {
+    current.material.key.fill(0);
   }
-  const root = backupRoot(workspaceRoot);
-  mkdirSync(root, { recursive: true });
-  const fileName = `${safeFilePart(database, 'database')}-${safeTimestamp()}-${safeFilePart(
-    reason,
-    'manual',
-  )}-${randomUUID().slice(0, 8)}.modeldb-backup.json`;
-  const abs = join(root, fileName);
-  const payload: ModelDbBackupPayload = {
-    format: 'modeldb.backup.v1',
-    ...(displayName === undefined ? {} : { name: displayName }),
-    database,
-    createdAt: new Date().toISOString(),
-    kind: source.kind,
-    files: collectFiles(source.rootPath, workspaceRoot),
-  };
-  writeFileSync(abs, JSON.stringify(payload, null, 2) + '\n', { encoding: 'utf-8', flag: 'wx' });
-  const st = statSync(abs);
-  return {
-    fileName,
-    name: payload.name,
-    database,
-    createdAt: payload.createdAt,
-    bytes: st.size,
-    path: abs,
-  };
 }
-
 export function listDatabaseBackups(
-  workspaceRoot: string,
+  workspace: string,
   database?: string,
+  provider?: VaultKeyProvider,
 ): readonly ModelDbBackupInfo[] {
-  const root = backupRoot(workspaceRoot);
+  if (database) {
+    assertFlatGraphSegment(database, 'database');
+  }
+  const root = backupRoot(workspace);
   if (!existsSync(root)) {
     return [];
   }
-  const out: ModelDbBackupInfo[] = [];
+  const keys = providerRequired(provider),
+    out: ModelDbBackupInfo[] = [];
   for (const entry of readdirSync(root, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith('.modeldb-backup.json')) {
       continue;
     }
-    const abs = join(root, entry.name);
     try {
-      const payload = readBackupPayload(abs);
-      if (database && payload.database !== database) {
-        continue;
+      const content = readBackupBytes(backupPath(workspace, entry.name));
+      const opened = openBackupPackage(content, { provider: keys });
+      try {
+        if (!database || opened.manifest.database === database) {
+          out.push(info(workspace, entry.name, opened.manifest, content.length));
+        }
+      } finally {
+        opened.material.key.fill(0);
       }
-      const st = statSync(abs);
-      out.push({
-        fileName: entry.name,
-        name: payload.name,
-        database: payload.database,
-        createdAt: payload.createdAt,
-        bytes: st.size,
-        path: abs,
-      });
     } catch {
-      continue;
+      /* Unsupported, damaged or unavailable packages are never advertised as verified backups. */
     }
   }
-  out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  return out;
+  return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
-
 export function readDatabaseBackupFile(
-  workspaceRoot: string,
-  backupFileName: string,
-): { readonly info: ModelDbBackupInfo; readonly content: Buffer } {
-  assertSafeBackupFileName(backupFileName);
-  const abs = join(backupRoot(workspaceRoot), backupFileName);
-  if (!existsSync(abs)) {
-    throw new Error(`Backup "${backupFileName}" not found.`);
+  workspace: string,
+  fileName: string,
+  provider?: VaultKeyProvider,
+): { info: ModelDbBackupInfo; content: Buffer } {
+  const path = backupPath(workspace, fileName);
+  if (!existsSync(path)) {
+    throw new SecurityError('SECURITY_NOT_FOUND');
   }
-  const payload = readBackupPayload(abs);
-  const content = readFileSync(abs);
-  return {
-    info: {
-      fileName: backupFileName,
-      name: payload.name,
-      database: payload.database,
-      createdAt: payload.createdAt,
-      bytes: content.byteLength,
-      path: abs,
-    },
-    content,
-  };
+  const content = readBackupBytes(path),
+    opened = openBackupPackage(content, { provider: providerRequired(provider) });
+  try {
+    return { info: info(workspace, fileName, opened.manifest, content.length), content };
+  } finally {
+    opened.material.key.fill(0);
+  }
 }
-
+/** Imported files are authenticated before storage; names cannot inject extraction paths. */
 export function importDatabaseBackup(
-  workspaceRoot: string,
-  requestedFileName: string,
+  workspace: string,
+  _requestedFileName: string,
   content: Uint8Array,
+  provider?: VaultKeyProvider,
 ): ModelDbBackupInfo {
-  if (content.byteLength === 0) {
-    throw new Error('Backup file is empty.');
-  }
-  const payload = parseBackupPayload(Buffer.from(content).toString('utf-8'));
-  const requestedBase = basename(requestedFileName.trim());
-  const requestedStem = requestedBase.replace(/\.modeldb-backup\.json$/i, '');
-  const fallbackStem = safeFilePart(payload.database, 'database');
-  const safeStem = safeFilePart(requestedStem, fallbackStem);
-  const preferredName = `${safeStem}.modeldb-backup.json`;
-  assertSafeBackupFileName(preferredName);
-
-  const root = backupRoot(workspaceRoot);
-  mkdirSync(root, { recursive: true });
-  let fileName = preferredName;
-  if (existsSync(join(root, fileName))) {
-    fileName = `${safeStem}-${safeTimestamp()}-${randomUUID().slice(0, 8)}-imported.modeldb-backup.json`;
-  }
-  const abs = join(root, fileName);
-  writeFileSync(abs, Buffer.from(content), { flag: 'wx' });
-  const st = statSync(abs);
-  return {
-    fileName,
-    name: payload.name,
-    database: payload.database,
-    createdAt: payload.createdAt,
-    bytes: st.size,
-    path: abs,
-  };
+  return store(workspace, Buffer.from(content), { provider: providerRequired(provider) });
 }
-
+/** Verify an incoming package without changing the target database. */
+export function verifyDatabaseBackup(
+  workspace: string,
+  fileName: string,
+  provider: VaultKeyProvider,
+): ModelDbBackupInfo {
+  return readDatabaseBackupFile(workspace, fileName, provider).info;
+}
+/** Explicit trusted full migration, re-encrypted for a new destination database before local storage. */
+export function importMigrationBackup(
+  workspace: string,
+  database: string,
+  content: Uint8Array,
+  privateKey: KeyObject,
+  provider: VaultKeyProvider,
+): ModelDbBackupInfo {
+  const target = vaultPath(workspace, database, true);
+  if (
+    existsSync(target.path) ||
+    existsSync(target.path + '.pending') ||
+    existsSync(target.path + '.commit')
+  ) {
+    return invalid();
+  }
+  const opened = openBackupPackage(content, { privateKey });
+  try {
+    opened.vault.relocateAtlas(opened.manifest.database, database);
+    const key = provider.resolveKey(database);
+    const material = { reference: key.reference, key: Buffer.from(key.key) };
+    try {
+      return store(
+        workspace,
+        sealBackupPackage(opened.vault.exportBytes(material), material, {
+          database,
+          name: opened.manifest.name,
+          kind: 'nested',
+        }),
+        { provider },
+      );
+    } finally {
+      material.key.fill(0);
+    }
+  } finally {
+    opened.material.key.fill(0);
+  }
+}
+/** Atomic replacement preserves the existing directory, access ledger, policies and unrelated files. */
 export function restoreDatabaseBackup(
-  workspaceRoot: string,
-  targetDatabase: string,
-  backupFileName: string,
+  workspace: string,
+  database: string,
+  fileName: string,
+  provider?: VaultKeyProvider,
+  onPoint?: (point: AtomicCommitPoint) => void,
 ): ModelDbBackupInfo {
-  assertSafeBackupFileName(backupFileName);
-  const abs = join(backupRoot(workspaceRoot), backupFileName);
-  if (!existsSync(abs)) {
-    throw new Error(`Backup "${backupFileName}" not found.`);
+  const keys = providerRequired(provider),
+    result = readDatabaseBackupFile(workspace, fileName, keys);
+  const opened = openBackupPackage(result.content, { provider: keys });
+  let destination: VaultKeyMaterial | undefined;
+  try {
+    opened.vault.relocateAtlas(opened.manifest.database, database);
+    const target = vaultPath(workspace, database, true);
+    assertVaultArtifacts(target.path);
+    let expected: string | null = null;
+    if (existsSync(target.path)) {
+      const current = snapshot(target.path, database, keys);
+      destination = current.material;
+      expected = fileDigest(current.bytes);
+    } else {
+      const existing = readAtlasVaultKeyReference(target.path);
+      const key = keys.resolveKey(database, existing);
+      destination = { reference: key.reference, key: Buffer.from(key.key) };
+      if (existing) {
+        resumeInitialRestore(target.path, destination, opened.vault);
+        const recovered = readAtomicFileSync(target.path, (bytes) =>
+          new AtlasSingleVault().loadBytes(bytes, destination!),
+        );
+        expected = recovered ? fileDigest(recovered) : null;
+      }
+    }
+    const parent =
+      target.kind === 'nested'
+        ? assertRecoveryPath(join(workspace, database))
+        : assertRecoveryPath(workspace);
+    mkdirSync(parent, { recursive: true });
+    if (
+      statfsSync(parent).bavail * statfsSync(parent).bsize <
+      opened.vaultBytes.length * 3 + 1024 * 1024
+    ) {
+      throw new SecurityError('SECURITY_RESPONSE_LIMIT');
+    }
+    opened.vault.saveReplacingSync(target.path, destination, expected, onPoint);
+    const check = new AtlasSingleVault();
+    if (!check.loadSync(target.path, destination)) {
+      return invalid();
+    }
+    return result.info;
+  } finally {
+    opened.material.key.fill(0);
+    destination?.key.fill(0);
   }
-  const payload = readBackupPayload(abs);
-
-  const nested = join(workspaceRoot, targetDatabase);
-  const flat = join(workspaceRoot, `${targetDatabase}.mld`);
-  if (existsSync(nested)) {
-    rmSync(nested, { recursive: true, force: true });
-  }
-  if (existsSync(flat)) {
-    rmSync(flat, { force: true });
-  }
-
-  for (const file of payload.files) {
-    const rel = targetRelativePath(file.path, payload.database, targetDatabase);
-    const target = join(workspaceRoot, rel);
-    assertInsideWorkspace(workspaceRoot, target);
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, Buffer.from(file.data, 'base64'));
-  }
-
-  const st = statSync(abs);
-  return {
-    fileName: backupFileName,
-    name: payload.name,
-    database: payload.database,
-    createdAt: payload.createdAt,
-    bytes: st.size,
-    path: abs,
-  };
 }
-
-export function forceResetDatabase(workspaceRoot: string, database: string): void {
-  const nested = join(workspaceRoot, database);
-  const flat = join(workspaceRoot, `${database}.mld`);
+export function forceResetDatabase(workspace: string, database: string): void {
+  assertFlatGraphSegment(database, 'database');
+  const nested = assertRecoveryPath(join(workspace, database)),
+    flat = assertRecoveryPath(join(workspace, `${database}.mld`));
   if (existsSync(nested)) {
     rmSync(nested, { recursive: true, force: true });
   }

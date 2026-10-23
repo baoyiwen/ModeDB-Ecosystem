@@ -176,7 +176,7 @@ describe('core query predicates', () => {
     const engine = new AuthoringEngine({
       atlas: 'import-self',
       storageRoot: root,
-      connectToken: 'test-token',
+      keyProvider: fixtureVaultKeys(root),
     });
     try {
       engine.registerModel('Division', { code: 'String', name: 'String' });
@@ -216,7 +216,7 @@ describe('core query predicates', () => {
     const engine = new AuthoringEngine({
       atlas: 'import-self-allow',
       storageRoot: root,
-      connectToken: 'test-token',
+      keyProvider: fixtureVaultKeys(root),
     });
     try {
       engine.registerModel('Division', { code: 'String', name: 'String' });
@@ -270,3 +270,4 @@ describe('core query predicates', () => {
     }
   });
 });
+import { fixtureVaultKeys } from '../vault-keys.js';

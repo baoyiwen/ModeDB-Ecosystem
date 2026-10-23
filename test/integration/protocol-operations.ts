@@ -29,7 +29,7 @@ import {
   type EngineOperation,
   type EngineOperationResult,
 } from '@mode-db/sdk';
-import { INTEGRATION_CONNECT_TOKEN, useIntegrationVaultEnv } from './vault-env.js';
+import { INTEGRATION_CONNECT_TOKEN, useIntegrationVaultEnv, integrationVaultKeys } from './vault-env.js';
 
 const WORKSPACE = join(process.cwd(), 'data', 'protocol_ops_workspace');
 const CORE_ATLAS = 'protocol_core';
@@ -108,7 +108,7 @@ section('1. Core in-process: AuthoringEngine.apply / applyAll (database scope)')
 const engine = new AuthoringEngine({
   atlas: CORE_ATLAS,
   storageRoot: WORKSPACE,
-  connectToken: INTEGRATION_CONNECT_TOKEN,
+  keyProvider: integrationVaultKeys(WORKSPACE),
 });
 
 const schemaRes = await engine.apply(SCHEMA_OP);

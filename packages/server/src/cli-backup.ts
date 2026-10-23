@@ -1,171 +1,211 @@
 import { AuthoringEngine } from '@mode-db/core';
-import { assertFlatGraphSegment } from '@mode-db/common';
+import { assertFlatGraphSegment, PathResolver } from '@mode-db/common';
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import {
   createDatabaseBackup,
   forceResetDatabase,
   listDatabaseBackups,
   restoreDatabaseBackup,
+  verifyDatabaseBackup,
 } from './backup-manager.js';
-import { loadModelDBServerConfig } from './config-loader.js';
+import { loadModelDBServerConfig, type ResolvedModelDBServerConfig } from './config-loader.js';
+import { serverVaultKeys } from './security/server-vault-keys.js';
+import { SecurityRegistry } from './security/security-registry.js';
+import { SecurityError } from './security/security-errors.js';
 import { assertLogicalDatabaseExists } from './logical-database-guard.js';
 
 export function parseBackupArgv(argv: string[]): {
-  readonly config?: string;
-  readonly token?: string;
-  readonly reason?: string;
-  readonly yes: boolean;
+  config?: string;
+  token?: string;
+  reason?: string;
+  yes: boolean;
 } {
   const out: { config?: string; token?: string; reason?: string; yes: boolean } = { yes: false };
   for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === '-c' || a === '--config') {
+    const arg = argv[i]!;
+    if (arg === '-c' || arg === '--config') {
       out.config = argv[++i];
-    } else if (a.startsWith('--config=')) {
-      out.config = a.slice('--config='.length);
-    } else if (a === '-t' || a === '--token') {
+    } else if (arg.startsWith('--config=')) {
+      out.config = arg.slice(9);
+    } else if (arg === '-t' || arg === '--token') {
       out.token = argv[++i];
-    } else if (a.startsWith('--token=')) {
-      out.token = a.slice('--token='.length);
-    } else if (a === '--reason') {
+    } else if (arg.startsWith('--token=')) {
+      out.token = arg.slice(8);
+    } else if (arg === '--reason') {
       out.reason = argv[++i];
-    } else if (a.startsWith('--reason=')) {
-      out.reason = a.slice('--reason='.length);
-    } else if (a === '-y' || a === '--yes') {
+    } else if (arg.startsWith('--reason=')) {
+      out.reason = arg.slice(9);
+    } else if (arg === '-y' || arg === '--yes') {
       out.yes = true;
+    } else {
+      throw new SecurityError('SECURITY_INVALID_REQUEST');
     }
   }
   return out;
 }
-
-function formatBytes(n: number): string {
-  if (n < 1024) {
-    return `${n} B`;
-  }
-  if (n < 1024 * 1024) {
-    return `${(n / 1024).toFixed(1)}KB`;
-  }
-  if (n < 1024 ** 3) {
-    return `${(n / 1024 ** 2).toFixed(1)}MB`;
-  }
-  return `${(n / 1024 ** 3).toFixed(1)}GB`;
-}
-
-async function loadCliConfig(
+async function offline<T>(
   argv: string[],
-): Promise<Awaited<ReturnType<typeof loadModelDBServerConfig>>> {
-  const parsed = parseBackupArgv(argv);
-  return loadModelDBServerConfig(parsed.config, {
-    connectToken:
-      parsed.token !== undefined && String(parsed.token).trim() !== ''
-        ? String(parsed.token).trim()
-        : undefined,
-  });
-}
-
-function requireYes(yes: boolean, action: string): void {
-  if (!yes) {
-    throw new Error(`${action} is destructive. Re-run with --yes to confirm.`);
-  }
-}
-
-export async function runBackup(dbName: string, argv: string[]): Promise<void> {
-  assertFlatGraphSegment(dbName, 'database name');
+  work: (cfg: ResolvedModelDBServerConfig) => Promise<T>,
+): Promise<T> {
   const opts = parseBackupArgv(argv);
-  const cfg = await loadCliConfig(argv);
-  assertLogicalDatabaseExists(cfg.storageRoot, dbName);
-  const engine = new AuthoringEngine({
-    atlas: dbName,
-    storageRoot: cfg.storageRoot,
-    connectToken: cfg.connectToken,
-  });
-  await engine.flushAll();
-  const backup = createDatabaseBackup(cfg.storageRoot, dbName, opts.reason ?? 'manual');
-  console.log(`Backup created: ${backup.fileName}`);
-  console.log(`Database: ${backup.database}`);
-  console.log(`Bytes: ${formatBytes(backup.bytes)}`);
-  console.log(`Path: ${backup.path}`);
-}
-
-export async function runBackups(dbName: string | undefined, argv: string[]): Promise<void> {
-  if (dbName) {
-    assertFlatGraphSegment(dbName, 'database name');
+  if (!opts.config) {
+    throw new SecurityError('SECURITY_INVALID_REQUEST');
   }
-  const cfg = await loadCliConfig(argv);
-  const backups = listDatabaseBackups(cfg.storageRoot, dbName);
-  if (backups.length === 0) {
-    console.log(dbName ? `No backups for ${dbName}.` : 'No backups.');
-    return;
+  const cfg = await loadModelDBServerConfig(opts.config, { connectToken: opts.token });
+  let registry: SecurityRegistry | undefined;
+  if (cfg.securityMode === 'registry') {
+    const directory = join(dirname(cfg.configFilePath), 'security');
+    if (!existsSync(join(directory, 'registry.mds'))) {
+      throw new SecurityError('SECURITY_NOT_FOUND');
+    }
+    registry = SecurityRegistry.open(directory, {
+      auditLimit: cfg.securityAudit.maxEvents,
+      auditRetentionDays: cfg.securityAudit.retentionDays,
+    });
   }
-  for (const backup of backups) {
-    console.log(
-      `${backup.fileName}\t${backup.database}\t${backup.createdAt}\t${formatBytes(backup.bytes)}`,
-    );
-  }
-}
-
-export async function runRestore(
-  dbName: string,
-  backupFile: string,
-  argv: string[],
-): Promise<void> {
-  assertFlatGraphSegment(dbName, 'database name');
-  const opts = parseBackupArgv(argv);
-  requireYes(opts.yes, 'restore');
-  const cfg = await loadCliConfig(argv);
   try {
-    const safety = createDatabaseBackup(cfg.storageRoot, dbName, 'pre-restore');
-    console.log(`Safety backup created: ${safety.fileName}`);
-  } catch (e) {
-    console.warn(`Safety backup skipped: ${e instanceof Error ? e.message : String(e)}`);
+    registry?.recordMaintenance('backup.task.started');
+    const result = await work(cfg);
+    registry?.recordMaintenance('backup.task.completed');
+    return result;
+  } catch (error) {
+    try {
+      registry?.recordMaintenance('backup.task.failed');
+    } catch {
+      /* Preserve the original failure. */
+    }
+    throw error;
+  } finally {
+    registry?.close();
   }
-  const restored = restoreDatabaseBackup(cfg.storageRoot, dbName, backupFile);
-  const engine = new AuthoringEngine({
-    atlas: dbName,
-    storageRoot: cfg.storageRoot,
-    connectToken: cfg.connectToken,
-  });
-  await engine.flushAll();
-  console.log(`Restored ${dbName} from ${restored.fileName}.`);
 }
-
-export async function runClearData(dbName: string, argv: string[]): Promise<void> {
-  assertFlatGraphSegment(dbName, 'database name');
-  const opts = parseBackupArgv(argv);
-  requireYes(opts.yes, 'clear-data');
-  const cfg = await loadCliConfig(argv);
-  assertLogicalDatabaseExists(cfg.storageRoot, dbName);
-  try {
-    const safety = createDatabaseBackup(cfg.storageRoot, dbName, 'pre-clear');
-    console.log(`Safety backup created: ${safety.fileName}`);
-  } catch (e) {
-    console.warn(`Safety backup skipped: ${e instanceof Error ? e.message : String(e)}`);
+function requireYes(argv: string[]): void {
+  if (!parseBackupArgv(argv).yes) {
+    throw new SecurityError('SECURITY_CONFIRMATION_REQUIRED');
   }
-  const engine = new AuthoringEngine({
-    atlas: dbName,
-    storageRoot: cfg.storageRoot,
-    connectToken: cfg.connectToken,
-  });
-  const result = await engine.clearAllData({ sync: true });
-  console.log(`Cleared ${result.totalDeleted} row(s) from ${dbName}.`);
 }
-
-export async function runForceReset(dbName: string, argv: string[]): Promise<void> {
-  assertFlatGraphSegment(dbName, 'database name');
-  const opts = parseBackupArgv(argv);
-  requireYes(opts.yes, 'force-reset');
-  const cfg = await loadCliConfig(argv);
-  try {
-    const safety = createDatabaseBackup(cfg.storageRoot, dbName, 'pre-reset');
-    console.log(`Safety backup created: ${safety.fileName}`);
-  } catch (e) {
-    console.warn(`Safety backup skipped: ${e instanceof Error ? e.message : String(e)}`);
-  }
-  forceResetDatabase(cfg.storageRoot, dbName);
-  const engine = new AuthoringEngine({
-    atlas: dbName,
+function engineFor(cfg: ResolvedModelDBServerConfig, database: string): AuthoringEngine {
+  return new AuthoringEngine({
+    atlas: database,
     storageRoot: cfg.storageRoot,
-    connectToken: cfg.connectToken,
+    paths: existsSync(PathResolver.workspaceFlatVaultPath(cfg.storageRoot, database))
+      ? new PathResolver(cfg.storageRoot, database, { workspaceFlatVault: true })
+      : undefined,
+    keyProvider: serverVaultKeys(cfg),
+    engineLogger: false,
   });
-  await engine.flushAll();
-  console.log(`Force-reset database ${dbName}.`);
+}
+export async function runBackup(database: string, argv: string[]): Promise<void> {
+  assertFlatGraphSegment(database, 'database');
+  const result = await offline(argv, async (cfg) => {
+    assertLogicalDatabaseExists(cfg.storageRoot, database);
+    const engine = engineFor(cfg, database);
+    try {
+      await engine.flushAll();
+      const backup = createDatabaseBackup(
+        cfg.storageRoot,
+        database,
+        parseBackupArgv(argv).reason,
+        undefined,
+        serverVaultKeys(cfg),
+      );
+      return { ok: true, backup };
+    } finally {
+      await engine.dispose();
+    }
+  });
+  process.stdout.write(JSON.stringify(result) + '\n');
+}
+export async function runBackups(database: string | undefined, argv: string[]): Promise<void> {
+  const result = await offline(argv, async (cfg) => ({
+    backups: listDatabaseBackups(cfg.storageRoot, database, serverVaultKeys(cfg)),
+  }));
+  process.stdout.write(JSON.stringify(result) + '\n');
+}
+export async function runRestore(database: string, file: string, argv: string[]): Promise<void> {
+  assertFlatGraphSegment(database, 'database');
+  requireYes(argv);
+  const result = await offline(argv, async (cfg) => {
+    const keys = serverVaultKeys(cfg);
+    verifyDatabaseBackup(cfg.storageRoot, file, keys);
+    let safetyBackup;
+    if (
+      existsSync(join(cfg.storageRoot, database, 'atlas.mld')) ||
+      existsSync(join(cfg.storageRoot, database + '.mld'))
+    ) {
+      const engine = engineFor(cfg, database);
+      try {
+        await engine.flushAll();
+        safetyBackup = createDatabaseBackup(
+          cfg.storageRoot,
+          database,
+          'pre-restore',
+          undefined,
+          keys,
+        );
+      } finally {
+        await engine.dispose();
+      }
+    }
+    const restored = restoreDatabaseBackup(cfg.storageRoot, database, file, keys);
+    const engine = engineFor(cfg, database);
+    try {
+      await engine.flushAll();
+    } finally {
+      await engine.dispose();
+    }
+    return { ok: true, restored, safetyBackup };
+  });
+  process.stdout.write(JSON.stringify(result) + '\n');
+}
+export async function runClearData(database: string, argv: string[]): Promise<void> {
+  assertFlatGraphSegment(database, 'database');
+  requireYes(argv);
+  const output = await offline(argv, async (cfg) => {
+    assertLogicalDatabaseExists(cfg.storageRoot, database);
+    const engine = engineFor(cfg, database);
+    try {
+      await engine.flushAll();
+      const safetyBackup = createDatabaseBackup(
+        cfg.storageRoot,
+        database,
+        'pre-clear',
+        undefined,
+        serverVaultKeys(cfg),
+      );
+      const result = await engine.clearAllData({ sync: true });
+      return { ok: true, deletedCount: result.totalDeleted, safetyBackup };
+    } finally {
+      await engine.dispose();
+    }
+  });
+  process.stdout.write(JSON.stringify(output) + '\n');
+}
+export async function runForceReset(database: string, argv: string[]): Promise<void> {
+  assertFlatGraphSegment(database, 'database');
+  requireYes(argv);
+  const result = await offline(argv, async (cfg) => {
+    let safetyBackup;
+    try {
+      safetyBackup = createDatabaseBackup(
+        cfg.storageRoot,
+        database,
+        'pre-reset',
+        undefined,
+        serverVaultKeys(cfg),
+      );
+    } catch {
+      /* Explicit force reset remains available for corrupt or missing Vaults. */
+    }
+    forceResetDatabase(cfg.storageRoot, database);
+    const engine = engineFor(cfg, database);
+    try {
+      await engine.flushAll();
+    } finally {
+      await engine.dispose();
+    }
+    return { ok: true, database, safetyBackup };
+  });
+  process.stdout.write(JSON.stringify(result) + '\n');
 }

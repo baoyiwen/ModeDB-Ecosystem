@@ -15,7 +15,7 @@ import type { TransferFilter } from '../../apps/model-designer/src/data-transfer
 
 it('exports filtered data and bidirectional/self relations through the SDK and validates without changing the vault', async () => {
   const root = mkdtempSync(join(tmpdir(), 'modedb-transfer-'));
-  const engine = new AuthoringEngine({ atlas: 'fixture', storageRoot: root, connectToken: 'transfer-fixture' });
+  const engine = new AuthoringEngine({ atlas: 'fixture', storageRoot: root, keyProvider: fixtureVaultKeys(root) });
   engine.registerModel('Node', { name: 'I18N', score: 'Int', code: 'String', happenedAt:'DateTime',active:'Boolean' });
   engine.registerModel('Group', { title: 'String' });
   engine.registerRelation('Node', 'Node', 'children', 'parent', 'one-to-many');
@@ -29,7 +29,7 @@ it('exports filtered data and bidirectional/self relations through the SDK and v
   const vault = join(root, 'fixture', 'atlas.mld');
   const hash = (): string => createHash('sha256').update(readFileSync(vault)).digest('hex');
   const before = hash();
-  const app = await buildDualTrackFastify({ host: '127.0.0.1', port: 0, storageRoot: root, designerWorkspace: 'designer', connectToken: 'transfer-fixture', dev: false, configFilePath: join(root, 'config.json') });
+  const app = await buildDualTrackFastify({ host: '127.0.0.1', port: 0, storageRoot: root, vaultKeyProvider: fixtureVaultKeys(root), designerWorkspace: 'designer', connectToken: 'transfer-fixture', dev: false, configFilePath: join(root, 'config.json') });
   let client: RemoteModelDBClient | undefined;
   try {
     const address = app.server.address();
@@ -97,3 +97,4 @@ it('exports filtered data and bidirectional/self relations through the SDK and v
     finally { rmSync(root, { recursive: true, force: true }); }
   }
 });
+import { fixtureVaultKeys } from '../vault-keys.js';

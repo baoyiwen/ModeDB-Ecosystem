@@ -17,5 +17,6 @@
     "databases": []
   },
   "dev": false,
-  "connectToken": "dev-connect-token-change-in-production"
+  "connectToken": "dev-connect-token-change-in-production",
+  "securityMode": "registry"
 }

@@ -17,7 +17,7 @@ import {
   startModelDBWebSocketServer,
 } from '@mode-db/server';
 import { ModelDB, RemoteHydratedEntity } from '@mode-db/sdk';
-import { INTEGRATION_CONNECT_TOKEN, useIntegrationVaultEnv } from './vault-env.js';
+import { INTEGRATION_CONNECT_TOKEN, useIntegrationVaultEnv, integrationVaultKeys } from './vault-env.js';
 
 const WORKSPACE = join(process.cwd(), 'data', 'e2e_engine_workspace');
 const ATLAS = 'e2e_engine_flow';
@@ -57,7 +57,7 @@ section('1. AuthoringEngine: create logical DB, models (inheritance), relation, 
 const ddl = new AuthoringEngine({
   atlas: ATLAS,
   storageRoot: WORKSPACE,
-  connectToken: INTEGRATION_CONNECT_TOKEN,
+  keyProvider: integrationVaultKeys(WORKSPACE),
 });
 
 const baseSchema: FieldDefsRecord = {
@@ -128,7 +128,7 @@ try {
   const rw = new AuthoringEngine({
     atlas: ATLAS,
     storageRoot: WORKSPACE,
-    connectToken: INTEGRATION_CONNECT_TOKEN,
+    keyProvider: integrationVaultKeys(WORKSPACE),
   });
   const personDef = rw.registry.getModel('Person');
   ok(personDef?.fields.has('title') === true, 'Person has title after remote alterModel');

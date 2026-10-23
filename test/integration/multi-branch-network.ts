@@ -24,7 +24,7 @@ import {
   startModelDBWebSocketServer,
 } from '@mode-db/server';
 import { ModelDB, RemoteHydratedEntity } from '@mode-db/sdk';
-import { INTEGRATION_CONNECT_TOKEN, useIntegrationVaultEnv } from './vault-env.js';
+import { INTEGRATION_CONNECT_TOKEN, useIntegrationVaultEnv, integrationVaultKeys } from './vault-env.js';
 
 const WORKSPACE = join(process.cwd(), 'data', 'multi_branch_workspace');
 const ATLAS = 'multi_branch_network';
@@ -70,7 +70,7 @@ section('1. AuthoringEngine: two independent 2-hop chains from Hub');
 const ddl = new AuthoringEngine({
   atlas: ATLAS,
   storageRoot: WORKSPACE,
-  connectToken: INTEGRATION_CONNECT_TOKEN,
+  keyProvider: integrationVaultKeys(WORKSPACE),
 });
 
 const named: FieldDefsRecord = { id: DataType.String, name: { type: DataType.String, required: true } };

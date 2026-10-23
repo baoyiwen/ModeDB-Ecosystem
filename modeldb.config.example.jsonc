@@ -11,7 +11,7 @@
   // 实际绑定的网卡地址：
   // 127.0.0.1 = 仅本机访问；0.0.0.0 = 监听所有 IPv4 网卡；生产环境也可以填指定网卡 IP。
   // CLI：-H / --host；环境变量：MODEL_DB_HOST；默认值：127.0.0.1。
-  "host": "0.0.0.0",
+  "host": "127.0.0.1",
 
   // 启动日志中优先展示的客户端主机名或 IP。它只影响提示文字，不改变监听行为。
   // 例如局域网访问填写服务器 IP；公网反向代理场景可填写 api.example.com。
@@ -59,10 +59,50 @@
   // 环境变量：MODEL_DB_DESIGNER_WORKSPACE（仅在文件没有填写时生效）。
   "designerWorkspace": "model_designer_workspace",
 
-  // 服务认证令牌。必须与 SDK、管理 API 和 HTTP 直连请求中的 token 完全一致。
-  // 请使用长随机字符串，禁止提交真实生产令牌到 Git。
-  // CLI：-t / --token；环境变量：MODEL_DB_CONNECT_TOKEN；三者优先级为 CLI → 文件 → 环境变量。
-  "connectToken": "replace-with-long-random-secret",
+  // 新版 registry 安全模式。首次启动会创建独立安全台账和本机保护材料，
+  // 不把共享 connectToken 写入配置，也不会用网络凭据派生 Vault 数据密钥。
+  "security": {
+    "version": 1,
+
+    // 安全审计事件保存在加密 registry 中，不会另写明文日志文件。
+    // 超过保留天数的事件在启动或下一次 registry 写入时清理；容量满时安全变更 fail-closed。
+    "audit": {
+      "retentionDays": 365, // 保留天数：1-3650，默认 365。
+      "maxEvents": 10000 // 最大事件数：100-50000，默认 10000；80% 预警、95% 严重。
+    },
+
+    // 传输模式：
+    // loopback = 仅本机（默认，host 也必须是回环地址）；
+    // tls = 服务原生 HTTPS/WSS；proxy = 位于可信 HTTPS 反向代理后。
+    "network": {
+      "transport": {
+        "mode": "loopback"
+        // 原生 TLS 示例：
+        // "mode": "tls",
+        // "certificateFile": "security/server.crt",
+        // "privateKeyFile": "security/server.key"
+        // 反向代理示例：
+        // "mode": "proxy",
+        // "trustedProxies": ["127.0.0.1/32"]
+      },
+
+      // 浏览器 Origin 精确匹配；不支持 *、路径、凭据或查询参数。
+      // "allowedOrigins": ["https://designer.example.com"],
+
+      // 数据面和管理面可以分别限制来源。allow-list 开启但为空时全部拒绝，deny 优先。
+      // 规则 source 支持 IP、CIDR 和 IPv4-mapped IPv6；expiresAt 为可选 ISO 到期时间。
+      // "data": {
+      //   "allowListEnabled": true,
+      //   "allow": [{ "id": "office", "source": "192.168.0.0/24" }],
+      //   "deny": []
+      // },
+      // "management": {
+      //   "allowListEnabled": true,
+      //   "allow": [{ "id": "admin-lan", "source": "192.168.0.0/24" }],
+      //   "deny": []
+      // }
+    }
+  },
 
   // 是否允许开发诊断输出。生产环境必须保持 false，避免输出敏感的 RPC 诊断信息。
   // CLI：--dev；环境变量：MODEL_DB_DEV（true/false、1/0、yes/no）。
@@ -88,7 +128,7 @@
   // MODEL_DB_HOST / -H <host>                   监听地址
   // MODEL_DB_ADVERTISED_HOST / --advertised-host <host>  启动信息中的客户端地址
   // MODEL_DB_PUBLIC_BASE_URL / --public-base-url <url>    Query Interface 公共地址
-  // MODEL_DB_CONNECT_TOKEN / -t <secret>        连接认证令牌
+  // registry 凭据通过本机安全 CLI 创建/轮换，不写入配置、不放 URL。
   // MODEL_DB_BUFFER_THRESHOLD <rows>            写缓冲行数
   // MODEL_DB_DESIGNER_WORKSPACE <name>          Designer 元数据逻辑库
   // MODEL_DB_ACCESS_LOG=true                    强制启用 access.log

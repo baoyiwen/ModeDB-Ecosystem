@@ -1,4 +1,5 @@
 import { RemoteModelDBClient, type ManagementCatalogResponse } from '@mode-db/sdk';
+import { isBrowserSessionMode } from '../config/connection-prefs.js';
 import {
   SYS_DATA_ASSET_MAP,
   SYS_MODEL,
@@ -72,6 +73,7 @@ export interface BusinessCatalogParams {
   readonly host: string;
   readonly port: number;
   readonly token: string;
+  readonly browserSession?: boolean;
   readonly businessDb: string;
 }
 
@@ -87,6 +89,7 @@ export async function readBusinessCatalog(
     host: params.host.trim(),
     port: params.port,
     token: params.token.trim(),
+    browserSession: params.browserSession ?? isBrowserSessionMode(),
     database: params.businessDb.trim(),
   });
 }

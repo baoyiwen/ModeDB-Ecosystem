@@ -1,9 +1,11 @@
 import { RemoteModelDBClient } from '@mode-db/sdk';
+import { isBrowserSessionMode } from '../config/connection-prefs.js';
 
 export interface WorkspaceSessionOptions {
   readonly host: string;
   readonly port: number;
   readonly token: string;
+  readonly browserSession?: boolean;
   readonly workspace: string;
 }
 
@@ -20,6 +22,7 @@ export async function openWorkspaceSession(
     host: opts.host.trim(),
     port: opts.port,
     token: opts.token.trim(),
+    browserSession: opts.browserSession ?? isBrowserSessionMode(),
     database: workspace,
   });
 }
@@ -28,6 +31,7 @@ export interface DesignerWorkspaceSessionOptions {
   readonly host: string;
   readonly port: number;
   readonly token: string;
+  readonly browserSession?: boolean;
   /** 设计器专属逻辑库名；与用户的业务库**完全分离**，缺失时自动 `createDatabase`。 */
   readonly designerWorkspace: string;
 }
@@ -50,9 +54,16 @@ export async function ensureDesignerWorkspaceSession(
   const host = opts.host.trim();
   const port = opts.port;
   const token = opts.token.trim();
-  const list = await RemoteModelDBClient.listDatabases({ host, port, token });
+  const browserSession = opts.browserSession ?? isBrowserSessionMode();
+  const list = await RemoteModelDBClient.listDatabases({ host, port, token, browserSession });
   if (!list.some((d) => d.name === designerDb)) {
-    await RemoteModelDBClient.createDatabase({ host, port, token, name: designerDb });
+    await RemoteModelDBClient.createDatabase({
+      host,
+      port,
+      token,
+      browserSession,
+      name: designerDb,
+    });
   }
-  return openWorkspaceSession({ host, port, token, workspace: designerDb });
+  return openWorkspaceSession({ host, port, token, browserSession, workspace: designerDb });
 }

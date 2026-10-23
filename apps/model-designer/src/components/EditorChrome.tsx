@@ -21,6 +21,7 @@ import { LayerTreePanel } from './LayerTreePanel.js';
 import { RelationDetailPanel } from './RelationDetailPanel.js';
 import { PivotTab } from './PivotTab.js';
 import { ModelMapWorkspace } from './ModelMapWorkspace.js';
+import { SecurityCenterWorkspace } from './SecurityCenterWorkspace.js';
 import {
   QueryDesignerPanel,
   QueryInterfaceManagerPanel,
@@ -41,6 +42,7 @@ import {
   IconLink,
   IconSettings,
   IconBell,
+  IconShield,
 } from './designer-icons.js';
 import type {
   QueryChainState,
@@ -62,6 +64,7 @@ export type ManualPanelKind =
   | 'bindings'
   | 'pivot'
   | 'settings'
+  | 'security'
   | 'notifications';
 
 type PivotContext =
@@ -158,6 +161,7 @@ export function EditorChrome(props: {
   const [pivotReturnPanel, setPivotReturnPanel] = useState<ManualPanelKind | null>(null);
   const [pivotReturnInterfaceId, setPivotReturnInterfaceId] = useState<string>();
   const [modelMapOpen, setModelMapOpen] = useState(false);
+  const [securityReturnPanel, setSecurityReturnPanel] = useState<ManualPanelKind | null>(null);
 
   useEffect(() => {
     if (isQueryDesignerMode(modes.mode)) {
@@ -166,7 +170,8 @@ export function EditorChrome(props: {
         current === 'query-interface' ||
         current === 'operations' ||
         current === 'bindings' ||
-        current === 'pivot'
+        current === 'pivot' ||
+        current === 'security'
           ? current
           : null,
       );
@@ -189,8 +194,14 @@ export function EditorChrome(props: {
     manualPanel === 'operations' ||
     manualPanel === 'bindings';
   const pivotOpen = manualPanel === 'pivot';
+  const securityOpen = manualPanel === 'security';
 
   const closeAll = useCallback((): void => {
+    if (securityOpen) {
+      setManualPanel(securityReturnPanel);
+      setSecurityReturnPanel(null);
+      return;
+    }
     if (pivotOpen) {
       setManualPanel(pivotReturnPanel);
       setPivotContext(undefined);
@@ -211,7 +222,17 @@ export function EditorChrome(props: {
     if (queryOpen) {
       modes.setMode('select');
     }
-  }, [pivotOpen, pivotReturnPanel, manualOpen, modes, passiveOpen, props, queryOpen]);
+  }, [
+    securityOpen,
+    securityReturnPanel,
+    pivotOpen,
+    pivotReturnPanel,
+    manualOpen,
+    modes,
+    passiveOpen,
+    props,
+    queryOpen,
+  ]);
 
   const openPivot = useCallback(
     (context: PivotContext): void => {
@@ -237,12 +258,25 @@ export function EditorChrome(props: {
     [manualPanel, modes, notifications],
   );
 
+  const openSecurityCenter = useCallback((): void => {
+    if (manualPanel === 'security') {
+      setManualPanel(securityReturnPanel);
+      setSecurityReturnPanel(null);
+      return;
+    }
+    setSecurityReturnPanel(manualPanel);
+    setManualPanel('security');
+  }, [manualPanel, securityReturnPanel]);
+
   const title = (): string => {
     if (manualPanel === 'hierarchy') {
       return i18n.t('ui', 'panelHierarchy');
     }
     if (manualPanel === 'settings') {
       return i18n.t('ui', 'settings');
+    }
+    if (manualPanel === 'security') {
+      return i18n.t('ui', 'securityCenterTitle');
     }
     if (manualPanel === 'notifications') {
       return i18n.t('ui', 'notifyCenterTitle');
@@ -275,6 +309,9 @@ export function EditorChrome(props: {
   };
 
   const renderBody = (): ReactElement | null => {
+    if (manualPanel === 'security') {
+      return <SecurityCenterWorkspace />;
+    }
     if (manualPanel === 'hierarchy') {
       return <LayerTreePanel selectedId={effectiveModelId} readOnly={readOnly} />;
     }
@@ -635,6 +672,15 @@ export function EditorChrome(props: {
         <button
           type="button"
           className="designer-fab designer-fab--panel"
+          data-active={manualPanel === 'security' ? 'true' : 'false'}
+          title={i18n.t('ui', 'fabSecurity')}
+          onClick={openSecurityCenter}
+        >
+          <IconShield />
+        </button>
+        <button
+          type="button"
+          className="designer-fab designer-fab--panel"
           data-active={manualPanel === 'settings' ? 'true' : 'false'}
           title={i18n.t('ui', 'fabSettings')}
           onClick={() => openManual('settings')}
@@ -648,15 +694,19 @@ export function EditorChrome(props: {
         title={shellOpen ? title() : ''}
         eyebrow={interfaceWorkspaceOpen ? i18n.t('ui', 'interfaceWorkspaceEyebrow') : 'ModeDB'}
         side="right"
-        width={pivotOpen ? '100vw' : interfaceWorkspaceOpen ? 'calc(100vw - 32px)' : 430}
+        width={
+          pivotOpen || securityOpen ? '100vw' : interfaceWorkspaceOpen ? 'calc(100vw - 32px)' : 430
+        }
         closeLabel={i18n.t('ui', 'notifyDismiss')}
         onClose={closeAll}
         className={
           pivotOpen
             ? 'designer-pivot-workspace'
-            : interfaceWorkspaceOpen
-              ? 'designer-interface-workspace'
-              : undefined
+            : securityOpen
+              ? 'designer-security-center-workspace'
+              : interfaceWorkspaceOpen
+                ? 'designer-interface-workspace'
+                : undefined
         }
         bodyClassName={[
           'designer-panel-body',
@@ -665,6 +715,7 @@ export function EditorChrome(props: {
           manualPanel === 'notifications' ? 'designer-panel-body--notifications' : '',
           interfaceWorkspaceOpen ? 'designer-panel-body--interface-workspace' : '',
           pivotOpen ? 'designer-panel-body--pivot' : '',
+          securityOpen ? 'designer-panel-body--security-center' : '',
         ]
           .filter(Boolean)
           .join(' ')}

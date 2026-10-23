@@ -16,6 +16,11 @@ import {
 import {
   clearSessionToken,
   getSessionToken,
+  isBrowserSessionMode,
+  isSecurityCenterActive,
+  hasActiveConnection,
+  getPairingLaunch,
+  logoutCurrentBrowserSession,
   getStoredHost,
   getStoredLastLibrary,
   getStoredPort,
@@ -214,11 +219,18 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
   } | null {
     const host = getStoredHost(import.meta.env.VITE_MODE_DB_HOST ?? '').trim();
     const port = getStoredPort(Number(import.meta.env.VITE_MODE_DB_PORT ?? 0) || 0);
-    // 静默重连仅依赖 sessionStorage 中的会话 token（F5 刷新当前工作区）。
-    // 手动断开会清除 session token；「记住 Token」只用于预填连接表单，不触发自动重连。
+    // Only non-secret endpoint preferences persist; the SDK restores the HttpOnly session.
     const token = getSessionToken()?.trim() ?? '';
     const library = getStoredLastLibrary('').trim();
-    if (!host || !port || !token || !library) {
+    if (
+      getPairingLaunch() ||
+      isSecurityCenterActive() ||
+      !hasActiveConnection() ||
+      !host ||
+      !port ||
+      (!token && !isBrowserSessionMode()) ||
+      !library
+    ) {
       return null;
     }
     return { host, port, token, library };
@@ -387,7 +399,9 @@ export default class App extends DesignerChromePage<Record<string, never>, AppSt
     data.resetToNewLibrary();
     config.resetViewport();
     config.setActiveLibraryName(null);
-    // 显式断开：清掉 session token，避免下次刷新又被静默重连拉回来。
+    void logoutCurrentBrowserSession().catch(() => {
+      window.alert(this.managers.i18n.t('ui', 'sessionLogoutFailed'));
+    });
     clearSessionToken();
     this.setState((s) => ({
       connected: false,

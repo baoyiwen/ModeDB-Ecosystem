@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "pnpm --filter @mode-db/shared run build && pnpm --filter @mode-db/sdk run build",
+    "prebuild": "pnpm --filter @mode-db/shared run build && pnpm --filter @mode-db/sdk run build",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",

@@ -92,7 +92,7 @@ describe('QueryChain ordering', () => {
     const engine = new AuthoringEngine({
       atlas: 'query-order',
       storageRoot: root,
-      connectToken: 'test-token',
+      keyProvider: fixtureVaultKeys(root),
     });
     try {
       engine.registerModel('Item', { name: 'String', score: 'Int' });
@@ -157,3 +157,4 @@ describe('QueryChain ordering', () => {
     );
   });
 });
+import { fixtureVaultKeys } from '../vault-keys.js';

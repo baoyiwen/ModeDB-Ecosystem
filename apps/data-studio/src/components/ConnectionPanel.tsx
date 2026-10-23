@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import {
   RemoteModelDBClient,
+  getBrowserSession,
+  pairBrowserSession,
   type ManagementCatalogResponse,
   type ManagementDatabaseInfo,
 } from '@mode-db/sdk';
@@ -11,12 +13,17 @@ import {
   getStoredNameDisplayMode,
   getStoredPort,
   getStoredToken,
+  getPairingLaunch,
+  clearPairingLaunch,
+  isBrowserSessionMode,
+  persistBrowserSessionMode,
   persistConnection,
   persistLibrary,
   persistNameDisplayMode,
   type NameDisplayMode,
 } from '../config/connection-prefs.js';
 import { openLibrarySession } from '../config/open-library-session.js';
+import { connectionErrorMessage } from '../config/connection-error.js';
 import { useStudio, useStudioLocale, type StudioLocale } from '../context/studio-context.js';
 
 export interface ConnectionPanelProps {
@@ -51,16 +58,18 @@ export function ConnectionPanel(props: ConnectionPanelProps): ReactElement {
   const { onConnected } = props;
   const { i18n, notify } = useStudio();
   useStudioLocale();
+  const launch = getPairingLaunch();
+  const launched = useRef(false);
+  const [browserSession, setBrowserSession] = useState(isBrowserSessionMode);
+  const [pairingCode, setPairingCode] = useState(launch?.code ?? '');
 
-  const [host, setHost] = useState(() =>
-    getStoredHost(import.meta.env.VITE_MODE_DB_HOST ?? '127.0.0.1'),
+  const [host, setHost] = useState(
+    () => launch?.host ?? getStoredHost(import.meta.env.VITE_MODE_DB_HOST ?? '127.0.0.1'),
   );
-  const [port, setPort] = useState(() =>
-    getStoredPort(Number(import.meta.env.VITE_MODE_DB_PORT ?? 8765) || 8765),
+  const [port, setPort] = useState(
+    () => launch?.port ?? getStoredPort(Number(import.meta.env.VITE_MODE_DB_PORT ?? 8765) || 8765),
   );
-  const [token, setToken] = useState(() =>
-    getStoredToken(import.meta.env.VITE_MODE_DB_TOKEN ?? ''),
-  );
+  const [token, setToken] = useState(() => getStoredToken(''));
   const [libraries, setLibraries] = useState<readonly ManagementDatabaseInfo[]>([]);
   const [library, setLibrary] = useState(() => getStoredLibrary(''));
   const [busy, setBusy] = useState(false);
@@ -82,11 +91,21 @@ export function ConnectionPanel(props: ConnectionPanelProps): ReactElement {
     setBusy(true);
     setErr(null);
     try {
+      persistBrowserSessionMode(browserSession);
+      if (browserSession) {
+        const endpoint = { host: host.trim(), port };
+        if (pairingCode.trim()) {
+          await pairBrowserSession(endpoint, pairingCode.trim());
+          clearPairingLaunch();
+          setPairingCode('');
+        } else await getBrowserSession(endpoint);
+      }
       persistConnection(host, port, token);
       const infos = await RemoteModelDBClient.listDatabases({
         host: host.trim(),
         port,
         token: token.trim(),
+        browserSession,
       });
       setLibraries(infos);
       if (infos.length > 0 && !infos.some((info) => info.name === library)) {
@@ -94,13 +113,20 @@ export function ConnectionPanel(props: ConnectionPanelProps): ReactElement {
       }
       setStep('library');
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = connectionErrorMessage(e, i18n);
       setErr(msg);
       notify.error(i18n.t('connect'), msg);
     } finally {
       setBusy(false);
     }
-  }, [host, port, token, library, notify, i18n]);
+  }, [host, port, token, library, notify, i18n, browserSession, pairingCode]);
+
+  useEffect(() => {
+    if (launch && !launched.current) {
+      launched.current = true;
+      void listLibraries();
+    }
+  }, [launch, listLibraries]);
 
   const openLibrary = useCallback(async (): Promise<void> => {
     const name = library.trim();
@@ -117,18 +143,19 @@ export function ConnectionPanel(props: ConnectionPanelProps): ReactElement {
         host: host.trim(),
         port,
         token: token.trim(),
+        browserSession,
         library: name,
       });
       notify.success(i18n.t('openLibrary'), name);
       onConnected(opened.client, opened.library, opened.catalog);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = connectionErrorMessage(e, i18n);
       setErr(msg);
       notify.error(i18n.t('openLibrary'), msg);
     } finally {
       setBusy(false);
     }
-  }, [host, port, token, library, onConnected, notify, i18n]);
+  }, [host, port, token, library, onConnected, notify, i18n, browserSession]);
 
   useEffect(() => {
     if (step === 'library' && libraries.length === 0) {
@@ -178,6 +205,8 @@ export function ConnectionPanel(props: ConnectionPanelProps): ReactElement {
               <input
                 className="studio-input"
                 value={host}
+                placeholder="127.0.0.1 / https://db.example.com"
+                title={i18n.t('security_transportHint')}
                 onChange={(e) => setHost(e.target.value)}
                 autoComplete="off"
               />
@@ -192,23 +221,40 @@ export function ConnectionPanel(props: ConnectionPanelProps): ReactElement {
               />
             </label>
             <label className="studio-field">
-              {i18n.t('token')}
+              {i18n.t('sessionAuthMode')}
+              <select
+                className="studio-select"
+                value={browserSession ? 'browser' : 'token'}
+                onChange={(e) => {
+                  setBrowserSession(e.target.value === 'browser');
+                  setToken('');
+                }}
+              >
+                <option value="browser">{i18n.t('sessionBrowserMode')}</option>
+                <option value="token">{i18n.t('sessionTokenMode')}</option>
+              </select>
+            </label>
+            <label className="studio-field">
+              {i18n.t(browserSession ? 'sessionPairingCode' : 'token')}
               <input
                 className="studio-input"
                 type="password"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
+                value={browserSession ? pairingCode : token}
+                onChange={(e) =>
+                  browserSession ? setPairingCode(e.target.value) : setToken(e.target.value)
+                }
                 autoComplete="off"
               />
             </label>
             <button
               type="button"
               className="studio-btn-primary"
-              disabled={busy || !token.trim()}
+              disabled={busy || (!browserSession && !token.trim())}
               onClick={() => void listLibraries()}
             >
               {busy ? i18n.t('connecting') : i18n.t('connect')}
             </button>
+            <p>{i18n.t(browserSession ? 'sessionPairingHint' : 'security_memoryOnly')}</p>
           </>
         ) : (
           <>

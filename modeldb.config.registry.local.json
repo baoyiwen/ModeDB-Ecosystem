@@ -1,0 +1,28 @@
+{
+  "port": 9091,
+  "host": "127.0.0.1",
+  "advertisedHost": "",
+  "publicBaseUrl": "",
+  "logDir": "logs",
+  "workspace": "vault",
+  "bufferThreshold": 50000,
+  "cacheSize": "2GB",
+  "mode": "production",
+  "designerWorkspace": "model_designer_workspace",
+  "security": {
+    "version": 1,
+    "network": {
+      "transport": {
+        "mode": "loopback"
+      }
+    }
+  },
+  "autoBackup": {
+    "enabled": false,
+    "intervalMinutes": 60,
+    "runOnStart": false,
+    "reason": "auto",
+    "databases": []
+  },
+  "dev": false
+}

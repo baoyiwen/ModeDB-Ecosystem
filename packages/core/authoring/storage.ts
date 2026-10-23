@@ -8,6 +8,7 @@ import type {
   DataReader,
   PathResolver,
   Diagnostic,
+  VaultKeyMaterial,
 } from '@mode-db/common';
 import {
   ModelNotRegisteredError,
@@ -40,7 +41,7 @@ function compactModelRecords(records: readonly ModelRecord[]): ModelRecord[] {
 
 export interface ModelStorageVaultOptions {
   readonly vault: AtlasSingleVault;
-  readonly vaultSecret: string;
+  readonly vaultKey: VaultKeyMaterial;
 }
 
 function buildSchemaHeaderLine(schema: ModelSchema): string {
@@ -108,7 +109,7 @@ export class ModelStorage implements DataReader {
     if (this.vaultOptions) {
       this.vaultOptions.vault.saveSync(
         this.paths.atlasSingleVaultPath(),
-        this.vaultOptions.vaultSecret,
+        this.vaultOptions.vaultKey,
       );
     }
   }

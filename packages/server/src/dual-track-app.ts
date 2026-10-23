@@ -35,6 +35,16 @@ import { BinaryInterceptor, TransportAuthError } from './binary-interceptor.js';
 import type { ResolvedModelDBServerConfig } from './config-loader.js';
 import { formatModelDBStartupInfo, resolveModelDBPublicBaseUrl } from './server-access-info.js';
 import { AuthoringBridge } from './authoring-bridge.js';
+import { serverVaultKeys } from './security/server-vault-keys.js';
+import { SecurityRegistry } from './security/security-registry.js';
+import { SecurityProtection } from './security/security-protection.js';
+import { SecurityMaintenance } from './security/security-maintenance.js';
+import { LocalVaultKeyProvider } from './security/local-vault-key-provider.js';
+import type { SecurityControl } from './security/security-control.js';
+import { startLocalSecurityChannel } from './security/local-management-channel.js';
+import { installRegistryEntrypoints } from './security/registry-entrypoints.js';
+import { SecurityNetworkPolicy } from './security/network-policy.js';
+import { installSecurityNetworkBoundary } from './security/network-boundary.js';
 import { startAutoBackupScheduler } from './auto-backup-scheduler.js';
 import { WriteSerializationGate } from './write-serialization-gate.js';
 import { WireRequestDispatcher, decodeExecuteBody } from './request-dispatcher.js';
@@ -49,6 +59,7 @@ import {
   listDatabaseBackups,
   readDatabaseBackupFile,
   restoreDatabaseBackup,
+  verifyDatabaseBackup,
 } from './backup-manager.js';
 import {
   getConnectedWebSocketClients,
@@ -874,14 +885,82 @@ function sendPublishedInterfaceHttpError(reply: FastifyReply, error: unknown): F
 export async function buildDualTrackFastify(
   cfg: ResolvedModelDBServerConfig,
 ): Promise<FastifyInstance> {
+  const cleanup: Array<() => void | Promise<void>> = [];
+  try {
+    return await initializeDualTrackFastify(cfg, cleanup);
+  } catch (error) {
+    for (const release of cleanup.reverse()) {
+      try {
+        await release();
+      } catch {
+        console.error('[ModelDB] SERVER_STARTUP_CLEANUP_FAILED');
+      }
+    }
+    throw error;
+  }
+}
+
+async function initializeDualTrackFastify(
+  cfg: ResolvedModelDBServerConfig,
+  cleanup: Array<() => void | Promise<void>>,
+): Promise<FastifyInstance> {
   const dataRoot = cfg.workspace ?? cfg.storageRoot;
   configureModelDBStorageRoot({ storageRoot: dataRoot });
-  process.env.MODEL_DB_CONNECT_TOKEN = cfg.connectToken;
 
   const rootPrint = storageRootFingerprint(dataRoot);
   // The config directory owns server resources; workspace is only the parent
   // of logical databases and can point to a separate directory or disk.
   const sessionRoot = dirname(cfg.configFilePath);
+  const network =
+    cfg.securityMode === 'registry'
+      ? new SecurityNetworkPolicy(cfg.securityNetwork, {
+          host: cfg.host,
+          port: cfg.port,
+          publicBaseUrl: cfg.publicBaseUrl,
+          directory: sessionRoot,
+        })
+      : undefined;
+  const https = network?.tlsOptions();
+  const localVaultKeys = serverVaultKeys(cfg);
+  let keyProvider = localVaultKeys;
+  let registry: SecurityRegistry | undefined;
+  let securityControl: SecurityControl | undefined;
+  let localChannel: Awaited<ReturnType<typeof startLocalSecurityChannel>> | undefined;
+  if (cfg.securityMode === 'registry') {
+    registry = SecurityRegistry.open(join(sessionRoot, 'security'), {
+      auditLimit: cfg.securityAudit.maxEvents,
+      auditRetentionDays: cfg.securityAudit.retentionDays,
+    });
+    network!.setPairedOriginVerifier((origin) => registry!.allowsBrowserOrigin(origin));
+    cleanup.push(() => registry!.close());
+    const protection = new SecurityProtection(registry, network!);
+    cleanup.push(() => protection.close());
+    const maintenance =
+      localVaultKeys instanceof LocalVaultKeyProvider
+        ? new SecurityMaintenance(registry, localVaultKeys, join(sessionRoot, 'security'), dataRoot)
+        : undefined;
+    maintenance?.resumeRotation();
+    securityControl = { protection, maintenance };
+    keyProvider = {
+      resolveKey(atlas, existing) {
+        const material = localVaultKeys.resolveKey(atlas, existing);
+        registry!.registerKeyReference(material.reference);
+        return material;
+      },
+    };
+    try {
+      localChannel = await startLocalSecurityChannel(
+        join(sessionRoot, 'security'),
+        registry,
+        () => [cfg.designerWorkspace, ...scanWorkspaceDatabases(dataRoot).map((db) => db.name)],
+        securityControl,
+      );
+      cleanup.push(() => localChannel!.close());
+    } catch (error) {
+      registry.close();
+      throw error;
+    }
+  }
   EngineLogger.instance.configure({
     logDirectory: cfg.serverLogDirectory ?? join(sessionRoot, 'logs'),
     enableAccessLog: cfg.accessLog === true,
@@ -911,13 +990,14 @@ export async function buildDualTrackFastify(
   // catalog. Management operations that replace/remove a vault explicitly
   // evict this cache below.
   const atlasClients = new Map<string, Promise<ModelDBClient>>();
+  const legacySockets = new Set<WebSocket>();
   function getClient(atlas: string): Promise<ModelDBClient> {
     assertLogicalDatabaseExists(dataRoot, atlas);
     const hit = atlasClients.get(atlas);
     if (hit) {
       return hit;
     }
-    const p = ModelDBClient.connect(atlas);
+    const p = ModelDBClient.connect(atlas, { keyProvider });
     atlasClients.set(atlas, p);
     p.catch(() => {
       if (atlasClients.get(atlas) === p) {
@@ -927,26 +1007,60 @@ export async function buildDualTrackFastify(
     return p;
   }
 
-  const authoring = new AuthoringBridge(dataRoot, cfg.connectToken, cfg.bufferFlushRowThreshold);
-  const autoBackup = startAutoBackupScheduler(dataRoot, cfg.autoBackup, authoring);
+  const authoring = new AuthoringBridge(dataRoot, keyProvider, cfg.bufferFlushRowThreshold);
+  cleanup.push(() => authoring.close());
   const writeGate = new WriteSerializationGate();
+  const autoBackup = startAutoBackupScheduler(
+    dataRoot,
+    cfg.autoBackup,
+    authoring,
+    keyProvider,
+    writeGate,
+    registry,
+  );
+  if (autoBackup) {
+    cleanup.push(() => autoBackup.stop());
+  }
   const dispatcher = new WireRequestDispatcher({
-    dev: cfg.dev,
-    getEngine: (atlas) => authoring.getEngine(atlas),
+    dev: cfg.dev && !registry,
+    getEngine: (atlas) => {
+      if (registry) {
+        assertLogicalDatabaseExists(dataRoot, atlas);
+      }
+      return authoring.getEngine(atlas);
+    },
     writeGate,
     designerWorkspace: cfg.designerWorkspace,
   });
 
-  const app = Fastify({ logger: false, bodyLimit: 128 * 1024 * 1024 });
+  const app = Fastify({
+    logger: false,
+    bodyLimit: registry ? 8 * 1024 * 1024 : 128 * 1024 * 1024,
+    ...(https ? { https } : {}),
+  });
+  if (network) {
+    installSecurityNetworkBoundary(app, network, securityControl?.protection);
+  }
+  app.addHook('onClose', async () => {
+    try {
+      await authoring.close();
+    } finally {
+      await localChannel?.close();
+      registry?.close();
+    }
+  });
   if (autoBackup) {
     app.addHook('onClose', (_instance, done) => {
       autoBackup.stop();
       done();
     });
   }
+  cleanup.push(() => app.close());
 
   await app.register(cors, {
-    origin: true,
+    origin: network
+      ? (origin, callback) => callback(null, origin !== undefined && network.allowsOrigin(origin))
+      : true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
       'Content-Type',
@@ -954,13 +1068,16 @@ export async function buildDualTrackFastify(
       'X-ModelDB-Connect-Token',
       'X-ModelDB-Db-Name',
       'X-ModelDB-Atlas',
+      'X-ModelDB-User-Subject',
+      'X-ModelDB-CSRF',
     ],
+    ...(network ? { credentials: true } : {}),
   });
 
   app.addHook('onResponse', async (request, reply) => {
     if (EngineLogger.instance.isAccessLogEnabled()) {
       EngineLogger.instance.accessInfo(
-        `HTTP ${request.method} ${request.url}`,
+        `HTTP ${request.method} ${registry ? (request.routeOptions.url ?? '<unmatched>') : request.url}`,
         { status: reply.statusCode },
         'ModelDBServer',
       );
@@ -975,7 +1092,146 @@ export async function buildDualTrackFastify(
     async (_req: FastifyRequest, body: Buffer) => body,
   );
 
-  app.get('/health', async () => ({ ok: true as const, v: 2 }));
+  app.get('/health', async () => ({
+    ok: true as const,
+    v: 2,
+    security: { mode: registry ? 'registry' : 'legacy', protocol: registry ? 1 : 2 },
+  }));
+
+  async function buildCatalog(dbName: string): Promise<ManagementCatalogResponse> {
+    assertLogicalDatabaseExists(dataRoot, dbName);
+    const engine = await authoring.getEngine(dbName);
+    const defs = engine.registry.getModelDefinitions();
+    const defsByName = new Map(defs.map((d) => [d.name, d] as const));
+    const displayMetadata = await readCatalogDisplayMetadataForDatabase(
+      authoring,
+      dataRoot,
+      dbName,
+      engine,
+      cfg.designerWorkspace,
+    );
+    return {
+      database: dbName,
+      displayName: displayMetadata.databaseDisplayName,
+      models: defs.map((d) => {
+        const fields = effectiveCatalogFields(defsByName, d.name);
+        return {
+          name: d.name,
+          parentId: d.parentId,
+          displayName: displayMetadata.modelDisplayNames.get(d.name),
+          fields,
+          fieldLabels: mergeCatalogFieldLabels(
+            fields,
+            displayMetadata.modelFieldLabels.get(d.name),
+            displayMetadata.fieldLabelsByName,
+          ),
+          fieldTypes: effectiveCatalogFieldTypes(defsByName, d.name),
+        };
+      }),
+      relations: engine.registry.getRelations().map((r) => ({
+        forward: r.forward,
+        reverse: r.reverse,
+        source: r.source,
+        selfLoopPolicy: r.selfLoopPolicy ?? 'deny',
+        target: r.target,
+      })),
+    };
+  }
+  if (registry) {
+    installRegistryEntrypoints({
+      app,
+      registry,
+      network,
+      securityControl,
+      dispatcher,
+      designerWorkspace: cfg.designerWorkspace,
+      workspace: dataRoot,
+      backupKeys: keyProvider,
+      writeGate,
+      getEngine: (database) => {
+        assertLogicalDatabaseExists(dataRoot, database);
+        return authoring.getEngine(database);
+      },
+      listDatabases: () => scanWorkspaceDatabases(dataRoot),
+      catalog: buildCatalog,
+      manage: {
+        async create(database) {
+          if (
+            existsSync(join(dataRoot, database, 'atlas.mld')) ||
+            existsSync(join(dataRoot, `${database}.mld`))
+          ) {
+            throw new Error('DATABASE_ALREADY_EXISTS');
+          }
+          mkdirSync(join(dataRoot, database), { recursive: true });
+          await authoring.getEngine(database);
+          return { ok: true, name: database };
+        },
+        async drop(database) {
+          assertLogicalDatabaseExists(dataRoot, database);
+          const engine = await authoring.getEngine(database);
+          await engine.flushAll();
+          createDatabaseBackup(dataRoot, database, 'pre-drop', undefined, keyProvider);
+          await engine.dispose();
+          authoring.evict(database);
+          atlasClients.delete(database);
+          const nested = join(dataRoot, database);
+          if (existsSync(join(nested, 'atlas.mld'))) {
+            rmSync(nested, { recursive: true });
+          } else {
+            rmSync(join(dataRoot, `${database}.mld`));
+          }
+          return { ok: true, name: database };
+        },
+        async clear(database) {
+          assertLogicalDatabaseExists(dataRoot, database);
+          const engine = await authoring.getEngine(database);
+          await engine.flushAll();
+          const { path: _path, ...safetyBackup } = createDatabaseBackup(
+            dataRoot,
+            database,
+            'pre-clear',
+            undefined,
+            keyProvider,
+          );
+          const result = await engine.clearAllData({ sync: true });
+          atlasClients.delete(database);
+          return {
+            ok: true,
+            database,
+            mode: 'clearAllData',
+            deletedCount: result.totalDeleted,
+            perModel: result.perModel,
+            safetyBackup,
+          };
+        },
+        async restore(database, fileName) {
+          verifyDatabaseBackup(dataRoot, fileName, keyProvider);
+          assertLogicalDatabaseExists(dataRoot, database);
+          const engine = await authoring.getEngine(database);
+          await engine.flushAll();
+          const { path: _path, ...safetyBackup } = createDatabaseBackup(
+            dataRoot,
+            database,
+            'pre-restore',
+            undefined,
+            keyProvider,
+          );
+          await engine.dispose();
+          authoring.evict(database);
+          atlasClients.delete(database);
+          const { path: _restoredPath, ...restored } = restoreDatabaseBackup(
+            dataRoot,
+            database,
+            fileName,
+            keyProvider,
+          );
+          authoring.evict(database);
+          await authoring.getEngine(database);
+          return { ok: true, restored, safetyBackup };
+        },
+      },
+    });
+  }
 
   app.get('/api/v1/management/databases', async (request: FastifyRequest, reply: FastifyReply) => {
     const interceptor = new BinaryInterceptor(cfg.connectToken);
@@ -1106,7 +1362,7 @@ export async function buildDualTrackFastify(
         assertFlatGraphSegment(database, 'database name');
       }
       const body: ManagementBackupsResponse = {
-        backups: listDatabaseBackups(dataRoot, database || undefined),
+        backups: listDatabaseBackups(dataRoot, database || undefined, keyProvider),
       };
       return reply.send(body);
     } catch (e) {
@@ -1127,7 +1383,7 @@ export async function buildDualTrackFastify(
         interceptor.validateConnectToken(token);
         const params = request.params as { backupFile?: string };
         const backupFile = decodeURIComponent(String(params.backupFile ?? '').trim());
-        const result = readDatabaseBackupFile(dataRoot, backupFile);
+        const result = readDatabaseBackupFile(dataRoot, backupFile, keyProvider);
         reply.header('Content-Type', 'application/vnd.modeldb.backup+json');
         reply.header('Content-Length', String(result.content.byteLength));
         reply.header('Content-Disposition', `attachment; filename="${result.info.fileName}"`);
@@ -1147,6 +1403,7 @@ export async function buildDualTrackFastify(
 
   app.post(
     '/api/v1/management/backups/import',
+    { bodyLimit: 128 * 1024 * 1024 },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const interceptor = new BinaryInterceptor(cfg.connectToken);
       try {
@@ -1160,7 +1417,7 @@ export async function buildDualTrackFastify(
         if (!Buffer.isBuffer(request.body)) {
           return reply.code(400).send({ error: 'Backup upload body must be binary.' });
         }
-        const backup = importDatabaseBackup(dataRoot, fileName, request.body);
+        const backup = importDatabaseBackup(dataRoot, fileName, request.body, keyProvider);
         const body: ManagementBackupImportResponse = { ok: true, backup };
         return reply.send(body);
       } catch (e) {
@@ -1191,18 +1448,12 @@ export async function buildDualTrackFastify(
         } catch (error) {
           return reply.code(400).send({ error: (error as Error).message });
         }
-        try {
+        const reason = String(raw?.reason ?? 'manual').replace(/[^A-Za-z0-9_-]/g, '_');
+        const backup = await writeGate.runExclusive(dbName, async () => {
           const engine = await authoring.getEngine(dbName);
           await engine.flushAll();
-        } catch (e) {
-          EngineLogger.instance.warn(
-            'Backup proceeding without engine flush',
-            { database: dbName, message: e instanceof Error ? e.message : String(e) },
-            'ManagementBackup',
-          );
-        }
-        const reason = String(raw?.reason ?? 'manual').replace(/[^A-Za-z0-9_-]/g, '_');
-        const backup = createDatabaseBackup(dataRoot, dbName, reason || 'manual', name);
+          return createDatabaseBackup(dataRoot, dbName, reason || 'manual', name, keyProvider);
+        });
         const body: ManagementBackupCreateResponse = { ok: true, backup };
         return reply.send(body);
       } catch (e) {
@@ -1230,23 +1481,32 @@ export async function buildDualTrackFastify(
         if (!backupFile) {
           return reply.code(400).send({ error: 'Missing backupFile.' });
         }
-        let safetyBackup: ReturnType<typeof createDatabaseBackup> | undefined;
-        try {
-          safetyBackup = createDatabaseBackup(dataRoot, dbName, 'pre-restore');
-        } catch {
-          safetyBackup = undefined;
-        }
-        authoring.evict(dbName);
-        atlasClients.delete(dbName);
-        const restored = restoreDatabaseBackup(dataRoot, dbName, backupFile);
-        authoring.evict(dbName);
-        atlasClients.delete(dbName);
-        await authoring.getEngine(dbName);
-        const body: ManagementBackupRestoreResponse = {
-          ok: true,
-          restored,
-          ...(safetyBackup ? { safetyBackup } : {}),
-        };
+        const body: ManagementBackupRestoreResponse = await writeGate.runExclusive(
+          dbName,
+          async () => {
+            verifyDatabaseBackup(dataRoot, backupFile, keyProvider);
+            assertLogicalDatabaseExists(dataRoot, dbName);
+            const engine = await authoring.getEngine(dbName);
+            await engine.flushAll();
+            const safetyBackup = createDatabaseBackup(
+              dataRoot,
+              dbName,
+              'pre-restore',
+              undefined,
+              keyProvider,
+            );
+            await engine.dispose();
+            for (const socket of legacySockets) {
+              socket.close(1012, 'DATABASE_RESTORED');
+            }
+            authoring.evict(dbName);
+            atlasClients.delete(dbName);
+            const restored = restoreDatabaseBackup(dataRoot, dbName, backupFile, keyProvider);
+            authoring.evict(dbName);
+            await authoring.getEngine(dbName);
+            return { ok: true, restored, safetyBackup };
+          },
+        );
         return reply.send(body);
       } catch (e) {
         if (e instanceof TransportAuthError) {
@@ -1279,6 +1539,8 @@ export async function buildDualTrackFastify(
             dataRoot,
             dbName,
             forceReset ? 'pre-reset' : 'pre-clear',
+            undefined,
+            keyProvider,
           );
         } catch {
           safetyBackup = undefined;
@@ -1569,6 +1831,8 @@ export async function buildDualTrackFastify(
   });
 
   const wsHandler = (socket: WebSocket, rawRequest: FastifyRequest): void => {
+    legacySockets.add(socket);
+    socket.on('close', () => legacySockets.delete(socket));
     attachWireSocket(socket, rawRequest.raw, cfg, getClient, dispatcher);
   };
 
@@ -1580,7 +1844,13 @@ export async function buildDualTrackFastify(
     wsHandler(socket as WebSocket, request);
   });
 
-  await app.listen({ port: cfg.port, host: cfg.host });
+  try {
+    await app.listen({ port: cfg.port, host: cfg.host });
+  } catch (error) {
+    await localChannel?.close();
+    registry?.close();
+    throw error;
+  }
 
   const port = getServerListeningPort(app);
   // eslint-disable-next-line no-console

@@ -13,7 +13,7 @@ import {
 import type { ModelStorage } from './storage.js';
 import { MergedDataReader, type BufferedModelSource } from './merged-data-reader.js';
 
-const shutdownTasks: Array<() => Promise<void>> = [];
+const shutdownTasks = new Set<() => Promise<void>>();
 let lifecycleHooksInstalled = false;
 let shutdownRan = false;
 
@@ -22,10 +22,12 @@ let shutdownRan = false;
  * SIGTERM. Safe to call multiple times (one hook set per process). Normal process exit relies on
  * {@link AuthoringEngine}'s scheduler / `beforeExit` or an explicit {@link AuthoringEngine.flushAll}.
  */
-export function registerAuthoringShutdownTask(task: () => Promise<void>): void {
-  shutdownTasks.push(task);
+export function registerAuthoringShutdownTask(task: () => Promise<void>): () => void {
+  shutdownTasks.add(task);
   if (lifecycleHooksInstalled) {
-    return;
+    return () => {
+      shutdownTasks.delete(task);
+    };
   }
   lifecycleHooksInstalled = true;
 
@@ -49,6 +51,12 @@ export function registerAuthoringShutdownTask(task: () => Promise<void>): void {
   process.once('SIGTERM', () => {
     void runAll().finally(() => process.exit(0));
   });
+  process.once('beforeExit', () => {
+    void runAll();
+  });
+  return () => {
+    shutdownTasks.delete(task);
+  };
 }
 
 /**
