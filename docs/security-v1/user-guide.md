@@ -103,6 +103,20 @@ modeldb-server security recovery-restore --package <recovery-file> --target-secu
 
 在普通 Windows 登录账号下打开 PowerShell，进入各自的项目根目录。以下 `ExecutionPolicy Bypass` 仅作用于本次子进程，不修改系统或用户执行策略；组织策略仍可能限制脚本运行。
 
+两端均须使用**未以管理员身份运行**的 PowerShell。从开始菜单正常打开 Windows PowerShell，不选择“以管理员身份运行”；在管理员窗口中再输入 `powershell.exe` 仍会继承提升权限。可执行以下检查，结果必须为 `False`：
+
+```powershell
+$drillIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
+try {
+    $drillPrincipal = New-Object Security.Principal.WindowsPrincipal($drillIdentity)
+    $drillPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+} finally {
+    $drillIdentity.Dispose()
+}
+```
+
+新版脚本在构建和创建演练目录前检测提升令牌，管理员窗口直接返回 `RECOVERY_DRILL_NON_ELEVATED_REQUIRED`。Windows 在提升进程中创建文件时可能使用 Administrators 组作为所有者，与严格的当前用户所有者检查不符；旧入口可能在 `prepare.recovery-package` 将该保护检查失败统一显示为 `SECURITY_INSTANCE_BUSY`。遇到这一组合时先使用普通窗口、新目录重试，不修改旧目录权限，也不依据该错误停止真实服务。历史失败现场仍保留，根因以环境及复验结果核对。
+
 **A 设备：准备材料。**
 
 ```powershell
@@ -133,17 +147,18 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\security-recov
 
 重复验证可对同一个 B 目录执行 `Verify`，报告不会覆盖；重复 `Prepare` 或 `Receive` 总是新建目录。可通过 `-DrillRoot <尚不存在的绝对路径>` 指定源码目录之外、父目录已存在的全新演练目录；不接受仓库内或已有目录。两端代码和构建均未改变时，可加 `-SkipBuild` 加快重复操作。
 
-| 输出/错误码                                                           | 处理方式                                                                    |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `FAILED` / 非零退出码                                                 | 本次未通过；查看 `Step` 和 `Report`，保留现场，不传递不完整材料             |
-| `RECOVERY_DRILL_DEPENDENCIES_MISSING` / `RECOVERY_DRILL_BUILD_FAILED` | 在该设备补齐依赖或处理构建错误；构建失败不开始演练                          |
-| `EEXIST`                                                              | 准备/接收目录已有内容，改用新目录，不覆盖原文件                             |
-| `ENOENT`                                                              | 核对是否复制齐三个 fixture 文件及单独口令文件，检查 `Step`                  |
-| `VAULT_PROTECTION_UNAVAILABLE` / `EACCES` / `EPERM`                   | 核对当前 Windows 账号及专用目录权限，不沿用源设备 ACL；不要放宽安全目录权限 |
-| `SECURITY_INSTANCE_BUSY`                                              | 查看报告步骤；隔离演练的维护租约或保护检查未通过，保留现场后使用新目录重试  |
-| `RECOVERY_DRILL_REQUIRES_INDEPENDENT_WINDOWS_ENVIRONMENT`             | 检测到同机同账号，需在另一台设备验证                                        |
-| `RECOVERY_DRILL_RECEIVER_REQUIRED`                                    | 使用 B 的 `Receive` 输出目录，不能把 A 的源目录直接当作接收目录             |
-| `RECOVERY_DRILL_DATA_MISMATCH` / `RECOVERY_DRILL_FAILED`              | 保留报告和材料，不改写 manifest 或删除标记绕过验证                          |
+| 输出/错误码                                                           | 处理方式                                                                                  |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `RECOVERY_DRILL_NON_ELEVATED_REQUIRED`                                | 两端都重新打开普通 PowerShell，不选择管理员运行，再执行原操作；本次尚未构建或创建演练目录 |
+| `FAILED` / 非零退出码                                                 | 本次未通过；查看 `Step` 和 `Report`，保留现场，不传递不完整材料                           |
+| `RECOVERY_DRILL_DEPENDENCIES_MISSING` / `RECOVERY_DRILL_BUILD_FAILED` | 在该设备补齐依赖或处理构建错误；构建失败不开始演练                                        |
+| `EEXIST`                                                              | 准备/接收目录已有内容，改用新目录，不覆盖原文件                                           |
+| `ENOENT`                                                              | 核对是否复制齐三个 fixture 文件及单独口令文件，检查 `Step`                                |
+| `VAULT_PROTECTION_UNAVAILABLE` / `EACCES` / `EPERM`                   | 核对当前 Windows 账号及专用目录权限，不沿用源设备 ACL；不要放宽安全目录权限               |
+| `SECURITY_INSTANCE_BUSY`                                              | 查看报告步骤；隔离演练的维护租约或保护检查未通过，保留现场后使用新目录重试                |
+| `RECOVERY_DRILL_REQUIRES_INDEPENDENT_WINDOWS_ENVIRONMENT`             | 检测到同机同账号，需在另一台设备验证                                                      |
+| `RECOVERY_DRILL_RECEIVER_REQUIRED`                                    | 使用 B 的 `Receive` 输出目录，不能把 A 的源目录直接当作接收目录                           |
+| `RECOVERY_DRILL_DATA_MISMATCH` / `RECOVERY_DRILL_FAILED`              | 保留报告和材料，不改写 manifest 或删除标记绕过验证                                        |
 
 早先手动准备失败的目录不自动接管或删除。旧 CLI 将部分异常统一显示为 `RECOVERY_DRILL_FAILED`；新版会保留公开安全错误码，托管脚本另提供失败步骤。历史那次失败的根因仍需以新报告核对，不能仅凭后续准备成功认定已经修复。
 

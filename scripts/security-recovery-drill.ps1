@@ -27,6 +27,17 @@ try {
     if ($Action -eq 'Verify' -and [string]::IsNullOrWhiteSpace($DrillRoot)) {
         throw 'RECOVERY_DRILL_ROOT_REQUIRED'
     }
+    # Elevated Windows tokens can assign Administrators ownership to new files.
+    # The drill requires current-user ownership and must not rewrite existing ACLs.
+    $drillIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    try {
+        $drillPrincipal = New-Object Security.Principal.WindowsPrincipal($drillIdentity)
+        if ($drillPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+            throw 'RECOVERY_DRILL_NON_ELEVATED_REQUIRED'
+        }
+    } finally {
+        $drillIdentity.Dispose()
+    }
     $nodeCommand = Get-Command node -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $nodeCommand) { throw 'RECOVERY_DRILL_NODE_20_REQUIRED' }
     $nodeVersion = & $nodeCommand.Source -p 'parseInt(process.versions.node)'
@@ -85,6 +96,10 @@ try {
         $safeMessage = 'RECOVERY_DRILL_POWERSHELL_FAILED'
     }
     Write-Host "FAILED: $safeMessage" -ForegroundColor Red
+    if ($safeMessage -eq 'RECOVERY_DRILL_NON_ELEVATED_REQUIRED') {
+        Write-Host 'Open a normal PowerShell window without Run as administrator, then run this command again.'
+        Write-Host 'Use a normal window for Prepare, Receive and Verify on both devices.'
+    }
     $drillExitCode = 1
 } finally {
     Pop-Location

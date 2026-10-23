@@ -10,6 +10,8 @@ SEC-M1—SEC-M5 已完成代码与隔离验收；SEC-M6 进行中，S6.1 异机 
 
 D06 补充交付：S6.1 已提供 `scripts/security-recovery-drill.ps1` 的 Prepare/Receive/Verify、默认构建、全新隔离目录及脱敏诊断报告。恢复与脚本回归 31/31 通过；两台 Windows 的成功报告仍待回传核对，S6.1 不标完成，任务和里程碑计数不变。详见 [SEC-M6 / D06](security-v1-deliveries/SEC-M6.md#d06s61-可重复-powershell-演练与失败诊断)。
 
+D07：用户确认准备失败发生在管理员 PowerShell。演练入口已增加未提升令牌预检，避免在构建/创建材料后才拒绝；未提升隔离准备成功、脚本定向 5/5 通过。用户普通窗口复验和两台设备成功报告仍待，状态和计数不变；详见 [SEC-M6 / D07](security-v1-deliveries/SEC-M6.md#d07s61-管理员窗口预检与操作修正)。
+
 | 项目           | 当前状态                                                                                                                                                                                                                                                                                                            |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 需求和交付基线 | 已建立；不计入研发里程碑完成数                                                                                                                                                                                                                                                                                      |
@@ -18,7 +20,7 @@ D06 补充交付：S6.1 已提供 `scripts/security-recovery-drill.ps1` 的 Prep
 | 当前研发里程碑 | SEC-M6 进行中；S6.1 待异机验收，S6.2 完成，S6.3 进行中                                                                                                                                                                                                                                                              |
 | 下一项开发任务 | SEC-M6 / S6.3 继承虚拟关系/复杂链引用兼容、导入后浏览器审核/重新发布/目标授权验收；S6.1 异机恢复验收仍待补                                                                                                                                                                                                          |
 | 首要验证平台   | Windows；其他平台完成独立适配与验证后才列为支持                                                                                                                                                                                                                                                                     |
-| 已登记研发交付 | [SEC-M1 / D01](security-v1-deliveries/SEC-M1.md)、[SEC-M2 / D01](security-v1-deliveries/SEC-M2.md)、[SEC-M3 / D01](security-v1-deliveries/SEC-M3.md)、[SEC-M4 / D04](security-v1-deliveries/SEC-M4.md)、[SEC-M5 / D05](security-v1-deliveries/SEC-M5.md)、[SEC-M6 / D06 阶段记录](security-v1-deliveries/SEC-M6.md) |
+| 已登记研发交付 | [SEC-M1 / D01](security-v1-deliveries/SEC-M1.md)、[SEC-M2 / D01](security-v1-deliveries/SEC-M2.md)、[SEC-M3 / D01](security-v1-deliveries/SEC-M3.md)、[SEC-M4 / D04](security-v1-deliveries/SEC-M4.md)、[SEC-M5 / D05](security-v1-deliveries/SEC-M5.md)、[SEC-M6 / D07 阶段记录](security-v1-deliveries/SEC-M6.md) |
 
 任务完成数只表示条目数量，不代表工时比例。日期用于记录实际开始、交付和验证时间，不在未评估前填写承诺工期。
 

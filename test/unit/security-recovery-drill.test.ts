@@ -35,6 +35,30 @@ it('exposes only stable drill, security and filesystem error codes', () => {
   }
 });
 
+it('checks the actual Windows token before creating a managed drill directory', windowsOnly, () => {
+  const root = mkdtempSync(join(tmpdir(), 'modedb-drill-token-check-'));
+  try {
+    const token = spawnSync(powershell, ['-NoProfile', '-Command',
+      '$identity = [Security.Principal.WindowsIdentity]::GetCurrent(); try { $principal = New-Object Security.Principal.WindowsPrincipal($identity); $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) } finally { $identity.Dispose() }'],
+      { encoding: 'utf8', windowsHide: true, timeout: 10000 });
+    assert.equal(token.status, 0, token.stderr);
+    assert.match(token.stdout.trim(), /^(True|False)$/);
+    const target = join(root, 'fresh receiver');
+    const result = spawnSync(powershell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', wrapper,
+      '-Action', 'Receive', '-DrillRoot', target, '-SkipBuild'],
+      { encoding: 'utf8', windowsHide: true, timeout: 30000 });
+    if (token.stdout.trim() === 'True') {
+      assert.equal(result.status, 1);
+      assert.match(result.stdout, /RECOVERY_DRILL_NON_ELEVATED_REQUIRED/);
+      assert.equal(existsSync(target), false);
+    } else {
+      assert.equal(result.status, 0, result.stdout + result.stderr);
+      assert.match(result.stdout, /SUCCESS: Receive/);
+      assert.equal(existsSync(join(target, 'drill-session.json')), true);
+    }
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
 it('runs PowerShell from another directory, preserves runs and records independent-environment refusal', windowsOnly, () => {
   const root = mkdtempSync(join(tmpdir(), 'modedb-wrapper-test-'));
   function invoke(action: string, target: string) {
