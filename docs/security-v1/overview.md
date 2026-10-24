@@ -39,6 +39,7 @@ v2 包增加所选 Query/Operation Interface、Binding Surface、固定版本依
 ## 从哪里开始
 
 - 全新发布候选、离线安装验证、完整回归、性能比较与旧环境切换/回退：[构建与切换指南](release-guide.md)。候选每次使用新临时输出，生成七个包和三个前端的文件摘要；实际发布、真实切换分别授权与记录。
+- Git 同步后的只读交付核对：`node scripts/security-release-evidence.mjs`，检查开发文件及归档证据；Git 忽略规则不移除已有跟踪记录或历史材料，详见[发布指南第 6 节](release-guide.md#6-git-同步后的交付证据核对)。
 - 两台 Windows 设备重复验证：[使用手册 §4.1](user-guide.md#41-两台-windows-设备的可重复演练脚本)，入口为 `scripts/security-recovery-drill.ps1`；已补 Windows PowerShell 5.1 中文目录的 UTF-8 解析和明确错误诊断。直接接收成功后可保留目录继续验证。
 - 构建摘要不同：[使用手册 §4.2](user-guide.md#42-构建摘要不同的诊断)，用 `node scripts/security-recovery-build-check.mjs` 保存脱敏文件清单，无需重做演练。
 - 操作步骤、备份/恢复、迁移命令和故障处理：[安全 V1 使用手册](user-guide.md)。

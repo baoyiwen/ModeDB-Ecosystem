@@ -57,6 +57,7 @@ yarn-error.log*
 
 # Runtime data
 data
+/security/
 
 # Coverage
 coverage

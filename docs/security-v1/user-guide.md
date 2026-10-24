@@ -6,6 +6,8 @@
 
 构建与安装从[发布准备指南](release-guide.md)开始：`node scripts/security-release-candidate.mjs` 每次新建临时目录，构建七个包和三个前端，核对清单并离线安装本地候选。复验、性能测量、旧格式处理、真实切换和回退边界也在该指南中；命令不会发布或接管现有服务。
 
+Git 同步后可执行 `node scripts/security-release-evidence.mjs`，只读核对开发文件和已归档证据，允许 Windows 换行差异；完整步骤及已跟踪运行材料的处理边界见[发布指南第 6 节](release-guide.md#6-git-同步后的交付证据核对)。它不会连接真实实例，也不替代完整功能复验。
+
 ## 1. 连接与权限
 
 新安装的 registry 配置包含 `security: { "version": 1 }`。它使用独立凭据台账，不从旧 `connectToken` 自动导入身份。配置示例、监听地址和 TLS 见[配置指南](../modeldb-config-guide.md)。本机 loopback 可用 HTTP；跨机器连接配置可信的 HTTPS/WSS。
