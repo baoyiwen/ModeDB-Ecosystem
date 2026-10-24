@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
 
-import { resolveModelDbConfigPathFromCli } from '../../packages/server/src/modeldb-default-home.ts';
+import { resolveModelDbConfigPathFromCli } from '../../packages/server/src/modeldb-default-home.js';
 
 it('reports a useful error when a shell strips separators from a Windows path', () => {
   assert.throws(

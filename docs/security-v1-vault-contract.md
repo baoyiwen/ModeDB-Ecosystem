@@ -183,7 +183,7 @@ protected header 仅包含 `enc/typ/manifest/recipientBindings`。manifest 包�
 
 原始 Vault 上限 48 MiB、完整包上限 128 MiB，读磁盘前检查大小和路径；不递归打包或解压。统计为 `vaultBytes/entries/models/relations`，条目数不代表业务行数/边数。旧 `modeldb.backup.v1` 明确返回 `SECURITY_PROTOCOL_UNSUPPORTED`，原件保留且不作为已验证包列出。资产包的首批模型子集见第 9 节，完整依赖映射与跨存储分阶段发布仍属 S6.3 后续。
 
-## 9. S6.3 首批模型资产格式（完整阶段仍进行中）
+## 9. S6.3 模型与 Designer 资产格式
 
 2026-10-23 增加 `modeldb.asset.v1` 模型子集格式。外层为带 `format` 标识的 RFC 7515 Flattened JWS JSON：仅 `format/protected/payload/signature`。protected 仅 `alg:PS256/typ:modeldb.asset.v1/kid:<publisher-SPKI-SHA256>`，RSA-PSS SHA-256、32 字节盐、RSA 3072—4096 位。签名输入是原始 ASCII `protected.payload`；payload 是完整 Compact JWE 字符串的 base64url。不获取包指定的远程密钥，不信任自报公钥；调用者必须提供经可信渠道确认的发布者公钥与精确指纹。
 
@@ -205,6 +205,10 @@ Designer 模型白名单：`sys_data_asset_map`、`sys_model`、`sys_props`、`s
 
 显示行保留 I18N 和受限布局；关系以端点+forward+reverse 匹配，不能仅用 forward 全局匹配。导入生成目标作用域实体 ID，按语义字段映射模型/字段/关系/接口及 Binding 引用，不全局替换任意字符串或字面值。相同引用字符串在实体、接口逻辑 ID 或模型名之间存在歧义时拒绝，不能默默覆盖映射。业务 ID 和引擎唯一名保留。接口及历史版本的权限强制为 disabled，源策略/访问密钥摘要移除，源发布签名清空；目标端重新审核、发布与授权。
 
+继承引用由业务 catalog 的父链独立验证。`childModelId` 必须是 `ownerModelId` 的后代，普通关系的遍历起点必须是该 owner；虚拟 ID 不得冒用持久实体 ID，一个虚拟 ID 不得表示不同父子端点。旧随机继承 ID 在导入时按已验证父链归一到直接边，目标使用 `inherit_<parentId长度>_<parentId>_<childId>` 的确定性标识，加载器与新建子模型共用该规则。虚拟继承边不能进入普通关系遍历。双库合并按业务父链补齐 Designer 的 `modelBelongsToParent` / `parentModelHasChildren` 双向索引。
+
+查询链中重复模型节点、正反向关系、分支和约束的来源节点后缀，以及生成节点/边 ID、投影、过滤、路径和已发布适配器的节点键一致映射。来源节点必须在当前草稿设计图中唯一存在，模型须与遍历方向的起点（继承时为 child）一致，拒绝悬空、重复或错误模型节点。字面值不参与映射。约束设计可保留；现有查询编译器不支持的执行语义仍会在重新发布时拒绝，资产导入不扩展查询执行能力。无版本接口依赖仍拒绝，不猜测当前版本；Binding Surface 使用显式固定版本及历史版本存在性校验。
+
 ### 9.2 离线分阶段发布
 
 仅 OS 所有者在 registry 独占 lease 内执行。预览绑定完整正文摘要、两库存储版本、目标/本地身份及映射，导入重新验证。已有业务库或目标 Designer 归属冲突拒绝，其他库元数据保留。
@@ -212,3 +216,11 @@ Designer 模型白名单：`sys_data_asset_map`、`sys_model`、`sys_props`、`s
 `security/asset-publication.mld` 是独立目标 DEK 保护的 Vault，内含任务身份、目标根/库名、两份目标加密候选、原文件摘要及原 Designer 加密快照，上限 224 MiB。先 fsync 任务，再分别发布业务和 Designer Vault；普通 registry.open 在任务本体/候选/journal/锁存在时拒绝启动。只有离线资产预览/导入允许打开台账续跑，并强制核对原包和精确目标，不自动猜测或跨任务清理。每个文件复用 CAS/journal，首次只剩 candidate 时在死进程 lease 接管后按已认证任务补 intent。两个文件都匹配新摘要才将任务更名为同目录 `asset-publication.<localId>.completed.mld`，保留平铺安全目录/ACL约束、快照和恢复证据；重复请求只在两文件完全匹配时返回已发布。现有 Designer DEK 保留，新业务库使用新 DEK，任务使用独立 DEK。
 
 这是通过离线互斥和启动阻断实现的分阶段发布，不声称有底层跨库原子事务。未实现手工回滚入口、在线资产 API、浏览器资产向导或硬件断电保证；Windows 文件 fsync/journal 仅按实际进程中断证据验收。
+
+## 10. 出厂清除归档恢复（S7.1）
+
+兼容现有 `.mdreset` v1：外层 version/instanceId/iv/tag/key/ciphertext，AES-256-GCM 的 AAD 与 DPAPI purpose 均为 `modeldb-reset-v1:<instanceId>`，正文仅 version/instanceId/workspace/content。每项含 root（workspace/security）、relative、SHA-256 hash、base64 data。校验字段集合、编码、摘要、大小写重复、父文件冲突和 Windows 不安全路径；文件最多 10000、合计 128 MiB、路径深度 128、归档 240 MiB。security 项保持平铺且不能包含实例/维护锁。原账号 DPAPI 依赖仍在，不替代独立恢复包。
+
+恢复工具只接受显式配置对应的 `reset-backups/<uuid>.mdreset` 和精确实例/原 workspace。`verify` 认证并报告摘要，不修改归档；`resume` 对原 tombstone/原归档绑定、独占 lease 和全部残留文件哈希校验成功后续删，回执落盘后才移除标记。最初只剩 marker candidate 时，仅认证内容完全符合后才提升；提交意图/回执恢复沿用原子文件协议。
+
+`restore` 只写不重叠且尚不存在的新隔离目录。先写启动阻断标记，再恢复 workspace 与密钥文件；排除大小写不敏感匹配的 `registry.mds*` / `registry.ready*`，空访问台账不复活旧凭据、会话或网络策略。新副本回执完成后才移除其标记；失败保留副本与标记，用另一个新目录重试。原标记、原数据和原包不因恢复副本而改变。操作步骤见[手册 §6.1](security-v1/user-guide.md#61-出厂清除中断验证续跑或恢复副本)。

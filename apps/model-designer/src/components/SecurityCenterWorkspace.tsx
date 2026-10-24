@@ -444,6 +444,11 @@ export function SecurityCenterWorkspace({
         <td key="category">{event.category}</td>,
         <td key="action">
           <code>{event.action}</code>
+          {event.aggregation ? (
+            <small>
+              {t('securityCenterAuditObserved')}: {event.aggregation.observedCount}
+            </small>
+          ) : null}
         </td>,
         <td key="actor">
           {event.actor.principalId ?? '-'}
@@ -643,6 +648,14 @@ export function SecurityCenterWorkspace({
             ) : null}
           </form>
           <div className="security-center-metrics">
+            <div className="security-center-metric">
+              <span>{t('securityCenterAuditObserved')}</span>
+              <strong>{page.summary.observedCount}</strong>
+            </div>
+            <div className="security-center-metric">
+              <span>{t('securityCenterAuditSuppressed')}</span>
+              <strong>{page.summary.suppressedDetails}</strong>
+            </div>
             <div className="security-center-metric">
               <span>{t('securityCenterAuditTotal')}</span>
               <strong>{page.summary.total}</strong>

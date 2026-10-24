@@ -1,8 +1,10 @@
 # ModelDB 安全 V1 使用手册
 
-更新日期：2026-10-23。适用于当前源码构建的 Windows Server、registry 模式和新格式 Vault。配套[功能简介](overview.md)、[进度台账](../security-v1-milestones.md)、[交付证据](../security-v1-deliveries/SEC-M6.md)。后续开发须同步更新本手册。
+更新日期：2026-10-24。适用于当前源码构建的 Windows Server、registry 模式和新格式 Vault。配套[功能简介](overview.md)、[进度台账](../security-v1-milestones.md)、[当前交付证据](../security-v1-deliveries/SEC-M7.md)。后续开发须同步更新本手册。
 
 本文命令中的 `<...>` 都需要替换。先在专用隔离实例验证；本文不表示现有实例已经升级。源码构建后的 CLI 可用 `node packages/server/dist/cli.js` 替代 `modeldb-server`。请使用匹配本次源码的构建，已全局安装的旧版本可能没有这些命令。
+
+构建与安装从[发布准备指南](release-guide.md)开始：`node scripts/security-release-candidate.mjs` 每次新建临时目录，构建七个包和三个前端，核对清单并离线安装本地候选。复验、性能测量、旧格式处理、真实切换和回退边界也在该指南中；命令不会发布或接管现有服务。
 
 ## 1. 连接与权限
 
@@ -27,6 +29,14 @@ modeldb-server security browser-open -c <isolated-config> --url <designer-url> -
 误锁后，在服务器本机使用同一配置的 `security network-status`、`network-preview`、`network-apply`、`network-confirm`、`network-rollback` 或 `network-unban` 修复。参数形状见 `modeldb-server security help` 和 [SEC-M5 记录](../security-v1-deliveries/SEC-M5.md)。不要通过关闭认证来恢复访问。
 
 审计页可以按时间、来源 IP、主体、凭据、库、接口和结果筛选并导出。关键操作在审计写入不可用时拒绝或报告结果未确认。备份/恢复不会还原安全台账，也不会让已撤销的凭据或会话复活。
+
+### 2.1 高频拒绝事件的计数
+
+匿名 `network.reject` / `authentication.reject` 按固定 UTC 60 秒窗口聚合。同一来源（socket 与解析后地址、归因依据）、原因、管理/数据面、HTTP/WS、策略版本和规则保存一行，包含首次/最后时间、观察次数和最多三个请求 ID 样本。安全中心同时显示“观察次数”“保存明细”和“被抑制明细”；例如同组 200 次拒绝为 200 次观察、1 行保存明细、199 条被抑制明细。已认证事件、管理变更和数据操作继续逐项记录。
+
+分页 `total` 仍为行数，分类/结果统计按观察次数累计；JSONL 导出包含 `aggregation`。时间筛选按该行的最后观察时间，不对窗口内的次数做精确切分；请求 ID 检索只匹配首请求及三个样本，未保存的请求 ID 无法逐项检索。
+
+每窗口最多 `min(128, max(1, floor(maxEvents / 4)))` 个匿名来源键，审计容量到 80% 后拒绝新增匿名键，保留管理容量；已有组仍可累计。达到限制或落盘失败时请求失败关闭，不能将这些未成功落盘的请求计为已持久化观察。该实现每次仍同步写入计数，没有异步日志队列；不保证提高洪泛时的磁盘吞吐。来源限流窗口最多 10000 个键，自动临时封禁最多 1000 项，过期后回收。
 
 ## 3. 创建和恢复日常备份
 
@@ -93,7 +103,7 @@ modeldb-server security recovery-restore --package <recovery-file> --target-secu
 
 该命令保留源 Vault key domain，以目标 OS 保护和新主密钥重新封装。随后在新 home 中建立匹配配置，普通首次启动建立空访问台账，重新授权；再通过上传 API 或第 3 节离线恢复业务备份。不要覆盖已有实例的 `security/`，不要拷回旧 registry、Token 或网络策略。已初始化的恢复目标不能重复覆盖；只允许严格匹配同一恢复 receipt 且未初始化台账的幂等确认。
 
-**已收到两台 Windows 的恢复功能成功报告，构建摘要差异仍待核对，S6.1 尚未关闭。** 最新证据与范围见 [SEC-M6 / D09](../security-v1-deliveries/SEC-M6.md#d09s61-用户异机报告核对与构建差异)。同机新目录或新进程通过，不能登记成异机验收。
+**2026-10-23 已完成两台 Windows 的合成异机恢复验收，S6.1 完成。** 原始构建摘要差异已由逐文件报告确认为当前模块未使用的旧输出，当前源码对应的 136 个编译文件与配置一致；原报告保留。证据与边界见 [SEC-M6 / D11](../security-v1-deliveries/SEC-M6.md#d11s61-异机验收完成)。这不是实际业务库的恢复或生产切换；同机新目录或新进程通过仍不能登记成异机验收。
 
 ### 4.1 两台 Windows 设备的可重复演练脚本
 
@@ -193,6 +203,10 @@ node .\scripts\security-recovery-build-check.mjs
 
 报告的构建摘要沿用演练报告中规范化 CRLF/LF、按排序路径聚合全部 `.js` 的规则；同步这个独立诊断脚本不改变原演练摘要范围，不需要重做已成功的演练。收到两端完整清单后，再判断是旧产物、编译配置/工具链还是代码内容的差异，并登记处置结果。
 
+终端显示的是包概要；逐文件及编译配置摘要保存在 `report` 指向的 JSON 文件中。若只回传终端概要，仍无法确认同名文件内容是否一致；直接发送该已生成文件即可，不需要再次运行脚本。
+
+本轮核对已完成：两端 136 个当前源码对应 JS 及六份编译配置摘要一致，137 个共有路径无内容变化；A 独有一份旧 initializer，B 独有 19 份旧 core/common、PathResolver 产物，均未被当前模块引用。因此恢复验收不需要重做，原始总摘要差异按清单解释保留。后续发布应在隔离的全新输出目录构建并检查包清单；不要把现有 `dist` 含有旧文件的事实当作发布包也已验收。
+
 若复制长命令时遇到 `UnexpectedCharactersAfterHereStringHeader`，说明 PowerShell 的 `@'` 起始标记后没有立即换行，诊断程序尚未执行。这不影响此前恢复结果；使用上面单行脚本入口即可。
 
 ## 5. 向受信任实例完整迁移
@@ -244,15 +258,45 @@ modeldb-server restore <new-db> <imported.fileName> --yes -c <target-isolated-co
 | `VAULT_COMMIT_CONFLICT` / `VAULT_COMMIT_INCOMPLETE`        | 保留目标、`.pending/.commit/.lock/.reclaim` 和备份，停止其他写者后按原目标和原包重试；损坏/不匹配现场拒绝 |
 | 审计失败或没有成功回执                                     | 可能已写入备份或恢复数据；先列表、核对目标和审计再决定重试，不将无回执当作未执行                          |
 
-业务恢复的 `staged/journaled/replaced` 进程中断可用相同备份和目标重试。首次创建只剩未提交候选时，只有候选认证成功且与所请求内容逐项一致才补写提交意图；内容不同或认证失败保持现场。不要手工删除这些文件后启动空库。恢复密钥目录、DEK 轮换和出厂清除使用各自任务流程，不能互相替代；reset 中断后的续跑/归档恢复工具仍未提供。
+业务恢复的 `staged/journaled/replaced` 进程中断可用相同备份和目标重试。首次创建只剩未提交候选时，只有候选认证成功且与所请求内容逐项一致才补写提交意图；内容不同或认证失败保持现场。不要手工删除这些文件后启动空库。恢复密钥目录、DEK 轮换和出厂清除使用各自任务流程，不能互相替代；清除中断按第 6.1 节处理。
 
 当前备份上限为单个原始 Vault 48 MiB、完整包 128 MiB，不做压缩解包或流式大库处理；空间不足会拒绝或保留失败现场，损坏包不会作为可恢复备份列出。包 manifest 可见库名、名称、时间、密钥引用和统计，业务正文及密钥为密文；备份文件仍应按敏感资料保管。
 
 自动备份默认关闭，显式配置 `autoBackup.enabled: true` 后最小间隔 60000ms；快照与写操作共用同一库写入锁，刷盘或审计失败不会返回成功。当前自动备份使用本机历史 DEK 封装，未提供恢复公钥登记后自动加入接收方的配置；独立恢复需要另外维护最新恢复文件。
 
-Windows 已验证范围包括 DPAPI、ACL 和进程退出恢复，尚不等同硬件断电验证。Designer 资产包的当前操作范围见第 7 节；完整 UI 验收、整体性能和正式升级切换材料仍由 S6.3/SEC-M7 完成。
+Windows 已验证范围包括 DPAPI、ACL 和进程退出恢复，尚不等同硬件断电验证。Designer 资产包的当前操作范围见第 7 节，导入后审核、重新发布与目标授权的 Chrome 流程已验证。全流程、安装与性能证据见[当前交付记录](../security-v1-deliveries/SEC-M7.md#d02s72-全流程回归与发布准备)，操作材料见[构建、安装与切换指南](release-guide.md)；阶段状态以唯一台账为准。registry 的同步审计/OS 保护有明显秒级成本，不代表低延迟、高并发或生产容量已验收；真实升级切换须另行授权。
 
-## 7. 首批模型资产包（S6.3 进行中）
+### 6.1 出厂清除中断：验证、续跑或恢复副本
+
+这组命令用于 `factory-reset` 已生成的 `.mdreset` 本机归档，由原 Windows 账号离线执行。它依赖原账号 DPAPI，不是异机恢复材料。先停止对应隔离实例，保留原配置、`security-reset.pending` 及其提交侧文件、`reset-backups` 和所有残留数据，不手工删除标记或锁。归档固定在原配置父目录的 `reset-backups/<uuid>.mdreset`，不要改写包内路径。
+
+先验证归档；此步不恢复数据或继续删除，也不创建缺失的归档目录：
+
+```text
+modeldb-server security factory-reset-verify -c <original-isolated-config> --package <original-archive.mdreset> --instance <original-instance-id> --target <original-workspace>
+```
+
+核对返回 `verified: true`、实例 ID、文件数和归档摘要。三个新命令及原 `factory-reset` 都必须显式传 `-c`。错误账号、篡改包、链接路径、不匹配实例/目标或不安全文件路径会拒绝。
+
+若决定完成清除，用原包和准确原目标续跑：
+
+```text
+modeldb-server security factory-reset-resume -c <original-isolated-config> --package <original-archive.mdreset> --instance <original-instance-id> --target <original-workspace> --yes
+```
+
+工具先认证归档与原标记、取得独占锁，并检查全部残留文件。只允许归档中哈希未改变的文件或已删除文件；新文件、改动文件、活进程或 junction 会阻止续跑。成功后原业务目录和安全状态删除，原包及 `.receipt` 保留，最后移除阻断标记。已完成且没有标记的清除不重复执行续跑；核对回执即可。
+
+若要取回数据，恢复到一个尚不存在的新隔离目录：
+
+```text
+modeldb-server security factory-reset-restore -c <original-isolated-config> --package <original-archive.mdreset> --instance <original-instance-id> --target <original-workspace> --output <new-quarantine-directory> --yes
+```
+
+输出为新目录下的 `workspace/`、受保护的 `security/` 和 `reset-restore.receipt`，不覆盖原现场。保留原数据密钥引用，但排除归档中的 `registry.mds*` / `registry.ready*`，包括大小写变体；新副本建立空访问台账，旧凭据、会话和网络规则不会复活。为副本新建显式隔离配置，指向返回的 workspace，使用随机端口，重新授权后再核对业务内容；不能直接套用仍指向原目标的配置启动。
+
+恢复副本失败时保留该目录及其阻断标记，用另一个全新目录重试，勿删除标记后启动半成品。原归档和原清除现场保持不变。当前原始数据合计上限 128 MiB、10000 文件、128 层；归档读取上限 240 MiB。进程退出与注入 ENOSPC 的验收不代表已做硬件断电或物理磁盘耗尽实验。
+
+## 7. 模型与 Designer 资产包
 
 当前入口是离线 CLI，需停止相应的隔离实例，由其 OS 所有者执行；不授予远程主体隐含的整库导出权限。私钥和口令只从受保护本机文件读取，不传到 HTTP。保留原包和公钥指纹；仅凭包内声明不能信任发布者。
 
@@ -317,6 +361,16 @@ modeldb-server security asset-import -c <target-config> --instance <target-insta
 预览和导入沿用上面的两个命令；v2 预览返回 `modeldb.asset-preview.v2`、业务/Designer 目标摘要、源/目标行 ID、版本、`importedPermissions: "disabled"`、冲突和确认摘要。它仍不创建目标库/DEK。默认只接受新业务库，且 Designer 中不能已有该目标库的登记、元数据、接口或快照。已有 Designer 库的其他库数据保留。内部 ID 根据目标实例、包和实体用途重新映射，业务记录 ID 与引擎名称保持不变。
 
 所有导入接口及历史版本默认 `disabled`，不复制源密钥摘要、角色或自定义访问规则。导入成功后在 Designer 中核对模型、字段、关系、位置及接口，重新审核并发布目标权限；新版本摘要发生变化，原实例的发布授权不会自动适用。当前只提供离线入口，没有浏览器上传私钥或资产导入向导。
+
+父模型多级继承和通过父模型关系查询子模型的引用会按业务层级校验并映射。重复模型节点、反向关系、分支和约束的来源节点也随目标身份映射；未知关系、伪造祖先或悬空链引用拒绝。约束设计可交付，但现有编译器不支持的执行仍会阻止发布，不因导入而自动可执行。
+
+导入完成后的审核与启用步骤：
+
+1. 启动目标隔离实例，用目标实例所有者签发的浏览器邀请打开 Designer，选择新导入库。核对模型/字段显示名、父子层级、双向关系、数据数量和接口固定版本。
+2. 打开“接口管理”，展开导入接口并打开编辑器。查询接口在“契约”页查看访问策略，默认应为禁用；核对选中字段、过滤和链，再按目标要求设置访问策略并保存。
+3. 返回接口管理，重新发布目标草稿。发布失败时按校验诊断修正，不能直接恢复源发布签名或把权限改成已授权。历史版本仍保持导入时的禁用策略，需逐个审核。
+4. 从已发布接口页面取得“当前发布版本的授权配置”，按[标准 HTTP 调用说明](../security-http-invocation.md#为调用应用签发限权凭据)创建目标实例应用身份和限权凭据。`none` 只表示接口不额外要求访问密钥，registry 身份和准确版本授权仍然必需。
+5. 验证无权限/旧版本授权被拒绝、新目标授权只返回发布投影；再验证其他库、原始查询和系统库访问被拒绝，以及撤销即时生效。不要把源 Token 或源权限文件作为目标授权使用。
 
 ### 7.2 双库中断续跑
 

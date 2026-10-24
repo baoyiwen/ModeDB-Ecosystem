@@ -18,6 +18,7 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { configureModelDBStorageRoot, DataType, type FieldDefsRecord } from '@mode-db/common';
 import { AuthoringEngine } from '@mode-db/core';
+import type { WireEntityNode } from '@mode-db/shared';
 import {
   getServerListeningPort,
   loadModelDBServerConfig,
@@ -291,7 +292,7 @@ try {
   const jsonResult = await remote.apply({ op: 'executeQuery', snapshot });
   const jsonRows =
     asRecord(jsonResult).kind === 'rows'
-      ? (asRecord(jsonResult).rows as { model: string; data: Record<string, unknown> }[])
+      ? (asRecord(jsonResult).rows as WireEntityNode[])
       : [];
 
   ok(
@@ -303,9 +304,7 @@ try {
   const fluentJpCities = ((fluentJp?.getData().relates as Record<string, unknown> | undefined)
     ?.cities as unknown[] | undefined)?.length;
   const jsonJp = jsonRows.find((r) => r.data.id === 'jp');
-  const jsonJpCities = ((jsonJp?.data.relates as Record<string, unknown> | undefined)?.cities as
-    | unknown[]
-    | undefined)?.length;
+  const jsonJpCities = jsonJp?.relates?.cities?.length;
   ok(
     fluentJpCities === 2 && jsonJpCities === 2,
     `Japan carries 2 cities in both paths (fluent=${fluentJpCities}, json=${jsonJpCities})`,

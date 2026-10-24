@@ -38,6 +38,16 @@ export interface DataSecurityEvent {
   readonly ruleId?: string;
   readonly durationMs?: number;
   readonly affectedCount?: number;
+  /** One durable anonymous rejection row per source/reason/transport/plane/minute. */
+  readonly aggregation?: {
+    readonly windowStartUtc: string;
+    readonly firstSeenUtc: string;
+    readonly lastSeenUtc: string;
+    readonly observedCount: number;
+    readonly savedDetails: 1;
+    readonly suppressedDetails: number;
+    readonly sampleRequestIds: readonly string[];
+  };
 }
 
 /** Restricted, metadata-only query for the security audit ledger. */
@@ -58,6 +68,9 @@ export interface SecurityAuditQuery {
 
 export interface SecurityAuditSummary {
   readonly total: number;
+  readonly observedCount: number;
+  readonly savedDetails: number;
+  readonly suppressedDetails: number;
   readonly byCategory: Readonly<Record<DataSecurityEvent['category'], number>>;
   readonly byResult: Readonly<Record<DataSecurityEvent['result'], number>>;
   readonly uniqueClientIps: number;

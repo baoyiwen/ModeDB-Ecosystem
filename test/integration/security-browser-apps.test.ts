@@ -36,7 +36,9 @@ async function waitFor<T>(read: () => Promise<T>, accept: (value: T) => boolean,
 }
 
 async function serveApp(app: string): Promise<{ server: Server; origin: string }> {
-  const root = resolve(workspace, 'apps', app, 'dist');
+  const root = process.env.MODELDB_TEST_APP_ROOT
+    ? resolve(process.env.MODELDB_TEST_APP_ROOT, app)
+    : resolve(workspace, 'apps', app, 'dist');
   assert.ok(existsSync(join(root, 'index.html')), 'Build all three applications before browser acceptance.');
   const server = createServer((request, response) => {
     void (async () => {
@@ -229,8 +231,21 @@ it('three production browser apps pair through the Windows pipe, restore after r
         assert.deepEqual(await page.evaluate<{ databases: unknown[] }>(`fetch(${JSON.stringify(api + '/api/v1/management/databases')},{credentials:'include'}).then(r=>r.json())`), { databases: [] }, 'administrator sees no business databases');
         assert.equal(await page.evaluate<number>(`fetch(${JSON.stringify(api + '/api/v1/management/databases/graph/catalog')},{credentials:'include'}).then(r=>r.status)`), 403, 'administrator has no business database grants');
         console.log('[security-browser] administrator: independent entry and business isolation passed');
+        for (let i = 0; i < 8; i++) {
+          const rejected = await fetch(api + '/api/v1/rpc', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer synthetic-rejected-browser-probe' }, body: '{}' });
+          assert.equal(rejected.status, 401);
+        }
         await page.call('Page.reload', { ignoreCache: true });
         await waitFor(() => page!.evaluate<boolean>(`!!document.querySelector('.security-center-metrics')`), Boolean);
+        await page.evaluate(`document.querySelectorAll('.security-center-navigation nav button')[7].click()`);
+        await waitFor(() => page!.evaluate<boolean>(`!!document.querySelector('.security-center-audit-controls')`), Boolean);
+        const counts: number[] = await page.evaluate<number[]>(`[...document.querySelectorAll('.security-center-metric strong')].map(el=>Number(el.textContent))`);
+        assert.equal(counts[0], counts[1] + counts[2], 'observed = suppressed + saved audit details');
+        assert.ok(counts[1] >= 6, 'anonymous browser probes aggregate even across a minute boundary');
+        assert.equal(await page.evaluate<boolean>(`[...document.querySelectorAll('td')].some(td=>td.querySelector('code')?.textContent==='authentication.reject' && !!td.querySelector('small'))`), true, 'aggregate row shows observed count');
+        await page.call('Emulation.setDeviceMetricsOverride', { width: 760, height: 900, deviceScaleFactor: 1, mobile: false });
+        assert.equal(await page.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth`), true, 'audit metrics fit a narrow viewport');
+        console.log('[security-browser] administrator: aggregate audit counts, row details and narrow layout passed');
         await page.evaluate(`document.querySelectorAll('.security-center-navigation nav button')[5].click()`);
         await waitFor(() => page!.evaluate<boolean>(`!!document.querySelector('.security-protection-panel > fieldset')`), Boolean);
         const initial = await callLocalSecurity(join(root, 'security'), { action: 'network.status' }) as SecurityProtectionState;

@@ -114,6 +114,10 @@ node .\packages\server\dist\cli.js security reset-access --yes -c C:\modeldb-lab
 
 提交失败时拒绝变更，关闭当前台账写者并要求恢复重开；恢复依据候选、提交意图和摘要，不以报错就一定未提交来推断结果。Windows 下已验证进程中断与模拟持久化失败，不替代硬件断电或物理磁盘耗尽实验。
 
+S7.1 补充当前匿名审计契约：只有 unverified / denied 的 `network.reject`、`authentication.reject` 按 UTC 固定 60 秒窗口聚合。键包括 action、reason、plane、transport、peer/client IP、归因依据、policyVersion、ruleId。每行 `aggregation` 保存窗口起点、first/lastSeenUtc、observedCount、savedDetails=1、suppressedDetails=observedCount-1 和最多三个请求 ID。计数每次同步原子提交，没有内存异步队列；失败不确认已观察计数。单组计数上限为 `floor(Number.MAX_SAFE_INTEGER / 50000)`，保证最多 50000 行汇总仍为安全整数。管理与已认证事件不抽样。
+
+每窗口至多 `min(128, max(1, floor(maxEvents / 4)))` 个键；已保留行数达 80% 时拒绝新增匿名键，给本机修复保留容量。保留期仍在提交时执行，不覆盖未过期历史。`SecurityAuditSummary.total/savedDetails` 和页 `total` 是行数；observedCount、suppressedDetails 及 byCategory/byResult 是观察次数。时间筛选使用最后观察时间，requestId 只匹配首请求或保存样本；聚合行不是窗口内的逐请求明细。完整使用范围与命令见[手册 §2.1](security-v1/user-guide.md#21-高频拒绝事件的计数)。
+
 ## Designer 当前连接失败的诊断
 
 2026-10-20 对现有 9091 服务的只读检查：健康检查和带现有 Token 的管理状态均返回 200，读取 `model_designer_workspace` 的 catalog 返回 500 / `VAULT_LEGACY_FORMAT`。其 `atlas.mld` 前缀为旧 `MDB4SVLT`，M1 后引擎要求 `MDB5SVLT`。

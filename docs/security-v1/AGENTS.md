@@ -4,16 +4,16 @@
 
 - 项目名称：ModelDB 安全改造 V1。
 - 目标：为 ModelDB 建立默认安全可用、最小权限、可审计、可维护并支持备份恢复与资产交付的安全机制；安全改造不能以牺牲现有业务数据完整性为代价。
-- 当前范围：按 `docs/security-v1-milestones.md` 补齐 SEC-M6 的 S6.1 构建一致性证据，继续 S6.3 的继承虚拟关系/复杂链引用兼容与导入后浏览器审核/重新发布/授权验收，之后进入 SEC-M7。D09 已收到用户两台 Windows 恢复成功报告，构建摘要不同仍待核对。用户已允许在 S6.1 待验证时推进其余开发。
-- S6.1 演练入口：D06—D08 的 `scripts/security-recovery-drill.ps1` 提供 Prepare/Receive/Verify、未提升令牌预检、UTF-8 输出解析和脱敏报告，步骤见使用手册 §4.1。D09 用户 A/B 报告的 runId/源码一致，恢复五项成功；构建摘要不同，待 B 运行 `node scripts/security-recovery-build-check.mjs` 回传构建诊断报告。初版多行 here-string 被复制成单行造成解析错误，改用脚本。新诊断只读取代码/编译文件，写全新临时脱敏报告；不自动构建/清理、不重做演练。证据归档在交付目录 `evidence/SEC-M6-D09/`；本地两份旧 JS 不能解释全部差异，不得直接忽略差异或标完成。
-- 当前基线：SEC-M1 至 SEC-M5 已交付，累计 5/7 里程碑、16/20 开发任务；SEC-M6 进行中，S6.1 异机恢复功能通过、构建一致性待验证；S6.2 备份/完整受信迁移完成；S6.3 / D05 已有 v2 Designer 接口/固定版本依赖、I18N/基础布局映射和离线双库日志/启动阻断/续跑，完整兼容与浏览器验收未完成，最新测试以 D05 为准；SEC-M7 未开始。同机同账号演练明确拒绝异机成功，不能作为独立灾备证据。SEC-M5 / D05 的 reset 中断后无续跑/归档恢复工具限制仍在。不能据此宣称安全 V1 已整体完成。每次接续工作以进度台账和最新交付报告为准，不以本段静态文字覆盖较新的记录。
+- 当前范围：SEC-M7 / D02 已完成 S7.2，全流程回归与安全 V1 研发验收结项。累计 7/7 里程碑、20/20 任务，无默认的下一开发阶段。接续先读唯一台账和 D02；新缺陷按影响重开任务，真实发布/切换、性能优化与扩展需用户明确任务范围。S6.1 两台 Windows 实测沿用 D09—D11，无需重复。
+- S6.1 证据：D09 用户 A/B 报告 runId/源码一致、恢复五项成功；D11 完整 B 清单确认当前源码对应的 136 JS、六份编译配置、TypeScript 版本全部一致，137 个共有路径无内容变化。原始 dist 摘要不同仅因 A 独有 1/B 独有 19 个未引用旧输出；原摘要/旧文件保留，不改算法。A 及恢复报告在 `evidence/SEC-M6-D09/`，B 原报告和逐文件结果在 `evidence/SEC-M6-D11/`。S7.2 已使用隔离全新输出及逐文件包清单完成验收，旧 dist 保留；后续候选继续采用该方法，不能把恢复实现一致性替代发布安装验收。
+- 当前基线：SEC-M1—SEC-M7 完成，7/7 里程碑、20/20 任务。D02 的63文件424/424单元、六个引擎流程82断言、Chrome2/2均通过，0 skip；七个新包/三前端、真实离线安装、bin/CLI与严格类型消费、157项zh/en/ja对齐、整仓check和独立四项性能通过，保留44条既有lint警告。registry查询/同步写入中位约1.6秒，因同步审计/OS保护有明显开销；不得声称低延迟/高并发或生产容量已通过。物理磁盘耗尽/硬件断电未验证。清除归档依赖原Windows账号，恢复空访问台账；资产/约束/跨库存储限制沿用D12。研发验收完成不代表真实服务已升级；未部署、发布或切换。
 
 ## 关键资料
 
 以下路径均相对于项目根目录。此安全改造目前沿用现有资料，不另建重复的 `brief.md`、`decisions.md` 或 `progress.md`：
 
 - 项目需求与总体方案：`docs/security-v1-plan.md`
-- 面向用户的功能简介：`docs/security-v1/overview.md`；操作使用手册：`docs/security-v1/user-guide.md`
+- 面向用户的功能简介：`docs/security-v1/overview.md`；操作使用手册：`docs/security-v1/user-guide.md`；构建/安装/切换/回退：`docs/security-v1/release-guide.md`
 - 已确认的方案与技术契约：
   - `docs/security-v1-vault-contract.md`
   - `docs/security-v1-identity-contract.md`
@@ -21,13 +21,13 @@
   - `docs/security-browser-sessions.md`
   - `docs/security-http-invocation.md`
 - 当前进度、任务状态、验收门槛和后续任务：`docs/security-v1-milestones.md`（唯一进度台账）
-- 阶段交付记录：`docs/security-v1-deliveries/SEC-M1.md` 至 `SEC-M6.md`；接续工作先读当前阶段报告的最新修订
+- 阶段交付记录：`docs/security-v1-deliveries/SEC-M1.md` 至 `SEC-M7.md`；接续工作先读当前阶段报告的最新修订
 - 本文件：`docs/security-v1/AGENTS.md`，只作为安全改造专项的会话指南
 - 代码交付位置：按任务涉及 `packages/common`、`packages/core`、`packages/server`、`packages/shared`、`packages/sdk`、`apps/model-designer` 及相关测试目录；不是集中输出到 `outputs/`
 
 ## 开始工作前
 
-- 接续之前的工作时，先阅读 `docs/security-v1-milestones.md` 和当前阶段最新交付报告；当前应先读 `docs/security-v1-deliveries/SEC-M6.md`，必要时回看 `SEC-M5.md` 的维护边界。
+- 接续之前的工作时，先阅读 `docs/security-v1-milestones.md` 和当前阶段最新交付报告；当前应先读 `docs/security-v1-deliveries/SEC-M7.md`，并保留 SEC-M6 / D09—D12 证据及 SEC-M5 的历史记录。
 - 阅读与本次任务直接相关的总体方案、契约和代码，并检查相关目录中的现有 `AGENTS.md`。本文件不替代这些模块规则。
 - 检查 `git status --short`，识别并保留用户已有改动。不要覆盖或清理与当前任务无关的工作区变更。
 - 如果本文件引用的资料不存在，明确报告缺失；不要假定其内容，也不要为了补齐模板而创建重复的需求或进度台账。
@@ -58,6 +58,8 @@
   - `pnpm run test:security:recovery`
   - `pnpm run test:security:backup`
   - `pnpm run test:security:asset`
+  - `pnpm run test:security:asset:browser`（先构建 Designer；真实 Windows/Chrome，隔离 profile/实例）
+  - `pnpm run test:security:fault`（清除恢复、匿名审计洪泛/容量与注入故障）
   - `pnpm run check`（源代码检查、类型检查、lint 与格式检查）
 - 运行前核对脚本和环境是否可用；若包管理器、依赖或环境导致命令无法运行，记录原始失败及替代验证，不能静默省略。新加安全行为应添加定向单测/集成测试，覆盖允许、拒绝、撤销/到期、错误输入和故障路径。
 - 文档验证：核对任务编号与里程碑、状态计数、相对链接、配置/命令准确性及中英文术语；确认没有秘密、真实业务数据或未经验证的结论。只格式检查本次修改的文档，不重排用户已有文件。

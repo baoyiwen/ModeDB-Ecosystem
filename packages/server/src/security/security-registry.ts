@@ -116,6 +116,7 @@ const ACTIONS = new Set([
 const ID = /^[a-zA-Z0-9_-]{1,96}$/;
 const HASH = /^[a-f0-9]{64}$/;
 const DAY = 86400000;
+const MAX_AGGREGATED_OBSERVATIONS = Math.floor(Number.MAX_SAFE_INTEGER / 50000);
 const hash = (value: string): string => createHash('sha256').update(value).digest('hex');
 const validDate = (value: unknown): value is string =>
   typeof value === 'string' && Number.isFinite(Date.parse(value));
@@ -352,6 +353,89 @@ export class SecurityRegistry {
   }
 
   recordSecurityEvent(event: DataSecurityEvent): void {
+    this.assertOpen();
+    if (
+      event.actor.identityTrust === 'unverified' &&
+      event.result === 'denied' &&
+      (event.action === 'network.reject' || event.action === 'authentication.reject')
+    ) {
+      check(validDate(event.timestampUtc));
+      const windowStartUtc = new Date(
+        Math.floor(Date.parse(event.timestampUtc) / 60000) * 60000,
+      ).toISOString();
+      const retained = this.state.events.filter(
+        (e) => Date.parse(e.timestampUtc) >= this.now() - this.auditRetentionDays * DAY,
+      );
+      const currentWindow = retained.filter(
+        (e) => e.aggregation?.windowStartUtc === windowStartUtc,
+      );
+      const key = (e: DataSecurityEvent) =>
+        JSON.stringify([
+          e.action,
+          e.reasonCode,
+          e.plane,
+          e.source.transport,
+          e.source.peerIp,
+          e.source.clientIp,
+          e.source.clientIpBasis,
+          e.policyVersion,
+          e.ruleId,
+        ]);
+      const previous = currentWindow.find((e) => key(e) === key(event));
+      if (
+        !previous &&
+        (currentWindow.length >= Math.min(128, Math.max(1, Math.floor(this.auditLimit / 4))) ||
+          retained.length >= Math.floor(this.auditLimit * 0.8))
+      ) {
+        throw new SecurityError('SECURITY_AUDIT_CAPACITY');
+      }
+      const count = (previous?.aggregation?.observedCount ?? 0) + 1;
+      if (!Number.isSafeInteger(count) || count > MAX_AGGREGATED_OBSERVATIONS) {
+        throw new SecurityError('SECURITY_AUDIT_CAPACITY');
+      }
+      const samples = [...(previous?.aggregation?.sampleRequestIds ?? [])];
+      if (event.requestId && samples.length < 3 && !samples.includes(event.requestId)) {
+        samples.push(event.requestId);
+      }
+      const aggregate: DataSecurityEvent = {
+        ...event,
+        timestampUtc:
+          previous && Date.parse(previous.timestampUtc) > Date.parse(event.timestampUtc)
+            ? previous.timestampUtc
+            : event.timestampUtc,
+        eventId: previous?.eventId ?? event.eventId,
+        requestId: previous?.requestId ?? event.requestId,
+        aggregation: {
+          windowStartUtc,
+          firstSeenUtc:
+            previous?.aggregation &&
+            Date.parse(previous.aggregation.firstSeenUtc) < Date.parse(event.timestampUtc)
+              ? previous.aggregation.firstSeenUtc
+              : event.timestampUtc,
+          lastSeenUtc:
+            previous?.aggregation &&
+            Date.parse(previous.aggregation.lastSeenUtc) > Date.parse(event.timestampUtc)
+              ? previous.aggregation.lastSeenUtc
+              : event.timestampUtc,
+          observedCount: count,
+          savedDetails: 1,
+          suppressedDetails: count - 1,
+          sampleRequestIds: samples,
+        },
+      };
+      this.commit(
+        event.action,
+        (state) => {
+          if (previous) {
+            state.events = state.events.filter((e) => e.eventId !== previous.eventId);
+          }
+        },
+        undefined,
+        'denied',
+        aggregate,
+      );
+      return;
+    }
     this.commit(event.action, () => undefined, undefined, 'succeeded', event);
   }
 
@@ -1174,9 +1258,14 @@ export class SecurityRegistry {
       failed: 0,
     };
     const ips = new Set<string>();
+    let observedCount = 0,
+      suppressedDetails = 0;
     for (const event of filtered) {
-      byCategory[event.category]++;
-      byResult[event.result]++;
+      const count = event.aggregation?.observedCount ?? 1;
+      observedCount += count;
+      suppressedDetails += event.aggregation?.suppressedDetails ?? 0;
+      byCategory[event.category] += count;
+      byResult[event.result] += count;
       if (event.source.clientIp) {
         ips.add(event.source.clientIp);
       }
@@ -1190,6 +1279,9 @@ export class SecurityRegistry {
       hasMore: offset + limit < filtered.length,
       summary: {
         total: filtered.length,
+        observedCount,
+        savedDetails: filtered.length,
+        suppressedDetails,
         byCategory,
         byResult,
         uniqueClientIps: ips.size,
@@ -1299,7 +1391,9 @@ export class SecurityRegistry {
           (query.principalId === undefined || event.actor.principalId === query.principalId) &&
           (query.credentialId === undefined || event.actor.credentialId === query.credentialId) &&
           (query.database === undefined || event.resource?.database === query.database) &&
-          (query.requestId === undefined || event.requestId === query.requestId) &&
+          (query.requestId === undefined ||
+            event.requestId === query.requestId ||
+            event.aggregation?.sampleRequestIds.includes(query.requestId)) &&
           (query.clientIp === undefined || event.source.clientIp === query.clientIp)
         );
       })
@@ -1570,7 +1664,25 @@ export class SecurityRegistry {
               (e.source?.peerIp === undefined || typeof e.source.peerIp === 'string') &&
               (e.source?.clientIp === undefined || typeof e.source.clientIp === 'string') &&
               (e.source?.clientIpBasis === undefined ||
-                ['socket', 'trusted-proxy'].includes(e.source.clientIpBasis)),
+                ['socket', 'trusted-proxy'].includes(e.source.clientIpBasis)) &&
+              (e.aggregation === undefined ||
+                (e.actor.identityTrust === 'unverified' &&
+                  e.result === 'denied' &&
+                  ['network.reject', 'authentication.reject'].includes(e.action) &&
+                  validDate(e.aggregation.windowStartUtc) &&
+                  validDate(e.aggregation.firstSeenUtc) &&
+                  validDate(e.aggregation.lastSeenUtc) &&
+                  e.aggregation.firstSeenUtc <= e.aggregation.lastSeenUtc &&
+                  e.aggregation.savedDetails === 1 &&
+                  Number.isSafeInteger(e.aggregation.observedCount) &&
+                  e.aggregation.observedCount > 0 &&
+                  e.aggregation.observedCount <= MAX_AGGREGATED_OBSERVATIONS &&
+                  e.aggregation.suppressedDetails === e.aggregation.observedCount - 1 &&
+                  Array.isArray(e.aggregation.sampleRequestIds) &&
+                  e.aggregation.sampleRequestIds.length <= 3 &&
+                  e.aggregation.sampleRequestIds.every(
+                    (id) => typeof id === 'string' && id.length <= 180,
+                  ))),
           ),
       );
       return s;

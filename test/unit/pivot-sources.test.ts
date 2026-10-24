@@ -157,7 +157,7 @@ describe('Pivot source adapters', () => {
       { name: 'active', label: 'Active', type: 'Boolean' },
     ] };
     const client = { model: () => ({ query: () => query }) };
-    const source = { kind: 'model' as const, modelName: 'Route' };
+    const source = { kind: 'model' as const, modelId: 'route-model', modelName: 'Route' };
     const document = await queryModelPivot({ client, source, filter: { model, conditions: [
       { field: 'count', op: 'gt', value: '5' },
       { field: 'count', op: 'lt', value: '10' },
@@ -174,7 +174,7 @@ describe('Pivot source adapters', () => {
     ]) {
       await assert.rejects(queryModelPivot({ client, source, filter: { model, conditions } }), (error: unknown) => error instanceof TransferError && error.code === 'filter');
     }
-    await assert.rejects(queryModelPivot({ client, source: { kind: 'model', modelName: 'Other' }, filter: { model, conditions: [] } }), (error: unknown) => error instanceof TransferError && error.code === 'filter');
+    await assert.rejects(queryModelPivot({ client, source: { kind: 'model', modelId: 'other-model', modelName: 'Other' }, filter: { model, conditions: [] } }), (error: unknown) => error instanceof TransferError && error.code === 'filter');
     assert.deepEqual(calls, [], 'invalid forms must neither mutate nor execute a query');
   });
 });

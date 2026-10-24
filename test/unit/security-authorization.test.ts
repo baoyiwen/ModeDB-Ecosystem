@@ -9,7 +9,7 @@ import Fastify from '../../packages/server/node_modules/fastify/fastify.js';
 import type websocketType from '../../packages/server/node_modules/@fastify/websocket/types/index.js';
 import { AuthoringEngine } from '@mode-db/core';
 import { ModelDB, RemoteModelDBClient, ConnectionSecurityError, pairBrowserSession, getBrowserSession, refreshBrowserSession, logoutBrowserSession } from '@mode-db/sdk';
-import { WebSocket } from '../../packages/server/node_modules/ws/wrapper.mjs';
+const { WebSocket } = await import(new URL('../../packages/server/node_modules/ws/wrapper.mjs', import.meta.url).href) as typeof import('ws');
 import {
   securityReleaseDigest,
   interfaceParameterPlaceholder,

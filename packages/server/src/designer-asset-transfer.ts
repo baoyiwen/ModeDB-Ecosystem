@@ -316,7 +316,12 @@ export function previewDesignerAssetImport(input: DesignerAssetImportInput) {
         }
       }
       // Exercise merge and identity collision validation during preview, without provisioning a key.
-      mergeDesignerAsset(vault, mappedDesigner(input, localId), input.designerWorkspace);
+      mergeDesignerAsset(
+        vault,
+        mappedDesigner(input, localId),
+        input.designerWorkspace,
+        input.content.graph,
+      );
     } else {
       const directory = assertRecoveryPath(join(input.storageRoot, input.designerWorkspace));
       if (existsSync(directory) && readdirSync(directory).length) {
@@ -326,6 +331,7 @@ export function previewDesignerAssetImport(input: DesignerAssetImportInput) {
         new AtlasSingleVault(),
         mappedDesigner(input, localId),
         input.designerWorkspace,
+        input.content.graph,
       );
     }
   }
@@ -471,6 +477,7 @@ export function importDesignerAsset(
       workspace,
       mappedDesigner(input, localId),
       input.designerWorkspace,
+      input.content.graph,
     );
     const business = assetTargetVault(input.content, input.database, input.instanceId).vault;
     const businessBytes = encodeVault(input, input.database, business),

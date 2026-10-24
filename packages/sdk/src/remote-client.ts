@@ -730,7 +730,7 @@ type WsEmitter = {
   once?(event: 'open' | 'error', fn: (...args: unknown[]) => void): void;
   addEventListener?(
     type: 'open' | 'error' | 'message' | 'close',
-    fn: (ev: Event | MessageEvent) => void,
+    fn: (ev: { readonly type: string; readonly data?: unknown }) => void,
     opts?: { once?: boolean },
   ): void;
 };

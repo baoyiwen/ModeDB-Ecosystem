@@ -190,3 +190,4 @@ export type {
   SecurityControlResult,
 } from './security-contracts.js';
 export { securityReleaseDigest } from './security-release.js';
+export { designerInheritanceRelationId } from './designer-references.js';

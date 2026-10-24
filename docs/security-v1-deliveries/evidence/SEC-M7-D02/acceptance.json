@@ -1,0 +1,128 @@
+{
+  "format": "modeldb.security-acceptance.v1",
+  "milestone": "SEC-M7",
+  "task": "S7.2",
+  "revision": "D02",
+  "date": "2026-10-24",
+  "baseCommit": "cde9c14680b8dd26cde7f65d16ac8c4cf2a4b0dc",
+  "codeState": "uncommitted-working-tree",
+  "progress": {
+    "milestonesCompleted": 7,
+    "milestonesTotal": 7,
+    "tasksCompleted": 20,
+    "tasksTotal": 20
+  },
+  "environment": {
+    "platform": "win32",
+    "osRelease": "10.0.26300",
+    "architecture": "x64",
+    "cpu": "Intel(R) Core(TM) i7-14650HX",
+    "node": "v24.15.0",
+    "typescript": "5.9.3",
+    "pnpm": "10.33.0",
+    "declaredPackageManager": "pnpm@9.15.4",
+    "declaredPnpmVersionIndependentlyTested": false
+  },
+  "evidence": {
+    "release": "release-candidate.json",
+    "equivalence": "equivalence.json",
+    "regression": "regression.json",
+    "browser": "browser.json",
+    "performance": "performance.json",
+    "exploratoryPerformance": "performance-exploratory.json",
+    "independentWindowsRecovery": "../SEC-M6-D09 and ../SEC-M6-D11; referenced from SEC-M6 D09-D11"
+  },
+  "checks": {
+    "unit": {
+      "files": 63,
+      "tests": 424,
+      "pass": 424,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 274812.6473
+    },
+    "engineIntegration": {
+      "files": 6,
+      "assertions": 82,
+      "exitCode": 0
+    },
+    "browser": {
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 318272.4874
+    },
+    "installationLifecycle": {
+      "installedPackageHashes": true,
+      "frontendAndDocumentHashes": true,
+      "exclusiveInstalledStartup": true,
+      "crossDatabaseDenied": true,
+      "oneTimePairingHttpOnly": true,
+      "localNetworkRepair": true,
+      "backupRestore": true,
+      "masterRotation": true,
+      "credentialAndSessionRevoked": true,
+      "performanceWithinBaseline": true
+    },
+    "release": {
+      "packages": 7,
+      "packageJsFiles": 202,
+      "packageFiles": 587,
+      "productionApps": 3,
+      "offlineDependencySnapshots": 74,
+      "sourceFiles": 239,
+      "userDocuments": 4,
+      "securityKeysPerLocale": 157,
+      "freshOutput": true,
+      "minifiedProductionPackages": true,
+      "exactArchiveManifest": true,
+      "offlineTarballInstall": true,
+      "dependencyScope": "installed-third-party-code-snapshot-not-registry-fetch",
+      "cliHelp": true,
+      "binShim": true,
+      "consumerTypes": true,
+      "postinstall": "server installer explicitly executed after --ignore-scripts; third-party lifecycle disabled",
+      "cleanFrontends": true,
+      "documentedCliAndSecurityI18n": true
+    }
+  },
+  "finalStaticChecks": {
+    "status": "pending-final-check"
+  },
+  "boundaries": {
+    "temporarySyntheticDataOnly": true,
+    "explicitIsolatedConfigs": true,
+    "randomPorts": true,
+    "independentChromeProfile": true,
+    "real9091Touched": false,
+    "realConfigOrSecretsOrVaultTouched": false,
+    "liveAclChanged": false,
+    "oldDistDeleted": false,
+    "existingChangesPreserved": true,
+    "deployedOrPublishedOrCommitted": false,
+    "physicalDiskExhaustionTested": false,
+    "hardwarePowerLossTested": false,
+    "registryNetworkResolutionTested": false,
+    "thirdPartyInstallScriptsExecuted": false
+  },
+  "limitations": [
+    "Registry query and synchronous write medians are about 1.6 seconds because OS protection and audit persistence remain synchronous.",
+    "Performance compares current legacy and registry paths, not historical binaries; local regression bounds are not production SLA, TLS, capacity or concurrency acceptance.",
+    "Process exits and injected ENOSPC do not prove hardware power-loss or physical disk-exhaustion behavior.",
+    "Fresh installation uses local snapshots of installed third-party code; no network registry dependency-resolution acceptance.",
+    "Windows is the verified security platform; local reset archives require the original DPAPI account.",
+    "Existing package versions are retained; real publication needs an explicit version and target, a fresh rebuild and separate authorization.",
+    "No true service deployment or data migration has occurred; old formats are not automatically converted and new writes prevent guaranteed lossless snapshot rollback."
+  ],
+  "developmentFailuresResolved": [
+    "Sandbox dependency reads and CDP initialization failures resolved through isolated execution with explicit paths; no ACL changes.",
+    "Temporary-cwd tsx/tsconfig/child entry resolution failures resolved in regression runner.",
+    "Offline registry metadata absence resolved using 74 installed-code dependency archives.",
+    "Source type entrypoints corrected to emitted declarations; strict consumer checks retained.",
+    "Stale Binding mock and WireEntityNode relation assertion corrected without weakening counts or schema assertions.",
+    "Final evidence JSON format check initially failed; final static result is recorded separately.",
+    "Raw third-party archive hashes differ across rebuilds; full snapshot-file inventories proved identical contents, rather than accepting version numbers alone."
+  ],
+  "files": []
+}

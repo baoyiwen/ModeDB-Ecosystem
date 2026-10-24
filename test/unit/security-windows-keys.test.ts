@@ -246,6 +246,7 @@ it('reopens the same server database with a different network credential', windo
     const before = readFileSync(path);
     for (const connectToken of ['network-one', 'network-two']) {
       const app = await buildDualTrackFastify({
+        securityAudit: { retentionDays: 365, maxEvents: 10000 },
         storageRoot: root,
         port: 0,
         host: '127.0.0.1',

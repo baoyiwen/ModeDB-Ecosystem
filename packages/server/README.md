@@ -2,6 +2,8 @@
 
 ModelDB **网络服务进程**：WebSocket + HTTP 管理面、线协议分发、写串行化门闩、CLI（`modeldb-server`）。将客户端 RPC 委托给 **`@mode-db/core`** 的 `AuthoringEngine` 与查询运行时。
 
+新配置使用 registry 安全模式：Windows DPAPI 保护独立数据密钥，应用使用限权凭据，浏览器通过一次性配对取得短期 HttpOnly 会话。下面保留的 `connectToken` 操作仅适用于显式 legacy 配置，不能作为新实例的默认接入方法；安全管理员身份也不隐含业务库权限。安全 V1 的简介、使用手册、全新候选构建及切换/回退流程位于源码的 `docs/security-v1/`，本地候选同时携带这些文档。实际发布和真实实例切换需单独授权。
+
 ## 文档导航
 
 - 模块说明文档：[`docs/module-overview.md`](./docs/module-overview.md)
@@ -12,13 +14,13 @@ ModelDB **网络服务进程**：WebSocket + HTTP 管理面、线协议分发、
 
 ## 模块用途
 
-| 能力               | 说明                                                 |
-| ------------------ | ---------------------------------------------------- |
-| **WebSocket 服务** | 握手、`connectToken`、按逻辑库（`dbName`）绑定 Atlas |
-| **RPC 分发**       | `WireRequestDispatcher` → `executeDatabaseOperation` |
-| **管理 HTTP**      | 库列表、catalog、健康检查（Dual-track Fastify）      |
-| **CLI**            | `modeldb-server start`、`create-db`、配置路径解析    |
-| **安全传输**       | 二进制帧、载荷混淆（`@mode-db/shared`）              |
+| 能力               | 说明                                                  |
+| ------------------ | ----------------------------------------------------- |
+| **WebSocket 服务** | registry 限权身份握手、按逻辑库（`dbName`）绑定 Atlas |
+| **RPC 分发**       | `WireRequestDispatcher` → `executeDatabaseOperation`  |
+| **管理 HTTP**      | 库列表、catalog、健康检查（Dual-track Fastify）       |
+| **CLI**            | `modeldb-server start`、`create-db`、配置路径解析     |
+| **安全传输**       | 二进制帧、载荷混淆（`@mode-db/shared`）               |
 
 **不包含**浏览器 SDK；客户端见 **`@mode-db/sdk`**。
 

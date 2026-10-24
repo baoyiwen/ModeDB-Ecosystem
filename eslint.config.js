@@ -15,6 +15,7 @@ export default [
       'dist-bundle/**',
       'coverage/**',
       'data/**',
+      'security/**',
       'packages/**/dist/**',
       'packages/**/tsup.config.ts',
       // Colocated `tsc` emit next to sources (not part of the TS program).

@@ -2,9 +2,9 @@
 
 本文说明 **`modeldb.config.json` 应如何写、放在哪、与「配置文件所在目录」和磁盘目录的关系**，并分别给出 **Windows、Linux、macOS** 下的推荐做法。实现以 **`packages/server/src/config-loader.ts`**、**`packages/server/src/modeldb-default-home.ts`** 与 **`modeldb-persisted-home.ts`**（**`set`** 持久路径）为准。
 
-SEC-M4/S4.1：新生成的配置默认 `"security": { "version": 1 }`，不再生成 `connectToken`；支持 Windows DPAPI/ACL、本机管理 CLI、限权 Bearer HTTP/WS、HTTPS/WSS、来源名单与三个前端的统一 SDK 连接。浏览器一次性配对、短期 Cookie、续期、注销和 CSRF 仍属于 SEC-M4/S4.2。本文保留的 `connectToken` 示例适用于未含 `security` 的 legacy 配置，不会自动迁移现有进程、配置或旧 Vault。详细步骤见[统一授权与连接契约](security-v1-authorization-contract.md)。
+安全 V1：新生成的配置默认 `"security": { "version": 1 }`，不再生成 `connectToken`；已提供 Windows DPAPI/ACL、本机管理 CLI、限权 Bearer HTTP/WS、HTTPS/WSS、来源名单，以及三个前端的一次性配对、短期 HttpOnly Cookie、续期、注销和 CSRF。安全发布平台验收为 Windows，本文其他平台的目录示例不代表其已完成密钥适配验收。本文保留的 `connectToken` 示例适用于未含 `security` 的 legacy 配置，不会自动迁移现有进程、配置或旧 Vault。详细步骤见[统一授权与连接契约](security-v1-authorization-contract.md)和[使用手册](security-v1/user-guide.md)。
 
-仓库根目录的 `modeldb.config.json` 仍可作为旧 9091 局域网验收配置使用。要在不改动该配置的前提下验收新版 registry，本仓库提供 `modeldb.config.registry.local.json`：先停止旧进程，再执行 `node packages/server/dist/cli.js start --config C:/workspace/web_code/ModeDB-Ecosystem/modeldb.config.registry.local.json`。该模板绑定 `127.0.0.1`，不读取或保存 `connectToken`；如果需要局域网访问，必须另行配置原生 TLS 或可信 HTTPS 反向代理，不能只把 `host` 改成 `0.0.0.0`。
+研发验收使用全新临时目录、显式配置与随机端口，步骤见[构建与切换指南](security-v1/release-guide.md)。现有根配置、真实 9091 和业务库不属于默认测试目标。局域网访问必须配置原生 TLS 或可信 HTTPS 反向代理，不能只把 `host` 改成 `0.0.0.0`；实际停机、切换与发布须单独授权。
 
 **仓库布局（与本文件字段无关）**：**ModeDB-Ecosystem** 为 **pnpm monorepo**；**`modeldb-server`** 在 **`packages/server`**，图谱引擎在 **`packages/core`**（**`@mode-db/core`**），根目录 **`package.json`**（**`modedb-ecosystem`**，**`private: true`**）仅做脚本编排。应用侧 **API** 见 **[developer-handbook.md](./developer-handbook.md)**。**引擎与 SDK 的 API 说明**见 **[developer-handbook.md](./developer-handbook.md)**。
 

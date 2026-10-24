@@ -1,0 +1,120 @@
+{
+  "format": "modeldb.security-regression.v1",
+  "timestampUtc": "2026-10-24T02:00:17.343Z",
+  "unitFiles": [
+    "backup-management-http.test.ts",
+    "backup-management.test.ts",
+    "binding-surface-compiler.test.ts",
+    "binding-surface-publication.test.ts",
+    "browser-connection-credentials.test.ts",
+    "core-query-filter.test.ts",
+    "data-kit-apply-outcome.test.ts",
+    "data-kit-bind-only-import.test.ts",
+    "data-kit-binding-surface-session.test.ts",
+    "data-kit-binding.test.ts",
+    "data-kit-coerce-import.test.ts",
+    "data-kit-insert-many-failures.test.ts",
+    "data-kit-phase2.test.ts",
+    "data-kit-phase3.test.ts",
+    "data-kit-query-adapter.test.ts",
+    "data-kit-relation-bind.test.ts",
+    "data-transfer-http.test.ts",
+    "data-transfer.test.ts",
+    "data-ui-binding-surface.test.tsx",
+    "field-defs.test.ts",
+    "interface-call-docs.test.ts",
+    "interface-release-management.test.ts",
+    "interface-transfer.test.ts",
+    "model-map.test.ts",
+    "operation-interface-compiler.test.ts",
+    "pivot-display.test.ts",
+    "pivot-interface-http.test.ts",
+    "pivot-interface-input.test.ts",
+    "pivot-result-model.test.ts",
+    "pivot-sources.test.ts",
+    "published-binding-surface-runtime.test.ts",
+    "published-interface-runtime.test.ts",
+    "published-operation-interface-runtime.test.ts",
+    "query-cursor-pagination.test.ts",
+    "query-distinct-aggregation.test.ts",
+    "query-execution-compiler.test.ts",
+    "query-having.test.ts",
+    "query-interface-audit-summary.test.ts",
+    "query-interface-errors.test.ts",
+    "query-interface-publication.test.ts",
+    "query-ordering.test.ts",
+    "query-related-aggregation.test.ts",
+    "query-relation-quantifier.test.ts",
+    "relation-pair-geometry.test.ts",
+    "sdk-revive-tree.test.ts",
+    "security-asset.test.ts",
+    "security-authorization.test.ts",
+    "security-backup.test.ts",
+    "security-browser-session.test.ts",
+    "security-designer-asset.test.ts",
+    "security-designer-references.test.ts",
+    "security-fault-acceptance.test.ts",
+    "security-network.test.ts",
+    "security-protection.test.ts",
+    "security-recovery-drill.test.ts",
+    "security-recovery.test.ts",
+    "security-registry-http.test.ts",
+    "security-registry.test.ts",
+    "security-reset-recovery.test.ts",
+    "security-vault-v2.test.ts",
+    "security-windows-keys.test.ts",
+    "server-config-path.test.ts",
+    "server-directory-layout.test.ts"
+  ],
+  "unit": {
+    "tests": 424,
+    "pass": 424,
+    "fail": 0,
+    "skip": 0,
+    "durationMs": 274812.6473
+  },
+  "results": [
+    {
+      "name": "unit",
+      "exitCode": 0,
+      "durationMs": 274993.0342,
+      "logSha256": "b034ada8edc2e2614337c0beefad59c154f4be96c89092b242c9b667bceb2597"
+    },
+    {
+      "name": "e2e-engine-workflow",
+      "exitCode": 0,
+      "durationMs": 5226.450399999972,
+      "logSha256": "143d2e1a2dc5aa49e8aa123d2673f55f7f6f20086e40ca9cff53470240c6b798"
+    },
+    {
+      "name": "relate-conserved-forest",
+      "exitCode": 0,
+      "durationMs": 4309.050700000022,
+      "logSha256": "74bd5d675b146abd9ce299318b2666e78d6fbde184519b84b1690722f0ffe39c"
+    },
+    {
+      "name": "children-tree-query",
+      "exitCode": 0,
+      "durationMs": 3848.3638999999966,
+      "logSha256": "226d07d151442c66380c19a79ab88befe0a153c7e587a2772ab7c74706f7177c"
+    },
+    {
+      "name": "group-lateral-attach",
+      "exitCode": 0,
+      "durationMs": 4307.844400000002,
+      "logSha256": "7b68e23100e0cb7b08234b28d6b608eeea23a771f573d09c4ab3174a32485ef8"
+    },
+    {
+      "name": "multi-branch-network",
+      "exitCode": 0,
+      "durationMs": 5545.837500000023,
+      "logSha256": "112dd1e7e538ea0006396cb367446bb09f8fe132ba6a51decc98120924a86b21"
+    },
+    {
+      "name": "protocol-operations",
+      "exitCode": 0,
+      "durationMs": 5530.6243999999715,
+      "logSha256": "055938e33cc254ac940257817f91eee00bd565bbedfb5ed8ab18a7383b8f169e"
+    }
+  ]
+}

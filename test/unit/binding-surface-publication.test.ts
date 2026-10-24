@@ -205,10 +205,10 @@ describe('BindingSurface catalog', () => {
   it('registers the sys_binding_surface persistence schema', async () => {
     const models = new Map<string, Record<string, unknown>>();
     const client = {
-      async registerModel(name: string, schema: Record<string, unknown>) {
-        models.set(name, schema);
+      async batchRegister(input: { models: { name: string; schema: Record<string, unknown> }[] }) {
+        for (const model of input.models) models.set(model.name, model.schema);
+        return { skipped: { models: [] } };
       },
-      async registerRelation() {},
       async alterModel() {},
     } as unknown as RemoteModelDBClient;
 

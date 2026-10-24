@@ -20,6 +20,11 @@ import {
 } from './security/network-policy.js';
 import { SecurityProtection } from './security/security-protection.js';
 import { SecurityMaintenance } from './security/security-maintenance.js';
+import {
+  resumeFactoryReset,
+  restoreResetArchive,
+  verifyResetArchive,
+} from './security/reset-recovery.js';
 import { LocalVaultKeyProvider } from './security/local-vault-key-provider.js';
 import { loadModelDBServerConfig } from './config-loader.js';
 import {
@@ -140,7 +145,10 @@ export async function runSecurityCli(argv: string[]): Promise<void> {
         'network-status | network-preview --rules-file <json> | network-apply --rules-file <json> --revision <n> --preview <preview-id>\n' +
         'network-confirm --id <pending-id> | network-rollback --revision <n> | network-unban --id <ban-id>\n' +
         'maintenance-status | master-rotate --yes (retains historical masters; resumes interrupted rewrapping)\n' +
-        'factory-reset --instance <id> --target <exact-workspace> --yes (offline only; verified encrypted backup required)\n' +
+        'factory-reset -c <config> --instance <id> --target <exact-workspace> --yes (offline only; verified encrypted backup required)\n' +
+        'factory-reset-verify --package <archive.mdreset> --instance <id> --target <original-workspace> -c <config> (same OS account)\n' +
+        'factory-reset-resume --package <archive.mdreset> --instance <id> --target <exact-workspace> --yes -c <config> (offline; unchanged remaining files only)\n' +
+        'factory-reset-restore --package <archive.mdreset> --instance <id> --target <original-workspace> --output <new-directory> --yes -c <config> (quarantine copy; excludes archived access ledger)\n' +
         'recovery-create --instance <id> --yes --output <external-package> --passphrase-file <protected-file> -c <config> (offline)\n' +
         'recovery-verify --package <package> --passphrase-file <protected-file>\n' +
         'recovery-check --package <package> --vault <vault-or-backup.mld> --passphrase-file <protected-file>\n' +
@@ -203,7 +211,9 @@ export async function runSecurityCli(argv: string[]): Promise<void> {
     return;
   }
   if (
-    (action === 'recovery-create' || action === 'database-key-rotate') &&
+    (action === 'recovery-create' ||
+      action === 'database-key-rotate' ||
+      action?.startsWith('factory-reset')) &&
     !options.get('-c') &&
     !options.get('--config')
   ) {
@@ -211,6 +221,33 @@ export async function runSecurityCli(argv: string[]): Promise<void> {
   }
   const cfg = await loadModelDBServerConfig(options.get('-c') ?? options.get('--config'), {});
   const directory = resolve(dirname(cfg.configFilePath), 'security');
+  if (['factory-reset-verify', 'factory-reset-resume', 'factory-reset-restore'].includes(action)) {
+    const archive = options.get('--package'),
+      instanceId = options.get('--instance'),
+      target = options.get('--target');
+    if (cfg.securityMode !== 'registry' || !archive || !instanceId || !target) {
+      throw new SecurityError('SECURITY_INVALID_REQUEST');
+    }
+    const workspace = resolve(cfg.workspace ?? cfg.storageRoot);
+    if (resolve(target) !== workspace) {
+      throw new SecurityError('SECURITY_CONFIRMATION_REQUIRED');
+    }
+    const input = { directory, workspace, instanceId, archive, yes };
+    let result: unknown;
+    if (action === 'factory-reset-verify') {
+      result = verifyResetArchive(input);
+    } else if (action === 'factory-reset-resume') {
+      result = resumeFactoryReset(input);
+    } else {
+      const output = options.get('--output');
+      if (!output) {
+        throw new SecurityError('SECURITY_INVALID_REQUEST');
+      }
+      result = restoreResetArchive({ ...input, output });
+    }
+    process.stdout.write(JSON.stringify(result) + '\n');
+    return;
+  }
   if (action === 'recovery-create' || action === 'database-key-rotate') {
     if (cfg.securityMode !== 'registry') {
       throw new SecurityError('SECURITY_INVALID_REQUEST');

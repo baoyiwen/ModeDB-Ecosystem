@@ -17,6 +17,14 @@ import { WindowsSecretProtector, type SecretProtector } from './windows-secret-p
 
 const MAX_RESET_BYTES = 128 * 1024 * 1024;
 const digest = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
+type ResetPoint =
+  | 'backed-up'
+  | 'marked'
+  | 'deleted'
+  | 'removed'
+  | 'receipted'
+  | `marker.${'staged' | 'journaled' | 'replaced'}`
+  | `receipt.${'staged' | 'journaled' | 'replaced'}`;
 
 /** Reset always runs offline under the registry lease. HTTP/IPC can only inspect its target. */
 export class SecurityMaintenance {
@@ -58,7 +66,7 @@ export class SecurityMaintenance {
   /** Caller must own the registry exclusively, have verified OS ACL, and must not start a listener. */
   factoryReset(
     input: { instanceId: string; target: string; yes: boolean },
-    onPoint?: (point: 'backed-up' | 'marked' | 'deleted') => void,
+    onPoint?: (point: ResetPoint) => void,
   ): { reset: true; backup: string; files: number } {
     const release = acquireFileLeaseSync(join(this.directory, 'key-maintenance'));
     try {
@@ -71,7 +79,7 @@ export class SecurityMaintenance {
   private reset(
     input: { instanceId: string; target: string; yes: boolean },
     release: () => void,
-    onPoint?: (point: 'backed-up' | 'marked' | 'deleted') => void,
+    onPoint?: (point: ResetPoint) => void,
   ): { reset: true; backup: string; files: number } {
     const directory = realpathSync(this.directory);
     const workspace = realpathSync(this.workspace);
@@ -257,6 +265,7 @@ export class SecurityMaintenance {
       Buffer.from(JSON.stringify({ version: 1, instanceId, workspace, backup })),
       null,
       () => undefined,
+      (point) => onPoint?.(`marker.${point}`),
     );
     onPoint?.('marked');
     for (let i = 0; i < records.length; i++) {
@@ -284,6 +293,7 @@ export class SecurityMaintenance {
         rmdirSync(path);
       }
     }
+    onPoint?.('removed');
     writeAtomicFileSync(
       `${backup}.receipt`,
       Buffer.from(
@@ -291,7 +301,9 @@ export class SecurityMaintenance {
       ),
       null,
       () => undefined,
+      (point) => onPoint?.(`receipt.${point}`),
     );
+    onPoint?.('receipted');
     unlinkSync(marker);
     return { reset: true, backup, files: records.length };
   }

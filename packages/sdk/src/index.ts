@@ -38,6 +38,7 @@ export {
   queryInterfaceAccessKeyDigest,
   isPublishedBindingSurfaceContract,
   securityReleaseDigest,
+  designerInheritanceRelationId,
 } from '@mode-db/shared';
 export type {
   SecurityActor,

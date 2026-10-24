@@ -11,6 +11,7 @@ import {
   type RelationIndexData,
 } from '@mode-db/common';
 import { AtlasSingleVault } from './atlas-single-vault.js';
+import { designerInheritanceRelationId } from '@mode-db/shared';
 import {
   collectAssetGraph,
   validateAssetGraph,
@@ -363,6 +364,59 @@ function relationFor(row: ModelRecord, graph: AssetGraph) {
       r.reverse === meta.engineReverse,
   )?.definition;
 }
+
+/** Bind old ephemeral inheritance IDs to a verified direct link in the business hierarchy. */
+function inheritedReferences(designer: DesignerAssetGraph, graph: AssetGraph) {
+  const models = designer.rows.filter((r) => r.model === 'sys_model').map((r) => r.data);
+  const refs = new Map<string, { parent: ModelRecord; child: ModelRecord }>();
+  const model = (key: unknown) => {
+    const found = models.filter((r) => r._id === key || r.engine_name === key);
+    check(found.length === 1);
+    return found[0]!;
+  };
+  const inspect = (obj: Obj) => {
+    if (obj.inheritRelationId === undefined) {
+      return;
+    }
+    const owner = model(obj.ownerModelId);
+    let child = model(obj.childModelId);
+    check(child !== owner && typeof obj.inheritRelationId === 'string');
+    const visited = new Set<string>();
+    while (true) {
+      const name = String(child.engine_name);
+      check(!visited.has(name));
+      visited.add(name);
+      const parentName = graph.models.find((m) => m.definition.name === name)?.definition.parentId;
+      check(typeof parentName === 'string');
+      if (parentName === owner.engine_name) {
+        break;
+      }
+      child = model(parentName);
+    }
+    const key = String(obj.inheritRelationId);
+    // A virtual identity cannot alias any persisted entity or logical/model alias.
+    check(
+      !designer.rows.some(
+        (r) => r.data._id === key || r.data.engine_name === key || logicalId(r.data) === key,
+      ),
+    );
+    const previous = refs.get(key);
+    check(!previous || (previous.parent === owner && previous.child === child));
+    refs.set(key, { parent: owner, child });
+  };
+  for (const { model, data } of designer.rows) {
+    if (interfaceModels.includes(model as (typeof interfaceModels)[number])) {
+      for (const column of jsonFields) {
+        if (data[column]) {
+          const decoded: unknown = JSON.parse(String(data[column]));
+          visit(decoded, () => undefined);
+          visitReferences(decoded, inspect);
+        }
+      }
+    }
+  }
+  return refs;
+}
 function references(
   model: string,
   row: ModelRecord,
@@ -630,12 +684,31 @@ export function validateDesignerAsset(
     designer.rows.filter((row) => row.model === model).map((row) => row.data);
   const modelRows = byModel('sys_model');
   const relationIds = new Set(byModel('sys_relation').map((row) => row._id));
+  const inherited = inheritedReferences(designer, graph);
   const modelName = (key: unknown): string => {
     const matches = modelRows.filter((r) => r._id === key || r.engine_name === key);
     check(matches.length <= 1);
     const name = matches.length ? String(matches[0]!.engine_name) : String(key);
     check(graph.models.some((m) => m.definition.name === name));
     return name;
+  };
+  const validateUsage = (value: unknown, key: string, direction: string): void => {
+    const usage = object(value);
+    check(usage.kind === undefined || usage.kind === 'direct' || usage.kind === 'inherited');
+    if (usage.kind === 'direct') {
+      check(Object.keys(usage).join() === 'kind');
+      return;
+    }
+    check(
+      Object.keys(usage).every((key) =>
+        ['kind', 'childModelId', 'ownerModelId', 'inheritRelationId'].includes(key),
+      ),
+    );
+    check(inherited.has(String(usage.inheritRelationId)));
+    check(direction === 'forward' || direction === 'reverse');
+    const row = byModel('sys_relation').find((r) => r._id === key) ?? fail();
+    const def = relationFor(row, graph) ?? fail();
+    check(modelName(usage.ownerModelId) === (direction === 'forward' ? def.source : def.target));
   };
   for (const row of designer.rows) {
     check(
@@ -746,9 +819,12 @@ export function validateDesignerAsset(
             }
             if (typeof obj.relationId === 'string') {
               check(relationIds.has(obj.relationId));
+              if (obj.inherited !== undefined) {
+                validateUsage(obj.inherited, obj.relationId, String(obj.traversal));
+              }
             }
             if (typeof obj.inheritRelationId === 'string') {
-              check(relationIds.has(obj.inheritRelationId));
+              check(inherited.has(obj.inheritRelationId));
             }
             if (typeof obj.model === 'string') {
               check(graph.models.some((m) => m.definition.name === obj.model));
@@ -788,11 +864,49 @@ export function validateDesignerAsset(
                 check(Array.isArray(obj[key]));
                 for (const value of obj[key] as unknown[]) {
                   check(typeof value === 'string');
-                  const key = (value as string)
-                    .replace(/^(forward:|reverse:)/, '')
-                    .split('::source::')[0]!;
+                  const match =
+                    /^(forward:|reverse:)?([^:]+)(?:::source::(.+))?$/.exec(value as string) ??
+                    fail();
+                  const key = match[2]!;
                   check(relationIds.has(key));
+                  if (match[3] !== undefined) {
+                    check(column === 'chain_json' && row.model === 'sys_query_interface');
+                    const draftGraph = object(json(data.query_json).designGraph);
+                    check(Array.isArray(draftGraph.nodes));
+                    const nodes = (draftGraph.nodes as unknown[])
+                      .map(object)
+                      .filter((node) => node.id === match[3]);
+                    check(nodes.length === 1);
+                    const relation = byModel('sys_relation').find((r) => r._id === key) ?? fail();
+                    const def = relationFor(relation, graph) ?? fail();
+                    const usage = obj.relationUsages
+                      ? object(obj.relationUsages)[value as string]
+                      : undefined;
+                    const ref = usage === undefined ? undefined : object(usage);
+                    const source =
+                      ref?.kind === 'inherited'
+                        ? modelName(ref.childModelId)
+                        : match[1] === 'reverse:'
+                          ? def.target
+                          : def.source;
+                    check(modelName(nodes[0]!.modelId) === source);
+                  }
                 }
+              }
+            }
+            if (obj.relationUsages !== undefined) {
+              const usages = object(obj.relationUsages);
+              const keys = [
+                'primaryRelationIds',
+                'branchRelationIds',
+                'constraintRelationIds',
+              ].flatMap((key) => (Array.isArray(obj[key]) ? (obj[key] as unknown[]) : []));
+              for (const [key, usage] of Object.entries(usages)) {
+                check(keys.includes(key));
+                const ref = object(usage);
+                check(ref.kind === 'direct' || ref.kind === 'inherited');
+                const match = /^(forward:|reverse:)?([^:]+)(::source::.*)?$/.exec(key) ?? fail();
+                validateUsage(usage, match[2]!, match[1] === 'reverse:' ? 'reverse' : 'forward');
               }
             }
           });
@@ -860,6 +974,15 @@ export function mapDesignerAsset(
       mappings.set(String(data.engine_name), mapId(model, data._id));
     }
   }
+  for (const [key, { parent, child }] of inheritedReferences(designer, graph)) {
+    mappings.set(
+      key,
+      designerInheritanceRelationId(
+        String(mappings.get(parent._id)),
+        String(mappings.get(child._id)),
+      ),
+    );
+  }
   const mapped = (key: unknown) => (typeof key === 'string' ? (mappings.get(key) ?? key) : key);
   const identityKeys = [
     'modelId',
@@ -876,6 +999,14 @@ export function mapDesignerAsset(
     'operationInterfaceId',
     'sourceId',
     'targetId',
+    'nodeId',
+    'rootNodeId',
+    'activeNodeId',
+    'fromNodeId',
+    'toNodeId',
+    'sourceNodeId',
+    'targetNodeId',
+    'edgeId',
   ];
   const propertyId = (modelId: unknown, fieldId: unknown): unknown => {
     const model = designer.rows.find(
@@ -908,6 +1039,64 @@ export function mapDesignerAsset(
     }
     return (match[1] ?? '') + String(mapped(match[2])) + sourceNode;
   };
+  // These IDs are local to a query document, but generated IDs must follow the mapped
+  // model/relation identity so reopening a chain recreates the same nodes and edges.
+  const localMappings = new Map<string, string>();
+  const stablePart = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const addLocal = (from: string, to: string) => {
+    check(!localMappings.has(from) || localMappings.get(from) === to);
+    localMappings.set(from, to);
+  };
+  for (const { model, data } of designer.rows) {
+    if (!interfaceModels.includes(model as (typeof interfaceModels)[number])) {
+      continue;
+    }
+    for (const column of jsonFields) {
+      if (!data[column]) {
+        continue;
+      }
+      visitReferences(JSON.parse(String(data[column])), (obj) => {
+        if (typeof obj.id === 'string' && typeof obj.modelId === 'string') {
+          const prefix = 'qnode_' + stablePart(obj.modelId) + '_';
+          if (obj.id.startsWith(prefix) && /^\d+$/.test(obj.id.slice(prefix.length))) {
+            addLocal(
+              obj.id,
+              'qnode_' +
+                stablePart(String(mapped(obj.modelId))) +
+                '_' +
+                obj.id.slice(prefix.length),
+            );
+          } else if (obj.id === 'node_' + obj.modelId) {
+            addLocal(obj.id, 'node_' + String(mapped(obj.modelId)));
+          }
+        }
+        for (const [column, role] of [
+          ['primaryRelationIds', 'primary'],
+          ['branchRelationIds', 'branch'],
+          ['constraintRelationIds', 'constraint'],
+        ] as const) {
+          if (Array.isArray(obj[column])) {
+            obj[column].forEach((key, index) => {
+              check(typeof key === 'string');
+              addLocal(
+                'edge_qedge_' + role + '_' + stablePart(String(key)) + '_' + index,
+                'edge_qedge_' + role + '_' + stablePart(String(relationKey(key))) + '_' + index,
+              );
+            });
+          }
+        }
+        if (
+          typeof obj.id === 'string' &&
+          typeof obj.relationId === 'string' &&
+          obj.id === 'edge_' + obj.relationId
+        ) {
+          addLocal(obj.id, 'edge_' + String(mapped(obj.relationId)));
+        }
+      });
+    }
+  }
+  const identity = (value: unknown) =>
+    typeof value === 'string' ? (localMappings.get(value) ?? mapped(value)) : value;
   const rewrite = (value: unknown): unknown => {
     const clone: unknown = structuredClone(value);
     visitReferences(clone, (obj) => {
@@ -916,7 +1105,28 @@ export function mapDesignerAsset(
       }
       for (const key of identityKeys) {
         if (obj[key] !== undefined) {
-          obj[key] = mapped(obj[key]);
+          obj[key] = identity(obj[key]);
+        }
+      }
+      if (typeof obj.id === 'string' && localMappings.has(obj.id)) {
+        obj.id = localMappings.get(obj.id);
+      }
+      for (const key of [
+        'readableNodes',
+        'writableNodes',
+        'primaryPathNodeIds',
+        'primaryPath',
+        'path',
+      ]) {
+        if (Array.isArray(obj[key])) {
+          obj[key] = (obj[key] as unknown[]).map(identity);
+        }
+      }
+      for (const key of ['fieldsByNode', 'edgesBySource']) {
+        if (obj[key] !== undefined) {
+          obj[key] = Object.fromEntries(
+            Object.entries(object(obj[key])).map(([key, value]) => [String(identity(key)), value]),
+          );
         }
       }
       for (const key of ['primaryRelationIds', 'branchRelationIds', 'constraintRelationIds']) {
@@ -1002,6 +1212,7 @@ export function mergeDesignerAsset(
   vault: AtlasSingleVault,
   designer: DesignerAssetGraph,
   workspace: string,
+  businessGraph?: AssetGraph,
 ): AtlasSingleVault {
   const copy = new AtlasSingleVault();
   for (const key of vault.keys()) {
@@ -1101,6 +1312,36 @@ export function mergeDesignerAsset(
       }
       (index.fwd[owner._id] ??= []).push(row._id);
       (index.rev[row._id] ??= []).push(owner._id);
+    }
+    copy.set(key, JSON.stringify(index));
+  }
+  if (businessGraph?.models.some((m) => m.definition.parentId !== null)) {
+    const forward = 'modelBelongsToParent',
+      reverse = 'parentModelHasChildren';
+    const existing = relations.find(
+      (r) => r.source === 'sys_model' && r.target === 'sys_model' && r.forward === forward,
+    );
+    check(!existing || (existing.reverse === reverse && existing.logic === 'many-to-one'));
+    if (!existing) {
+      relations.push({
+        source: 'sys_model',
+        target: 'sys_model',
+        forward,
+        reverse,
+        logic: 'many-to-one',
+        matchOn: null,
+      });
+    }
+    const key = AtlasSingleVault.relationKey('sys_model-sys_model-' + forward);
+    const index: RelationIndexData = JSON.parse(copy.get(key) ?? '{"fwd":{},"rev":{}}');
+    for (const { definition } of businessGraph.models) {
+      if (definition.parentId === null) {
+        continue;
+      }
+      const child = modelRows.find((r) => r.engine_name === definition.name) ?? fail();
+      const parent = modelRows.find((r) => r.engine_name === definition.parentId) ?? fail();
+      (index.fwd[child._id] ??= []).push(parent._id);
+      (index.rev[parent._id] ??= []).push(child._id);
     }
     copy.set(key, JSON.stringify(index));
   }

@@ -1,13 +1,13 @@
 # SEC-M6 交付记录
 
 - 日期：2026-10-23
-- 修订：D09
-- 范围：S6.1 独立恢复及可重复演练、S6.2 备份/完整受信迁移与 S6.3 模型/Designer 资产子集。
-- 技术状态：S6.2 完成；S6.3 的 v2 Designer 子集与双库分阶段发布见 D05，继承/复杂链兼容及浏览器流程仍待；D09 已核对 A/B 异机恢复功能通过，两端构建摘要不同、待查明，S6.1 保持待验证。SEC-M6 不能作为完整里程碑交付。
-- 基线：SEC-M1—SEC-M5 完成，累计 5/7 里程碑、16/20 开发任务。
-- 代码定位：本轮仅更新工作区文档/证据，未提交、推送、部署或发布；已收到用户 A Prepare/B Verify 成功报告，摘要核对结果见 D09。
+- 修订：D12
+- 范围：S6.1 独立恢复及可重复演练、S6.2 备份/完整受信迁移与 S6.3 模型/Designer 资产交付。
+- 技术状态：S6.1—S6.3 完成，M6-A1—M6-A5 通过；SEC-M6 完成，SEC-M7 未开始。
+- 基线：SEC-M1—SEC-M6 完成，累计 6/7 里程碑、18/20 开发任务；整仓既有类型问题和总体验收限制仍保留。
+- 代码定位：未提交的工作区变更；D12 涉及 shared/SDK 继承标识、core 资产映射、server 双库合并、Designer 加载/新建子模型、隔离测试及文档，具体文件和命令见文末。未提交、推送、部署或发布。用户异机/构建报告见 D09—D11；D12 浏览器验收尚未收到用户反馈。
 
-最新内容及验证见文末 **D09**；D01/D02 为 S6.1 历史证据，D03 为 S6.2 交付，D04/D05 为 S6.3 局部交付，D06—D08 为演练工具与故障修复，D09 为用户异机证据核对，历史状态和计数不覆盖最新修订。
+最新内容及验证见文末 **D12**；D01/D02 为 S6.1 历史证据，D03 为 S6.2 交付，D04/D05 为 S6.3 局部交付，D06—D08 为演练工具与故障修复，D09—D11 为用户异机及构建证据核对，D12 补齐资产兼容与浏览器验收。历史状态和计数不覆盖最新修订。
 
 ## S6.1 已实现内容（D01/D02）
 
@@ -322,3 +322,112 @@ A 的 `prepared` 为 `true`；B 结果格式正确，`independentOsEnvironment`�
 文档收尾：58 个本地链接、20 项任务/16 项完成计数及两份原报告字节摘要核对通过；涉及文档/本地诊断 JSON 格式和 `git diff --check` 检查通过。B 诊断尚未回传，不把本地工具校验当作差异已闭合。
 
 M6-A1 已有用户两台设备恢复功能成功证据；构建一致性证据尚未闭合，**S6.1 继续待验证，5/7 里程碑、16/20 开发任务不变**。S6.2 完成，S6.3 进行中，SEC-M7 未开始；整仓既有类型问题与 reset 中断工具限制未解除。本轮只新增诊断工具，无服务端业务实现变更，不重跑恢复安全回归或整仓 `check`；D08 的 34/34 证据保留，不能表述成本轮重跑。所有新增操作限于脱敏报告、源码/编译目录的读取、新建临时编译输出、诊断工具及文档更新；真实 9091、真实配置、凭据、密钥、Vault 和业务库未触及。
+
+## D10：S6.1 B 构建概要核对
+
+2026-10-23，用户回传 B 单行诊断的终端 JSON：`ok: true`，Node `v24.14.1`、TypeScript `5.9.3`，整体构建摘要仍为 `159c636d2a5c7574e52cce0ddb0667ef7f435baa10e40277f95be0510a4330d7`，与 B 原 Verify 报告一致。诊断已成功，不需要重跑。与 D09 已归档的 A 完整清单核对如下：
+
+| 包     | A JS 文件数 | B JS 文件数 | 包摘要核对                                                                    |
+| ------ | ----------- | ----------- | ----------------------------------------------------------------------------- |
+| shared | 13          | 13          | 一致                                                                          |
+| common | 24          | 24          | 一致                                                                          |
+| core   | 52          | 70          | 不同；B 为 `1fc1be43e37cb27dbd94823c157224696990271cf7a49546dfe0b8cb582b97a0` |
+| server | 49          | 49          | 一致                                                                          |
+
+全部差异已缩小到 core。A 的 core 缺源码候选为 `dist/templates/model-designer/initializer.js` 一份；B 为 `dist/common/` 下 18 份和 `dist/src/common/PathResolver.js` 一份，共 19 份。B 列表没有 A 那份 initializer，因此两端总数相差 18，不能解读为仅 B 额外多 18 个文件。两端各有 51 个能按映射对应当前源码的 core JS，但只有文件数量，尚不足以证明这些同名文件的路径和内容全部一致。
+
+当前收到的是终端概要，未含逐文件摘要及编译配置摘要。下一只需用户发送已经生成的 B `ModeDB-Build-Check-eyIQ89/build-check.json`，与 A 归档清单比对；不要求再次执行诊断、重新 Prepare/Verify 或删除任何旧产物。构建差异仍未完整解释，恢复功能成功结论保留，S6.1 继续待验证，5/7、16/20 不变。
+
+本轮仅使用用户终端数据和本地归档清单做只读比较，并同步文档；无代码变更，不重跑安全回归或整仓检查。真实服务、配置、凭据、密钥、Vault 和业务库未触及。
+
+## D11：S6.1 异机验收完成
+
+2026-10-23，用户提供完整 B `build-check.json`。原始字节归档为 [B 原始报告](evidence/SEC-M6-D11/build-check-B.original.txt)，文件 SHA-256 为 `20a858bcfdefa96bfb947b9876a193473e78c590cb3eeed0ce0699928189eeb9`；另提供仅格式化、数据完全相同的 [B 构建清单 JSON](evidence/SEC-M6-D11/build-check-B.json)。可审查的 [逐文件核对结果](evidence/SEC-M6-D11/comparison.json) 连接 D09 的 A 清单及 Prepare/Verify 报告。所有报告只作为数据解析，未加载其中的代码或命令。
+
+### 核对结果与结论
+
+| 核对项                 | 结果             | 证据与范围                                                                                                                                           |
+| ---------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 演练身份和源码         | 通过             | A Prepare/B Verify 均成功、runId 和源码摘要一致，沿用 D09 原报告                                                                                     |
+| 独立 Windows 恢复      | 通过             | B `independentOsEnvironment`、`restored`、`emptyAccessLedger`、`wrongPassphraseRejected`、`tamperedPackageRejected` 五项为 true                      |
+| 编译配置与 TypeScript  | 通过             | 六份配置的相对路径及摘要一致，TypeScript 均为 5.9.3；Node 版本差异保留，不归因为根因                                                                 |
+| 当前源码对应编译结果   | 通过             | A/B 的 136 个当前源码对应 JS 路径及规范化内容摘要逐项相同；重读本地文件校验与 A 清单相符                                                             |
+| 所有共有文件           | 通过             | 137 个共有路径，内容摘要全部相同，其中包括两端共有的一份旧 common 产物                                                                               |
+| 原始 dist 整体摘要     | 不同，差异已解释 | A 独有 1 个旧 initializer；B 独有 19 个旧 core/common、PathResolver 产物，均无对应当前源码，没有其他文件差异                                         |
+| 当前模块是否依赖旧产物 | 通过             | 当前 136 JS 及三个演练 TS 共 139 文件、533 条模块引用，未引用 21 个旧产物候选；未发现非字面量 import/require，core/common 包公开入口也指向当前 index |
+
+当前源码对应 136 个编译文件按原规范聚合的摘要为 `0b6a148d3bab8074aee27d78bf78ba8d6480042c99108a78b250ece3e11d98e1`，与 D09 全新临时输出构建一致。两端原始 `buildFingerprint` 仍保留不相等的事实，不重写报告、不修改摘要算法，也不以文件数量替代内容比对。本次完整清单证明差异全部来自当前模块未使用的旧输出，已足以确定本次演练实现一致；无需通过删除原构建文件、复制另一端 dist 或重做异机演练凑齐摘要。
+
+结合 D01/D02 的恢复材料、历史依赖、密钥轮换/恢复中断及拒绝测试、D08 的 34/34 恢复/脚本回归，以及 D09—D11 的用户两台 Windows 实测与逐文件核对，**M6-A1 通过，S6.1 由待验证更新为完成**。M6-A2 的 S6.1 范围沿用已通过证据，S6.2 完成，累计 **5/7 里程碑、17/20 开发任务**。SEC-M6 仍因 S6.3 继承/复杂链兼容及浏览器审核/重新发布/目标授权验收未完成而保持进行中；SEC-M7 未开始。
+
+### 保留边界与后续
+
+旧 dist 产物保留未删除。SEC-M7 / S7.2 的可安装构建和发布准备须使用隔离的全新输出目录并核对打包清单，避免历史产物随 `files: [dist]` 混入交付包；本轮结论仅证明当前恢复链路一致，不把现有混有旧产物的整个 dist 当作已验收发布包。根类型检查既有错误与 SEC-M5 reset 中断工具缺口仍在，不借此关闭其余验收门槛。
+
+文档与证据收尾：B 原件字节副本及 SHA-256、格式化副本数据一致性、A/B 成功报告和逐文件比较断言、54 个本地文档链接、20 项任务/17 项完成计数均通过。涉及文档与两份可读 JSON 的 Prettier 检查、`git diff --check` 通过；原始字节副本不格式化。
+
+本轮为证据审核及文档交付，无业务代码改动，未重跑安全回归/浏览器/整仓 check；历史测试按其原修订引用。本地只读取用户脱敏报告、代码与编译配置，并新建证据副本/核对结果；原报告和原演练材料均保留。未读取或修改真实配置、凭据、密钥、Vault 或业务库，未连接真实 9091，未提交、推送、部署或发布。下一任务为 SEC-M6 / S6.3 剩余兼容与浏览器验收。
+
+## D12：S6.3 继承复杂链与浏览器验收完成
+
+2026-10-23，按用户“开始下一步开发”补完 S6.3。保留接续前的 D11 文档/证据和全部无关工作区改动；D09—D11 已确认的用户异机结果继续有效，不要求重复恢复演练。
+
+### 实现与操作变化
+
+- shared 新增 `designerInheritanceRelationId`，SDK 重新导出；Designer catalog 加载器和新建子模型使用同一稳定继承标识。core 从业务父链验证 owner/child 与遍历方向，把旧随机虚拟 ID 归一为对应直接父子边；拒绝伪造祖先、身份冒用和一个虚拟 ID 对应多个端点。
+- core 映射复杂链的生成节点/边 ID、重复模型节点、反向分支、来源后缀、投影/过滤/路径，以及发布适配器的节点键。字面值继续按数据处理。补充来源节点校验：当前草稿设计图必须唯一包含该节点，模型必须匹配正反向起点或继承 child；悬空、重复、错误模型和未选边的 usage 拒绝。
+- `mergeDesignerAsset` 接收业务图谱，补齐 Designer `modelBelongsToParent` / `parentModelHasChildren` 正反索引；server 预览和实际发布使用同一规则，保持其他库元数据。合成多级继承资产导入后，两次 hydrate 的虚拟 ID 一致；从链重建的节点/边与已映射设计图一致，实际查询编译器通过。
+- 新增合成 fixture、引用单测和独立 Chrome 验收入口。浏览器从签名加密 v2 包导入全新实例，在接口管理/契约页确认禁用策略，编辑保存并重新发布，再使用本机管理通道签发准确目标版本的限权凭据。旧源版本授权、空授权、其他库、raw 查询和系统库均拒绝；新授权仅返回预期投影，撤销立即生效，刷新自动重开且无未处理页面异常。
+- 根脚本 `test:security:asset` 增加 SDK 构建及引用测试，新增 `test:security:asset:browser`。同步[功能简介](../security-v1/overview.md)、[使用手册 §7.1](../security-v1/user-guide.md#71-designer-依赖包v2)、Vault 契约、总体方案、专项指南和测试说明；手册包含审核、启用、发布、准确版本授权与拒绝验证步骤。
+
+主要代码：[core 映射/校验](../../packages/core/authoring/designer-asset.ts)、[双库发布](../../packages/server/src/designer-asset-transfer.ts)、[稳定标识](../../packages/shared/src/designer-references.ts)、[Designer 加载器](../../apps/model-designer/src/sync/designer-row-hydrate.ts)、[新建子模型](../../apps/model-designer/src/managers/data-manager.ts)。测试：[合成资产](../../test/fixtures/security-designer-asset.ts)、[引用回归](../../test/unit/security-designer-references.test.ts)、[浏览器验收](../../test/integration/security-asset-browser.test.ts)及[隔离浏览器辅助](../../test/helpers/security-browser.ts)。
+
+### 验证结果
+
+| 检查                | 结果与范围                                                                                                                                                                                                                  |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 完整隔离安全集      | 19 个文件 **167/167 通过、0 skip，约 202.2 秒**，包含恢复演练 7 项、新引用测试最初 3 项；这是最后补充来源节点校验之前的完整集结果                                                                                           |
+| 收尾资产回归        | v1/v2/Designer/引用三文件 **37/37 通过、0 skip，约 85.8 秒**，包含 Windows DPAPI 离线 CLI、恶意签名内容、原包续跑及 12 个双库硬退出点；已包含最后来源校验的第 4 项引用测试。最终补全该项允许分支后，引用再单独 **4/4 通过** |
+| 最新生产构建 Chrome | **1/1 通过、0 skip，约 150.1 秒**；实际 UI 审核、编辑/发布、目标授权和拒绝、撤销、刷新重开。此前版本也曾 1/1 通过，本次以最新构建为准；等待窗口不作为性能达标证据                                                           |
+| 包与 Designer       | shared/core/server/SDK 定向构建、Designer 独立类型检查、最新 Vite 生产构建通过；完整 `check` 中 common/data-kit/data-ui 等构建及源码/SDK 边界通过                                                                           |
+| 整仓检查            | `pnpm run check` 未通过，根 tsc 被既有 DOM/ImportMeta.env、旧 fixture/readonly/ws 等错误阻断，未进入整仓 lint/format。收尾沙箱外直接根 tsc 仍有 **49 项诊断**，本轮新增/修改源码与测试无诊断；不能将限定通过写成整仓通过    |
+
+`pnpm.cmd run test:security:asset` 在沙箱内启动时遇到 pnpm SQLite store 无法打开，改用本地 `node`/`tsc`/`tsx` 执行等价构建与测试。此前 Vite 在沙箱内读取已安装 exceljs 被拒绝；只执行离线 frozen/ignore-scripts 依赖核对，结果 Already up to date、锁文件未改，沙箱外同一 Vite 命令成功。根 tsc 在沙箱内还出现依赖读取诊断，沙箱外复查后按上表 49 项记录；未通过改动系统目录权限解决。
+
+收尾检查：本轮包源码的限定 ESLint、涉及源码/JSON/文档的 Prettier、84 个本地链接及标题锚点、20 项任务/18 项完成和 7 个里程碑/6 个完成计数、`git diff --check` 通过。四份新测试用 Prettier API 显式格式化；仓库仍忽略 test/apps 的通用 lint/格式路径，不将其记为已通过整仓检查。
+
+核心实际命令（均在隔离测试环境；完整集命令在补最后来源节点用例前执行，之后仅复验受影响资产集和浏览器）：
+
+```powershell
+node node_modules/typescript/bin/tsc -p packages/shared/tsconfig.build.json
+node node_modules/typescript/bin/tsc -p packages/core/tsconfig.build.json
+node node_modules/typescript/bin/tsc -p packages/server/tsconfig.json
+node node_modules/typescript/bin/tsc -p packages/sdk/tsconfig.json
+node node_modules/typescript/bin/tsc --noEmit -p apps/model-designer/tsconfig.json
+node node_modules/tsx/dist/cli.mjs --test --test-concurrency=2 test/unit/security-asset.test.ts test/unit/security-designer-asset.test.ts test/unit/security-designer-references.test.ts
+node node_modules/tsx/dist/cli.mjs --test test/unit/security-designer-references.test.ts
+node node_modules/tsx/dist/cli.mjs --test test/integration/security-asset-browser.test.ts
+node node_modules/tsx/dist/cli.mjs --test --test-concurrency=4 test/unit/security-vault-v2.test.ts test/unit/security-windows-keys.test.ts test/unit/server-directory-layout.test.ts test/unit/security-registry.test.ts test/unit/security-authorization.test.ts test/unit/security-network.test.ts test/unit/security-browser-session.test.ts test/unit/browser-connection-credentials.test.ts test/unit/interface-call-docs.test.ts test/unit/security-protection.test.ts test/unit/security-registry-http.test.ts test/unit/security-recovery.test.ts test/unit/security-recovery-drill.test.ts test/unit/security-backup.test.ts test/unit/backup-management.test.ts test/unit/backup-management-http.test.ts test/unit/security-asset.test.ts test/unit/security-designer-asset.test.ts test/unit/security-designer-references.test.ts
+pnpm.cmd run check
+node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
+# 在 apps/model-designer 中构建最新页面
+node node_modules/vite/bin/vite.js build
+```
+
+### 验收与后续边界
+
+| 验收项 | 状态 | 证据                                                                                                                             |
+| ------ | ---- | -------------------------------------------------------------------------------------------------------------------------------- |
+| M6-A1  | 通过 | D09—D11 用户两台 Windows 成功报告、源码/编译逐文件一致性及旧产物差异说明；不重新执行或覆盖原报告                                 |
+| M6-A2  | 通过 | D01—D03 历史密钥、DEK 轮换中断及旧包恢复，D12 安全集复验；访问台账/安全策略不回滚                                                |
+| M6-A3  | 通过 | D03 一致性备份、完整受信迁移及目标重新保护，D12 安全集复验                                                                       |
+| M6-A4  | 通过 | D04—D05 独立 PEK/签名、模型 ID/关系/接口/固定版本/I18N、依赖与策略剥离；D12 多级继承/复杂链、hydrate/编译和 Chrome 重新发布/授权 |
+| M6-A5  | 通过 | D04—D05 签名/摘要/解密/危险包拒绝、冲突预览和双库日志/启动阻断/12 个硬退出续跑点；D12 资产集及浏览器目标授权复验                 |
+
+**S6.3 与 SEC-M6 完成，累计 6/7 里程碑、18/20 开发任务；下一 SEC-M7 / S7.1。** 没有启动 S7.1 实现，不将本次阶段通过表述为安全 V1 总体验收通过。
+
+资产入口仍为离线 OS 所有者 CLI；没有在线私钥入口、在线资产 API 或浏览器导入向导。Binding 明确固定版本并校验历史版本存在；无版本 `dependencies.interfaces` 拒绝，不猜测当前版本。约束设计可交付，但现有 compiler 不支持的执行仍会拒绝发布，没有新增约束执行能力。v1/v2 的容量、完整模型选择、无覆盖/合并、双库分阶段发布、任务归档无人工回滚/清理入口等限制沿用 D05 和手册；不把协议验收扩大为任意 Designer 文档兼容。
+
+SEC-M7 须处理整仓既有类型检查、SEC-M5 reset 中断工具缺口，完成全流程/故障/性能及发布材料验收。S7.2 按 D11 使用隔离全新输出构建并核对打包清单，仓库旧 dist 保留。本次进程硬退出和 Chrome 通过不替代硬件断电、性能或真实环境切换验收。
+
+全部验证使用系统临时合成目录、显式临时配置、随机端口和独立 Chrome profile。临时测试实例结束后关闭，真实 9091、真实配置、凭据、密钥、Vault 和业务库未读取或修改；未改 ACL、未清理原有旧输出、未提交、推送、部署或发布。

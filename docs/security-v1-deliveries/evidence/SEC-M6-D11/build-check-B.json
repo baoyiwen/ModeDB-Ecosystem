@@ -1,0 +1,871 @@
+{
+  "format": "modeldb.recovery-build-check.v1",
+  "timestampUtc": "2026-10-23T08:05:40.552Z",
+  "platform": "win32",
+  "architecture": "x64",
+  "nodeVersion": "v24.14.1",
+  "typescriptVersion": "5.9.3",
+  "fingerprintScope": "recovery-source-and-build-v1",
+  "buildFingerprint": "159c636d2a5c7574e52cce0ddb0667ef7f435baa10e40277f95be0510a4330d7",
+  "fileCount": 156,
+  "configs": [
+    {
+      "path": "tsconfig.json",
+      "sha256": "3b797cea103b3b2bc40428400dde2045c765d7a55d4cfb9a7594d0508834885d"
+    },
+    {
+      "path": "packages/shared/tsconfig.json",
+      "sha256": "1ad64d23e53342954ce878557d53d10bc5cc37a9ecfe5e1856bbae90dfe1a8fd"
+    },
+    {
+      "path": "packages/shared/tsconfig.build.json",
+      "sha256": "b7db678c9338fd651d6e414c47513affdee4a091960e5d25820f06f24bcb2e65"
+    },
+    {
+      "path": "packages/common/tsconfig.json",
+      "sha256": "5f6e7bf9462ca8d99cb66f0b59fc419da140f38b67319c38839cf335c569d4d8"
+    },
+    {
+      "path": "packages/core/tsconfig.build.json",
+      "sha256": "c9a4c5175b6e024c4cbf44b7e41a70c3e827b1053afa0d1ec9794cdb2a7802e4"
+    },
+    {
+      "path": "packages/server/tsconfig.json",
+      "sha256": "df1e879c8741688defa32d89ef91d3e73296df0b79a3067f6a006384cd034dee"
+    }
+  ],
+  "packages": [
+    {
+      "package": "shared",
+      "fileCount": 13,
+      "fingerprint": "8d6fd8fa8827dbc0f7ebe566b60775bc5cb1b27ac3d94fb026389cbca133cdbe",
+      "extra": [],
+      "files": [
+        {
+          "path": "packages/shared/dist/binary-transport.js",
+          "sha256": "3f8cd8935405195791929335a50276a2b20227254bcb99f08d94fc675bb8d91e",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/shared/dist/binding-surface.js",
+          "sha256": "683a9b6ce32b882bc812d88f956442863dda5573aa4cac96a4fcd113378ba104",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/shared/dist/engine-operations.js",
+          "sha256": "b5ac1500940b079c52876708bb14d67730c0a79e22305abccb3a88604c895ad1",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/shared/dist/index.js",
+          "sha256": "abe23e31730aa377195fcafa88bdc2942e954bb6bbcda4adc90d0fc6ba868925",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/shared/dist/management-types.js",
+          "sha256": "6f58c7cdf043a18fc860da11d40199084ea6a2e20acd5d383e614863dbe2635b",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/shared/dist/published-operation-interface.js",
+          "sha256": "212a679b8a5e5281b1f96bdb0b41e778d8a83726e761911e76f1f1c8919293c7",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/shared/dist/published-query-interface.js",
+          "sha256": "ac5066f85fb1c0218e639399fd81851e7075a6e42a5ee1c5d9c8c496af4d3139",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/shared/dist/query-interface-errors.js",
+          "sha256": "a5d56a7c72b7b2d349e0372300915ef896fd80b0d5bed20c1d1610a66799970a",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/shared/dist/security-contracts.js",
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/shared/dist/security-release.js",
+          "sha256": "9813690262a37114e442550e3994db1f2764708a832513b982c40704dfa29b3b",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/shared/dist/wire-codec.js",
+          "sha256": "e8ac274961f251d68a5b090ff3a98967ec0c701400e5b750cbb03a52479ec276",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/shared/dist/wire-protocol-exports.js",
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/shared/dist/wire-query-plan.js",
+          "sha256": "1683be731edb0b730c417cbd3f6c66261e42dab981d5d71765680a92f8a1e4dc",
+          "sourceExists": true
+        }
+      ]
+    },
+    {
+      "package": "common",
+      "fileCount": 24,
+      "fingerprint": "8aef6ea7071b40304e2e7e240ac7f5a81c5059f7db8b7c12e3506b6e4245203f",
+      "extra": ["packages/common/dist/atlas-vault-secret.js"],
+      "files": [
+        {
+          "path": "packages/common/dist/PathResolver.js",
+          "sha256": "f36079aa457351ef8df777a3bb8cb66bd069fc1b259c06cbf4986610858fef7c",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/atlas-manifest.js",
+          "sha256": "7c3750bc5916bbc01ee841eb90fbf65bfcd6bbac2a8ee8a72ddfe9993d93e184",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/atlas-paths.js",
+          "sha256": "a3a9afa4c97fe43e183f80234b12e66502322ef15082deb42c049ee411ccf056",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/atlas-segments.js",
+          "sha256": "fe25575152c998f3be8ed72d0401e9ac3d22bd16e47035cc8c52c0c769b8bba8",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/atlas-vault-secret.js",
+          "sha256": "34b2ad7b49a98cae5387e073ba54cbec2ac73ae6a815956654b25009e8bd8385",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/common/dist/atomic-file.js",
+          "sha256": "7569f636412d85610696393704c9cb5972f06b739d1d21b9326e2742433a6dd3",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/coerce-import-cell.js",
+          "sha256": "ef229d1c67147d798524041d7122aaa39114f2047af44631f1904fde6e785d3c",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/data-types.js",
+          "sha256": "6fae625d7455c8fae87f6ed51629a6613fa744705ba59e9ebd9ed42e2a99d4b2",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/default-storage-root.js",
+          "sha256": "c438bd20ff2b6e562a47360da9df329f06ad89a8d33ff0d2861c577235b69a62",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/diagnostic.js",
+          "sha256": "14e9f33dc653fc981d4a9a37f80d19ab7341ad1b4331c3f9c14a2afecefb205c",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/disk-adapter.js",
+          "sha256": "06cc53045d06770cdf56a66d65a466a0d54d65b6f2694851b28c42f9fc385a9c",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/engine-logger.js",
+          "sha256": "f9bd4ac2bfc82b788527cccffc736af387036580385b7eed31cfcd8f5b3c77ff",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/errors.js",
+          "sha256": "a3fc73a744fe62e697ea5991237867770da8fb13d5321cb80190f5da34c7ce18",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/index.js",
+          "sha256": "ba8515406982256c24b90e0da9aa2dcdb522692af61735e91cf0e0d88edf7a61",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/internal-vault.js",
+          "sha256": "15ebf83f9e6319c42ec160f536b0085ef53df89f6f264efe3a12fcc5695b9ad8",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/provider.js",
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/registry.js",
+          "sha256": "44c51e2c10e15da1c6d727b42689a22c71e5e1aa2d4b4b4b616321774a220ed9",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/shadow-codec.js",
+          "sha256": "a7dbab1d00b704cacf2d3ca16af8cac6ec8bbbd063aa345b7f0191ce34b8fb74",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/smart-cache.js",
+          "sha256": "7db5b7f631bd473a90c76ef4fa40f30bd37619047dfe705e2d2ad63f1e14297d",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/storage-root-config.js",
+          "sha256": "486ed4c1b455bc5ae9e5a84a196727695583e2b46c68d2ecfd0ff8a4827669e1",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/types.js",
+          "sha256": "4a850f2741ed50d471ce24a9d34a0051a8e6c5f28521732f8429ab841655bdb6",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/value-objects.js",
+          "sha256": "5c030db60bdd4fb3f2c493a2668e33207a4d3c8ef7428f701dcedf7302107d3a",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/vault-keys.js",
+          "sha256": "91782ba3fbb9f08eaa1d24666b0d52bb544de37d71420d45010abcd38c40d8b4",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/common/dist/wire-codec.js",
+          "sha256": "9342bd1b2e4e7c6941b037dbecd1cb32df6c25ab682b1f4ae94b942ec98f8d8c",
+          "sourceExists": true
+        }
+      ]
+    },
+    {
+      "package": "core",
+      "fileCount": 70,
+      "fingerprint": "1fc1be43e37cb27dbd94823c157224696990271cf7a49546dfe0b8cb582b97a0",
+      "extra": [
+        "packages/core/dist/common/atlas-manifest.js",
+        "packages/core/dist/common/atlas-paths.js",
+        "packages/core/dist/common/atlas-segments.js",
+        "packages/core/dist/common/data-types.js",
+        "packages/core/dist/common/default-storage-root.js",
+        "packages/core/dist/common/diagnostic.js",
+        "packages/core/dist/common/disk-adapter.js",
+        "packages/core/dist/common/engine-logger.js",
+        "packages/core/dist/common/errors.js",
+        "packages/core/dist/common/internal-vault.js",
+        "packages/core/dist/common/provider.js",
+        "packages/core/dist/common/registry.js",
+        "packages/core/dist/common/shadow-codec.js",
+        "packages/core/dist/common/smart-cache.js",
+        "packages/core/dist/common/storage-root-config.js",
+        "packages/core/dist/common/types.js",
+        "packages/core/dist/common/value-objects.js",
+        "packages/core/dist/common/wire-codec.js",
+        "packages/core/dist/src/common/PathResolver.js"
+      ],
+      "files": [
+        {
+          "path": "packages/core/dist/authoring/admin.js",
+          "sha256": "2ffc37d510ed212e6c91447c219991cb3390777b1b1438b7c23e7b894e97173b",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/authoring/asset-graph.js",
+          "sha256": "243c369425b130659b23e95000cd4b23c2c00591217dd1316484f75f7a6a7385",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/authoring/atlas-registry.js",
+          "sha256": "ba61987ae97bd9db49f9a887c158b7c095314b11c248dedca3e0c91dfdea6355",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/authoring/atlas-single-vault.js",
+          "sha256": "22f9679d8ec4a5465fcea9464c7188c87bff0d36419d87f981e1656d07f77338",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/authoring/authoring-facilities.js",
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/authoring/designer-asset.js",
+          "sha256": "fe7bbd854efe06599e88792ea4e652408a33931e30e7493940a6beba17571d52",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/authoring/engine.js",
+          "sha256": "b888ff3bb84bfa0e768f339b00f6a26fb7f3fe223e46984575f390bd9229e014",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/authoring/entity.js",
+          "sha256": "433465d49cc25f5670234ceec2890411d70b60e3c95907153577cd82769cb59d",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/authoring/index.js",
+          "sha256": "65f50fdbcf6add6ec461260ce9f9c38e3d2c8c6997319c2dd290c7324f475a37",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/authoring/indexer.js",
+          "sha256": "6195cea33203a38cba0897400ce0326b20805929c85cd175dffa0547a295a45a",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/authoring/merged-data-reader.js",
+          "sha256": "e218612c49f34810e8d3901c41edd883a0c15b76367d773017f00c1afdfb9f3e",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/authoring/persistence-manager.js",
+          "sha256": "379abd25c4ba0e2c86209daada97d36f867a9872558d746dc9f12f161915a3a2",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/authoring/relation-entity.js",
+          "sha256": "dfb5c3aa25ea080b73c70a4ffebb45486eb032aa6bd8c7959193ae13f562756e",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/authoring/storage.js",
+          "sha256": "3527262fd00aea020c53449ba368ec048c56dbdeac0d98b34e20751ce637d98f",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/common/atlas-manifest.js",
+          "sha256": "f85c6c4a993914a54273d3ed0b100ed581c2358e418ca83ad6bf0b8d2728effd",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/atlas-paths.js",
+          "sha256": "b79868c90faba9055844f2a1d8713274dfcb6840933f0b777f11cc47073211f4",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/atlas-segments.js",
+          "sha256": "fe25575152c998f3be8ed72d0401e9ac3d22bd16e47035cc8c52c0c769b8bba8",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/data-types.js",
+          "sha256": "6fae625d7455c8fae87f6ed51629a6613fa744705ba59e9ebd9ed42e2a99d4b2",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/default-storage-root.js",
+          "sha256": "c438bd20ff2b6e562a47360da9df329f06ad89a8d33ff0d2861c577235b69a62",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/diagnostic.js",
+          "sha256": "0c4e9788c2ca3a48044abefd16b4d5ad6f3453052912cea8d6fbd2c0994919c0",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/disk-adapter.js",
+          "sha256": "7cf64f6bf04895c7901af09e6a18dcc4037e420cdbb56b8752c6330b19cc849b",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/engine-logger.js",
+          "sha256": "fe67028029bfc12d4df387be1280e2f546623892c5a0253b0d36a0aa84cde5ce",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/errors.js",
+          "sha256": "a3fc73a744fe62e697ea5991237867770da8fb13d5321cb80190f5da34c7ce18",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/internal-vault.js",
+          "sha256": "15ebf83f9e6319c42ec160f536b0085ef53df89f6f264efe3a12fcc5695b9ad8",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/provider.js",
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/registry.js",
+          "sha256": "7a344ac9db5015acaaf0d5a9389091bedf1e1b0edfb3b14f7ad520f55aec0196",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/shadow-codec.js",
+          "sha256": "f6e9bb9e492eda22d8155400e4b46828f9a069271a686bb845b1113a5b5fdc1c",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/smart-cache.js",
+          "sha256": "7db5b7f631bd473a90c76ef4fa40f30bd37619047dfe705e2d2ad63f1e14297d",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/storage-root-config.js",
+          "sha256": "486ed4c1b455bc5ae9e5a84a196727695583e2b46c68d2ecfd0ff8a4827669e1",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/types.js",
+          "sha256": "4a850f2741ed50d471ce24a9d34a0051a8e6c5f28521732f8429ab841655bdb6",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/value-objects.js",
+          "sha256": "5c030db60bdd4fb3f2c493a2668e33207a4d3c8ef7428f701dcedf7302107d3a",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/common/wire-codec.js",
+          "sha256": "9342bd1b2e4e7c6941b037dbecd1cb32df6c25ab682b1f4ae94b942ec98f8d8c",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/facade/client.js",
+          "sha256": "30c03a60d5dc283e60395efa4e422db2b90f43de29e948b0d0ae2ea84206823f",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/facade/config.js",
+          "sha256": "45744f4d085ad558a90371e4a2117bcda1b51e6b6b47db06069118a1aac06044",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/facade/context.js",
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/facade/index.js",
+          "sha256": "5b20e8324cfe0fc81cae51fc5859d4a9bf73c70be9dd641c741773fdb4b72885",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/facade/model-runtime.js",
+          "sha256": "3e02e304968d3b07e516982b9b300cdedba63d9d1ecf65f74b3c76aac27e43e5",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/facade/query.js",
+          "sha256": "953185b80992149aa689b0b5b4d0eb98a95ca6a7880e2b4a53e2f0d9eb9de703",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/facade/relation-runtime.js",
+          "sha256": "83a149900820583189520d34d5200d5a91e9fdef29a487096d44314103d16a22",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/index.js",
+          "sha256": "42fe7ac6c9e4d3b26a80c762999d3f8c937930ef5ab5c1f980c7ef60dc18cf2f",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/authoring/AuthoringEngine.js",
+          "sha256": "f2b1cf799eacce4a07dc261784442b5d9ef9e7429598c7d90a58254e1f9a0a82",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/common/PathResolver.js",
+          "sha256": "96b7c25076e951b0e33899b5887ba1659bf92d9fc809deb38d4a4fd204e7f8ed",
+          "sourceExists": false
+        },
+        {
+          "path": "packages/core/dist/src/network/execute-result-wire.js",
+          "sha256": "be1aa398808c40089ba3b94ccbcc3c9b4872823f6d034846a7c2545affe3c759",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/network/operation-executor.js",
+          "sha256": "5f84c284769ffaa0599abed4c538ffa40d778596942c6c82fb66c6507d32223e",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/network/wire-protocol.js",
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/HydratedEntity.js",
+          "sha256": "d4a34635c8fb0c05f8d53dfcbbe571820c76524eb740b0c340c7bf4fd02ace0d",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/ModelDBClient.js",
+          "sha256": "a0f465cceae3457d590fadaaf8f8dff71dbae67e9b1152c93684df81092cd1f6",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/ModelEntity.js",
+          "sha256": "4ba8431c0cf3d481f34b618ce61214e37d6cc8ce1093581df16ae1a1f1a70c5f",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/ModelFileReader.js",
+          "sha256": "a791ec9f64a2d5af58f86798f4a5420e5b6c3aa2f6bf4c1558beadfc6be45bd9",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/RelationIndexFileReader.js",
+          "sha256": "c53b21839263bf73513f74aec50be8f05feb5bbb51cce917394622d2e65a04d8",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/RuntimeModel.js",
+          "sha256": "c2cb5cc68be095e6c175302d1933fea08fc3490bdd54891776bc58572094c69e",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/RuntimeRelation.js",
+          "sha256": "d6469eed59eee28fcb71dc5ca3b421e520b32cca2848e3d072368ac6257e3e44",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/compute-builder.js",
+          "sha256": "2d6adf8121012d51058c06dacc66567554ced575602e6da2b599e04544feaf12",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/context.js",
+          "sha256": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/filter-builder.js",
+          "sha256": "722a6389f083dfc19f7dfdb62a63ee54099916742ccc6955d50a88c3c4611c94",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/group-dimension.js",
+          "sha256": "39d7b97ffc8732223b830e8d6b78ad646e6b04b89cfab5fee111c2d10c79edfe",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/group-instance.js",
+          "sha256": "cc3ec9e773e0449b6657f162b21a308317d642304c1f992e0a20046ab0bd7284",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/index.js",
+          "sha256": "9a9328d624af443c3e617141d2c96bfe3b7ee3b1e8bc4f7e34b1a5fb97402143",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/pivot-from-hydrated.js",
+          "sha256": "9cedbccc4e5e641949bb8a6fe6ea2b12d10a46bfeb2751be0aa5b7174ce5e4e1",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/predicate-tree.js",
+          "sha256": "cf973a046a63763ba99bfc4688df6040a1729e6d12d3fcf7b022cafd241f8133",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/query-engine.js",
+          "sha256": "fe80f6953095d974539a929a5d066a0a5ce1d06ba7cfa08ed9ad99ad783fa0fb",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/query-filter.js",
+          "sha256": "ed582c56ab786b6127988a4116fc72b8384df20ccc1f6000eab201bd9c6ceb27",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/query.js",
+          "sha256": "3c0fcf469db50c21ae4292a24cff16960cdeca6b077df3abd3dc052151e63c71",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/recursive-relate.js",
+          "sha256": "27a14f3d6b091108bbed7b695dbe2cb842095a36d2aba977d123d550d70a5174",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/relation-resolve.js",
+          "sha256": "ba00e0b782cbd1bc3da8111f4e986cf1521f79f89515ba44879e25e35fa1a4ec",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/stat-accumulator.js",
+          "sha256": "71b7c5d2f487a47622631bc94107fecf91f621e706dd0b7aeb363aeacd9a950f",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/transform-engine.js",
+          "sha256": "85c138a7eb24c1b8de1d49b3268d092453b4b80455519db3adcf83fbfa8eddc3",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/vault-model-reader.js",
+          "sha256": "28fdf1062205f54f2b84b500bd0915afd4bec16f26b9cd97d91c3845d3238326",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/src/runtime/vault-relation-reader.js",
+          "sha256": "1dc8ee1fea707b693df63a85723843654e2fe7ec7ed996b39de6af50d7be08dc",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/core/dist/templates/pipe-gallery/register.js",
+          "sha256": "365f318ed9eb04c56ae55f4e8b8476d95fcbdbdb3769a5383d0a4b16066f1a28",
+          "sourceExists": true
+        }
+      ]
+    },
+    {
+      "package": "server",
+      "fileCount": 49,
+      "fingerprint": "ea4656d0bbe9a571d809fb40f88ad49d05d8c0cf6195d0660b5cb6506cd5331d",
+      "extra": [],
+      "files": [
+        {
+          "path": "packages/server/dist/asset-transfer.js",
+          "sha256": "aaac6638b4e6a17330df6457ea304247b647668791b7a74c4143252440126927",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/atlas-catalog-signature.js",
+          "sha256": "bb7024e9d4f6955f0748376ae5de7880b755d74082f618a4b3ff242880352b06",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/authoring-bridge.js",
+          "sha256": "3756385375dc56ddecbf9ee67831a69215fb9bae7b28636dff651625a18d093a",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/auto-backup-scheduler.js",
+          "sha256": "92cea75ed8b88259f7febb5a3d3a1ddb638c8f994a54b59c746f2302013aa040",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/backup-manager.js",
+          "sha256": "501f7265b52622d114def9b5188ed455aca5668539a189156dec445165af7e2e",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/binary-interceptor.js",
+          "sha256": "86a94093295572fd43ee2d4b45a3c07159d31918747a05f7d20d1b9131d41f13",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/cli-asset.js",
+          "sha256": "7c5482b2bc943cb324f883cb90b34a6904faf0279eb70902eadcfa41997ba589",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/cli-backup-security.js",
+          "sha256": "ad9dd9a5ce69905b60a72b1a55b12524ad02b04e6c6fe43c455192825a5e4871",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/cli-backup.js",
+          "sha256": "ecf5c261e87faefbfbec741160e449b75c90112715ea72d85c6ab618b19f80d1",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/cli-create-db.js",
+          "sha256": "33180b43a8a9be0117fe404b8d1bffb67605a27e6706f74c4497561f1f3b7335",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/cli-mgmt.js",
+          "sha256": "edd997a9ad5d7268451b1aef585aae4211ed11cc8e5a6de1f23f9219d083c661",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/cli-security.js",
+          "sha256": "4ac16c34145f5ff8f503091d3c4d593dec7e3d48f4a23dbede25674996a5d283",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/cli.js",
+          "sha256": "68d15b07683d1521c69014ba7ae00d27686765e116d2aa535096eac54caaa9d0",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/config-loader.js",
+          "sha256": "589753d8c7d754fdf7f9b31300e6debaab11f56c20d6f9ef4c33e5271a6470a0",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/designer-asset-transfer.js",
+          "sha256": "d37845d6efd25407b0dfa0b0265a0c6f52dcf16d11426058a946af1d6a8aae18",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/dual-track-app.js",
+          "sha256": "789c059f8b841402fa322d0db6e7441b11955a973585276bf41c361a4ca56bcb",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/index.js",
+          "sha256": "8e38dc4afaf7ad4f2a3353b0eba739bdfb2993edb4d5ab650daf7a724f4c4751",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/logical-database-guard.js",
+          "sha256": "c366d13e9c8a17ccc6026a2ad1b409510c167d783f11b31ab18cf35d1a9f88af",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/management-api.js",
+          "sha256": "46466eea8c0b8f7833ccc6793b2bfd54b80ecc35ba31fde24b22696e0d243567",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/modeldb-default-home.js",
+          "sha256": "ff4227802881e150fd6fb8e22d07cfeb38f30408ff25673c496807ea382227fa",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/modeldb-persisted-home.js",
+          "sha256": "08988593666f1215ec878bbf6ed8be71f95ca9dc2e16b534a6312e18c32357c8",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/modeldb-server.js",
+          "sha256": "829aa74bf9d1b8b0ee8067adccf7b8b6157c7e1e48d115e06953c65527e72bde",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/published-binding-surface-runtime.js",
+          "sha256": "77616cf7001f7599c6438464e0aea7112b2d41b5a84aa654a9360bb88dd8455a",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/published-interface-policy.js",
+          "sha256": "a98abb4b1b36cdd483964b35879bb0d091d9e164dca3f3bccd9b947be5148ed4",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/published-interface-runtime.js",
+          "sha256": "84c75e3f1f484dd9de7b476d22ed01a72adc68f69b08042d2213875b541cec2d",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/published-operation-interface-runtime.js",
+          "sha256": "6fcccb044b58639034b189e5868fa1e59fc16f35cf11891fb01d10dfcfb5c1ab",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/request-dispatcher.js",
+          "sha256": "ec459ff6b0ed69d0241094471e47b25dece75997500581d2548228411a5aaee8",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/asset-package.js",
+          "sha256": "90ee67f230ae6442d76d8d911311a3b1bcad658d60d7c0083cf31e053018e98e",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/authorization-service.js",
+          "sha256": "bee31f086ee76c1c48fcb1c8a11174ba544bfad0769d193842a47d1700920d57",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/backup-package.js",
+          "sha256": "bb10a6fa37d1f6ac05bd10c13e759a40cdfc9dfde7ae257137d53f0e874a03dc",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/local-management-channel.js",
+          "sha256": "90c14f06bdd8faa33b48746747c4dadfcf8371827f21f7ee73472b14736a7539",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/local-vault-key-provider.js",
+          "sha256": "827c0edf2a320d860cae39a9ce62c9fa516f94b718575fcde58cbd32851d9c66",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/migration-key.js",
+          "sha256": "6a6751543fc5db62bd591b70d588a1b2bb79626ffebef028b5d8d73bd41f2492",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/network-boundary.js",
+          "sha256": "0cba88d2daf451d4b8c98801a793a5aaab9fa30a2c18ca483caf92e453c3b001",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/network-policy.js",
+          "sha256": "f05d5ba5a709659f7309cbcec3b5fd4c95f54cc6fe055250e17dc78759cb2b8d",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/recovery-material.js",
+          "sha256": "c05efcb83a49d12422a23c1d5964f851293347ce9ee0bd95f20a4ce314279a95",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/registry-entrypoints.js",
+          "sha256": "a94b568ae3cdfd6ceb7e009a7e95bdcc3de406fb070dfb2f8f305510cf438646",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/security-control.js",
+          "sha256": "18489c0d8911a7eb619e6689f31d2d262b35fb8058448ae1230b9124b009b67a",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/security-errors.js",
+          "sha256": "02f46a0988eb81dd6953cba3927bdfc2b725c411268f75a0311d38d423cc8349",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/security-maintenance.js",
+          "sha256": "14cab47d2469d39344b4c42ed53545cbaa332e359256ff9159b0776d0cd59da7",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/security-protection.js",
+          "sha256": "edf898e12f96711e1e33ebafe8bc0c2287a16a3c56687f86b4de30577d3f40a3",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/security-registry.js",
+          "sha256": "e8e8f6f1a66dc0e998d0ce95d45b991a30f74aa4ce58c0a27ad0421c7472e06b",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/server-vault-keys.js",
+          "sha256": "fe3b42c8a1f225823524e5e92464479c47ad7c35131e7c732184e164c4e00109",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/security/windows-secret-protector.js",
+          "sha256": "baaf2794705657e0223f77dbe72a763b61ae942582019151adf5c8d1c968a29e",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/server-access-info.js",
+          "sha256": "cd5763112ba7d7848cbff9fd698d988e97d5fd68a331a98468a2286108d3e3a2",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/server-runtime-stats.js",
+          "sha256": "c93ff35211ed638ce817f32bb45130d002ad9186421bd4b4fd452018a804e846",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/stream-backpressure.js",
+          "sha256": "eef2fa3e8a48f82156e48921b50340c5576979a828bc41a6300fa9413da23f2a",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/transport-errors.js",
+          "sha256": "ec1ca2e06b7caad0cc6999d6ca4b043c839764d9308c44db7c038a59032e738b",
+          "sourceExists": true
+        },
+        {
+          "path": "packages/server/dist/write-serialization-gate.js",
+          "sha256": "254ccea8b00248823f20e326135b6fb835ad977f782f05b29d8ce41944fa63ad",
+          "sourceExists": true
+        }
+      ]
+    }
+  ]
+}
