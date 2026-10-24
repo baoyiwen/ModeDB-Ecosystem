@@ -1,7 +1,7 @@
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { DiagnosticCenter, ErrorCodes, PathResolver } from '@mode-db/common';
-import { AuthoringEngine, fileLooksLikeAtlasSingleVault } from '@mode-db/core';
+import { DiagnosticCenter, ErrorCodes, PathResolver, type VaultKeyProvider } from '@mode-db/common';
+import { AuthoringEngine } from '@mode-db/core';
 
 /**
  * Lazily constructs {@link AuthoringEngine} per logical database (**`<workspace>/<db>/atlas.mld`**)
@@ -19,7 +19,7 @@ export class AuthoringBridge {
 
   constructor(
     private readonly storageRoot: string,
-    private readonly connectToken: string,
+    private readonly keyProvider: VaultKeyProvider,
     private readonly bufferFlushRowThreshold?: number,
   ) {}
 
@@ -45,7 +45,24 @@ export class AuthoringBridge {
 
   /** Drop cached engine for a logical DB (e.g. after **`rm` workspace directory**). */
   evict(atlas: string): void {
+    const cached = this.cache.get(atlas);
     this.cache.delete(atlas);
+    void cached?.promise
+      .then((engine) => engine.dispose())
+      .catch(() => {
+        /* initialization already failed */
+      });
+  }
+
+  /** Flush and release all active engines on server shutdown. */
+  async close(): Promise<void> {
+    const engines = [...this.cache.values()];
+    this.cache.clear();
+    await Promise.all(
+      engines.map(async ({ promise }) => {
+        await (await promise).close();
+      }),
+    );
   }
 
   private async createEngine(atlas: string): Promise<AuthoringEngine> {
@@ -56,36 +73,23 @@ export class AuthoringBridge {
     const nestedDir = join(this.storageRoot, atlas);
     const nestedVaultPath = join(nestedDir, 'atlas.mld');
     const flatVaultPath = PathResolver.workspaceFlatVaultPath(this.storageRoot, atlas);
-    const ct = this.connectToken.trim();
-    if (!ct) {
-      throw new Error('AuthoringBridge: connectToken must be non-empty.');
-    }
-
     const baseEngineOpts = {
       atlas,
       storageRoot: this.storageRoot,
-      connectToken: ct,
+      keyProvider: this.keyProvider,
       // Server startup owns the process-wide logger. Opening a library must
       // not redirect it into the vault or reset its access-log configuration.
       engineLogger: false as const,
       ...flushOpt,
     };
 
-    if (existsSync(nestedVaultPath)) {
-      if (!(await fileLooksLikeAtlasSingleVault(nestedVaultPath))) {
-        throw new Error(
-          `AuthoringBridge: "${nestedVaultPath}" exists but is not a valid atlas single-file vault.`,
-        );
-      }
+    const present = (path: string): boolean =>
+      ['', '.pending', '.commit', '.lock', '.reclaim'].some((suffix) => existsSync(path + suffix));
+    if (present(nestedVaultPath)) {
       return new AuthoringEngine(baseEngineOpts);
     }
 
-    if (existsSync(flatVaultPath)) {
-      if (!(await fileLooksLikeAtlasSingleVault(flatVaultPath))) {
-        throw new Error(
-          `AuthoringBridge: "${flatVaultPath}" exists but is not a valid atlas single-file vault.`,
-        );
-      }
+    if (present(flatVaultPath)) {
       return new AuthoringEngine({
         ...baseEngineOpts,
         paths: new PathResolver(this.storageRoot, atlas, { workspaceFlatVault: true }),

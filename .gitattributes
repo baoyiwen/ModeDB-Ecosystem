@@ -1,0 +1,2 @@
+# Security acceptance reports bind exact bytes, including their original copies.
+/docs/security-v1-deliveries/evidence/** -text

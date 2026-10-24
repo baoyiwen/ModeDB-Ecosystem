@@ -13,10 +13,10 @@ import {TRANSFER_FORMAT} from '@mode-db/data-kit';
 import {writeTransferWorkbook,readTransferWorkbook} from '../../apps/model-designer/src/data-transfer/workbook.js';
 
 it('maps published aliases and self-join occurrences to current-language fields without exposing identities',()=>{
- const model={id:'m',model_name:'Node',name_i18n:{zh:'节点',en:'Node'},parent_id:null,props_objects_array:[{id:'f',name:'name',type:'I18N',name_i18n:{zh:'名称',en:'Name'}}]} as EngineModelNode;
+ const model={id:'m',model_name:'Node',name_i18n:{zh:'节点',en:'Node'},parent_id:null,props_objects_array:[{id:'f',name:'name',type:'I18N',is_primary:false,encrypt_level:0,metadata:{},name_i18n:{zh:'名称',en:'Name'}}]} as EngineModelNode;
  const asset=structuredClone(customerOrdersQueryFixture);
  asset.designGraph={rootNodeId:'a',nodes:[{id:'a',modelId:'m',alias:'a',role:'root'},{id:'b',modelId:'m',alias:'b',role:'joined'}],edges:[{id:'e',relationId:'r',fromNodeId:'a',toNodeId:'b',alias:'kids',traversal:'forward',required:false,cardinality:'many'}]};
- const release={queryInterface:asset,executionTemplate:{resultAdapter:{kind:'rows',rootNodeId:'a',fieldsByNode:{a:[{sourceField:'name',outputName:'label'}],b:[{sourceField:'name',outputName:'other'}]},edgesBySource:{a:[{outputName:'kids',toNodeId:'b',relationName:'children'}]}}}} as QueryInterfaceRelease;
+ const release={version:'1.0.0',publishedAt:'2026-10-17T00:00:00Z',callableName:'fixture',signature:'fixture',queryInterface:asset,executionTemplate:{format:1,parameters:[],pagination:{mode:'none'},snapshot:{plan:{version:2,originModel:'Node',start:{kind:'all'},hops:[],trailing:{type:'group',logic:'AND',children:[]}},execute:{},analysis:{groupBy:null,compute:null}},resultAdapter:{kind:'rows',rootNodeId:'a',fieldsByNode:{a:[{sourceField:'name',outputName:'label'}],b:[{sourceField:'name',outputName:'other'}]},edgesBySource:{a:[{outputName:'kids',toNodeId:'b',relationName:'children'}]}}}} as QueryInterfaceRelease;
  const display=buildPivotDisplay({models:[model],relations:[],schema:[],locale:'zh',release});
  assert.deepEqual(display.fields,[{key:'label',label:'名称',type:'I18N'}]);
  assert.deepEqual(display.children[0]?.node.fields,[{key:'other',label:'名称',type:'I18N'}]);
@@ -40,13 +40,13 @@ it('formats dates through the local display timezone and keeps raw values untouc
  assert.equal(displayPivotValue('invalid','DateTime','ja','current'),'invalid');
 });
 it('resolves both self-relation directions and translates aggregate source fields',()=>{
- const model={id:'m',model_name:'Node',name_i18n:{zh:'节点'},parent_id:null,props_objects_array:[{id:'f',name:'name',type:'I18N',name_i18n:{zh:'名称'}}]} as EngineModelNode;
+ const model={id:'m',model_name:'Node',name_i18n:{zh:'节点'},parent_id:null,props_objects_array:[{id:'f',name:'name',type:'I18N',is_primary:false,encrypt_level:0,metadata:{},name_i18n:{zh:'名称'}}]} as EngineModelNode;
  const relation={id:'r',kind:'modelRelation',source_model_id:'m',target_model_id:'m',forward_name:'children',reverse_name:'parent',forward_name_i18n:{zh:'子节点'},reverse_name_i18n:{zh:'父节点'}} as unknown as EngineRelationEdge;
  const display=buildPivotDisplay({models:[model],relations:[relation],schema:[],locale:'zh',modelId:'m'});
  assert.deepEqual(display.children.map(child=>child.key),['relates.children','relates.parent']);
  const asset=structuredClone(customerOrdersQueryFixture);
  asset.query.aggregation={groupBy:[{id:'g',source:{nodeId:'a',modelId:'m',fieldId:'f'},outputName:'dimension'}],metrics:[{id:'c',function:'count',source:{nodeId:'a',modelId:'m',fieldId:'f'},outputName:'n'}]};
- const release={queryInterface:asset,executionTemplate:{resultAdapter:{kind:'aggregation',dimensions:[{sourceField:'name',outputName:'dimension'}],metrics:[{wireKey:'n',outputName:'n'}]}}} as QueryInterfaceRelease;
+ const release={version:'1.0.0',publishedAt:'2026-10-17T00:00:00Z',callableName:'fixture',signature:'fixture',queryInterface:asset,executionTemplate:{format:1,parameters:[],pagination:{mode:'none'},snapshot:{plan:{version:2,originModel:'Node',start:{kind:'all'},hops:[],trailing:{type:'group',logic:'AND',children:[]}},execute:{},analysis:{groupBy:null,compute:null}},resultAdapter:{kind:'aggregation',dimensions:[{sourceField:'name',outputName:'dimension'}],metrics:[{wireKey:'n',outputName:'n'}]}}} as QueryInterfaceRelease;
  const aggregate=buildPivotDisplay({models:[model],relations:[],schema:[],locale:'zh',release,aggregateLabels:{count:'计数'}});
  assert.deepEqual(aggregate.fields.map(field=>field.label),['名称','名称 · 计数']);
 });

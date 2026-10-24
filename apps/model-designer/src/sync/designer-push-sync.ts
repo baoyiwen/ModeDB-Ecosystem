@@ -758,6 +758,7 @@ export interface PushLibraryParams {
   readonly host: string;
   readonly port: number;
   readonly token: string;
+  readonly browserSession?: boolean;
 }
 
 /**
@@ -792,6 +793,7 @@ export async function pushLibraryToEngine(params: PushLibraryParams): Promise<vo
     host: params.host,
     port: params.port,
     token: params.token,
+    browserSession: params.browserSession,
     businessDb: code,
   });
 
@@ -799,6 +801,7 @@ export async function pushLibraryToEngine(params: PushLibraryParams): Promise<vo
     host: params.host,
     port: params.port,
     token: params.token,
+    browserSession: params.browserSession,
     workspace: code,
   });
   try {
@@ -807,6 +810,7 @@ export async function pushLibraryToEngine(params: PushLibraryParams): Promise<vo
       host: params.host,
       port: params.port,
       token: params.token,
+      browserSession: params.browserSession,
       businessDb: code,
     });
     await pushSchemaToBusinessDb(businessClient, params.data, catalog);

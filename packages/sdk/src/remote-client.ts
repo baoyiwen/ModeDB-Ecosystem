@@ -34,6 +34,13 @@ import {
   type WireRelationStats,
   type WireRowRef,
 } from '@mode-db/shared';
+import {
+  ConnectionSecurityError,
+  connectionAuthHeaders,
+  remoteResponseError,
+} from './connection-security.js';
+import { connectionOrigin, assertSecureCredentialOrigin } from './connection-endpoint.js';
+import { browserSessionRequestInit } from './browser-session.js';
 
 export type QueryInterfaceInvocationResult = Extract<
   WireExecuteResultJson,
@@ -723,7 +730,7 @@ type WsEmitter = {
   once?(event: 'open' | 'error', fn: (...args: unknown[]) => void): void;
   addEventListener?(
     type: 'open' | 'error' | 'message' | 'close',
-    fn: (ev: Event | MessageEvent) => void,
+    fn: (ev: { readonly type: string; readonly data?: unknown }) => void,
     opts?: { once?: boolean },
   ): void;
 };
@@ -863,6 +870,8 @@ export interface ConnectRemoteOptions {
    */
   readonly connectToken?: string;
   readonly token?: string;
+  /** Use the browser's HttpOnly ModelDB session cookie instead of a bearer secret. */
+  readonly browserSession?: boolean;
   /**
    * Logical library **`dbName`** → server resolves **`<workspace>/<dbName>/`** (vault **`atlas.mld`** recommended).
    * Preferred over **`atlas`** for new integrations.
@@ -879,6 +888,9 @@ export interface ConnectRemoteOptions {
 }
 
 function resolveConnectToken(options: ConnectRemoteOptions): string {
+  if (options.browserSession) {
+    return '';
+  }
   const t = options.connectToken ?? options.token;
   if (typeof t !== 'string' || !t.trim()) {
     throw new Error(
@@ -907,6 +919,167 @@ type QuerySession = {
   /** Send a wire op, returning the **raw** JSON result (protocol-faithful; used by `apply`). */
   executeWireBodyRaw(body: WireExecuteBody): Promise<WireExecuteResultJson>;
 };
+
+class RegistryRemoteSession implements QuerySession {
+  constructor(
+    private readonly origin: string,
+    private readonly token: string,
+    readonly atlas: string,
+    private readonly browserSession = false,
+  ) {}
+
+  async connectHandshake(): Promise<void> {
+    const response = await fetch(
+      `${this.origin}/api/v1/security/context?database=${encodeURIComponent(this.atlas)}`,
+      {
+        redirect: 'error',
+        ...(this.browserSession
+          ? await browserSessionRequestInit(this.origin)
+          : { headers: connectionAuthHeaders(this.token) }),
+      },
+    );
+    if (!response.ok) {
+      throw await remoteResponseError(response);
+    }
+    const result: unknown = await response.json();
+    if (!isRecord(result) || result.version !== 1 || result.database !== this.atlas) {
+      throw new ConnectionSecurityError('SECURITY_PROTOCOL_UNSUPPORTED', 426);
+    }
+  }
+
+  async executeWireBodyRaw(body: WireExecuteBody): Promise<WireExecuteResultJson> {
+    const auth = this.browserSession
+      ? await browserSessionRequestInit(this.origin)
+      : { headers: connectionAuthHeaders(this.token) };
+    const response = await fetch(`${this.origin}/api/v1/rpc`, {
+      ...auth,
+      redirect: 'error',
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...auth.headers,
+      },
+      ...(this.browserSession ? { credentials: 'include' as const } : {}),
+      body: JSON.stringify({ version: 1, database: this.atlas, operation: body }),
+    });
+    if (!response.ok) {
+      throw await remoteResponseError(response);
+    }
+    const result: unknown = await response.json();
+    if (!isRecord(result) || result.version !== 1 || !isRecord(result.result)) {
+      throw new ConnectionSecurityError('SECURITY_PROTOCOL_UNSUPPORTED', 426);
+    }
+    return result.result as unknown as WireExecuteResultJson;
+  }
+  async executeWireBody(body: WireExecuteBody): Promise<unknown> {
+    return reviveWireResult(await this.executeWireBodyRaw(body));
+  }
+  executeSnapshot(snapshot: RemoteExecuteSnapshot): Promise<unknown> {
+    return this.executeWireBody({ op: 'executeQuery', snapshot });
+  }
+}
+
+class RegistryStreamSession implements QuerySession {
+  private waiting?: {
+    resolve: (value: unknown) => void;
+    reject: (error: Error) => void;
+    id?: string;
+  };
+  private queue: Promise<unknown> = Promise.resolve();
+  private closed = false;
+  constructor(
+    private readonly ws: WsEmitter,
+    private readonly token: string,
+    readonly atlas: string,
+    private readonly browserCsrf?: string,
+  ) {
+    bindSocketClose(ws, () => {
+      this.closed = true;
+      this.waiting?.reject(new ConnectionSecurityError('SECURITY_CONNECTION_CLOSED', 0));
+      this.waiting = undefined;
+    });
+    bindSocketMessage(ws, (raw) => {
+      try {
+        const msg: unknown = JSON.parse(messageText(raw));
+        if (!isRecord(msg) || msg.version !== 1) {
+          throw new ConnectionSecurityError('SECURITY_PROTOCOL_UNSUPPORTED', 426);
+        }
+        if (msg.type === 'security.error') {
+          this.waiting?.reject(
+            new ConnectionSecurityError(
+              String(msg.error),
+              Number(msg.status),
+              typeof msg.requestId === 'string' ? msg.requestId : undefined,
+            ),
+          );
+        } else if (
+          (msg.type === 'security.ready' && !this.waiting?.id && msg.database === this.atlas) ||
+          (msg.type === 'security.result' && msg.id === this.waiting?.id)
+        ) {
+          this.waiting?.resolve(msg.result);
+        } else {
+          throw new ConnectionSecurityError('SECURITY_PROTOCOL_UNSUPPORTED', 426);
+        }
+        this.waiting = undefined;
+      } catch (error) {
+        this.waiting?.reject(error instanceof Error ? error : new Error('Invalid response'));
+        this.waiting = undefined;
+        ws.close();
+      }
+    });
+  }
+  private exchange(message: object, id?: string): Promise<unknown> {
+    if (this.closed) {
+      return Promise.reject(new ConnectionSecurityError('SECURITY_CONNECTION_CLOSED', 0));
+    }
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.ws.close();
+        reject(new ConnectionSecurityError('SECURITY_CONNECTION_TIMEOUT', 0));
+      }, 30000);
+      this.waiting = {
+        id,
+        resolve: (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        reject: (error) => {
+          clearTimeout(timer);
+          reject(error);
+        },
+      };
+      try {
+        this.ws.send(JSON.stringify(message));
+      } catch (error) {
+        this.waiting.reject(error instanceof Error ? error : new Error('Send failed'));
+        this.waiting = undefined;
+      }
+    });
+  }
+  async connectHandshake(): Promise<void> {
+    await this.exchange({
+      type: 'security.hello',
+      version: 1,
+      ...(this.browserCsrf ? { csrf: this.browserCsrf } : { token: this.token }),
+      database: this.atlas,
+    });
+  }
+  async executeWireBodyRaw(body: WireExecuteBody): Promise<WireExecuteResultJson> {
+    const run = (): Promise<unknown> => {
+      const id = nextRpcId();
+      return this.exchange({ type: 'security.rpc', version: 1, id, operation: body }, id);
+    };
+    const next = this.queue.then(run, run);
+    this.queue = next.catch(() => undefined);
+    return (await next) as WireExecuteResultJson;
+  }
+  async executeWireBody(body: WireExecuteBody): Promise<unknown> {
+    return reviveWireResult(await this.executeWireBodyRaw(body));
+  }
+  executeSnapshot(snapshot: RemoteExecuteSnapshot): Promise<unknown> {
+    return this.executeWireBody({ op: 'executeQuery', snapshot });
+  }
+}
 
 class ShortRemoteSession implements QuerySession {
   constructor(
@@ -1265,17 +1438,29 @@ export class RemoteRuntimeModel {
   }
 }
 
-async function fetchManagementJson<T>(origin: string, token: string, path: string): Promise<T> {
+async function fetchManagementJson<T>(
+  origin: string,
+  auth: { readonly token?: string; readonly browserSession?: boolean },
+  path: string,
+): Promise<T> {
+  assertSecureCredentialOrigin(
+    origin,
+    auth.browserSession ? 'mdbt_v1_browser-session' : (auth.token ?? ''),
+  );
+  const access = auth.browserSession
+    ? await browserSessionRequestInit(origin)
+    : { headers: connectionAuthHeaders(auth.token ?? '') };
   const base = origin.replace(/\/$/, '');
   const url = `${base}${path}`;
   const trace = logInteractionStart('Management API', `GET ${path}`, { url });
   try {
     const res = await fetch(url, {
-      headers: { 'X-ModelDB-Connect-Token': token },
+      redirect: 'error',
+      ...access,
+      headers: access.headers,
     });
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+      throw await remoteResponseError(res);
     }
     const json = (await res.json()) as T;
     logInteractionSuccess(trace, {
@@ -1291,25 +1476,33 @@ async function fetchManagementJson<T>(origin: string, token: string, path: strin
 
 async function fetchManagementPostJson<T>(
   origin: string,
-  token: string,
+  auth: { readonly token?: string; readonly browserSession?: boolean },
   path: string,
   body: unknown,
 ): Promise<T> {
+  assertSecureCredentialOrigin(
+    origin,
+    auth.browserSession ? 'mdbt_v1_browser-session' : (auth.token ?? ''),
+  );
+  const access = auth.browserSession
+    ? await browserSessionRequestInit(origin)
+    : { headers: connectionAuthHeaders(auth.token ?? '') };
   const base = origin.replace(/\/$/, '');
   const url = `${base}${path}`;
   const trace = logInteractionStart('Management API', `POST ${path}`, { url, body });
   try {
     const res = await fetch(url, {
+      redirect: 'error',
+      ...access,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-ModelDB-Connect-Token': token,
+        ...access.headers,
       },
       body: JSON.stringify(body),
     });
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+      throw await remoteResponseError(res);
     }
     const json = (await res.json()) as T;
     logInteractionSuccess(trace, {
@@ -1323,13 +1516,26 @@ async function fetchManagementPostJson<T>(
   }
 }
 
-async function fetchManagementBlob(origin: string, token: string, path: string): Promise<Blob> {
+async function fetchManagementBlob(
+  origin: string,
+  auth: { readonly token?: string; readonly browserSession?: boolean },
+  path: string,
+): Promise<Blob> {
+  assertSecureCredentialOrigin(
+    origin,
+    auth.browserSession ? 'mdbt_v1_browser-session' : (auth.token ?? ''),
+  );
+  const access = auth.browserSession
+    ? await browserSessionRequestInit(origin)
+    : { headers: connectionAuthHeaders(auth.token ?? '') };
   const base = origin.replace(/\/$/, '');
   const url = `${base}${path}`;
   const trace = logInteractionStart('Management API', `GET ${path}`, { url, response: 'binary' });
   try {
     const res = await fetch(url, {
-      headers: { 'X-ModelDB-Connect-Token': token },
+      redirect: 'error',
+      ...access,
+      headers: access.headers,
     });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
@@ -1338,7 +1544,7 @@ async function fetchManagementBlob(origin: string, token: string, path: string):
           'The connected ModelDB Server does not provide the backup download API. Rebuild, upgrade, and restart @mode-db/server before exporting backups.',
         );
       }
-      throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+      throw await remoteResponseError(new Response(text, { status: res.status }));
     }
     const blob = await res.blob();
     logInteractionSuccess(trace, { status: res.status, bytes: blob.size });
@@ -1351,10 +1557,17 @@ async function fetchManagementBlob(origin: string, token: string, path: string):
 
 async function fetchManagementPostBlobJson<T>(
   origin: string,
-  token: string,
+  auth: { readonly token?: string; readonly browserSession?: boolean },
   path: string,
   body: Blob,
 ): Promise<T> {
+  assertSecureCredentialOrigin(
+    origin,
+    auth.browserSession ? 'mdbt_v1_browser-session' : (auth.token ?? ''),
+  );
+  const access = auth.browserSession
+    ? await browserSessionRequestInit(origin)
+    : { headers: connectionAuthHeaders(auth.token ?? '') };
   const base = origin.replace(/\/$/, '');
   const url = `${base}${path}`;
   const trace = logInteractionStart('Management API', `POST ${path}`, {
@@ -1364,10 +1577,12 @@ async function fetchManagementPostBlobJson<T>(
   });
   try {
     const res = await fetch(url, {
+      redirect: 'error',
+      ...access,
       method: 'POST',
       headers: {
         'Content-Type': 'application/octet-stream',
-        'X-ModelDB-Connect-Token': token,
+        ...access.headers,
       },
       body,
     });
@@ -1378,7 +1593,7 @@ async function fetchManagementPostBlobJson<T>(
           'The connected ModelDB Server does not provide the backup import API. Rebuild, upgrade, and restart @mode-db/server before importing backups.',
         );
       }
-      throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+      throw await remoteResponseError(new Response(text, { status: res.status }));
     }
     const json = (await res.json()) as T;
     logInteractionSuccess(trace, {
@@ -1392,18 +1607,30 @@ async function fetchManagementPostBlobJson<T>(
   }
 }
 
-async function fetchManagementDelete(origin: string, token: string, path: string): Promise<void> {
+async function fetchManagementDelete(
+  origin: string,
+  auth: { readonly token?: string; readonly browserSession?: boolean },
+  path: string,
+): Promise<void> {
+  assertSecureCredentialOrigin(
+    origin,
+    auth.browserSession ? 'mdbt_v1_browser-session' : (auth.token ?? ''),
+  );
+  const access = auth.browserSession
+    ? await browserSessionRequestInit(origin)
+    : { headers: connectionAuthHeaders(auth.token ?? '') };
   const base = origin.replace(/\/$/, '');
   const url = `${base}${path}`;
   const trace = logInteractionStart('Management API', `DELETE ${path}`, { url });
   try {
     const res = await fetch(url, {
+      redirect: 'error',
+      ...access,
       method: 'DELETE',
-      headers: { 'X-ModelDB-Connect-Token': token },
+      headers: access.headers,
     });
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`Management API failed (${path}): HTTP ${res.status} ${text}`);
+      throw await remoteResponseError(res);
     }
     logInteractionSuccess(trace, { status: res.status });
   } catch (e) {
@@ -1422,7 +1649,64 @@ export class RemoteModelDBClient {
   private async doConnect(): Promise<QuerySession> {
     const logical = resolveConnectLogicalDb(this.options);
     const connectToken = resolveConnectToken(this.options);
-    const mode = this.options.mode ?? 'stream';
+    const mode = this.options.mode ?? (this.options.browserSession ? 'short' : 'stream');
+    const origin = toHttpOrigin(this.options.url);
+    assertSecureCredentialOrigin(
+      origin,
+      this.options.browserSession ? 'mdbt_v1_browser-session' : connectToken,
+    );
+    const health = await fetch(`${origin}/health`, {
+      redirect: 'error',
+      ...(this.options.browserSession ? { credentials: 'include' as const } : {}),
+    });
+    if (!health.ok) {
+      throw await remoteResponseError(health);
+    }
+    const info: unknown = await health.json();
+    if (!isRecord(info) || info.ok !== true) {
+      throw new ConnectionSecurityError('SECURITY_PROTOCOL_UNSUPPORTED', 426);
+    }
+    const security = isRecord(info) && isRecord(info.security) ? info.security : undefined;
+    if (security && security.mode !== 'registry' && security.mode !== 'legacy') {
+      throw new ConnectionSecurityError('SECURITY_PROTOCOL_UNSUPPORTED', 426);
+    }
+    if (security?.mode === 'registry') {
+      if (
+        security.protocol !== 1 ||
+        (!this.options.browserSession && !connectToken.startsWith('mdbt_v1_'))
+      ) {
+        throw new ConnectionSecurityError('SECURITY_PROTOCOL_UNSUPPORTED', 426);
+      }
+      const browserAccess = this.options.browserSession
+        ? await browserSessionRequestInit(origin)
+        : undefined;
+      if (mode === 'short') {
+        const session = new RegistryRemoteSession(
+          origin,
+          connectToken,
+          logical,
+          this.options.browserSession,
+        );
+        await session.connectHandshake();
+        return session;
+      }
+      const url = new URL(toWsStreamUrl(this.options.url));
+      url.pathname = '/api/v1/stream';
+      url.search = '';
+      const ws = await openWebSocket(url.toString(), this.options.webSocketCtor);
+      this._ws = ws;
+      const session = new RegistryStreamSession(
+        ws,
+        connectToken,
+        logical,
+        browserAccess?.headers['x-modeldb-csrf'],
+      );
+      await session.connectHandshake();
+      return session;
+    }
+    if (this.options.browserSession || connectToken.startsWith('mdbt_v1_')) {
+      throw new ConnectionSecurityError('SECURITY_PROTOCOL_UNSUPPORTED', 426);
+    }
     if (mode === 'short') {
       const origin = toHttpOrigin(this.options.url);
       const session = new ShortRemoteSession(origin, connectToken, logical);
@@ -1448,6 +1732,8 @@ export class RemoteModelDBClient {
           return s;
         })
         .catch((e) => {
+          this._ws?.close();
+          this._ws = undefined;
           this._connectOnce = null;
           throw e;
         });
@@ -1467,12 +1753,14 @@ export class RemoteModelDBClient {
   static async listDatabases(options: {
     readonly host: string;
     readonly port: number;
-    readonly token: string;
+    readonly secure?: boolean;
+    readonly token?: string;
+    readonly browserSession?: boolean;
   }): Promise<readonly ManagementDatabaseInfo[]> {
-    const origin = `http://${options.host}:${options.port}`;
+    const origin = connectionOrigin(options);
     const json = await fetchManagementJson<ManagementDatabasesResponse>(
       origin,
-      options.token,
+      options,
       '/api/v1/management/databases',
     );
     if (!json || !Array.isArray(json.databases)) {
@@ -1487,12 +1775,14 @@ export class RemoteModelDBClient {
   static async getManagementStatus(options: {
     readonly host: string;
     readonly port: number;
-    readonly token: string;
+    readonly secure?: boolean;
+    readonly token?: string;
+    readonly browserSession?: boolean;
   }): Promise<ManagementStatusResponse> {
-    const origin = `http://${options.host}:${options.port}`;
+    const origin = connectionOrigin(options);
     return fetchManagementJson<ManagementStatusResponse>(
       origin,
-      options.token,
+      options,
       '/api/v1/management/status',
     );
   }
@@ -1503,14 +1793,16 @@ export class RemoteModelDBClient {
   static async getDatabaseCatalog(options: {
     readonly host: string;
     readonly port: number;
-    readonly token: string;
+    readonly secure?: boolean;
+    readonly token?: string;
+    readonly browserSession?: boolean;
     readonly database: string;
   }): Promise<ManagementCatalogResponse> {
-    const origin = `http://${options.host}:${options.port}`;
+    const origin = connectionOrigin(options);
     const enc = encodeURIComponent(options.database.trim());
     return fetchManagementJson<ManagementCatalogResponse>(
       origin,
-      options.token,
+      options,
       `/api/v1/management/databases/${enc}/catalog`,
     );
   }
@@ -1519,15 +1811,17 @@ export class RemoteModelDBClient {
   static async listBackups(options: {
     readonly host: string;
     readonly port: number;
-    readonly token: string;
+    readonly secure?: boolean;
+    readonly token?: string;
+    readonly browserSession?: boolean;
     readonly database?: string;
   }): Promise<readonly ManagementBackupInfo[]> {
-    const origin = `http://${options.host}:${options.port}`;
+    const origin = connectionOrigin(options);
     const database = options.database?.trim();
     const query = database ? `?database=${encodeURIComponent(database)}` : '';
     const json = await fetchManagementJson<ManagementBackupsResponse>(
       origin,
-      options.token,
+      options,
       `/api/v1/management/backups${query}`,
     );
     if (!json || !Array.isArray(json.backups)) {
@@ -1540,51 +1834,53 @@ export class RemoteModelDBClient {
   static async createBackup(options: {
     readonly host: string;
     readonly port: number;
-    readonly token: string;
+    readonly secure?: boolean;
+    readonly token?: string;
+    readonly browserSession?: boolean;
     readonly database: string;
     readonly reason?: string;
     readonly name?: string;
   }): Promise<ManagementBackupInfo> {
-    const origin = `http://${options.host}:${options.port}`;
+    const origin = connectionOrigin(options);
     const enc = encodeURIComponent(options.database.trim());
     const json = await fetchManagementPostJson<ManagementBackupCreateResponse>(
       origin,
-      options.token,
+      options,
       `/api/v1/management/databases/${enc}/backup`,
       { reason: options.reason ?? 'manual', name: options.name },
     );
     return json.backup;
   }
 
-  /** Download one server-side backup as a portable file. */
+  /** Download an encrypted backup; another instance also needs recovery or recipient material. */
   static async downloadBackup(options: {
     readonly host: string;
     readonly port: number;
-    readonly token: string;
+    readonly secure?: boolean;
+    readonly token?: string;
+    readonly browserSession?: boolean;
     readonly backupFile: string;
   }): Promise<Blob> {
-    const origin = `http://${options.host}:${options.port}`;
+    const origin = connectionOrigin(options);
     const file = encodeURIComponent(options.backupFile.trim());
-    return fetchManagementBlob(
-      origin,
-      options.token,
-      `/api/v1/management/backups/${file}/download`,
-    );
+    return fetchManagementBlob(origin, options, `/api/v1/management/backups/${file}/download`);
   }
 
-  /** Upload a portable ModelDB backup into the server backup directory. */
+  /** Upload and authenticate a v2 backup covered by this instance's retained keys. */
   static async importBackup(options: {
     readonly host: string;
     readonly port: number;
-    readonly token: string;
+    readonly secure?: boolean;
+    readonly token?: string;
+    readonly browserSession?: boolean;
     readonly fileName: string;
     readonly file: Blob;
   }): Promise<ManagementBackupInfo> {
-    const origin = `http://${options.host}:${options.port}`;
+    const origin = connectionOrigin(options);
     const query = `?fileName=${encodeURIComponent(options.fileName.trim())}`;
     const json = await fetchManagementPostBlobJson<ManagementBackupImportResponse>(
       origin,
-      options.token,
+      options,
       `/api/v1/management/backups/import${query}`,
       options.file,
     );
@@ -1595,15 +1891,17 @@ export class RemoteModelDBClient {
   static async restoreBackup(options: {
     readonly host: string;
     readonly port: number;
-    readonly token: string;
+    readonly secure?: boolean;
+    readonly token?: string;
+    readonly browserSession?: boolean;
     readonly database: string;
     readonly backupFile: string;
   }): Promise<ManagementBackupRestoreResponse> {
-    const origin = `http://${options.host}:${options.port}`;
+    const origin = connectionOrigin(options);
     const enc = encodeURIComponent(options.database.trim());
     return fetchManagementPostJson<ManagementBackupRestoreResponse>(
       origin,
-      options.token,
+      options,
       `/api/v1/management/databases/${enc}/restore`,
       { backupFile: options.backupFile.trim() },
     );
@@ -1613,15 +1911,17 @@ export class RemoteModelDBClient {
   static async clearDatabaseData(options: {
     readonly host: string;
     readonly port: number;
-    readonly token: string;
+    readonly secure?: boolean;
+    readonly token?: string;
+    readonly browserSession?: boolean;
     readonly database: string;
     readonly forceReset?: boolean;
   }): Promise<ManagementClearDatabaseResponse> {
-    const origin = `http://${options.host}:${options.port}`;
+    const origin = connectionOrigin(options);
     const enc = encodeURIComponent(options.database.trim());
     return fetchManagementPostJson<ManagementClearDatabaseResponse>(
       origin,
-      options.token,
+      options,
       `/api/v1/management/databases/${enc}/clear`,
       { forceReset: options.forceReset === true },
     );
@@ -1631,13 +1931,15 @@ export class RemoteModelDBClient {
   static async createDatabase(options: {
     readonly host: string;
     readonly port: number;
-    readonly token: string;
+    readonly secure?: boolean;
+    readonly token?: string;
+    readonly browserSession?: boolean;
     readonly name: string;
   }): Promise<void> {
-    const origin = `http://${options.host}:${options.port}`;
+    const origin = connectionOrigin(options);
     await fetchManagementPostJson<{ ok?: boolean }>(
       origin,
-      options.token,
+      options,
       '/api/v1/management/databases',
       { name: options.name.trim() },
     );
@@ -1647,12 +1949,14 @@ export class RemoteModelDBClient {
   static async deleteDatabase(options: {
     readonly host: string;
     readonly port: number;
-    readonly token: string;
+    readonly secure?: boolean;
+    readonly token?: string;
+    readonly browserSession?: boolean;
     readonly name: string;
   }): Promise<void> {
-    const origin = `http://${options.host}:${options.port}`;
+    const origin = connectionOrigin(options);
     const enc = encodeURIComponent(options.name.trim());
-    await fetchManagementDelete(origin, options.token, `/api/v1/management/databases/${enc}`);
+    await fetchManagementDelete(origin, options, `/api/v1/management/databases/${enc}`);
   }
 
   /**
@@ -1661,15 +1965,18 @@ export class RemoteModelDBClient {
   static async connectNetwork(options: {
     readonly host: string;
     readonly port: number;
-    readonly token: string;
+    readonly secure?: boolean;
+    readonly token?: string;
+    readonly browserSession?: boolean;
     readonly database: string;
     readonly mode?: 'short' | 'stream';
     readonly webSocketCtor?: WebSocketCtor;
   }): Promise<RemoteModelDBClient> {
-    const url = `http://${options.host}:${options.port}`;
+    const url = connectionOrigin(options);
     return RemoteModelDBClient.connect({
       url,
       connectToken: options.token,
+      browserSession: options.browserSession,
       dbName: options.database,
       mode: options.mode,
       webSocketCtor: options.webSocketCtor,
@@ -2228,6 +2535,7 @@ export class ModelDBClient {
   static connect(options: {
     readonly host: string;
     readonly port: number;
+    readonly secure?: boolean;
     readonly token: string;
     readonly database: string;
     readonly mode?: 'short' | 'stream';

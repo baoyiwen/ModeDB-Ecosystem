@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import {
   ModelDB,
+  logoutBrowserSession,
   RemoteModelDBClient,
   type ManagementBackupInfo,
   type ManagementCatalogResponse,
@@ -130,6 +131,9 @@ function StudioApp(): ReactElement {
   );
 
   const handleDisconnect = useCallback(() => {
+    const stored = getRestorableSession();
+    if (stored?.browserSession)
+      void logoutBrowserSession(stored).catch(() => notify.warning(i18n.t('sessionLogoutFailed')));
     try {
       clientRef.current?.close();
     } catch {
@@ -139,7 +143,7 @@ function StudioApp(): ReactElement {
     setClient(null);
     setSession(null);
     clearActiveSession();
-  }, []);
+  }, [i18n, notify]);
 
   const handleCatalogRefresh = useCallback(async (): Promise<ManagementCatalogResponse> => {
     if (!session) {
@@ -153,6 +157,7 @@ function StudioApp(): ReactElement {
       host: stored.host.trim(),
       port: stored.port,
       token: stored.token.trim(),
+      browserSession: stored.browserSession,
     });
     const [catalog, databases] = await Promise.all([
       db.getDatabaseCatalog(session.library),
@@ -160,6 +165,7 @@ function StudioApp(): ReactElement {
         host: stored.host.trim(),
         port: stored.port,
         token: stored.token.trim(),
+        browserSession: stored.browserSession,
       }),
     ]);
     const databaseInfo = databases.find((info) => info.name === session.library);
@@ -211,6 +217,7 @@ function StudioApp(): ReactElement {
         host: stored.host.trim(),
         port: stored.port,
         token: stored.token.trim(),
+        browserSession: stored.browserSession,
         database: library,
         reason: 'manual',
       });
@@ -227,6 +234,7 @@ function StudioApp(): ReactElement {
         host: stored.host.trim(),
         port: stored.port,
         token: stored.token.trim(),
+        browserSession: stored.browserSession,
         database: library,
       });
       if (backups.length === 0) {
@@ -254,6 +262,7 @@ function StudioApp(): ReactElement {
         host: stored.host.trim(),
         port: stored.port,
         token: stored.token.trim(),
+        browserSession: stored.browserSession,
         database: library,
         backupFile,
       });
@@ -281,6 +290,7 @@ function StudioApp(): ReactElement {
           host: stored.host.trim(),
           port: stored.port,
           token: stored.token.trim(),
+          browserSession: stored.browserSession,
           database: library,
           forceReset,
         });

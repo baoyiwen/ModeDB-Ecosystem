@@ -1,21 +1,32 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import type { RemoteModelDBClient } from '@mode-db/sdk';
-import { RemoteModelDBClient as RClient } from '@mode-db/sdk';
+import {
+  RemoteModelDBClient as RClient,
+  getBrowserSession,
+  pairBrowserSession,
+} from '@mode-db/sdk';
 import { ensureDesignerCatalog } from '../bootstrap/designer-storage-init.js';
 import { seedDefaultWorkspaceRecords } from '../bootstrap/seed-workspace-rows.js';
 import {
-  getRememberToken,
   getStoredHost,
   getStoredLastLibrary,
   getStoredPort,
   getStoredToken,
+  getPairingLaunch,
+  clearPairingLaunch,
+  clearSessionToken,
+  isBrowserSessionMode,
+  isSecurityCenterActive,
+  logoutCurrentBrowserSession,
+  persistSecurityCenterActive,
+  persistBrowserSessionMode,
   persistConnectionFields,
   persistLastLibrary,
   persistPublicBaseUrl,
   persistSessionToken,
   persistToken,
-  setRememberToken,
 } from '../config/connection-prefs.js';
+import { connectionErrorMessage } from '../config/connection-error.js';
 import { FIXED_MODEL_DESIGNER_DATABASE } from '../config/fixed-database.js';
 import { withTimeout } from '../engine/async-timeout.js';
 import { ensureDesignerWorkspaceSession } from '../engine/workspace-session.js';
@@ -34,6 +45,7 @@ import {
 } from '../sync/library-registry.js';
 import type { LibraryRegistryRecord } from '../types/library-registry.js';
 import { LibraryRegistryForm } from './LibraryRegistryForm.js';
+import { SecurityCenterWorkspace } from './SecurityCenterWorkspace.js';
 import { isValidUniqueName } from '../utils/name-validation.js';
 
 const CONNECT_MS = 45_000;
@@ -65,18 +77,20 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
   useEffect(() => i18n.subscribe(() => bump((n) => n + 1)), [i18n]);
 
   const designerClientRef = useRef<RemoteModelDBClient | null>(null);
+  const launch = getPairingLaunch();
+  const [browserSession, setBrowserSession] = useState(isBrowserSessionMode);
+  const [pairingCode, setPairingCode] = useState(launch?.code ?? '');
+  const launched = useRef(false);
+  const [securityAdmin, setSecurityAdmin] = useState(false);
 
   const [step, setStep] = useState<'credentials' | 'library' | 'opening'>('credentials');
-  const [host, setHost] = useState(() =>
-    getStoredHost(import.meta.env.VITE_MODE_DB_HOST ?? '127.0.0.1'),
+  const [host, setHost] = useState(
+    () => launch?.host ?? getStoredHost(import.meta.env.VITE_MODE_DB_HOST ?? '127.0.0.1'),
   );
-  const [port, setPort] = useState(() =>
-    getStoredPort(Number(import.meta.env.VITE_MODE_DB_PORT ?? 9090) || 9090),
+  const [port, setPort] = useState(
+    () => launch?.port ?? getStoredPort(Number(import.meta.env.VITE_MODE_DB_PORT ?? 9090) || 9090),
   );
-  const [token, setToken] = useState(() =>
-    getStoredToken(import.meta.env.VITE_MODE_DB_TOKEN ?? ''),
-  );
-  const [rememberToken, setRememberTokenState] = useState(getRememberToken);
+  const [token, setToken] = useState(() => getStoredToken(''));
   const [libraries, setLibraries] = useState<readonly LibraryRegistryRecord[]>([]);
   const [selectedDb, setSelectedDb] = useState(() =>
     getStoredLastLibrary(FIXED_MODEL_DESIGNER_DATABASE),
@@ -130,8 +144,28 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
     setSaveHint(null);
     setBusy(true);
     try {
+      persistBrowserSessionMode(browserSession);
+      if (browserSession) {
+        const endpoint = { host: host.trim(), port };
+        let session;
+        if (pairingCode.trim()) {
+          session = await pairBrowserSession(endpoint, pairingCode.trim());
+          clearPairingLaunch();
+          setPairingCode('');
+        } else {
+          session = await getBrowserSession(endpoint);
+        }
+        if (session.securityAdmin === true) {
+          persistConnectionFields(host.trim(), port, FIXED_MODEL_DESIGNER_DATABASE);
+          clearSessionToken();
+          persistSecurityCenterActive(true);
+          setSecurityAdmin(true);
+          return;
+        }
+      }
+      persistSecurityCenterActive(false);
       const list = await withTimeout(
-        RClient.listDatabases({ host: host.trim(), port, token: token.trim() }),
+        RClient.listDatabases({ host: host.trim(), port, token: token.trim(), browserSession }),
         CONNECT_MS,
         i18n.t('errors', 'connectTimeout'),
       );
@@ -139,6 +173,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
         host: host.trim(),
         port,
         token: token.trim(),
+        browserSession: isBrowserSessionMode(),
       })
         .then((status) => persistPublicBaseUrl(status.publicBaseUrl ?? ''))
         .catch(() => {
@@ -153,6 +188,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
           host: host.trim(),
           port,
           token: token.trim(),
+          browserSession: isBrowserSessionMode(),
           designerWorkspace: FIXED_MODEL_DESIGNER_DATABASE,
         }),
         CONNECT_MS,
@@ -174,14 +210,21 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
       setEditorMode('existing');
       setStep('library');
       persistConnectionFields(host.trim(), port, FIXED_MODEL_DESIGNER_DATABASE);
-      persistToken(rememberToken ? token.trim() : '');
-      setRememberToken(rememberToken);
+      persistToken(token.trim());
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
+      persistSecurityCenterActive(false);
+      setErr(connectionErrorMessage(e, i18n));
     } finally {
       setBusy(false);
     }
-  }, [host, port, token, rememberToken, selectedDb, i18n, refreshLibraries]);
+  }, [host, port, token, selectedDb, i18n, refreshLibraries, browserSession, pairingCode]);
+
+  useEffect(() => {
+    if ((launch || isSecurityCenterActive()) && !launched.current) {
+      launched.current = true;
+      void fetchDatabases();
+    }
+  }, [launch, fetchDatabases]);
 
   const saveLibraryDetails = useCallback(async (): Promise<void> => {
     const client = designerClientRef.current;
@@ -207,6 +250,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
             host: host.trim(),
             port,
             token: token.trim(),
+            browserSession: isBrowserSessionMode(),
             name: code,
           }),
           CONNECT_MS,
@@ -221,6 +265,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
           host: host.trim(),
           port,
           token: token.trim(),
+          browserSession: isBrowserSessionMode(),
         });
         const dbNames = list
           .filter((d) => d.name !== FIXED_MODEL_DESIGNER_DATABASE)
@@ -246,6 +291,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
         host: host.trim(),
         port,
         token: token.trim(),
+        browserSession: isBrowserSessionMode(),
       });
       const dbNames = list
         .filter((d) => d.name !== FIXED_MODEL_DESIGNER_DATABASE)
@@ -254,7 +300,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
       applyRecordToDraft(next);
       setSaveHint(i18n.t('ui', 'librarySaveDone'));
     } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
+      setErr(connectionErrorMessage(e, i18n));
     } finally {
       setBusy(false);
     }
@@ -273,7 +319,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
 
   const openLibrary = useCallback(async (): Promise<void> => {
     const name = selectedDb.trim();
-    if (!name || !token.trim()) {
+    if (!name || (!browserSession && !token.trim())) {
       window.alert(i18n.t('errors', 'tokenRequired'));
       return;
     }
@@ -294,6 +340,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
             host: host.trim(),
             port,
             token: token.trim(),
+            browserSession: isBrowserSessionMode(),
             designerWorkspace: FIXED_MODEL_DESIGNER_DATABASE,
           }),
           CONNECT_MS,
@@ -317,6 +364,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
               host: host.trim(),
               port,
               token: token.trim(),
+              browserSession: isBrowserSessionMode(),
               businessDb: name,
             });
             const report = await importEngineCatalogIntoDesignerDb(client!, name, catalog);
@@ -337,10 +385,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
       persistConnectionFields(host.trim(), port, FIXED_MODEL_DESIGNER_DATABASE);
       persistLastLibrary(name);
       persistSessionToken(token.trim());
-      if (rememberToken) {
-        persistToken(token.trim());
-      }
-      setRememberToken(rememberToken);
+      persistToken(token.trim());
       props.onEditorReady(
         client,
         name,
@@ -356,7 +401,7 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
       if (designerClientRef.current === client) {
         designerClientRef.current = null;
       }
-      const detail = e instanceof Error ? e.message : String(e);
+      const detail = connectionErrorMessage(e, i18n);
       const title = connectOk
         ? i18n.t('errors', 'bootstrapFailed')
         : i18n.t('errors', 'connectFailed');
@@ -366,10 +411,34 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
       setBusy(false);
       setOpeningDetail(null);
     }
-  }, [host, port, token, selectedDb, rememberToken, draft, libraries, i18n, props, asyncOps]);
+  }, [host, port, token, selectedDb, draft, libraries, i18n, props, asyncOps, browserSession]);
 
   const fieldClass = 'designer-connection-field';
   const locale = i18n.locale;
+
+  if (securityAdmin) {
+    return (
+      <>
+        {err ? (
+          <p role="alert" className="security-center-audit-error">
+            {err}
+          </p>
+        ) : null}
+        <SecurityCenterWorkspace
+          onDisconnect={() => {
+            void logoutCurrentBrowserSession()
+              .then(() => {
+                clearSessionToken();
+                setSecurityAdmin(false);
+                setStep('credentials');
+                setErr(null);
+              })
+              .catch(() => setErr(i18n.t('ui', 'sessionLogoutFailed')));
+          }}
+        />
+      </>
+    );
+  }
 
   return (
     <div className="designer-connection-flow designer-scrollbar-hide">
@@ -384,6 +453,8 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
               <input
                 className="designer-input"
                 value={host}
+                placeholder="127.0.0.1 / https://db.example.com"
+                title={i18n.t('errors', 'security_transportHint')}
                 onChange={(e) => setHost(e.target.value)}
               />
             </label>
@@ -397,31 +468,36 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
               />
             </label>
             <label className={fieldClass}>
-              <span>{i18n.t('ui', 'connectToken')}</span>
+              <span>{i18n.t('ui', 'sessionAuthMode')}</span>
+              <select
+                className="designer-select"
+                value={browserSession ? 'browser' : 'token'}
+                onChange={(e) => {
+                  setBrowserSession(e.target.value === 'browser');
+                  setToken('');
+                }}
+              >
+                <option value="browser">{i18n.t('ui', 'sessionBrowserMode')}</option>
+                <option value="token">{i18n.t('ui', 'sessionTokenMode')}</option>
+              </select>
+            </label>
+            <label className={fieldClass}>
+              <span>{i18n.t('ui', browserSession ? 'sessionPairingCode' : 'connectToken')}</span>
               <input
                 className="designer-input"
                 type="password"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
+                value={browserSession ? pairingCode : token}
+                onChange={(e) =>
+                  browserSession ? setPairingCode(e.target.value) : setToken(e.target.value)
+                }
                 autoComplete="off"
               />
             </label>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 12,
-                color: '#475569',
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={rememberToken}
-                onChange={(e) => setRememberTokenState(e.target.checked)}
-              />
-              {i18n.t('ui', 'rememberToken')}
-            </label>
+            <p className="designer-connection-lead">
+              {browserSession
+                ? i18n.t('ui', 'sessionPairingHint')
+                : i18n.t('errors', 'security_memoryOnly')}
+            </p>
             {err ? <div style={{ color: '#b91c1c', fontSize: 12 }}>{err}</div> : null}
             <div className="designer-connection-actions">
               <button

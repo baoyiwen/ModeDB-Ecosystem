@@ -1,0 +1,143 @@
+{
+  "format": "modeldb.security-acceptance.v1",
+  "milestone": "SEC-M7",
+  "task": "S7.1",
+  "date": "2026-10-24",
+  "baseCommit": "cde9c14680b8dd26cde7f65d16ac8c4cf2a4b0dc",
+  "codeState": "uncommitted-working-tree",
+  "environment": {
+    "platform": "win32",
+    "node": "v24.22.1",
+    "typescript": "5.9.3"
+  },
+  "checks": [
+    {
+      "name": "full-security-before-final-archive-hardening",
+      "files": 21,
+      "pass": 193,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 192207.3763
+    },
+    {
+      "name": "final-reset-and-fault-acceptance",
+      "files": 2,
+      "pass": 26,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 32408.2712
+    },
+    {
+      "name": "affected-type-fixture-regressions",
+      "files": 7,
+      "pass": 23,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 14802.3091
+    },
+    {
+      "name": "production-browser-apps-including-audit-aggregation",
+      "pass": 1,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 205800.6318,
+      "latestBuild": ["model-designer"],
+      "reusedBuilds": ["data-studio", "web"]
+    },
+    {
+      "name": "pnpm-run-check",
+      "exitCode": 0,
+      "eslintErrors": 0,
+      "existingEslintWarnings": 44,
+      "checkedFormatFilesAtRun": 583
+    },
+    {
+      "name": "designer-typecheck-and-production-build",
+      "exitCode": 0
+    }
+  ],
+  "boundaries": {
+    "temporarySyntheticDataOnly": true,
+    "explicitIsolatedConfigs": true,
+    "randomPorts": true,
+    "real9091Touched": false,
+    "realConfigOrSecretsOrVaultTouched": false,
+    "liveAclChanged": false,
+    "oldDistDeleted": false,
+    "deployedOrPublishedOrCommitted": false,
+    "physicalDiskExhaustionTested": false,
+    "hardwarePowerLossTested": false
+  },
+  "limits": [
+    "Per-request anonymous counts still require synchronous durable I/O.",
+    "Anonymous capacity failures are not counted as durable observations.",
+    "Reset archives require the original Windows DPAPI account.",
+    "S7.2 installation, clean-output packaging, full workflow and performance acceptance remain outstanding."
+  ],
+  "files": [
+    {
+      "path": "packages/server/src/security/reset-recovery.ts",
+      "sha256": "ef86d6da423a33b832bb3b5516a1bf1666e0ebede30c4887fa8248083130e5bb"
+    },
+    {
+      "path": "packages/server/src/security/security-maintenance.ts",
+      "sha256": "96396998d95f0ce0ac75d660ac3ded032406f5216e26f4ef8b6f90fd8af77068"
+    },
+    {
+      "path": "packages/server/src/security/security-registry.ts",
+      "sha256": "ca5c64f8b3c5559cefffc0e11dfa2aa3240f96775b90f4f2a4e6f532fb3bdf0c"
+    },
+    {
+      "path": "packages/server/src/cli-security.ts",
+      "sha256": "97b1f0a94f3ac3e330c62c3c165500cdb622301ae20045f8b40f2272985e7bb4"
+    },
+    {
+      "path": "packages/shared/src/security-contracts.ts",
+      "sha256": "2d26be4dd2ae2ff2377a22f1dde3ec5c07fa030943cde562043da4ca70765697"
+    },
+    {
+      "path": "packages/sdk/src/remote-client.ts",
+      "sha256": "01b0a40b64df763de0c76214c16ab3534cbeb4c4ee9e359905bdfeecba735114"
+    },
+    {
+      "path": "apps/model-designer/src/components/SecurityCenterWorkspace.tsx",
+      "sha256": "6ce47e80bb97c4e329a7c74ff108d29db480b2a8c26253c408f9974ad87ca439"
+    },
+    {
+      "path": "test/unit/security-reset-recovery.test.ts",
+      "sha256": "669cdeae7efd4e5253f2a10e9b94df88c1f436b129ecc81cdd3f5b14365a9dd5"
+    },
+    {
+      "path": "test/unit/security-fault-acceptance.test.ts",
+      "sha256": "024056763496ed640399144a0506e280112f30a70c16768f317441b4f171b51d"
+    },
+    {
+      "path": "test/fixtures/security-reset-child.ts",
+      "sha256": "d17558726396ebc6d841c9d5ecabfe21f05249a9954d086baef937a548c05ca9"
+    },
+    {
+      "path": "test/integration/security-browser-apps.test.ts",
+      "sha256": "f263e90b297177242ab744cc9de377ae2f03f6745f8fdde069e3e3d4ecdf9062"
+    },
+    {
+      "path": "scripts/check-format.mjs",
+      "sha256": "807026a61c65c23e5c7a68c6d746e5141e230bff314efce2b14cf548e1f7c604"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "53f2cdf260b8ee2dc369e23b84821ed9e2f38b7c576c7094e672fef667a8f9e8"
+    },
+    {
+      "path": "package.json",
+      "sha256": "ebaee92b5d1f579bbd3f4b73a79226ac8cb4faac7ef43a1f0e2fe5d8086a2068"
+    },
+    {
+      "path": "eslint.config.js",
+      "sha256": "019f89e2b90b8a163d29a5e77d4a4e1c3c886685193053369eb006e0bcf77d4a"
+    },
+    {
+      "path": ".prettierignore",
+      "sha256": "1931fbb09937fd837bf3479c2ade27ece5dfacb1c68c81db1bcc25c8002b6687"
+    }
+  ]
+}

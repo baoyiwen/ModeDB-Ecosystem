@@ -33,6 +33,14 @@ export interface ManagementDatabasesResponse {
 }
 
 export interface ManagementBackupInfo {
+  readonly format?: 'modeldb.backup.v2';
+  readonly packageId?: string;
+  readonly statistics?: {
+    readonly vaultBytes: number;
+    readonly entries: number;
+    readonly models: number;
+    readonly relations: number;
+  };
   readonly fileName: string;
   /** User-facing name; absent on legacy backup files. */
   readonly name?: string;

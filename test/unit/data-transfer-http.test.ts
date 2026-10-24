@@ -15,7 +15,7 @@ import type { TransferFilter } from '../../apps/model-designer/src/data-transfer
 
 it('exports filtered data and bidirectional/self relations through the SDK and validates without changing the vault', async () => {
   const root = mkdtempSync(join(tmpdir(), 'modedb-transfer-'));
-  const engine = new AuthoringEngine({ atlas: 'fixture', storageRoot: root, connectToken: 'transfer-fixture' });
+  const engine = new AuthoringEngine({ atlas: 'fixture', storageRoot: root, keyProvider: fixtureVaultKeys(root) });
   engine.registerModel('Node', { name: 'I18N', score: 'Int', code: 'String', happenedAt:'DateTime',active:'Boolean' });
   engine.registerModel('Group', { title: 'String' });
   engine.registerRelation('Node', 'Node', 'children', 'parent', 'one-to-many');
@@ -29,7 +29,7 @@ it('exports filtered data and bidirectional/self relations through the SDK and v
   const vault = join(root, 'fixture', 'atlas.mld');
   const hash = (): string => createHash('sha256').update(readFileSync(vault)).digest('hex');
   const before = hash();
-  const app = await buildDualTrackFastify({ host: '127.0.0.1', port: 0, storageRoot: root, designerWorkspace: 'designer', connectToken: 'transfer-fixture', dev: false, configFilePath: join(root, 'config.json') });
+  const app = await buildDualTrackFastify({ securityAudit: { retentionDays: 365, maxEvents: 10000 }, host: '127.0.0.1', port: 0, storageRoot: root, vaultKeyProvider: fixtureVaultKeys(root), designerWorkspace: 'designer', connectToken: 'transfer-fixture', dev: false, configFilePath: join(root, 'config.json') });
   let client: RemoteModelDBClient | undefined;
   try {
     const address = app.server.address();
@@ -70,13 +70,13 @@ it('exports filtered data and bidirectional/self relations through the SDK and v
       [[{field:'score',op:'between',value:'2',valueTo:'10'}],2],
     ];
     for(const [conditions,count] of expectedConditions) {
-      const preview=await queryModelPivot({client,source:{kind:'model',modelName:model.name},filter:{model,conditions}});
+      const preview=await queryModelPivot({client,source:{kind:'model',modelId:'fixture-model',modelName:model.name},filter:{model,conditions}});
       const exported=await collectModelTransfer({client,database:'fixture',model,relations:catalog.relations,filters:conditions});
       assert.equal(preview.rows.length,count,JSON.stringify(conditions));
       assert.equal(exported.rows.length,count,JSON.stringify(conditions));
     }
-    const firstPage=await queryModelPivot({client,source:{kind:'model',modelName:model.name},page:0,limit:1});
-    const secondPage=await queryModelPivot({client,source:{kind:'model',modelName:model.name},page:1,limit:1});
+    const firstPage=await queryModelPivot({client,source:{kind:'model',modelId:'fixture-model',modelName:model.name},page:0,limit:1});
+    const secondPage=await queryModelPivot({client,source:{kind:'model',modelId:'fixture-model',modelName:model.name},page:1,limit:1});
     assert.equal(firstPage.page.total,2);assert.equal(firstPage.page.pageCount,2);
     assert.equal(secondPage.page.page,1);assert.notDeepEqual(firstPage.rawRows,secondPage.rawRows);
     for (const filters of [
@@ -85,7 +85,7 @@ it('exports filtered data and bidirectional/self relations through the SDK and v
       [{ field: 'code', op: 'contains', value: 'PARENT' }],
       [{ field: 'score', op: 'gt', value: '5' }, { field: 'code', op: 'contains', value: 'CHILD' }],
     ] satisfies TransferFilter[][]) {
-      const preview = await queryModelPivot({ client, source: { kind: 'model', modelName: model.name }, fieldPolicy: { fields: model.fields.map((field) => field.name) }, filter: { model, conditions: filters } });
+      const preview = await queryModelPivot({ client, source: { kind: 'model', modelId: 'fixture-model', modelName: model.name }, fieldPolicy: { fields: model.fields.map((field) => field.name) }, filter: { model, conditions: filters } });
       const exported = await collectModelTransfer({ client, database: 'fixture', model, relations: catalog.relations, filters });
       assert.equal(preview.rows.length, exported.rows.length, 'preview and export must match for each condition set');
       assert.deepEqual(preview.rawRows.map((row) => ({ code: row.code, score: row.score })), exported.rows.map((row) => ({ code: row.values.code, score: row.values.score })));
@@ -97,3 +97,4 @@ it('exports filtered data and bidirectional/self relations through the SDK and v
     finally { rmSync(root, { recursive: true, force: true }); }
   }
 });
+import { fixtureVaultKeys } from '../vault-keys.js';

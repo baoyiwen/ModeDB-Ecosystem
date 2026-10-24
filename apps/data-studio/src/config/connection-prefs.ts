@@ -1,4 +1,20 @@
+import { takeBrowserPairingLink } from '@mode-db/sdk';
+
 const PREFIX = 'data-studio:';
+let activeToken = '';
+let pairingLaunch = takeBrowserPairingLink();
+export function getPairingLaunch(): typeof pairingLaunch {
+  return pairingLaunch;
+}
+export function clearPairingLaunch(): void {
+  pairingLaunch = undefined;
+}
+export function isBrowserSessionMode(): boolean {
+  return safeGet('authMode') !== 'token';
+}
+export function persistBrowserSessionMode(browser: boolean): void {
+  safeSet('authMode', browser ? 'browser' : 'token');
+}
 
 /** Active workspace session TTL after last connect or activity touch. */
 export const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
@@ -7,6 +23,7 @@ export interface RestorableSession {
   readonly host: string;
   readonly port: number;
   readonly token: string;
+  readonly browserSession?: boolean;
   readonly library: string;
 }
 
@@ -59,9 +76,9 @@ export function getStoredPort(fallback: number): number {
   return Number.isFinite(n) && n > 0 && n < 65536 ? Math.floor(n) : fallback;
 }
 
-export function getStoredToken(fallback: string): string {
-  const v = safeGet('token');
-  return v != null ? v : fallback;
+export function getStoredToken(_fallback: string): string {
+  safeRemove('token');
+  return activeToken;
 }
 
 export function getStoredLibrary(fallback: string): string {
@@ -72,7 +89,8 @@ export function getStoredLibrary(fallback: string): string {
 export function persistConnection(host: string, port: number, token: string): void {
   safeSet('host', host.trim());
   safeSet('port', String(port));
-  safeSet('token', token);
+  safeRemove('token');
+  activeToken = token;
 }
 
 export function persistLibrary(name: string): void {
@@ -102,9 +120,11 @@ export function persistActiveSession(ttlMs: number = SESSION_TTL_MS): void {
   safeSet('sessionExpiresAt', String(Date.now() + ttlMs));
 }
 
-/** Clears auto-restore session (manual disconnect). Credentials/library prefs are kept for the form. */
+/** Disconnect clears the in-memory credential; non-secret library preferences remain. */
 export function clearActiveSession(): void {
   safeRemove('sessionExpiresAt');
+  safeRemove('token');
+  activeToken = '';
 }
 
 /** Returns true when a non-expired session exists with library + token. */
@@ -119,7 +139,7 @@ export function isSessionValid(nowMs: number = Date.now()): boolean {
   }
   const library = getStoredLibrary('');
   const token = getStoredToken('');
-  return library.trim() !== '' && token.trim() !== '';
+  return library.trim() !== '' && (isBrowserSessionMode() || token.trim() !== '');
 }
 
 /** Session payload for silent reconnect after page refresh. */
@@ -129,13 +149,18 @@ export function getRestorableSession(nowMs: number = Date.now()): RestorableSess
   }
   const library = getStoredLibrary('');
   const token = getStoredToken('');
-  if (library.trim() === '' || token.trim() === '') {
+  if (
+    getPairingLaunch() ||
+    library.trim() === '' ||
+    (!isBrowserSessionMode() && token.trim() === '')
+  ) {
     return null;
   }
   return {
     host: getStoredHost('127.0.0.1'),
     port: getStoredPort(8765),
     token,
+    browserSession: isBrowserSessionMode(),
     library,
   };
 }
@@ -147,6 +172,7 @@ export function touchActiveSession(
   ttlMs: number = SESSION_TTL_MS,
   nowMs: number = Date.now(),
 ): void {
+  if (isBrowserSessionMode()) return; // Server session expiry is authoritative.
   if (!isSessionValid(nowMs)) {
     return;
   }

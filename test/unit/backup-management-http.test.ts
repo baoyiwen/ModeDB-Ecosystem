@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { fixtureVaultKeys } from '../vault-keys.js';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -11,17 +12,19 @@ it('supports named backups and validation across the management HTTP workflow', 
   const engine = new AuthoringEngine({
     atlas: 'graph',
     storageRoot: root,
-    connectToken: 'fixture-token',
+    keyProvider: fixtureVaultKeys(root),
   });
   engine.registerModel('Item', { label: 'String' });
   await engine.insert('Item', { label: 'before backup' }, { sync: true });
   await engine.flushAll();
   const app = await buildDualTrackFastify({
+    vaultKeyProvider: fixtureVaultKeys(root),
     host: '127.0.0.1',
     port: 0,
     storageRoot: root,
     designerWorkspace: 'designer',
     connectToken: 'fixture-token',
+    securityAudit: { maxEvents: 10000, retentionDays: 365 },
     dev: false,
     configFilePath: join(root, 'config.json'),
   });
@@ -63,7 +66,7 @@ it('supports named backups and validation across the management HTTP workflow', 
       headers,
     });
     assert.equal(downloaded.statusCode, 200, downloaded.body);
-    assert.equal(JSON.parse(downloaded.body).name, backup.name);
+    assert.equal(JSON.parse(Buffer.from(JSON.parse(downloaded.body).protected, 'base64url').toString()).manifest.name, backup.name);
     const imported = await app.inject({
       method: 'POST',
       url: `/api/v1/management/backups/import?fileName=${backup.fileName}`,

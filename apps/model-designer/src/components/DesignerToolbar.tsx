@@ -10,6 +10,7 @@ import {
 } from '../sync/engine-catalog-import.js';
 import {
   getSessionToken,
+  isBrowserSessionMode,
   getStoredHost,
   getStoredPort,
   getStoredToken,
@@ -354,6 +355,7 @@ export class DesignerToolbar extends DesignerComponent<
                         host: getStoredHost('127.0.0.1'),
                         port: getStoredPort(9090),
                         token: getSessionToken() ?? getStoredToken(''),
+                        browserSession: isBrowserSessionMode(),
                       }),
                     { detail: libName },
                   );
@@ -383,6 +385,7 @@ export class DesignerToolbar extends DesignerComponent<
                         host: getStoredHost('127.0.0.1'),
                         port: getStoredPort(9090),
                         token,
+                        browserSession: isBrowserSessionMode(),
                         businessDb: libName,
                       });
                       await importEngineCatalogIntoDesignerDb(client, libName, catalog);
@@ -435,6 +438,7 @@ export class DesignerToolbar extends DesignerComponent<
                         host,
                         port,
                         token,
+                        browserSession: isBrowserSessionMode(),
                         database: libName,
                       });
                       await reloadBusinessCatalog();
@@ -474,6 +478,7 @@ export class DesignerToolbar extends DesignerComponent<
                         host,
                         port,
                         token,
+                        browserSession: isBrowserSessionMode(),
                         database: libName,
                         forceReset: true,
                       });

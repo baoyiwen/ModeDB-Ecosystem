@@ -8,6 +8,8 @@ import { getModelDbCliSettingsDir, setPersistedModelDbHomePath } from './modeldb
 import { runBackup, runBackups, runClearData, runForceReset, runRestore } from './cli-backup.js';
 import { runCreateDb } from './cli-create-db.js';
 import { runInfo, runLs } from './cli-mgmt.js';
+import { runSecurityCli } from './cli-security.js';
+import { SecurityError } from './security/security-errors.js';
 
 function parseExportTokenArgv(argv: string[]): { config?: string } {
   const out: { config?: string } = {};
@@ -44,6 +46,18 @@ async function runExportToken(configArg: string | undefined): Promise<void> {
 }
 
 const argv = process.argv.slice(2);
+
+if (argv[0] === 'security') {
+  try {
+    await runSecurityCli(argv.slice(1));
+  } catch (error) {
+    console.error(
+      error instanceof SecurityError ? error.code : 'SECURITY_LOCAL_CHANNEL_UNAVAILABLE',
+    );
+    process.exit(1);
+  }
+  process.exit(0);
+}
 
 if (argv[0] === 'set') {
   const dir = argv[1];
@@ -119,7 +133,7 @@ if (argv[0] === 'backup') {
   const dbName = argv[1]?.trim();
   if (!dbName) {
     console.error(
-      'Usage: modeldb-server backup <db-name> [--reason manual] [-c <session-root|modeldb.config.json>] [-t <connectToken>]',
+      'Usage: modeldb-server backup <db-name> [--reason manual] -c <session-root|modeldb.config.json> (offline)',
     );
     process.exit(1);
   }
@@ -151,7 +165,7 @@ if (argv[0] === 'restore') {
   const backupFile = argv[2]?.trim();
   if (!dbName || !backupFile) {
     console.error(
-      'Usage: modeldb-server restore <db-name> <backup-file> --yes [-c <session-root|modeldb.config.json>] [-t <connectToken>]',
+      'Usage: modeldb-server restore <db-name> <backup-file> --yes -c <session-root|modeldb.config.json> (offline)',
     );
     process.exit(1);
   }
@@ -215,7 +229,7 @@ const program = new Command()
   .option('-H, --host <host>', 'Bind host (default 127.0.0.1)')
   .option('--advertised-host <host>', 'Preferred hostname or IP to print for clients')
   .option('--public-base-url <url>', 'Public HTTP(S) base URL shown in API documentation')
-  .option('-t, --token <secret>', 'Client connect token (also derives the atlas vault key)')
+  .option('-t, --token <secret>', 'Legacy network credential only; never derives a Vault key')
   .option('--dev', 'Print decrypted RPC payloads to stderr (development only)');
 
 const startArgv = argv[0] === 'start' ? argv.slice(1) : argv;

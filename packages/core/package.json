@@ -4,7 +4,7 @@
   "description": "ModeDB storage engine, authoring/runtime model APIs, and single-file Vault orchestration.",
   "type": "module",
   "main": "./dist/index.js",
-  "types": "./index.ts",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "dist",
@@ -17,7 +17,7 @@
   ],
   "exports": {
     ".": {
-      "types": "./index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     }

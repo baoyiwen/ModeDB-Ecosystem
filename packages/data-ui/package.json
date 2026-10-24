@@ -4,10 +4,10 @@
   "description": "React data page components and DataPageProvider for ModelDB (Table, Pivot, Import — builds on @mode-db/data-kit).",
   "type": "module",
   "main": "./dist/index.js",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     }

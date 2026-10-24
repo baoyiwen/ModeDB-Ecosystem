@@ -1,14 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import {
   ModelDB,
+  getBrowserSession,
+  pairBrowserSession,
+  logoutBrowserSession,
+  connectionSecurityIssue,
   type ManagementCatalogModelInfo,
   type ManagementCatalogRelationInfo,
   type ManagementCatalogResponse,
   type RemoteModelDBClient,
 } from '@mode-db/sdk';
 import { AppConfirmProvider, AppDrawer, useAppConfirm } from '@mode-db/data-ui';
-import { LOCALE_LABEL, type LocaleId } from './i18n/messages';
+import { LOCALE_LABEL, type LocaleId, type MessageKey } from './i18n/messages';
 import { useI18n } from './i18n/I18nContext';
+import {
+  getConnectionToken,
+  setConnectionToken,
+  getPairingLaunch,
+  clearPairingLaunch,
+  isBrowserSessionMode,
+  persistBrowserSessionMode,
+} from './session/connection-credentials.js';
 import { QueryPanel } from './components/QueryPanel.js';
 import { useHashRoute } from './hooks/use-hash-route.js';
 import { QueryManualPage } from './pages/QueryManualPage.js';
@@ -23,7 +35,6 @@ import {
 const LS = {
   host: 'modedb.playground.host',
   port: 'modedb.playground.port',
-  token: 'modedb.playground.token',
 } as const;
 
 function load(key: string, fallback: string): string {
@@ -40,6 +51,12 @@ function save(key: string, value: string): void {
   } catch {
     /* ignore */
   }
+}
+
+function connectionMessage(error: unknown, translate: (key: MessageKey) => string): string {
+  const issue = connectionSecurityIssue(error);
+  const detail = error instanceof Error ? error.message : String(error);
+  return issue ? `${translate(`security.${issue}`)} (${detail})` : detail;
 }
 
 function serializeRowEntity(row: unknown): unknown {
@@ -140,15 +157,16 @@ function PlaygroundApp(): ReactElement {
     }
   };
 
-  const [host, setHost] = useState(() =>
-    load(LS.host, import.meta.env.VITE_DEFAULT_HOST ?? '127.0.0.1'),
+  const launch = getPairingLaunch();
+  const [browserSession, setBrowserSession] = useState(isBrowserSessionMode);
+  const [pairingCode, setPairingCode] = useState(launch?.code ?? '');
+  const [host, setHost] = useState(
+    () => launch?.host ?? load(LS.host, import.meta.env.VITE_DEFAULT_HOST ?? '127.0.0.1'),
   );
   const [port, setPort] = useState(() =>
-    load(LS.port, import.meta.env.VITE_DEFAULT_PORT ?? '8765'),
+    launch ? String(launch.port) : load(LS.port, import.meta.env.VITE_DEFAULT_PORT ?? '8765'),
   );
-  const [token, setToken] = useState(() =>
-    load(LS.token, import.meta.env.VITE_DEFAULT_TOKEN ?? ''),
-  );
+  const [token, setToken] = useState(getConnectionToken);
 
   const [webGpu, setWebGpu] = useState<string>('…');
   const [busy, setBusy] = useState(false);
@@ -193,7 +211,7 @@ function PlaygroundApp(): ReactElement {
     save(LS.port, port);
   }, [port]);
   useEffect(() => {
-    save(LS.token, token);
+    setConnectionToken(token);
   }, [token]);
 
   const endpoint = useMemo(() => `${host}:${port}`, [host, port]);
@@ -205,7 +223,8 @@ function PlaygroundApp(): ReactElement {
       names.map(async (n: string) => {
         try {
           next[n] = await db.getDatabaseCatalog(n);
-        } catch {
+        } catch (error) {
+          if (connectionSecurityIssue(error)) throw error;
           next[n] = { database: n, models: [], relations: [] };
         }
       }),
@@ -221,7 +240,7 @@ function PlaygroundApp(): ReactElement {
         setResult(null);
       }
       const p = Number(port);
-      if (!token.trim() || !Number.isFinite(p)) {
+      if ((!browserSession && !token.trim()) || !Number.isFinite(p)) {
         if (!opts?.silent) {
           setError(t('connect.needCredentials'));
         }
@@ -231,7 +250,16 @@ function PlaygroundApp(): ReactElement {
         setBusy(true);
       }
       try {
-        const db = new ModelDB({ host: host.trim(), port: p, token: token.trim() });
+        persistBrowserSessionMode(browserSession);
+        if (browserSession) {
+          const endpoint = { host: host.trim(), port: p };
+          if (pairingCode.trim()) {
+            await pairBrowserSession(endpoint, pairingCode.trim());
+            clearPairingLaunch();
+            setPairingCode('');
+          } else await getBrowserSession(endpoint);
+        }
+        const db = new ModelDB({ host: host.trim(), port: p, token: token.trim(), browserSession });
         await loadTrees(db);
         setModelDb(db);
         if (!opts?.silent) {
@@ -243,7 +271,7 @@ function PlaygroundApp(): ReactElement {
         return true;
       } catch (e) {
         clearPlaygroundSession();
-        const message = e instanceof Error ? e.message : String(e);
+        const message = connectionMessage(e, t);
         if (opts?.silent) {
           setError(t('session.reconnectFailed', { reason: message }));
         } else {
@@ -258,7 +286,7 @@ function PlaygroundApp(): ReactElement {
         }
       }
     },
-    [host, loadTrees, port, t, token],
+    [host, loadTrees, port, t, token, browserSession, pairingCode],
   );
 
   useEffect(() => {
@@ -267,15 +295,20 @@ function PlaygroundApp(): ReactElement {
       return;
     }
     let cancelled = false;
-    void modelDb.use(selectedDb).then((c: RemoteModelDBClient) => {
-      if (!cancelled) {
-        setWire(c);
-      }
-    });
+    void modelDb
+      .use(selectedDb)
+      .then((c: RemoteModelDBClient) => {
+        if (!cancelled) {
+          setWire(c);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setError(connectionMessage(error, t));
+      });
     return () => {
       cancelled = true;
     };
-  }, [modelDb, selectedDb]);
+  }, [modelDb, selectedDb, t]);
 
   useEffect(() => {
     if (autoConnectStarted.current || modelDb) {
@@ -284,7 +317,7 @@ function PlaygroundApp(): ReactElement {
     autoConnectStarted.current = true;
 
     const session = loadPlaygroundSession();
-    if (!isPlaygroundSessionValid(session)) {
+    if (!launch && !isPlaygroundSessionValid(session)) {
       if (session) {
         clearPlaygroundSession();
         setError(t('session.expired'));
@@ -293,7 +326,7 @@ function PlaygroundApp(): ReactElement {
     }
 
     const p = Number(port);
-    if (!token.trim() || !Number.isFinite(p)) {
+    if ((!browserSession && !token.trim()) || !Number.isFinite(p)) {
       return;
     }
 
@@ -301,10 +334,18 @@ function PlaygroundApp(): ReactElement {
     void connect({ silent: true }).finally(() => {
       setSessionRestoring(false);
     });
-  }, [connect, modelDb, port, t, token]);
+  }, [connect, modelDb, port, t, token, browserSession, launch]);
 
   const disconnect = useCallback((): void => {
+    if (browserSession)
+      void logoutBrowserSession({ host, port: Number(port) }).catch(() =>
+        setError(t('session.logoutFailed')),
+      );
+    wire?.close();
+    for (const database of Object.keys(catalogs)) modelDb?.releaseClient(database);
     clearPlaygroundSession();
+    setToken('');
+    setConnectionToken('');
     setModelDb(null);
     setCatalogs({});
     setSelectedDb(null);
@@ -312,7 +353,7 @@ function PlaygroundApp(): ReactElement {
     setWire(null);
     setResult(null);
     setError(null);
-  }, []);
+  }, [catalogs, modelDb, wire, host, port, browserSession, t]);
 
   const createDb = useCallback(async (): Promise<void> => {
     if (!modelDb) {
@@ -330,7 +371,7 @@ function PlaygroundApp(): ReactElement {
       setNewDbName('');
       await loadTrees(modelDb);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(connectionMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -358,7 +399,7 @@ function PlaygroundApp(): ReactElement {
       setWire(null);
       await loadTrees(modelDb);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(connectionMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -380,7 +421,7 @@ function PlaygroundApp(): ReactElement {
       const out = await wire.model(selectedModel).insertMany(parsed as Record<string, unknown>[]);
       setResult(out);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(connectionMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -402,7 +443,7 @@ function PlaygroundApp(): ReactElement {
         await loadTrees(modelDb);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(connectionMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -432,7 +473,7 @@ function PlaygroundApp(): ReactElement {
         await loadTrees(modelDb);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(connectionMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -457,7 +498,7 @@ function PlaygroundApp(): ReactElement {
         await loadTrees(modelDb);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(connectionMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -483,7 +524,7 @@ function PlaygroundApp(): ReactElement {
       const out = await wire.apply({ op: 'clearModelData', model: selectedModel });
       setResult(out);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(connectionMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -509,7 +550,7 @@ function PlaygroundApp(): ReactElement {
       const out = await wire.apply({ op: 'clearAllData' });
       setResult(out);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(connectionMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -527,7 +568,7 @@ function PlaygroundApp(): ReactElement {
       const backup = await modelDb.createBackup(selectedDb, 'manual');
       setResult({ ok: true, op: 'createBackup', backup });
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(connectionMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -572,7 +613,7 @@ function PlaygroundApp(): ReactElement {
       setWire(nextWire);
       setResult({ op: 'restoreBackup', ...out });
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(connectionMessage(e, t));
     } finally {
       setBusy(false);
     }
@@ -603,7 +644,7 @@ function PlaygroundApp(): ReactElement {
         setWire(nextWire);
         setResult({ op: forceReset ? 'forceResetDatabase' : 'clearDatabaseData', ...out });
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        setError(connectionMessage(e, t));
       } finally {
         setBusy(false);
       }
@@ -659,6 +700,8 @@ function PlaygroundApp(): ReactElement {
               <label htmlFor="host">{t('connect.host')}</label>
               <input
                 id="host"
+                placeholder="127.0.0.1 / https://db.example.com"
+                title={t('security.transportHint')}
                 value={host}
                 onChange={(e) => setHost(e.target.value)}
                 autoComplete="off"
@@ -670,14 +713,33 @@ function PlaygroundApp(): ReactElement {
                 onChange={(e) => setPort(e.target.value)}
                 autoComplete="off"
               />
-              <label htmlFor="token">{t('connect.token')}</label>
+              <label htmlFor="authMode">{t('session.authMode')}</label>
+              <select
+                id="authMode"
+                value={browserSession ? 'browser' : 'token'}
+                onChange={(e) => {
+                  setBrowserSession(e.target.value === 'browser');
+                  setToken('');
+                }}
+              >
+                <option value="browser">{t('session.browserMode')}</option>
+                <option value="token">{t('session.tokenMode')}</option>
+              </select>
+              <label htmlFor="token">
+                {t(browserSession ? 'session.pairingCode' : 'connect.token')}
+              </label>
               <input
                 id="token"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
+                value={browserSession ? pairingCode : token}
+                onChange={(e) =>
+                  browserSession ? setPairingCode(e.target.value) : setToken(e.target.value)
+                }
                 autoComplete="off"
                 type="password"
               />
+              <p className="meta">
+                {t(browserSession ? 'session.pairingHint' : 'security.memoryOnly')}
+              </p>
               <div className="actions">
                 <button type="button" disabled={busy} onClick={() => void connect()}>
                   {t('connect.button')}

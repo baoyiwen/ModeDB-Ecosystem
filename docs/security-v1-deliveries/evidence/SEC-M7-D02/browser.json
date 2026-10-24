@@ -1,0 +1,21 @@
+{
+  "format": "modeldb.security-browser-acceptance.v1",
+  "tests": 2,
+  "pass": 2,
+  "fail": 0,
+  "skip": 0,
+  "durationMs": 318272.4874,
+  "cases": [
+    {
+      "name": "asset-review-publication-target-authorization",
+      "durationMs": 131986.6726
+    },
+    {
+      "name": "three-production-frontends-security-center",
+      "durationMs": 180134.2761
+    }
+  ],
+  "logSha256": "4ca81c42a5e19dcc60193333540656b0a716e33bba8d705bf2b12dd0615fdd5b",
+  "frontendManifest": "tested-release-candidate.original.json.txt",
+  "equivalentDeliveryManifest": "release-candidate.json"
+}

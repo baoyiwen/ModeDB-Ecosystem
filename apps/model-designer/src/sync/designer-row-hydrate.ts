@@ -1,4 +1,5 @@
 import type { ManagementCatalogResponse, RemoteModelDBClient } from '@mode-db/sdk';
+import { designerInheritanceRelationId } from '@mode-db/sdk';
 import { SYS_MODEL, SYS_PROPS, SYS_RELATION_DEF } from '../bootstrap/designer-storage-init.js';
 import { DataType } from '../config/engine-prop-types.js';
 import {
@@ -576,7 +577,7 @@ export async function fetchGraphFromDesignerRows(
       continue;
     }
     relations.push({
-      id: createUuid(),
+      id: designerInheritanceRelationId(m.parent_id, m.id),
       source_model_id: m.parent_id,
       target_model_id: m.id,
       forward_name: INHERIT_RELATION_DEFAULT_NAME,

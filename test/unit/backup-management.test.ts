@@ -1,5 +1,7 @@
+import { AtlasSingleVault, readAtlasVaultKeyReference } from '@mode-db/core';
+import { fixtureVaultKeys } from '../vault-keys.js';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
@@ -24,7 +26,7 @@ function withWorkspace(run: (root: string) => void): void {
   const root = mkdtempSync(join(tmpdir(), 'modedb-backup-test-'));
   try {
     mkdirSync(join(root, 'graph'), { recursive: true });
-    writeFileSync(join(root, 'graph', 'atlas.mld'), 'test-only-vault');
+    const vault = new AtlasSingleVault(); vault.set('test', 'test-only-vault'); vault.saveSync(join(root, 'graph', 'atlas.mld'), fixtureVaultKeys(root).resolveKey('graph'));
     run(root);
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -34,32 +36,35 @@ function withWorkspace(run: (root: string) => void): void {
 describe('named backup contract', () => {
   it('persists Unicode names through creation, listing, export, import and restore', () =>
     withWorkspace((root) => {
-      const created = createDatabaseBackup(root, 'graph', 'manual', '  上线前备份  ');
+      const created = createDatabaseBackup(root, 'graph', 'manual', '  上线前备份  ', fixtureVaultKeys(root));
       assert.equal(created.name, '上线前备份');
       assert.match(created.fileName, /^[A-Za-z0-9_.-]+\.modeldb-backup\.json$/);
-      const exported = readDatabaseBackupFile(root, created.fileName);
+      const exported = readDatabaseBackupFile(root, created.fileName, fixtureVaultKeys(root));
       assert.equal(exported.info.name, created.name);
-      assert.equal(JSON.parse(exported.content.toString()).name, created.name);
-      const imported = importDatabaseBackup(root, created.fileName, exported.content);
-      const importedAgain = importDatabaseBackup(root, created.fileName, exported.content);
+      assert.equal(JSON.parse(Buffer.from(JSON.parse(exported.content.toString()).protected, 'base64url').toString()).manifest.name, created.name);
+      const imported = importDatabaseBackup(root, created.fileName, exported.content, fixtureVaultKeys(root));
+      const importedAgain = importDatabaseBackup(root, created.fileName, exported.content, fixtureVaultKeys(root));
       assert.notEqual(imported.fileName, created.fileName);
       assert.notEqual(importedAgain.fileName, imported.fileName);
       assert.equal(imported.name, created.name);
-      assert.equal(listDatabaseBackups(root, 'graph').length, 3);
-      assert.ok(listDatabaseBackups(root).every((item) => item.name === created.name));
-      const restored = restoreDatabaseBackup(root, 'copy', imported.fileName);
+      assert.equal(listDatabaseBackups(root, 'graph', fixtureVaultKeys(root)).length, 3);
+      assert.ok(listDatabaseBackups(root, undefined, fixtureVaultKeys(root)).every((item) => item.name === created.name));
+      const restored = restoreDatabaseBackup(root, 'copy', imported.fileName, fixtureVaultKeys(root));
       assert.equal(restored.name, created.name);
-      assert.equal(readFileSync(join(root, 'copy', 'atlas.mld'), 'utf8'), 'test-only-vault');
+      const copyPath=join(root,'copy','atlas.mld'), vault=new AtlasSingleVault(); vault.loadSync(copyPath,fixtureVaultKeys(root).resolveKey('copy',readAtlasVaultKeyReference(copyPath)!)); assert.equal(vault.get('test'),'test-only-vault');
+      restoreDatabaseBackup(root, '合成库', imported.fileName, fixtureVaultKeys(root));
+      const unicode = createDatabaseBackup(root, '合成库', 'manual', '中文库备份', fixtureVaultKeys(root));
+      assert.equal(readDatabaseBackupFile(root, unicode.fileName, fixtureVaultKeys(root)).info.database, '合成库');
     }));
 
-  it('keeps legacy files readable and same-name backups distinct', () =>
+  it('supports unnamed encrypted backups and keeps same-name backups distinct', () =>
     withWorkspace((root) => {
-      const first = createDatabaseBackup(root, 'graph', 'manual');
-      const second = createDatabaseBackup(root, 'graph', 'manual');
+      const first = createDatabaseBackup(root, 'graph', 'manual', undefined, fixtureVaultKeys(root));
+      const second = createDatabaseBackup(root, 'graph', 'manual', undefined, fixtureVaultKeys(root));
       assert.notEqual(first.fileName, second.fileName);
       assert.equal(first.name, undefined);
       assert.match(backupDisplayName(first), /^graph_\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$/);
-      assert.equal(listDatabaseBackups(root).length, 2);
+      assert.equal(listDatabaseBackups(root, undefined, fixtureVaultKeys(root)).length, 2);
     }));
 
   it('validates names and rejects invalid imported metadata and paths', () =>
@@ -69,18 +74,18 @@ describe('named backup contract', () => {
       }
       assert.equal(normalizeBackupName(undefined), undefined);
       assert.equal(normalizeBackupName('备份 / 发布前'), '备份 / 发布前');
-      const backup = createDatabaseBackup(root, 'graph');
-      const payload = JSON.parse(readDatabaseBackupFile(root, backup.fileName).content.toString());
+      const backup = createDatabaseBackup(root, 'graph', 'manual', undefined, fixtureVaultKeys(root));
+      const payload = JSON.parse(readDatabaseBackupFile(root, backup.fileName, fixtureVaultKeys(root)).content.toString());
       assert.throws(() =>
         importDatabaseBackup(
           root,
           'bad.json',
-          Buffer.from(JSON.stringify({ ...payload, name: 5 })),
+          Buffer.from(JSON.stringify({ ...payload, name: 5 })), fixtureVaultKeys(root),
         ),
       );
-      payload.files[0].path = 'graph/../other/atlas.mld';
+      payload.files = [{path:'graph/../other/atlas.mld',data:'invalid'}];
       assert.throws(() =>
-        importDatabaseBackup(root, 'bad.json', Buffer.from(JSON.stringify(payload))),
+        importDatabaseBackup(root, 'bad.json', Buffer.from(JSON.stringify(payload)), fixtureVaultKeys(root)),
       );
     }));
 
@@ -95,12 +100,12 @@ describe('named backup contract', () => {
       );
     };
     try {
-      const db = new ModelDB({ host: '127.0.0.1', port: 9091, token: 'fixture' });
+      const db = new ModelDB({ host: '127.0.0.1', port: 49111, token: 'fixture' });
       const result = await db.createBackup('graph', 'manual', '发布前');
       assert.equal(result.name, '发布前');
       assert.deepEqual(calls, [
         {
-          url: 'http://127.0.0.1:9091/api/v1/management/databases/graph/backup',
+          url: 'http://127.0.0.1:49111/api/v1/management/databases/graph/backup',
           body: { reason: 'manual', name: '发布前' },
         },
       ]);

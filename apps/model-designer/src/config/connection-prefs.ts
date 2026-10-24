@@ -1,4 +1,49 @@
+import { logoutBrowserSession, takeBrowserPairingLink } from '@mode-db/sdk';
+
 const PREFIX = 'model-designer:';
+let activeToken = '';
+let pairingLaunch = takeBrowserPairingLink();
+export function getPairingLaunch(): typeof pairingLaunch {
+  return pairingLaunch;
+}
+export function clearPairingLaunch(): void {
+  pairingLaunch = undefined;
+}
+export function isBrowserSessionMode(): boolean {
+  return safeGet('authMode') !== 'token';
+}
+export function persistBrowserSessionMode(browser: boolean): void {
+  safeSet('authMode', browser ? 'browser' : 'token');
+}
+export function getConnectionAuth(): { token: string; browserSession: boolean } {
+  return { token: getStoredToken(''), browserSession: isBrowserSessionMode() };
+}
+export function hasActiveConnection(): boolean {
+  return safeGet('sessionActive') === 'true' || !!activeToken;
+}
+/** Navigation preference only; the server verifies the administrator session on every load. */
+export function isSecurityCenterActive(): boolean {
+  return safeGet('securityCenterActive') === 'true';
+}
+export function persistSecurityCenterActive(active: boolean): void {
+  safeSet('securityCenterActive', String(active));
+}
+export async function logoutCurrentBrowserSession(): Promise<void> {
+  if (isBrowserSessionMode())
+    await logoutBrowserSession({ host: getStoredHost('127.0.0.1'), port: getStoredPort(9090) });
+}
+
+function purgeStoredCredentials(): void {
+  for (const key of ['localStorage', 'sessionStorage'] as const) {
+    try {
+      const storage = globalThis[key];
+      storage?.removeItem(PREFIX + 'token');
+      storage?.removeItem(PREFIX + 'rememberToken');
+    } catch {
+      /* Storage can be unavailable in private browser contexts. */
+    }
+  }
+}
 
 function safeGet(key: string): string | null {
   if (typeof localStorage === 'undefined') {
@@ -39,7 +84,11 @@ export function getStoredPort(fallback: number): number {
 /** Public HTTP(S) origin advertised by the server; empty means use host/port. */
 export function getStoredPublicBaseUrl(fallback = ''): string {
   const v = safeGet('publicBaseUrl');
-  const candidate = v != null && v.trim() !== '' ? v.trim() : fallback.trim();
+  return normalizePublicBaseUrl(v != null && v.trim() !== '' ? v : fallback);
+}
+
+function normalizePublicBaseUrl(value: string): string {
+  const candidate = value.trim();
   if (!candidate) {
     return '';
   }
@@ -61,7 +110,7 @@ export function getStoredPublicBaseUrl(fallback = ''): string {
 }
 
 export function persistPublicBaseUrl(value: string): void {
-  const normalized = getStoredPublicBaseUrl(value);
+  const normalized = normalizePublicBaseUrl(value);
   if (normalized) {
     safeSet('publicBaseUrl', normalized);
   } else {
@@ -87,24 +136,18 @@ export function persistConnectionFields(host: string, port: number, workspace: s
   safeSet('workspace', workspace.trim());
 }
 
-export function getRememberToken(): boolean {
-  return safeGet('rememberToken') === '1';
-}
-
-export function setRememberToken(v: boolean): void {
-  safeSet('rememberToken', v ? '1' : '0');
-}
-
-export function getStoredToken(fallback: string): string {
-  const v = safeGet('token');
-  return v != null ? v : fallback;
+export function getStoredToken(_fallback: string): string {
+  purgeStoredCredentials();
+  return activeToken;
 }
 
 export function persistToken(token: string): void {
-  safeSet('token', token);
+  purgeStoredCredentials();
+  activeToken = token;
 }
 
 export function clearStoredToken(): void {
+  activeToken = '';
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(PREFIX + 'token');
@@ -123,52 +166,20 @@ export function persistLastLibrary(name: string): void {
   safeSet('lastLibrary', name.trim());
 }
 
-/**
- * 标签页生命周期内的 token 缓存：用于 F5 后无感重连，但**关闭标签页即消失**。
- * 与 {@link persistToken}（localStorage、跨会话）独立，二者读取时优先 session。
- */
-function safeSessionGet(key: string): string | null {
-  if (typeof sessionStorage === 'undefined') {
-    return null;
-  }
-  try {
-    return sessionStorage.getItem(PREFIX + key);
-  } catch {
-    return null;
-  }
-}
-
-function safeSessionSet(key: string, value: string): void {
-  if (typeof sessionStorage === 'undefined') {
-    return;
-  }
-  try {
-    sessionStorage.setItem(PREFIX + key, value);
-  } catch {
-    /* quota / private mode */
-  }
-}
-
-function safeSessionRemove(key: string): void {
-  if (typeof sessionStorage === 'undefined') {
-    return;
-  }
-  try {
-    sessionStorage.removeItem(PREFIX + key);
-  } catch {
-    /* ignore */
-  }
-}
-
+/** Advanced service credentials stay in memory; browser authentication uses HttpOnly cookies. */
 export function getSessionToken(): string | null {
-  const v = safeSessionGet('token');
-  return v != null && v !== '' ? v : null;
+  purgeStoredCredentials();
+  return activeToken || null;
 }
 
 export function persistSessionToken(token: string): void {
-  safeSessionSet('token', token);
+  persistToken(token);
+  safeSet('sessionActive', 'true');
 }
 
 export function clearSessionToken(): void {
-  safeSessionRemove('token');
+  purgeStoredCredentials();
+  activeToken = '';
+  safeSet('sessionActive', 'false');
+  persistSecurityCenterActive(false);
 }

@@ -255,7 +255,7 @@ describe('OperationInterface compiler', () => {
     const engine = new AuthoringEngine({
       atlas: 'operation-interface',
       storageRoot: root,
-      connectToken: 'test-token',
+      keyProvider: fixtureVaultKeys(root),
     });
     try {
       engine.registerModel('ItemRecord', { item_name: 'String', score: 'Number' });
@@ -278,7 +278,7 @@ describe('OperationInterface compiler', () => {
     const engine = new AuthoringEngine({
       atlas: 'operation-upsert',
       storageRoot: root,
-      connectToken: 'test-token',
+      keyProvider: fixtureVaultKeys(root),
     });
     try {
       engine.registerModel('ItemRecord', { item_name: 'String', score: 'Number' });
@@ -311,7 +311,7 @@ describe('OperationInterface compiler', () => {
     const engine = new AuthoringEngine({
       atlas: 'operation-rebind',
       storageRoot: root,
-      connectToken: 'test-token',
+      keyProvider: fixtureVaultKeys(root),
     });
     try {
       engine.registerModel('Node', { name: 'String' });
@@ -587,3 +587,4 @@ function batchOperationFixture(): OperationInterface {
   asset.contract.output = { shape: 'summary' };
   return asset;
 }
+import { fixtureVaultKeys } from '../vault-keys.js';

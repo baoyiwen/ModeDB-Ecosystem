@@ -9,7 +9,7 @@ import type { QueryInterfaceRelease } from '../../apps/model-designer/src/query-
 import type { EngineModelNode, EngineRelationEdge } from '../../apps/model-designer/src/types/engine-schema.js';
 import zh from '../../apps/model-designer/src/i18n/locales/zh/ui.json';
 
-const prop = (name: string, type = 'String') => ({ id: name, name, type, name_i18n: { zh: name === 'name' ? '名称' : name }, metadata: {} });
+const prop = (name: string, type = 'String') => ({ id: name, name, type, is_primary: false, encrypt_level: 0, name_i18n: { zh: name === 'name' ? '名称' : name }, metadata: {} });
 const models: EngineModelNode[] = [
   { id: 'node-model', model_name: 'Node', parent_id: null, name_i18n: { zh: '节点' }, props_objects_array: [prop('name', 'I18N'), prop('score', 'Int'), prop('secret')] },
   { id: 'group-model', model_name: 'Group', parent_id: null, props_objects_array: [prop('title')] },
@@ -31,7 +31,7 @@ function release(): QueryInterfaceRelease {
     { id: 'group-edge', relationId: 'group', fromNodeId: 'child', toNodeId: 'group', alias: 'group', traversal: 'reverse', required: false, cardinality: 'one' },
   ] };
   return { version: '1.0.0', callableName: 'fixture', publishedAt: '2026-10-17T00:00:00Z', signature: 'signature', queryInterface: asset, executionTemplate: {
-    format: 1, snapshot: { plan: { version: 2, originModel: 'Node', start: { kind: 'all' }, hops: [] }, execute: {}, analysis: { groupBy: null, compute: null } }, parameters: [], pagination: { mode: 'none' },
+    format: 1, snapshot: { plan: { version: 2, originModel: 'Node', start: { kind: 'all' }, hops: [], trailing: { type: 'group', logic: 'AND', children: [] } }, execute: {}, analysis: { groupBy: null, compute: null } }, parameters: [], pagination: { mode: 'none' },
     resultAdapter: { kind: 'rows', rootNodeId: 'root', fieldsByNode: { root: [{ sourceField: 'name', outputName: 'label' }], child: [{ sourceField: 'name', outputName: 'label' }, { sourceField: 'score', outputName: 'points' }], group: [{ sourceField: 'title', outputName: 'title' }] }, edgesBySource: { root: [{ toNodeId: 'child', relationName: 'children', outputName: 'children' }], child: [{ toNodeId: 'group', relationName: 'group', outputName: 'group' }] } },
   } };
 }
@@ -88,7 +88,7 @@ describe('published interface data transfer', () => {
   });
   it('exports aggregated values as reports and rejects aggregate templates', () => {
     const version = release();
-    version.executionTemplate.resultAdapter = { kind: 'aggregation', dimensions: [{ sourceField: 'status', outputName: 'status' }], metrics: [{ wireKey: 'count', outputName: 'total' }] };
+    version.executionTemplate = { ...version.executionTemplate, resultAdapter: { kind: 'aggregation', dimensions: [{ sourceField: 'status', outputName: 'status' }], metrics: [{ wireKey: 'count', outputName: 'total' }] } };
     const document = normalizePivotResult({ source: { kind: 'interface', callableName: 'fixture', version: '1' }, rows: [{ status: 'A', total: 0, private: 99 }] });
     const input = { database: 'fixture', release: version, models, relations, locale: 'zh', document };
     assert.deepEqual(buildInterfaceTransfer(input).rows[0]?.values, { status: 'A', total: 0 });

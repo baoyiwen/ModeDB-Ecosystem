@@ -18,13 +18,14 @@ const serverCheck = `
   import { DiagnosticCenter, EngineLogger, ErrorCodes, PathResolver } from '@mode-db/common';
   import { loadModelDBServerConfig } from './packages/server/src/config-loader.ts';
   import { buildDualTrackFastify } from './packages/server/src/dual-track-app.ts';
+  import { serverVaultKeys } from './packages/server/src/security/server-vault-keys.ts';
 
   const cfg = await loadModelDBServerConfig(process.env.LAYOUT_CONFIG, { port: 0 });
   if (process.env.LAYOUT_FLAT === 'true') {
     const paths = new PathResolver(cfg.storageRoot, 'flatgraph', { workspaceFlatVault: true });
     if (!existsSync(paths.atlasSingleVaultPath())) {
       mkdirSync(cfg.storageRoot, { recursive: true });
-      const engine = new AuthoringEngine({ atlas: 'flatgraph', paths, connectToken: cfg.connectToken });
+      const engine = new AuthoringEngine({ atlas: 'flatgraph', paths, keyProvider: serverVaultKeys(cfg) });
       engine.registerModel('Item', { title: 'String' });
       await engine.insert('Item', { title: 'fixture' }, { sync: true });
       await engine.flushAll();

@@ -14,8 +14,8 @@ import type { InterfaceParameter } from '../../apps/model-designer/src/query-des
 
 it('invokes a published interface through HTTP with typed inputs, defaults, keys and projection intact', async () => {
   const root = mkdtempSync(join(tmpdir(), 'modedb-pivot-input-'));
-  const business = new AuthoringEngine({ atlas: 'business', storageRoot: root, connectToken: 'fixture' });
-  const designer = new AuthoringEngine({ atlas: 'designer', storageRoot: root, connectToken: 'fixture' });
+  const business = new AuthoringEngine({ atlas: 'business', storageRoot: root, keyProvider: fixtureVaultKeys(root) });
+  const designer = new AuthoringEngine({ atlas: 'designer', storageRoot: root, keyProvider: fixtureVaultKeys(root) });
   const parameters: InterfaceParameter[] = [
     { id: 'p_score', name: 'score', type: 'number', required: true, defaultValue: 0 },
     { id: 'p_active', name: 'active', type: 'boolean', required: true, defaultValue: false },
@@ -55,9 +55,7 @@ it('invokes a published interface through HTTP with typed inputs, defaults, keys
     }),
   }, { sync: true });
   for(const mode of ['offset','cursor'] as const) {
-    const paginated=structuredClone(template);
-    if(mode==='cursor') paginated.snapshot.plan.version=7;
-    paginated.snapshot.plan.trailing={type:'group',logic:'AND',children:[]};
+    const paginated: PublishedQueryExecutionTemplate = { ...structuredClone(template), snapshot: { ...template.snapshot, plan: { ...template.snapshot.plan, version: mode === 'cursor' ? 7 : 2, trailing: { type: 'group', logic: 'AND', children: [] } } } };
     await designer.insert('sys_query_interface',{
       library_code:'business',release_history_json:'',
       release_json:JSON.stringify({version:'1.0.0',publishedAt:'2026-10-17T00:00:00Z',callableName:`items_${mode}`,signature:`fixture_${mode}`,queryInterface:{status:'active',contract:{permissions:{mode:'none'}}},executionTemplate:{...paginated,parameters:[],pagination:{mode,defaultLimit:1,maxLimit:2}}}),
@@ -67,7 +65,7 @@ it('invokes a published interface through HTTP with typed inputs, defaults, keys
   await designer.flushAll();
   const hash = (): string => createHash('sha256').update(readFileSync(join(root, 'business', 'atlas.mld'))).digest('hex');
   const before = hash();
-  const app = await buildDualTrackFastify({ host: '127.0.0.1', port: 0, storageRoot: root, designerWorkspace: 'designer', connectToken: 'fixture', dev: false, configFilePath: join(root, 'config.json') });
+  const app = await buildDualTrackFastify({ securityAudit: { retentionDays: 365, maxEvents: 10000 }, host: '127.0.0.1', port: 0, storageRoot: root, vaultKeyProvider: fixtureVaultKeys(root), designerWorkspace: 'designer', connectToken: 'fixture', dev: false, configFilePath: join(root, 'config.json') });
   let client: RemoteModelDBClient | undefined;
   try {
     const address = app.server.address();
@@ -92,7 +90,7 @@ it('invokes a published interface through HTTP with typed inputs, defaults, keys
       }),
     });
     assert.equal(direct.status, 200);
-    assert.deepEqual((await direct.json()).rows, [{ label: 'A', value: 0, enabled: false }]);
+    assert.deepEqual(((await direct.json()) as { rows: unknown[] }).rows, [{ label: 'A', value: 0, enabled: false }]);
     const directWithoutToken = await fetch(`http://127.0.0.1:${address.port}/api/v1/databases/business/query-interfaces/itemsByInputs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -126,3 +124,4 @@ it('invokes a published interface through HTTP with typed inputs, defaults, keys
     rmSync(root, { recursive: true, force: true });
   }
 });
+import { fixtureVaultKeys } from '../vault-keys.js';

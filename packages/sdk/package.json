@@ -4,10 +4,10 @@
   "description": "Remote WebSocket/HTTP client for ModelDB: wire session codec (@mode-db/shared) + query façade only. Does not bundle or start @mode-db/server.",
   "type": "module",
   "main": "./dist/index.js",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     }

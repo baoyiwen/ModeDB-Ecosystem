@@ -2,6 +2,8 @@
 
 ModelDB **网络服务进程**：WebSocket + HTTP 管理面、线协议分发、写串行化门闩、CLI（`modeldb-server`）。将客户端 RPC 委托给 **`@mode-db/core`** 的 `AuthoringEngine` 与查询运行时。
 
+新配置使用 registry 安全模式：Windows DPAPI 保护独立数据密钥，应用使用限权凭据，浏览器通过一次性配对取得短期 HttpOnly 会话。下面保留的 `connectToken` 操作仅适用于显式 legacy 配置，不能作为新实例的默认接入方法；安全管理员身份也不隐含业务库权限。安全 V1 的简介、使用手册、全新候选构建及切换/回退流程位于源码的 `docs/security-v1/`，本地候选同时携带这些文档。实际发布和真实实例切换需单独授权。
+
 ## 文档导航
 
 - 模块说明文档：[`docs/module-overview.md`](./docs/module-overview.md)
@@ -12,13 +14,13 @@ ModelDB **网络服务进程**：WebSocket + HTTP 管理面、线协议分发、
 
 ## 模块用途
 
-| 能力               | 说明                                                 |
-| ------------------ | ---------------------------------------------------- |
-| **WebSocket 服务** | 握手、`connectToken`、按逻辑库（`dbName`）绑定 Atlas |
-| **RPC 分发**       | `WireRequestDispatcher` → `executeDatabaseOperation` |
-| **管理 HTTP**      | 库列表、catalog、健康检查（Dual-track Fastify）      |
-| **CLI**            | `modeldb-server start`、`create-db`、配置路径解析    |
-| **安全传输**       | 二进制帧、载荷混淆（`@mode-db/shared`）              |
+| 能力               | 说明                                                  |
+| ------------------ | ----------------------------------------------------- |
+| **WebSocket 服务** | registry 限权身份握手、按逻辑库（`dbName`）绑定 Atlas |
+| **RPC 分发**       | `WireRequestDispatcher` → `executeDatabaseOperation`  |
+| **管理 HTTP**      | 库列表、catalog、健康检查（Dual-track Fastify）       |
+| **CLI**            | `modeldb-server start`、`create-db`、配置路径解析     |
+| **安全传输**       | 二进制帧、载荷混淆（`@mode-db/shared`）               |
 
 **不包含**浏览器 SDK；客户端见 **`@mode-db/sdk`**。
 
@@ -120,16 +122,16 @@ const db = await connectRemote({
 
 ## 数据备份与恢复
 
-`@mode-db/server` 支持手动备份、恢复、清除数据、强制重置以及可选自动备份。备份文件写入当前逻辑库 workspace 下的 `modeldb/backups/`。
+`@mode-db/server` 支持手动备份、恢复、清除数据、强制重置以及可选自动备份。备份文件写入当前逻辑库 workspace 下的 `modeldb/backups/`。S6.2 使用 `modeldb.backup.v2` 加密单库包，旧 JSON v1 明确拒绝并保留；Windows registry 离线 CLI 要求实例未运行且显式指定 `-c`。简介、权限、备份/独立恢复与接收方迁移步骤见[安全 V1 使用手册](../../docs/security-v1/user-guide.md)。
 
 CLI：
 
 ```bash
-modeldb-server backup <db-name> [--reason manual]
-modeldb-server backups [db-name]
-modeldb-server restore <db-name> <backup-file> --yes
-modeldb-server clear-data <db-name> --yes
-modeldb-server force-reset <db-name> --yes
+modeldb-server backup <db-name> --reason manual -c <config>
+modeldb-server backups [db-name] -c <config>
+modeldb-server restore <db-name> <backup-file> --yes -c <config>
+modeldb-server clear-data <db-name> --yes -c <config>
+modeldb-server force-reset <db-name> --yes -c <config>
 ```
 
 配置自动备份：
@@ -146,4 +148,4 @@ modeldb-server force-reset <db-name> --yes
 }
 ```
 
-不配置 `autoBackup` 或设置 `enabled: false` 时不会自动备份。`restore`、`clear-data`、`force-reset` 会先尽量创建安全备份，分别使用 `pre-restore`、`pre-clear`、`pre-reset` 作为 reason。
+不配置 `autoBackup` 或设置 `enabled: false` 时不会自动备份。恢复已有库和 `clear-data` 要先成功创建安全备份；`force-reset` 仍允许损坏/缺失库时跳过失败备份。自动备份共用写入锁，刷盘或审计失败不报告成功。单个 Vault 最大 48 MiB、包最大 128 MiB；备份不包括访问台账和策略，独立灾备还需要最新密钥恢复材料及单独保管的口令。

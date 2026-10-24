@@ -1,6 +1,4 @@
-import { existsSync } from 'node:fs';
 import {
-  AtlasManifestError,
   DiagnosticCenter,
   EngineError,
   EngineLogger,
@@ -8,7 +6,9 @@ import {
   ModelRegistry,
   PathResolver,
   SmartCache,
-  deriveAtlasVaultSecretFromConnectToken,
+  VaultSecurityError,
+  type VaultKeyMaterial,
+  type VaultKeyProvider,
   normalizeFieldDefs,
   parseAtlasManifestJson,
   resolveModelDBStorageRoot,
@@ -38,7 +38,7 @@ import { QueryEngine } from '../src/runtime/query-engine.js';
 import type { PredicateNode } from '../src/runtime/predicate-tree.js';
 import type { RuntimeContext } from '../src/runtime/context.js';
 import { executeDatabaseOperation } from '../src/network/operation-executor.js';
-import { AtlasSingleVault } from './atlas-single-vault.js';
+import { AtlasSingleVault, readAtlasVaultKeyReference } from './atlas-single-vault.js';
 import {
   isDatabaseOperation,
   type EngineApplyOutcome,
@@ -125,11 +125,8 @@ export interface AuthoringEngineOptions {
         logEachDiskOp?: boolean;
         logEachBinaryUnwrap?: boolean;
       };
-  /**
-   * Same value as the wire **`connectToken`**; used with {@link deriveAtlasVaultSecretFromConnectToken}
-   * to open **`${storageRoot}/${atlas}/atlas.mld`**. Omit to use **`process.env.MODEL_DB_CONNECT_TOKEN`**.
-   */
-  connectToken?: string;
+  /** Local-only key provider, independent of all network credentials. */
+  keyProvider: VaultKeyProvider;
 }
 
 function importRowMatchKey(
@@ -169,11 +166,13 @@ export class AuthoringEngine {
   readonly internalVault: InternalVault | undefined;
   /** In-memory vault for the single-file atlas layout. */
   readonly atlasVault: AtlasSingleVault | undefined;
-  private readonly vaultSecret: string | undefined;
+  private readonly vaultKey: VaultKeyMaterial;
   private readonly smartCacheRef: SmartCache | undefined;
   private readonly memoryShadowHydration: boolean;
   private readonly _autoFlushHandle: ReturnType<typeof setInterval>;
   private _flushAllPromise: Promise<void> | null = null;
+  private disposed = false;
+  private readonly unregisterShutdown: () => void;
 
   constructor(options: AuthoringEngineOptions) {
     const paths =
@@ -186,46 +185,37 @@ export class AuthoringEngine {
       );
     }
 
-    const connectTok = (
-      options.connectToken ??
-      (typeof process !== 'undefined' && process.env.MODEL_DB_CONNECT_TOKEN
-        ? process.env.MODEL_DB_CONNECT_TOKEN
-        : '')
-    ).trim();
-    if (!connectTok) {
-      throw new Error(
-        'AuthoringEngine requires connectToken or process.env.MODEL_DB_CONNECT_TOKEN (derives the atlas vault key).',
-      );
-    }
-    const resolvedVaultSecret = deriveAtlasVaultSecretFromConnectToken(connectTok);
-
-    paths.ensureAtlasVaultLayoutSync();
     const vaultPath = paths.atlasSingleVaultPath();
-    const atlasVault = new AtlasSingleVault();
-    const fileExisted = existsSync(vaultPath);
-    const loaded = atlasVault.loadSync(vaultPath, resolvedVaultSecret);
-    if (fileExisted && !loaded) {
-      throw new AtlasManifestError(
-        `Cannot open single-file vault at "${vaultPath}": decrypt failed, file truncated, or wrong connectToken (see diagnostics E3002).`,
-      );
+    // Inspect first: legacy/corrupt files must not cause new key provisioning.
+    const reference = readAtlasVaultKeyReference(vaultPath);
+    if (!options.keyProvider) {
+      throw new VaultSecurityError('VAULT_KEY_REQUIRED');
     }
-    if (!fileExisted) {
+    const resolvedKey = options.keyProvider.resolveKey(options.atlas, reference);
+    const vaultKey = {
+      reference: { ...resolvedKey.reference },
+      key: new Uint8Array(resolvedKey.key),
+    };
+    paths.ensureAtlasVaultLayoutSync();
+    const atlasVault = new AtlasSingleVault();
+    const loaded = atlasVault.loadSync(vaultPath, vaultKey);
+    if (!loaded) {
       atlasVault.set(
         AtlasSingleVault.manifestKey,
         serializeAtlasManifestFile(new ModelRegistry(), paths.atlasName),
       );
-      atlasVault.saveSync(vaultPath, resolvedVaultSecret);
+      atlasVault.saveSync(vaultPath, vaultKey);
     }
 
     this.paths = paths;
     this.atlasVault = atlasVault;
-    this.vaultSecret = resolvedVaultSecret;
+    this.vaultKey = vaultKey;
     this.currentLocale = options.currentLocale;
     this.memoryShadowHydration = options.memoryShadowHydration ?? false;
     this.internalVault = this.memoryShadowHydration ? new InternalVault() : undefined;
     this.smartCacheRef = options.enableSmartCache ? new SmartCache() : undefined;
 
-    const vaultOpts = { vault: atlasVault, vaultSecret: resolvedVaultSecret };
+    const vaultOpts = { vault: atlasVault, vaultKey };
 
     this.storage = new ModelStorage(paths, vaultOpts);
     this.storage.locale = this.currentLocale;
@@ -237,7 +227,7 @@ export class AuthoringEngine {
     );
     this.indexer = new RelationIndexer(paths, {
       vault: atlasVault,
-      vaultSecret: vaultOpts.vaultSecret,
+      vaultKey,
       loadModelRecords: (m) => this.persistence.getMergedReader().getAll(m),
     });
     this.registry =
@@ -270,20 +260,39 @@ export class AuthoringEngine {
       );
     }
 
-    registerAuthoringShutdownTask(() => this.flushAll());
+    this.unregisterShutdown = registerAuthoringShutdownTask(() => this.flushAll());
 
     this._autoFlushHandle = setInterval(() => {
       if (this.persistence.hasBufferedRows()) {
-        void this.flushAll();
+        void this.flushAll().catch((error: unknown) => {
+          clearInterval(this._autoFlushHandle);
+          console.error(
+            '[ModelDB] Background Vault flush failed; reopen after recovery.',
+            error instanceof VaultSecurityError ? error.code : 'VAULT_WRITE_FAILED',
+          );
+        });
       }
     }, 200);
     if (typeof this._autoFlushHandle.unref === 'function') {
       this._autoFlushHandle.unref();
     }
+  }
 
-    process.once('beforeExit', () => {
-      void this.flushAll();
-    });
+  /** Flush and detach lifecycle callbacks before replacing an engine instance. */
+  async close(): Promise<void> {
+    try {
+      await this.flushAll();
+    } finally {
+      this.dispose();
+    }
+  }
+
+  /** Stop an evicted/replaced engine without writing stale memory back to disk. */
+  dispose(): void {
+    this.disposed = true;
+    clearInterval(this._autoFlushHandle);
+    this.unregisterShutdown();
+    this.vaultKey.key.fill(0);
   }
 
   model(name: string): ModelEntity {
@@ -858,12 +867,18 @@ export class AuthoringEngine {
    * Write `atlas-manifest.json` (version, models, relations, checksum) for runtime `connect()`.
    */
   async writeAtlasManifest(): Promise<void> {
+    if (this.disposed) {
+      throw new EngineError('ENGINE_CLOSED');
+    }
     const body = serializeAtlasManifestFile(this.registry, this.paths.atlasName);
-    if (!this.atlasVault || !this.vaultSecret) {
+    if (!this.atlasVault) {
       throw new Error('writeAtlasManifest: internal vault is missing.');
     }
+    if (this.atlasVault.get(AtlasSingleVault.manifestKey) === body) {
+      return;
+    }
     this.atlasVault.set(AtlasSingleVault.manifestKey, body);
-    this.atlasVault.saveSync(this.paths.atlasSingleVaultPath(), this.vaultSecret);
+    this.atlasVault.saveSync(this.paths.atlasSingleVaultPath(), this.vaultKey);
   }
 
   /**
@@ -873,6 +888,9 @@ export class AuthoringEngine {
    * (e.g. cold `ModelDBClient.connect` to the same atlas).
    */
   async flushAll(): Promise<void> {
+    if (this.disposed) {
+      return;
+    }
     // Model rows, relation indices, and the manifest all share one encrypted
     // atlas file. Serialize the complete flush so the scheduler cannot write
     // the same vault while a mutation is persisting its relation/index state.

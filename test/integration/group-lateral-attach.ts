@@ -28,7 +28,7 @@ import {
   startModelDBWebSocketServer,
 } from '@mode-db/server';
 import { ModelDB, RemoteHydratedEntity } from '@mode-db/sdk';
-import { INTEGRATION_CONNECT_TOKEN, useIntegrationVaultEnv } from './vault-env.js';
+import { INTEGRATION_CONNECT_TOKEN, useIntegrationVaultEnv, integrationVaultKeys } from './vault-env.js';
 
 const WORKSPACE = join(process.cwd(), 'data', 'group_lateral_workspace');
 const ATLAS = 'group_lateral_attach';
@@ -74,7 +74,7 @@ section('1. AuthoringEngine: Item↔Tag (N:N) + Item→Bin (forward)');
 const ddl = new AuthoringEngine({
   atlas: ATLAS,
   storageRoot: WORKSPACE,
-  connectToken: INTEGRATION_CONNECT_TOKEN,
+  keyProvider: integrationVaultKeys(WORKSPACE),
 });
 
 const itemSchema: FieldDefsRecord = {

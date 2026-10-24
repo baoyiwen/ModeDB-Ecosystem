@@ -12,6 +12,7 @@ import {
   enforcePublishedInterfaceAccess,
   enforcePublishedInterfaceRateLimit,
 } from './published-interface-policy.js';
+import type { AuthorizationService } from './security/authorization-service.js';
 
 const OPERATION_INTERFACE_MODEL = 'sys_operation_interface';
 const OPERATION_INTERFACE_CALL_LOG_MODEL = 'sys_operation_interface_call_log';
@@ -47,6 +48,7 @@ interface StoredOperationRelease {
 }
 
 export async function executePublishedOperationInterface(input: {
+  authorization?: AuthorizationService;
   atlas: string;
   designerWorkspace: string;
   body: ExecuteOperationInterfaceBody;
@@ -77,6 +79,7 @@ export async function executePublishedOperationInterface(input: {
 }
 
 async function executePublishedOperationInterfaceCore(input: {
+  authorization?: AuthorizationService;
   atlas: string;
   designerWorkspace: string;
   body: ExecuteOperationInterfaceBody;
@@ -111,6 +114,7 @@ async function executePublishedOperationInterfaceCore(input: {
     throw new Error(`INTERFACE_RELEASE_AMBIGUOUS:${callableName}`);
   }
   const release = matches[0]!;
+  input.authorization?.release(input.atlas, 'callable.operation', callableName, release);
   const policyRelease = {
     version: release.version,
     callableName: release.callableName,
@@ -119,6 +123,9 @@ async function executePublishedOperationInterfaceCore(input: {
   enforcePublishedInterfaceAccess(policyRelease, input.body.accessKey);
   enforcePublishedInterfaceRateLimit(input.atlas, 'operation', policyRelease);
   const target = await input.getEngine(input.atlas);
+  const reauthorize = (): void =>
+    input.authorization?.release(input.atlas, 'callable.operation', callableName, release);
+  reauthorize();
   if (release.executionTemplate.batch) {
     return executePublishedOperationBatch({
       callableName,
@@ -127,6 +134,7 @@ async function executePublishedOperationInterfaceCore(input: {
       parameters: input.body.parameters ?? {},
       target,
       atlas: input.atlas,
+      reauthorize,
     });
   }
   const operation = bindPublishedOperationExecutionTemplate(
@@ -156,6 +164,7 @@ async function executePublishedOperationBatch(input: {
   parameters: Readonly<Record<string, unknown>>;
   target: AuthoringEngine;
   atlas: string;
+  reauthorize: () => void;
 }): Promise<OperationInterfaceWireResult> {
   const batch = bindPublishedOperationBatchExecutionTemplate(input.template, input.parameters);
   const itemResults: Array<Record<string, unknown>> = [];
@@ -169,6 +178,7 @@ async function executePublishedOperationBatch(input: {
       itemResults.push(batchFailureResult(item.index, item.error));
     } else {
       try {
+        input.reauthorize();
         const raw = await executeDatabaseOperation(
           { engine: input.target, atlas: input.atlas, flush: () => input.target.flushAll() },
           item.operation,
@@ -229,7 +239,9 @@ function batchFailureResult(index: number, message: string): Record<string, unkn
     index,
     ok: false,
     error: {
-      code: detail?.code ?? 'INTERFACE_BATCH_ITEM_FAILED',
+      code: /^SECURITY_[A-Z_]+$/.test(message)
+        ? message
+        : (detail?.code ?? 'INTERFACE_BATCH_ITEM_FAILED'),
       message: detail?.message ?? message,
     },
   };

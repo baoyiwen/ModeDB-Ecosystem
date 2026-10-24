@@ -22,6 +22,11 @@ export {
 } from './remote-client.js';
 export { ModelDB, type ModelDBConfig } from './model-db.js';
 export {
+  ConnectionSecurityError,
+  connectionSecurityIssue,
+  type ConnectionSecurityIssue,
+} from './connection-security.js';
+export {
   WireQueryChain,
   queryParameterPlaceholder,
   isQueryParameterPlaceholder,
@@ -32,6 +37,14 @@ export {
   isPublishedOperationExecutionTemplate,
   queryInterfaceAccessKeyDigest,
   isPublishedBindingSurfaceContract,
+  securityReleaseDigest,
+  designerInheritanceRelationId,
+} from '@mode-db/shared';
+export type {
+  SecurityActor,
+  SecurityAction,
+  SecurityGrant,
+  SecurityCredentialInfo,
 } from '@mode-db/shared';
 export type {
   AggregateOp,
@@ -100,3 +113,42 @@ export type {
 
 /** Alias for binary payloads: **Uint8Array** everywhere (no Node `Buffer`). */
 export type WireBinaryBytes = Uint8Array;
+export { connectionOrigin } from './connection-endpoint.js';
+export type { ConnectionEndpoint } from './connection-endpoint.js';
+export {
+  getBrowserSession,
+  logoutBrowserSession,
+  pairBrowserSession,
+  refreshBrowserSession,
+  takeBrowserPairingLink,
+  type BrowserSessionConfig,
+  type BrowserSessionInfo,
+} from './browser-session.js';
+export {
+  exportSecurityAudit,
+  getSecurityAudit,
+  getSecurityCenterOverview,
+  securityControl,
+} from './security-center.js';
+export type {
+  SecurityRegistryStatus,
+  SecurityCenterPrincipal,
+  SecurityCenterSession,
+  SecurityKeyReference,
+  SecurityCenterSnapshot,
+  SecurityNetworkStatus,
+  SecurityCenterOverview,
+  SecurityAuditQuery,
+  SecurityAuditSummary,
+  SecurityAuditPage,
+  SecurityPlane,
+  SecuritySourceRule,
+  SecuritySourcePolicy,
+  SecurityProtectionConfig,
+  SecurityProtectionState,
+  SecurityProtectionPreview,
+  SecurityTemporaryBan,
+  SecurityMaintenanceStatus,
+  SecurityControlRequest,
+  SecurityControlResult,
+} from '@mode-db/shared';

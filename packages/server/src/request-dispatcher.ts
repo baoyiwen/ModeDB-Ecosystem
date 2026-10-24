@@ -14,6 +14,7 @@ import type { WriteSerializationGate } from './write-serialization-gate.js';
 import { executePublishedQueryInterface } from './published-interface-runtime.js';
 import { executePublishedOperationInterface } from './published-operation-interface-runtime.js';
 import { executePublishedBindingSurface } from './published-binding-surface-runtime.js';
+import type { AuthorizationService } from './security/authorization-service.js';
 
 function sendJson(ws: WebSocket, msg: WireServerMessage): void {
   ws.send(JSON.stringify(msg));
@@ -248,9 +249,23 @@ export class WireRequestDispatcher {
   }
 
   /** Map one wire op to a JSON result via the shared executor; owns gating + the read/write runtime choice. */
-  private async executeBody(atlas: string, body: WireExecuteBody): Promise<WireExecuteResultJson> {
+  async executeAuthorized(
+    atlas: string,
+    body: WireExecuteBody,
+    authorization: AuthorizationService,
+  ): Promise<WireExecuteResultJson> {
+    authorization.preflight(atlas, body);
+    return this.executeBody(atlas, body, authorization);
+  }
+
+  private async executeBody(
+    atlas: string,
+    body: WireExecuteBody,
+    authorization?: AuthorizationService,
+  ): Promise<WireExecuteResultJson> {
     if (body.op === 'executeInterface') {
       return executePublishedQueryInterface({
+        authorization,
         atlas,
         designerWorkspace: this.opts.designerWorkspace,
         body,
@@ -260,6 +275,7 @@ export class WireRequestDispatcher {
     if (body.op === 'executeOperationInterface') {
       return this.opts.writeGate.runExclusive(atlas, () =>
         executePublishedOperationInterface({
+          authorization,
           atlas,
           designerWorkspace: this.opts.designerWorkspace,
           body,
@@ -270,6 +286,7 @@ export class WireRequestDispatcher {
     if (body.op === 'executeBindingSurface') {
       const execute = () =>
         executePublishedBindingSurface({
+          authorization,
           atlas,
           designerWorkspace: this.opts.designerWorkspace,
           body,
@@ -287,6 +304,7 @@ export class WireRequestDispatcher {
         );
       }
       const engine = await this.opts.getEngine(atlas);
+      await authorization?.operation(atlas, body, engine);
       const result = await executeDatabaseOperation(
         { runtime: engine.createRuntime(), atlas, dev: this.opts.dev },
         body,
@@ -303,12 +321,14 @@ export class WireRequestDispatcher {
     if (isMutatingDatabaseOperation(body)) {
       return this.opts.writeGate.runExclusive(atlas, async () => {
         const engine = await this.opts.getEngine(atlas);
+        await authorization?.operation(atlas, body, engine);
         return executeDatabaseOperation({ engine, atlas, flush: () => engine.flushAll() }, body);
       });
     }
 
     // Read-only engine ops: previewBind / relationStats.
     const engine = await this.opts.getEngine(atlas);
+    await authorization?.operation(atlas, body, engine);
     return executeDatabaseOperation({ engine, atlas }, body);
   }
 }

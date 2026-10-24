@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -56,7 +55,6 @@ export function ensureModelDbLayoutAtRoot(home: string): string {
   }
   const cfgPath = join(root, 'modeldb.config.json');
   if (!existsSync(cfgPath)) {
-    const connectToken = randomBytes(32).toString('hex');
     const payload = {
       port: 9090,
       host: '127.0.0.1',
@@ -68,7 +66,7 @@ export function ensureModelDbLayoutAtRoot(home: string): string {
       cacheSize: '2GB',
       mode: 'development',
       designerWorkspace: 'model_designer_workspace',
-      connectToken,
+      security: { version: 1 },
       autoBackup: {
         enabled: false,
         intervalMinutes: 60,
@@ -77,7 +75,16 @@ export function ensureModelDbLayoutAtRoot(home: string): string {
       },
       dev: false,
     };
-    writeFileSync(cfgPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf-8');
+    try {
+      writeFileSync(cfgPath, `${JSON.stringify(payload, null, 2)}\n`, {
+        encoding: 'utf-8',
+        flag: 'wx',
+      });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+        throw error;
+      }
+    }
   }
   return cfgPath;
 }
@@ -102,7 +109,21 @@ export function resolveModelDbConfigPathFromCli(cliPath: string | undefined): st
   if (cliPath === undefined || cliPath.trim() === '') {
     return ensureModelDbLayoutAtRoot(getModelDbHome());
   }
-  const resolved = resolve(cliPath.trim());
+  const rawPath = cliPath.trim();
+
+  // A Windows absolute path must contain a separator after the drive letter.
+  // In shells such as Git Bash, an unquoted `C:\\workspace\\...` argument can
+  // arrive here as `C:workspace...`; treating that as a relative path produces
+  // a misleading "missing connectToken" error for a config that was never read.
+  if (/^[A-Za-z]:[^\\/]/.test(rawPath)) {
+    throw new Error(
+      `ModelDB server: invalid Windows config path "${rawPath}". ` +
+        "Quote the path (for example, 'C:\\workspace\\...\\modeldb.config.json') " +
+        'or use forward slashes.',
+    );
+  }
+
+  const resolved = resolve(rawPath);
   if (existsSync(resolved)) {
     const st = statSync(resolved);
     if (st.isFile()) {

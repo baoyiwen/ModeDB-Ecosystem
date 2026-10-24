@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from 'rea
 import { seedDefaultWorkspaceRecords } from '../bootstrap/seed-workspace-rows.js';
 import {
   getSessionToken,
+  isBrowserSessionMode,
   getStoredHost,
   getStoredPort,
   getStoredToken,
@@ -54,7 +55,12 @@ export function ActiveLibraryPanel(props: { onLibrarySwitched?: () => void }): R
       const host = getStoredHost('127.0.0.1');
       const port = getStoredPort(9090);
       const token = getSessionToken() ?? getStoredToken('');
-      const dbs = await RClient.listDatabases({ host, port, token });
+      const dbs = await RClient.listDatabases({
+        host,
+        port,
+        token,
+        browserSession: isBrowserSessionMode(),
+      });
       const dbNames = dbs
         .map((db) => db.name)
         .filter((name) => name && name !== FIXED_MODEL_DESIGNER_DATABASE);

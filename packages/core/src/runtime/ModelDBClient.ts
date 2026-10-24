@@ -10,11 +10,12 @@ import {
   resolveModelDBStorageRoot,
   DiagnosticCenter,
   ErrorCodes,
-  deriveAtlasVaultSecretFromConnectToken,
+  VaultSecurityError,
+  type VaultKeyProvider,
 } from '@mode-db/common';
 import {
-  fileLooksLikeAtlasSingleVault,
   AtlasSingleVault,
+  readAtlasVaultKeyReference,
 } from '../../authoring/atlas-single-vault.js';
 import { VaultModelFileReader } from './vault-model-reader.js';
 import { VaultRelationIndexReader } from './vault-relation-reader.js';
@@ -23,23 +24,20 @@ async function connectSingleFileVault(
   atlasName: string,
   paths: PathResolver,
   vaultPath: string,
+  keyProvider: VaultKeyProvider,
 ): Promise<ModelDBClient> {
-  const connectTok =
-    typeof process !== 'undefined' && process.env.MODEL_DB_CONNECT_TOKEN
-      ? process.env.MODEL_DB_CONNECT_TOKEN.trim()
-      : '';
-  if (!connectTok) {
-    throw new AtlasManifestError(
-      `Atlas "${atlasName}" uses encrypted atlas.mld; set MODEL_DB_CONNECT_TOKEN in the environment (same value as the server wire connect token).`,
-    );
+  if (!keyProvider) {
+    throw new VaultSecurityError('VAULT_KEY_REQUIRED');
   }
-  const secret = deriveAtlasVaultSecretFromConnectToken(connectTok);
+  const reference = readAtlasVaultKeyReference(vaultPath);
+  if (!reference) {
+    throw new VaultSecurityError('VAULT_KEY_UNAVAILABLE');
+  }
+  const key = keyProvider.resolveKey(atlasName, reference);
   const vault = new AtlasSingleVault();
-  const ok = vault.loadSync(vaultPath, secret);
+  const ok = vault.loadSync(vaultPath, key);
   if (!ok) {
-    throw new AtlasManifestError(
-      `Cannot decrypt or parse vault "${vaultPath}" (wrong secret, truncated file, or corrupt payload). See diagnostics E3002.`,
-    );
+    throw new VaultSecurityError('VAULT_COMMIT_INCOMPLETE');
   }
   const manifestRaw = vault.get(AtlasSingleVault.manifestKey);
   if (!manifestRaw) {
@@ -76,13 +74,26 @@ export class ModelDBClient {
   /**
    * Primary API for external clients: load encrypted **`*.mld`** (workspace-flat **`${root}/${name}.mld`** or nested **`${root}/${name}/atlas.mld`**).
    */
-  static async connect(atlasName: string): Promise<ModelDBClient> {
+  static async connect(
+    atlasName: string,
+    options: { keyProvider: VaultKeyProvider },
+  ): Promise<ModelDBClient> {
     assertFlatGraphSegment(atlasName, 'atlas name');
+    if (!options?.keyProvider) {
+      throw new VaultSecurityError('VAULT_KEY_REQUIRED');
+    }
     const root = resolveModelDBStorageRoot();
     const nestedPaths = new PathResolver(root, atlasName);
     const nestedVault = nestedPaths.atlasSingleVaultPath();
-    if (existsSync(nestedVault) && (await fileLooksLikeAtlasSingleVault(nestedVault))) {
-      return connectSingleFileVault(atlasName, nestedPaths, nestedVault);
+    const present = (path: string): boolean =>
+      ['', '.pending', '.commit', '.lock', '.reclaim'].some((suffix) => existsSync(path + suffix));
+    if (present(nestedVault)) {
+      return connectSingleFileVault(atlasName, nestedPaths, nestedVault, options.keyProvider);
+    }
+    const flatPaths = new PathResolver(root, atlasName, { workspaceFlatVault: true });
+    const flatVault = flatPaths.atlasSingleVaultPath();
+    if (present(flatVault)) {
+      return connectSingleFileVault(atlasName, flatPaths, flatVault, options.keyProvider);
     }
 
     DiagnosticCenter.report(

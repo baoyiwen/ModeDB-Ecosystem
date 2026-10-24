@@ -98,6 +98,10 @@ function wsUrl(host: string, port: number, path = '/'): string {
   return `ws://${formatUrlHost(host)}:${port}${path}`;
 }
 
+function registryUrl(cfg: ResolvedModelDBServerConfig, host: string, port: number): string {
+  return `${cfg.securityNetwork?.transport?.mode === 'tls' ? 'https' : 'http'}://${formatUrlHost(host)}:${port}`;
+}
+
 function preferIpv4(hosts: readonly string[]): string | undefined {
   return hosts.find((host) => !host.includes(':')) ?? hosts[0];
 }
@@ -125,7 +129,7 @@ export function resolveModelDBPublicBaseUrl(
 
   const preferred = cfg.advertisedHost?.trim();
   if (preferred && !isLoopbackHost(preferred) && !isWildcardHost(preferred)) {
-    return httpUrl(preferred, port);
+    return registryUrl(cfg, preferred, port);
   }
 
   const candidate = isWildcardHost(cfg.host)
@@ -134,7 +138,7 @@ export function resolveModelDBPublicBaseUrl(
   if (!candidate || isLoopbackHost(candidate) || isWildcardHost(candidate)) {
     return undefined;
   }
-  return httpUrl(candidate, port);
+  return registryUrl(cfg, candidate, port);
 }
 
 function shellQuote(value: string): string {
@@ -154,11 +158,38 @@ export function formatModelDBStartupInfo(cfg: ResolvedModelDBServerConfig, port:
   const lines = ['[ModelDB] Engine is running', `  Listen: ${cfg.host}:${port}`];
   const publicBaseUrl = resolveModelDBPublicBaseUrl(cfg, port);
 
-  if (isLoopbackHost(cfg.host) || isWildcardHost(cfg.host)) {
-    lines.push(`  ➜ Local:   ${httpUrl('localhost', port, '/')} (本机访问)`);
+  if (
+    (isLoopbackHost(cfg.host) || isWildcardHost(cfg.host)) &&
+    cfg.securityNetwork?.transport?.mode !== 'proxy'
+  ) {
+    lines.push(`  ➜ Local:   ${registryUrl(cfg, 'localhost', port)}/ (本机访问)`);
   }
   for (const host of getModelDBNetworkHosts(cfg)) {
-    lines.push(`  ➜ Network: ${httpUrl(host, port, '/')} (网络访问入口)`);
+    if (cfg.securityNetwork?.transport?.mode !== 'proxy') {
+      lines.push(`  ➜ Network: ${registryUrl(cfg, host, port)}/ (网络访问入口)`);
+    }
+  }
+
+  if (cfg.securityMode === 'registry') {
+    const apiBase = publicBaseUrl ?? registryUrl(cfg, hosts[0] ?? 'localhost', port);
+    lines.push(
+      '',
+      '  Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.',
+      '  Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.',
+      `  Transport: ${cfg.securityNetwork?.transport?.mode ?? 'loopback'}; source/Origin policy is enforced.`,
+      ...(publicBaseUrl ? [`  Public base URL: ${publicBaseUrl}`] : []),
+      `    HTTP RPC:  ${apiBase}/api/v1/rpc`,
+      `    WebSocket: ${apiBase.replace(/^http/, 'ws')}/api/v1/stream`,
+      ...(cfg.securityNetwork?.transport?.mode === 'proxy'
+        ? ['  Upstream accepts configured proxies only; clients must use the public HTTPS address.']
+        : []),
+      '  Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.',
+      `    Status:      ${commandWithConfig('security status', cfg.configFilePath)}`,
+      `    Designer:    ${commandWithConfig(`security browser-open --url ${cfg.securityNetwork?.transport?.mode === 'tls' || cfg.securityNetwork?.transport?.mode === 'proxy' ? 'https' : 'http'}://127.0.0.1:5175/`, cfg.configFilePath)}`,
+      `    Credentials: ${commandWithConfig('security credentials', cfg.configFilePath)}`,
+      `    Help:        ${commandWithConfig('security help', cfg.configFilePath)}`,
+    );
+    return lines.join('\n');
   }
 
   lines.push('  Direct client addresses:');

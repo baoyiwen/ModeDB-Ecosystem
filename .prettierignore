@@ -3,6 +3,7 @@ dist
 **/dist/**
 coverage
 data
+/security/
 package-lock.json
 *.min.js
 

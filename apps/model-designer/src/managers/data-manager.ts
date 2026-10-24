@@ -1,4 +1,5 @@
 import type { ManagementCatalogResponse, RemoteModelDBClient } from '@mode-db/sdk';
+import { designerInheritanceRelationId } from '@mode-db/sdk';
 import type {
   DesignerLayerRow,
   DesignerLayout,
@@ -872,7 +873,7 @@ export class DataManager {
       return undefined;
     }
     const nid = newId();
-    const edgeId = newId();
+    const edgeId = designerInheritanceRelationId(parentId, nid);
     const pBase = pickCanonicalFromI18n(parent.name_i18n, parent.model_name);
     const childI18n = { zh: `${pBase}子`, en: `${pBase}_child` };
     const child: EngineModelNode = {

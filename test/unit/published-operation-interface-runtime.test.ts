@@ -306,12 +306,12 @@ async function withRuntime(
   const business = new AuthoringEngine({
     atlas: 'business',
     storageRoot: root,
-    connectToken: 'test-token',
+    keyProvider: fixtureVaultKeys(root),
   });
   const designer = new AuthoringEngine({
     atlas: 'designer',
     storageRoot: root,
-    connectToken: 'test-token',
+    keyProvider: fixtureVaultKeys(root),
   });
   try {
     business.registerModel('Item', { name: 'String', score: 'Number' });
@@ -336,6 +336,7 @@ async function withRuntime(
       },
     });
   } finally {
+    await Promise.all([business.close(), designer.close()]);
     rmSync(root, { recursive: true, force: true });
   }
 }
@@ -502,3 +503,4 @@ function batchUpdateTemplate(
     result: { returns: 'summary', includeItemResults: true },
   };
 }
+import { fixtureVaultKeys } from '../vault-keys.js';

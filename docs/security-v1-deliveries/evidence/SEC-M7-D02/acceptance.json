@@ -1,0 +1,278 @@
+{
+  "format": "modeldb.security-acceptance.v1",
+  "milestone": "SEC-M7",
+  "task": "S7.2",
+  "revision": "D02",
+  "date": "2026-10-24",
+  "baseCommit": "cde9c14680b8dd26cde7f65d16ac8c4cf2a4b0dc",
+  "codeState": "uncommitted-working-tree",
+  "progress": {
+    "milestonesCompleted": 7,
+    "milestonesTotal": 7,
+    "tasksCompleted": 20,
+    "tasksTotal": 20
+  },
+  "environment": {
+    "platform": "win32",
+    "osRelease": "10.0.26300",
+    "architecture": "x64",
+    "cpu": "Intel(R) Core(TM) i7-14650HX",
+    "node": "v24.15.0",
+    "typescript": "5.9.3",
+    "pnpm": "10.33.0",
+    "declaredPackageManager": "pnpm@9.15.4",
+    "declaredPnpmVersionIndependentlyTested": false
+  },
+  "evidence": {
+    "release": "release-candidate.json",
+    "equivalence": "equivalence.json",
+    "regression": "regression.json",
+    "browser": "browser.json",
+    "performance": "performance.json",
+    "exploratoryPerformance": "performance-exploratory.json",
+    "independentWindowsRecovery": "../SEC-M6-D09 and ../SEC-M6-D11; referenced from SEC-M6 D09-D11"
+  },
+  "checks": {
+    "unit": {
+      "files": 63,
+      "tests": 424,
+      "pass": 424,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 274812.6473
+    },
+    "engineIntegration": { "files": 6, "assertions": 82, "exitCode": 0 },
+    "browser": { "tests": 2, "pass": 2, "fail": 0, "skip": 0, "durationMs": 318272.4874 },
+    "installationLifecycle": {
+      "installedPackageHashes": true,
+      "frontendAndDocumentHashes": true,
+      "exclusiveInstalledStartup": true,
+      "crossDatabaseDenied": true,
+      "oneTimePairingHttpOnly": true,
+      "localNetworkRepair": true,
+      "backupRestore": true,
+      "masterRotation": true,
+      "credentialAndSessionRevoked": true,
+      "performanceWithinBaseline": true
+    },
+    "release": {
+      "packages": 7,
+      "packageJsFiles": 202,
+      "packageFiles": 587,
+      "productionApps": 3,
+      "offlineDependencySnapshots": 74,
+      "sourceFiles": 239,
+      "userDocuments": 4,
+      "securityKeysPerLocale": 157,
+      "freshOutput": true,
+      "minifiedProductionPackages": true,
+      "exactArchiveManifest": true,
+      "offlineTarballInstall": true,
+      "dependencyScope": "installed-third-party-code-snapshot-not-registry-fetch",
+      "cliHelp": true,
+      "binShim": true,
+      "consumerTypes": true,
+      "postinstall": "server installer explicitly executed after --ignore-scripts; third-party lifecycle disabled",
+      "cleanFrontends": true,
+      "documentedCliAndSecurityI18n": true
+    }
+  },
+  "finalStaticChecks": {
+    "status": "passed",
+    "command": "pnpm.cmd run check",
+    "exitCode": 0,
+    "eslintErrors": 0,
+    "existingEslintWarnings": 44,
+    "checkedFormatFiles": 596,
+    "logSha256": "200677b43bc0f98265fc3fbea9c25634a754259e718db1c953317b88e9d1fbbc",
+    "documentation": {
+      "files": 11,
+      "localLinksAndAnchors": 144,
+      "failures": 0,
+      "completedTaskRows": 20
+    },
+    "gitDiffCheckExitCode": 0
+  },
+  "boundaries": {
+    "temporarySyntheticDataOnly": true,
+    "explicitIsolatedConfigs": true,
+    "randomPorts": true,
+    "independentChromeProfile": true,
+    "real9091Touched": false,
+    "realConfigOrSecretsOrVaultTouched": false,
+    "liveAclChanged": false,
+    "oldDistDeleted": false,
+    "existingChangesPreserved": true,
+    "deployedOrPublishedOrCommitted": false,
+    "physicalDiskExhaustionTested": false,
+    "hardwarePowerLossTested": false,
+    "registryNetworkResolutionTested": false,
+    "thirdPartyInstallScriptsExecuted": false
+  },
+  "limitations": [
+    "Registry query and synchronous write medians are about 1.6 seconds because OS protection and audit persistence remain synchronous.",
+    "Performance compares current legacy and registry paths, not historical binaries; local regression bounds are not production SLA, TLS, capacity or concurrency acceptance.",
+    "Process exits and injected ENOSPC do not prove hardware power-loss or physical disk-exhaustion behavior.",
+    "Fresh installation uses local snapshots of installed third-party code; no network registry dependency-resolution acceptance.",
+    "Windows is the verified security platform; local reset archives require the original DPAPI account.",
+    "Existing package versions are retained; real publication needs an explicit version and target, a fresh rebuild and separate authorization.",
+    "No true service deployment or data migration has occurred; old formats are not automatically converted and new writes prevent guaranteed lossless snapshot rollback."
+  ],
+  "developmentFailuresResolved": [
+    "Sandbox dependency reads and CDP initialization failures resolved through isolated execution with explicit paths; no ACL changes.",
+    "Temporary-cwd tsx/tsconfig/child entry resolution failures resolved in regression runner.",
+    "Offline registry metadata absence resolved using 74 installed-code dependency archives.",
+    "Source type entrypoints corrected to emitted declarations; strict consumer checks retained.",
+    "Stale Binding mock and WireEntityNode relation assertion corrected without weakening counts or schema assertions.",
+    "Final evidence JSON format check initially failed; final static result is recorded separately.",
+    "Raw third-party archive hashes differ across rebuilds; full snapshot-file inventories proved identical contents, rather than accepting version numbers alone."
+  ],
+  "files": [
+    {
+      "path": "package.json",
+      "sha256": "9be222252f2da37f9e08dd38896ed786e96c566d5de40d871aca00b04d8ade19"
+    },
+    {
+      "path": "packages/common/package.json",
+      "sha256": "ab68f9f9bbb762e911f8cf1ea7ba96020cf7a124785a1bff118a726e0f9a0c2c"
+    },
+    {
+      "path": "packages/core/package.json",
+      "sha256": "3c00b8e1d8a8e4c6d5ea68693022b279a89e1fdfc24b44b571de5d458b8cf7a4"
+    },
+    {
+      "path": "packages/shared/package.json",
+      "sha256": "47e8b7bb710d02de436d4b5bd184571cf07a1a3eb111199f777952acd334ec21"
+    },
+    {
+      "path": "packages/sdk/package.json",
+      "sha256": "88805c0b7bf24eaeea99f41abd34883a4535df6ae293d6ac301422094f35f507"
+    },
+    {
+      "path": "packages/data-kit/package.json",
+      "sha256": "c6e69078ccbbede0251325f053927aa131d42e5d0caa801a0dfb46630bfc5918"
+    },
+    {
+      "path": "packages/data-ui/package.json",
+      "sha256": "4d6ab5222e5b4959556a68796ad2df1cdeb2c84cb6b849ed5b42661918648d1b"
+    },
+    {
+      "path": "packages/server/README.md",
+      "sha256": "7a92b66f5866621f005178ad774561f50b53a062674912ea20f79a77d4b9a9d7"
+    },
+    {
+      "path": "packages/server/templates/modeldb/AGENTS.md",
+      "sha256": "b910a6632fcda0e5c6d2ca168e8d8d83a1f00ad6b3b3f438e3eeb02fd5996771"
+    },
+    {
+      "path": "scripts/security-release-candidate.mjs",
+      "sha256": "dec198d4297dbe0c0a8b071caf8aab10d59a58365c2f6fc5cd1126a171840f14"
+    },
+    {
+      "path": "scripts/security-release-regression.mjs",
+      "sha256": "afcfc490eb0e0b51e1c9f61e0c52f47d642957d0f1c06f46d0ecba60bd99a527"
+    },
+    {
+      "path": "scripts/security-release-verify.ts",
+      "sha256": "1bf87c45f8eeb5cbeb069dd4aecd3431e335de05d71427321313725fed6336e9"
+    },
+    {
+      "path": "test/helpers/security-browser.ts",
+      "sha256": "731b0014ef978a843cff0dfb5e338f7c006aae06d81c5d8258bb75e5ec136e88"
+    },
+    {
+      "path": "test/integration/protocol-operations.ts",
+      "sha256": "093ad9273080175e1d3f4ba325fc8fd0ce623aab2d52e8d284049cdb72e0c63e"
+    },
+    {
+      "path": "test/integration/security-browser-apps.test.ts",
+      "sha256": "5ab3b59946a53e0fc1af79061104be19d351ad97eda668a73f90f6b60b5c1e43"
+    },
+    {
+      "path": "test/integration/security-asset-browser.test.ts",
+      "sha256": "742b169722297783ca9592210127f96b6bf82943341ccab236690c0d82709479"
+    },
+    {
+      "path": "test/unit/binding-surface-publication.test.ts",
+      "sha256": "ca06ae9713e0ee17e2a970d3b6851c570ae2dc467e0c52cd5224e93689abc88b"
+    },
+    {
+      "path": "docs/security-v1-deliveries/SEC-M7.md",
+      "sha256": "aa5ef98fe92ea4ace4c2b6d0177f6938555e740a8facdea57e056cf1babdc287"
+    },
+    {
+      "path": "docs/security-v1-milestones.md",
+      "sha256": "118ba993072063b6deb0eb0fc46bfcfb083b54dd50bc1fe54ad066806f2ea36e"
+    },
+    {
+      "path": "docs/security-v1-plan.md",
+      "sha256": "88fb267deeaa4f733366dd0762dbc9860e47901710dad8ab948136ea2c2192b2"
+    },
+    {
+      "path": "docs/security-v1/AGENTS.md",
+      "sha256": "d7278f700a9c5ab4511fbc241148db2170626b710432c9350a815c3df530c6d1"
+    },
+    {
+      "path": "docs/security-v1/overview.md",
+      "sha256": "c540131c96acab02e73f3a5abc4e8ac3f211dfdc3ec8a13a556a3578fa37df5d"
+    },
+    {
+      "path": "docs/security-v1/user-guide.md",
+      "sha256": "a36144464004cb696bc5475ca474013010f09828ec0cdc3adf25d5e83ce2e691"
+    },
+    {
+      "path": "docs/security-v1/release-guide.md",
+      "sha256": "40e9a9a4387c3df270bc6d8be7b26e331ffeb7d1d79ff34e4df655d951e1f885"
+    },
+    {
+      "path": "docs/modeldb-config-guide.md",
+      "sha256": "e76bb2d777e5db420b45ca98449ddc5003e4acd0e303feade37dec0bab0cd598"
+    },
+    {
+      "path": "test/README.md",
+      "sha256": "96f05035359a6876ebbbe9d349c21cf2d6c44adb767831483c41f6c4419fb184"
+    }
+  ],
+  "evidenceHashes": [
+    {
+      "path": "browser.json",
+      "sha256": "6baa741eeecba7b2571c6b29c7edd8263cd3c5b3b00afc30747eb3c25a3d68c2"
+    },
+    {
+      "path": "equivalence.json",
+      "sha256": "bf9d2f98188b2d83e3b23dd9515db9e34eed64087a89c9b9ff5ced7e03ba0db5"
+    },
+    {
+      "path": "performance-exploratory.json",
+      "sha256": "7b9df06ea27219d1719c8f3347b5cbe5ce8b6ed3723be7d0b974e5b9317e0ec8"
+    },
+    {
+      "path": "performance-exploratory.original.json.txt",
+      "sha256": "2d4454f5a92a9f92f2007b95ea2d454a5f1d47d50a0d6ec62e6434f4ce3d2163"
+    },
+    {
+      "path": "performance.json",
+      "sha256": "5a8291037c9d38e7e5468620ec10caac71958008623b823b47af71aad0a7c2d7"
+    },
+    {
+      "path": "performance.original.json.txt",
+      "sha256": "86c00c1fc64c968bdfee9bcf4a5a0ea99f25e993516267c5cddd7ca242f6a0f7"
+    },
+    {
+      "path": "regression.json",
+      "sha256": "05037b0833ff32758507f9cf04ce525f1a5c3aa2c0d3407f73197337c7fa5b86"
+    },
+    {
+      "path": "release-candidate.json",
+      "sha256": "ae3f3934977c7f285f12963522de5debcc9a94711ba23dd1e0a287da1045cabd"
+    },
+    {
+      "path": "release-candidate.original.json.txt",
+      "sha256": "ae3f3934977c7f285f12963522de5debcc9a94711ba23dd1e0a287da1045cabd"
+    },
+    {
+      "path": "tested-release-candidate.original.json.txt",
+      "sha256": "9a6c8a9f4158bd4f8598eb5361c5e7a56c0b096f0f0eda460085e38304b45054"
+    }
+  ]
+}

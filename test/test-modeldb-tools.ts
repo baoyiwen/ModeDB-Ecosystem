@@ -1,11 +1,7 @@
-import { ModelDB, RemoteHydratedEntity } from '@mode-db/sdk';
-import { DataType} from '@mode-db/common';
+import { ModelDB } from '@mode-db/sdk';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
 
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const datasDir = path.join(scriptDir, 'datas');
 
 type ParsedData = unknown;
 

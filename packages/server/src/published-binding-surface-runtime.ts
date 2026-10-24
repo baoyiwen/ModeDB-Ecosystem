@@ -17,6 +17,7 @@ import {
   enforcePublishedInterfaceAccess,
   enforcePublishedInterfaceRateLimit,
 } from './published-interface-policy.js';
+import type { AuthorizationService } from './security/authorization-service.js';
 
 const BINDING_SURFACE_MODEL = 'sys_binding_surface';
 const BINDING_SURFACE_CALL_LOG_MODEL = 'sys_binding_surface_call_log';
@@ -33,6 +34,7 @@ interface StoredBindingSurfaceRelease {
 }
 
 export async function executePublishedBindingSurface(input: {
+  authorization?: AuthorizationService;
   atlas: string;
   designerWorkspace: string;
   body: ExecuteBindingSurfaceBody;
@@ -64,12 +66,14 @@ export async function executePublishedBindingSurface(input: {
 }
 
 async function executePublishedBindingSurfaceCore(input: {
+  authorization?: AuthorizationService;
   atlas: string;
   designerWorkspace: string;
   body: ExecuteBindingSurfaceBody;
   getEngine: (atlas: string) => Promise<AuthoringEngine>;
 }): Promise<WireBindingSurfaceResult> {
   const release = await resolveBindingSurfaceRelease(input);
+  input.authorization?.release(input.atlas, 'callable.binding', input.body.surfaceId, release);
   const policyRelease = {
     version: release.version,
     callableName: release.contract.surfaceId,
@@ -103,6 +107,7 @@ async function executePublishedBindingSurfaceCore(input: {
   }
   const parameters = bindInterfaceParameters(mutation.parameterBindings, surfaceValues, action);
   const result = await executePublishedOperationInterface({
+    authorization: input.authorization,
     atlas: input.atlas,
     designerWorkspace: input.designerWorkspace,
     body: {
@@ -244,6 +249,7 @@ async function resolveBindingSurfaceRelease(input: {
 
 async function executeSurfaceQuery(
   input: {
+    authorization?: AuthorizationService;
     atlas: string;
     designerWorkspace: string;
     body: ExecuteBindingSurfaceBody;
@@ -259,6 +265,7 @@ async function executeSurfaceQuery(
     action,
   );
   return executePublishedQueryInterface({
+    authorization: input.authorization,
     atlas: input.atlas,
     designerWorkspace: input.designerWorkspace,
     body: {
