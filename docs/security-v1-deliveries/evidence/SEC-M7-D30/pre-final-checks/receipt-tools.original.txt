@@ -1,0 +1,352 @@
+TAP version 13
+# Subtest: hostile browser parser requires real Chrome and every defense
+ok 1 - hostile browser parser requires real Chrome and every defense
+  ---
+  duration_ms: 3.2543
+  type: 'test'
+  ...
+# Subtest: hostile parser rejects missing or duplicated records and summary drift
+ok 2 - hostile parser rejects missing or duplicated records and summary drift
+  ---
+  duration_ms: 0.6531
+  type: 'test'
+  ...
+# Subtest: hostile parser rejects invented hardware, trust or live environment evidence
+ok 3 - hostile parser rejects invented hardware, trust or live environment evidence
+  ---
+  duration_ms: 0.3666
+  type: 'test'
+  ...
+# Subtest: candidate requires all six groups on one build and exact successful units
+ok 4 - candidate requires all six groups on one build and exact successful units
+  ---
+  duration_ms: 2.4923
+  type: 'test'
+  ...
+# Subtest: candidate rejects stale build, source drift and expanded scope
+ok 5 - candidate rejects stale build, source drift and expanded scope
+  ---
+  duration_ms: 1.4084
+  type: 'test'
+  ...
+# Subtest: candidate snapshot is stable and detects mutation, removal and additions
+ok 6 - candidate snapshot is stable and detects mutation, removal and additions
+  ---
+  duration_ms: 6.8721
+  type: 'test'
+  ...
+# Subtest: candidate snapshot rejects a directory junction
+ok 7 - candidate snapshot rejects a directory junction
+  ---
+  duration_ms: 2.6179
+  type: 'test'
+  ...
+# Subtest: delivery evidence binds exact source, native raw result, summaries and scope
+ok 8 - delivery evidence binds exact source, native raw result, summaries and scope
+  ---
+  duration_ms: 3.7343
+  type: 'test'
+  ...
+# Subtest: delivery evidence refuses absent reports, static logs and source binding
+ok 9 - delivery evidence refuses absent reports, static logs and source binding
+  ---
+  duration_ms: 1.6101
+  type: 'test'
+  ...
+# Subtest: delivery evidence rejects skipped results, nonzero process and candidate drift
+ok 10 - delivery evidence rejects skipped results, nonzero process and candidate drift
+  ---
+  duration_ms: 0.9957
+  type: 'test'
+  ...
+# Subtest: delivery evidence rejects premature stage, install, performance and device claims
+ok 11 - delivery evidence rejects premature stage, install, performance and device claims
+  ---
+  duration_ms: 1.1267
+  type: 'test'
+  ...
+# Subtest: recipient evidence binds the current source, build, native checks and raw test summaries
+ok 12 - recipient evidence binds the current source, build, native checks and raw test summaries
+  ---
+  duration_ms: 3.1954
+  type: 'test'
+  ...
+# Subtest: recipient evidence rejects missing mandatory artifacts and source bindings
+ok 13 - recipient evidence rejects missing mandatory artifacts and source bindings
+  ---
+  duration_ms: 1.8929
+  type: 'test'
+  ...
+# Subtest: recipient evidence rejects skipped, failed, changed or missing browser and unit results
+ok 14 - recipient evidence rejects skipped, failed, changed or missing browser and unit results
+  ---
+  duration_ms: 0.9308
+  type: 'test'
+  ...
+# Subtest: recipient evidence does not upgrade scope, stage counts or incomplete checks
+ok 15 - recipient evidence does not upgrade scope, stage counts or incomplete checks
+  ---
+  duration_ms: 1.7612
+  type: 'test'
+  ...
+# Subtest: selects the current receipt and allows only development CRLF/LF differences
+ok 16 - selects the current receipt and allows only development CRLF/LF differences
+  ---
+  duration_ms: 64.8671
+  type: 'test'
+  ...
+# Subtest: rejects changed source text
+ok 17 - rejects changed source text
+  ---
+  duration_ms: 29.8882
+  type: 'test'
+  ...
+# Subtest: rejects changed historical screenshot bytes
+ok 18 - rejects changed historical screenshot bytes
+  ---
+  duration_ms: 42.4226
+  type: 'test'
+  ...
+# Subtest: rejects modified verification artifacts
+ok 19 - rejects modified verification artifacts
+  ---
+  duration_ms: 39.5393
+  type: 'test'
+  ...
+# Subtest: does not accept skipped tests even with matching artifact hashes
+ok 20 - does not accept skipped tests even with matching artifact hashes
+  ---
+  duration_ms: 45.9114
+  type: 'test'
+  ...
+# Subtest: rejects runtime and traversal paths before opening them
+ok 21 - rejects runtime and traversal paths before opening them
+  ---
+  duration_ms: 81.4944
+  type: 'test'
+  ...
+# Subtest: rejects linked source ancestors
+ok 22 - rejects linked source ancestors
+  ---
+  duration_ms: 26.4268
+  type: 'test'
+  ...
+# Subtest: fails closed for incomplete newest evidence and duplicate source paths
+ok 23 - fails closed for incomplete newest evidence and duplicate source paths
+  ---
+  duration_ms: 32.2117
+  type: 'test'
+  ...
+# Subtest: verifies a registration-contract receipt separately from historical runtime acceptance
+ok 24 - verifies a registration-contract receipt separately from historical runtime acceptance
+  ---
+  duration_ms: 51.1217
+  type: 'test'
+  ...
+# Subtest: rejects incomplete registration evidence without falling back to a passed D11 receipt
+ok 25 - rejects incomplete registration evidence without falling back to a passed D11 receipt
+  ---
+  duration_ms: 152.0744
+  type: 'test'
+  ...
+# Subtest: validates protocol evidence and the separately locked offline dependency graph
+ok 26 - validates protocol evidence and the separately locked offline dependency graph
+  ---
+  duration_ms: 54.4539
+  type: 'test'
+  ...
+# Subtest: fails closed for protocol skips, unavailable offline install and unverified browser boundary
+ok 27 - fails closed for protocol skips, unavailable offline install and unverified browser boundary
+  ---
+  duration_ms: 212.4789
+  type: 'test'
+  ...
+# Subtest: verifies storage acceptance without turning it into runtime registration acceptance
+ok 28 - verifies storage acceptance without turning it into runtime registration acceptance
+  ---
+  duration_ms: 175.6176
+  type: 'test'
+  ...
+# Subtest: does not fall back to D13 for skipped storage, failed legacy compatibility or missing DPAPI/hard-exit evidence
+ok 29 - does not fall back to D13 for skipped storage, failed legacy compatibility or missing DPAPI/hard-exit evidence
+  ---
+  duration_ms: 243.0068
+  type: 'test'
+  ...
+# Subtest: accepts registration API evidence without claiming approval or public-key login
+ok 30 - accepts registration API evidence without claiming approval or public-key login
+  ---
+  duration_ms: 86.7733
+  type: 'test'
+  ...
+# Subtest: refuses skipped runtime, missing native HTTPS or dependency drift without falling back to storage evidence
+ok 31 - refuses skipped runtime, missing native HTTPS or dependency drift without falling back to storage evidence
+  ---
+  duration_ms: 317.7481
+  type: 'test'
+  ...
+# Subtest: accepts OS-local approval evidence without claiming public-key login or full registration integration
+ok 32 - accepts OS-local approval evidence without claiming public-key login or full registration integration
+  ---
+  duration_ms: 66.655
+  type: 'test'
+  ...
+# Subtest: refuses approval skips, failed OS identity, scopes, atomic audit or native CLI without falling back to D15
+ok 33 - refuses approval skips, failed OS identity, scopes, atomic audit or native CLI without falling back to D15
+  ---
+  duration_ms: 360.2912
+  type: 'test'
+  ...
+# Subtest: accepts full registration integration evidence separately from hardware and public-key login acceptance
+ok 34 - accepts full registration integration evidence separately from hardware and public-key login acceptance
+  ---
+  duration_ms: 68.8156
+  type: 'test'
+  ...
+# Subtest: rejects missing virtual/native, skipped flow, hard-exit, capacity or session evidence without falling back to D16
+ok 35 - rejects missing virtual/native, skipped flow, hard-exit, capacity or session evidence without falling back to D16
+  ---
+  duration_ms: 436.9884
+  type: 'test'
+  ...
+# Subtest: accepts explicit session-parent migration evidence without claiming a public-key login
+ok 36 - accepts explicit session-parent migration evidence without claiming a public-key login
+  ---
+  duration_ms: 61.1101
+  type: 'test'
+  ...
+# Subtest: rejects incomplete or misbound session-parent evidence without falling back to D17
+ok 37 - rejects incomplete or misbound session-parent evidence without falling back to D17
+  ---
+  duration_ms: 510.6139
+  type: 'test'
+  ...
+# Subtest: accepts native public-key login evidence with separate UI, hardware and production boundaries
+ok 38 - accepts native public-key login evidence with separate UI, hardware and production boundaries
+  ---
+  duration_ms: 69.1388
+  type: 'test'
+  ...
+# Subtest: rejects incomplete authentication evidence without falling back to D18
+ok 39 - rejects incomplete authentication evidence without falling back to D18
+  ---
+  duration_ms: 590.9432
+  type: 'test'
+  ...
+# Subtest: accepts dynamic authorization evidence with live boundaries and preserves D19 as history
+ok 40 - accepts dynamic authorization evidence with live boundaries and preserves D19 as history
+  ---
+  duration_ms: 71.0483
+  type: 'test'
+  ...
+# Subtest: refuses incomplete dynamic authorization evidence without falling back to D19
+ok 41 - refuses incomplete dynamic authorization evidence without falling back to D19
+  ---
+  duration_ms: 818.9378
+  type: 'test'
+  ...
+# Subtest: accepts local identity maintenance evidence and retains D20 without implying a management UI
+ok 42 - accepts local identity maintenance evidence and retains D20 without implying a management UI
+  ---
+  duration_ms: 76.1997
+  type: 'test'
+  ...
+# Subtest: refuses incomplete maintenance, native CLI, replacement, metadata and fault evidence without falling back to D20
+ok 43 - refuses incomplete maintenance, native CLI, replacement, metadata and fault evidence without falling back to D20
+  ---
+  duration_ms: 817.6404
+  type: 'test'
+  ...
+# Subtest: accepts DR-P2 completion only with separate process-exit, native browser and maintenance evidence
+ok 44 - accepts DR-P2 completion only with separate process-exit, native browser and maintenance evidence
+  ---
+  duration_ms: 80.8146
+  type: 'test'
+  ...
+# Subtest: rejects incomplete or inflated resilience evidence without falling back to D21
+ok 45 - rejects incomplete or inflated resilience evidence without falling back to D21
+  ---
+  duration_ms: 1033.7781
+  type: 'test'
+  ...
+# Subtest: accepts hosted listeners only with native lifecycle, exact origin and localized browser evidence
+ok 46 - accepts hosted listeners only with native lifecycle, exact origin and localized browser evidence
+  ---
+  duration_ms: 98.5641
+  type: 'test'
+  ...
+# Subtest: rejects missing, skipped, stale, inflated or incomplete hosting evidence without fallback to D22
+ok 47 - rejects missing, skipped, stale, inflated or incomplete hosting evidence without fallback to D22
+  ---
+  duration_ms: 1540.1842
+  type: 'test'
+  ...
+# Subtest: requires the newest formal identity UI receipt while preserving D23 history
+ok 48 - requires the newest formal identity UI receipt while preserving D23 history
+  ---
+  duration_ms: 156.9909
+  type: 'test'
+  ...
+# Subtest: rejects incomplete identity UI evidence, hardware claims, count drift and missing screenshots without fallback
+ok 49 - rejects incomplete identity UI evidence, hardware claims, count drift and missing screenshots without fallback
+  ---
+  duration_ms: 1585.5307
+  type: 'test'
+  ...
+# Subtest: requires D25 local approval and maintenance UI evidence while preserving D24
+ok 50 - requires D25 local approval and maintenance UI evidence while preserving D24
+  ---
+  duration_ms: 214.0514
+  type: 'test'
+  ...
+# Subtest: rejects missing admin UI, conflict, paging, confirmation, native scope or count evidence without fallback
+ok 51 - rejects missing admin UI, conflict, paging, confirmation, native scope or count evidence without fallback
+  ---
+  duration_ms: 3159.233
+  type: 'test'
+  ...
+# Subtest: requires D26 first-deployment evidence while preserving D25 history
+ok 52 - requires D26 first-deployment evidence while preserving D25 history
+  ---
+  duration_ms: 268.4554
+  type: 'test'
+  ...
+# Subtest: rejects missing preview, offline, policy, localization or scope checks without falling back
+ok 53 - rejects missing preview, offline, policy, localization or scope checks without falling back
+  ---
+  duration_ms: 4265.62
+  type: 'test'
+  ...
+# Subtest: requires D27 public client and three-application compatibility evidence while preserving D26
+ok 54 - requires D27 public client and three-application compatibility evidence while preserving D26
+  ---
+  duration_ms: 433.7598
+  type: 'test'
+  ...
+# Subtest: rejects missing consumer, locale, application mode, lifecycle or accurate counts without fallback
+ok 55 - rejects missing consumer, locale, application mode, lifecycle or accurate counts without fallback
+  ---
+  duration_ms: 4711.5062
+  type: 'test'
+  ...
+# Subtest: requires D28 one-candidate browser, hostile page and three-client save evidence while preserving D27
+ok 56 - requires D28 one-candidate browser, hostile page and three-client save evidence while preserving D27
+  ---
+  duration_ms: 590.9906
+  type: 'test'
+  ...
+# Subtest: rejects missing candidate evidence, changed source binding, skipped checks and false production claims without fallback
+ok 57 - rejects missing candidate evidence, changed source binding, skipped checks and false production claims without fallback
+  ---
+  duration_ms: 6651.1006
+  type: 'test'
+  ...
+1..57
+# tests 57
+# suites 0
+# pass 57
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 30776.8777

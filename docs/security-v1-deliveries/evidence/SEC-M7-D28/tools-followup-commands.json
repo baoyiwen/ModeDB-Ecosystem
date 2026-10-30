@@ -1,0 +1,28 @@
+[
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-release-evidence.test.mjs",
+      "test/unit/security-authentication-report.test.mjs",
+      "test/unit/security-authentication-resilience-report.test.mjs"
+    ],
+    "exitCode": 0,
+    "log": "tools-after-style-1793154616295.original.txt",
+    "previous": "tools-before-style-1793154588268.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-browser-candidate-report.test.mjs"
+    ],
+    "exitCode": 0,
+    "log": "candidate-report-after-style-1793154616694.original.txt",
+    "previous": "candidate-report-before-style-1793154616297.original.txt"
+  }
+]

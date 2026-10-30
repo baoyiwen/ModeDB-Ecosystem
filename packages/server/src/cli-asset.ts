@@ -1,7 +1,7 @@
 import { createPublicKey } from 'node:crypto';
 import { closeSync, existsSync, fsyncSync, openSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { assertFlatGraphSegment } from '@mode-db/common';
+import { assertFlatGraphSegment, fileDigest } from '@mode-db/common';
 import {
   collectAssetGraph,
   collectDesignerAsset,
@@ -29,6 +29,8 @@ import { LocalVaultKeyProvider } from './security/local-vault-key-provider.js';
 import { SecurityRegistry } from './security/security-registry.js';
 import { WindowsSecretProtector } from './security/windows-secret-protector.js';
 import { SecurityError } from './security/security-errors.js';
+import { selectCliExportRecipient } from './cli-recipient-delivery.js';
+import { recipientDeliveryOptions } from './security/recipient-delivery.js';
 
 /** Offline OS-owner entry point; no HTTP path accepts private keys or passphrases. */
 export async function runAssetCli(argv: string[]): Promise<void> {
@@ -46,6 +48,7 @@ export async function runAssetCli(argv: string[]): Promise<void> {
       '--asset-id',
       '--asset-version',
       '--public-key',
+      ...recipientDeliveryOptions,
       '--signing-key',
       '--passphrase-file',
       '--output',
@@ -167,7 +170,12 @@ export async function runAssetCli(argv: string[]): Promise<void> {
     ) {
       throw new SecurityError('SECURITY_FORBIDDEN');
     }
+    const selected =
+      action === 'asset-export'
+        ? selectCliExportRecipient(registry, options, required('--instance'), yes, protector)
+        : undefined;
     registry.recordMaintenance('asset.task.started');
+    const deliveryRevision = registry.status().revision;
     let result: unknown;
     if (action === 'asset-export') {
       const nested = assertRecoveryPath(join(cfg.storageRoot, database, 'atlas.mld'));
@@ -191,7 +199,7 @@ export async function runAssetCli(argv: string[]): Promise<void> {
       const keyPath = assertRecoveryPath(required('--signing-key'));
       protector.ensureDirectory(dirname(keyPath));
       const key = openAssetSigningKey(readBackupBytes(keyPath, 16384), phrase());
-      const recipient = createPublicKey(readBackupBytes(required('--public-key'), 8192));
+      const recipient = selected!.key;
       const selection = JSON.parse(
         readBackupBytes(required('--selection'), 65536).toString('utf8'),
       ) as AssetSelection | DesignerAssetSelection;
@@ -241,13 +249,26 @@ export async function runAssetCli(argv: string[]): Promise<void> {
             key,
           );
         }
-        writeNew(output, bytes);
+        const packageSha256 = fileDigest(bytes);
+        if (selected?.selection) {
+          registry.withLocalActor(selected.sid, () =>
+            registry.recordSealedRecipientDelivery(
+              { ...selected.selection, revision: deliveryRevision },
+              database,
+              'asset',
+              packageSha256,
+            ),
+          );
+        }
         resultWritten = true;
+        writeNew(output, bytes);
         result = {
           exported: true,
           bytes: bytes.length,
           publisherId: backupRecipientId(key),
           recipientId: backupRecipientId(recipient),
+          packageSha256,
+          ...(selected?.recipient ? { recipient: selected.recipient } : {}),
         };
       } finally {
         await bridge.close();

@@ -1,3 +1,13 @@
+/** Session authority namespace. IDs from different namespaces are never interchangeable. */
+export type SecuritySessionParent =
+  | { readonly kind: 'api-credential'; readonly credentialId: string }
+  | {
+      readonly kind: 'registered-public-key';
+      readonly credentialId: string;
+      readonly userId: string;
+    }
+  | { readonly kind: 'local-management'; readonly credentialId: string };
+
 /** Non-secret identity context reserved for the unified authorization layer. */
 export interface SecurityActor {
   readonly principalId?: string;
@@ -38,6 +48,15 @@ export interface DataSecurityEvent {
   readonly ruleId?: string;
   readonly durationMs?: number;
   readonly affectedCount?: number;
+  /** Offline sealed package metadata. Never contains public/private keys or payload values. */
+  readonly delivery?: {
+    readonly recipientKeyId: string;
+    readonly userId: string;
+    readonly keyVersion: number;
+    readonly fingerprint: string;
+    readonly packageSha256: string;
+    readonly kind: 'backup' | 'asset';
+  };
   /** One durable anonymous rejection row per source/reason/transport/plane/minute. */
   readonly aggregation?: {
     readonly windowStartUtc: string;
@@ -160,6 +179,8 @@ export interface SecurityCenterSession {
   readonly id: string;
   readonly principalId: string;
   readonly credentialId: string;
+  /** Absent on older servers. Contains metadata only, never authentication material. */
+  readonly parent?: SecuritySessionParent;
   readonly createdAt: string;
   readonly expiresAt: string;
   readonly revokedAt?: string;

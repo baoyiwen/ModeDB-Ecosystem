@@ -1,0 +1,18 @@
+packages/shared/src/device-authentication-contracts.ts 323ms
+packages/shared/src/index.ts 8ms (unchanged)
+packages/server/src/security/authentication-ledger.ts 10ms
+packages/server/src/security/authentication-service.ts 30ms
+packages/server/src/security/authentication-routes.ts 19ms
+packages/server/src/security/browser-session-http.ts 9ms
+packages/server/src/security/security-registry.ts 131ms
+packages/server/src/security/registry-entrypoints.ts 50ms
+packages/server/src/security/network-boundary.ts 8ms
+packages/server/src/config-loader.ts 15ms
+packages/server/src/dual-track-app.ts 78ms
+packages/sdk/src/browser-session.ts 12ms
+packages/sdk/src/index.ts 3ms
+scripts/security-authentication-integration-check.mjs 86ms
+scripts/security-registration-storage-check.mjs 4ms (unchanged)
+scripts/security-registration-consumer-check.mjs 6ms (unchanged)
+scripts/security-release-evidence.mjs 26ms
+package.json 2ms (unchanged)

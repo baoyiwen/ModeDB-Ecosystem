@@ -1,0 +1,15 @@
+packages/server/src/security/authentication-service.ts 77ms (unchanged)
+scripts/security-authentication-resilience-check.mjs 20ms
+scripts/security-registration-storage-check.mjs 7ms (unchanged)
+scripts/security-release-evidence.mjs 35ms
+package.json 3ms (unchanged)
+docs/security-v1/device-registration-protocol-contract.md 96ms (unchanged)
+docs/security-v1/device-registration-runtime-guide.md 62ms (unchanged)
+docs/security-v1/overview.md 20ms (unchanged)
+docs/security-v1/user-guide.md 65ms (unchanged)
+docs/security-v1-identity-contract.md 54ms (unchanged)
+docs/security-v1-authorization-contract.md 29ms
+docs/security-browser-sessions.md 14ms
+docs/security-v1-plan.md 113ms (unchanged)
+docs/security-v1/AGENTS.md 22ms (unchanged)
+docs/security-v1-milestones.md 125ms

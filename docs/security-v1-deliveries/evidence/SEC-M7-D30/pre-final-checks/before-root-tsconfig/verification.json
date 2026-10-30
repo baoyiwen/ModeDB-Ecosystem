@@ -1,0 +1,59 @@
+{
+  "format": "modeldb.recipient-delivery-verification.v1",
+  "revision": "SEC-M7-D30",
+  "task": "DR-P4.2",
+  "date": "2026-10-28",
+  "timezone": "Asia/Shanghai",
+  "node": "v24.15.0",
+  "nativeNode": "v24.15.0",
+  "platform": "win32",
+  "candidateSha256": "b005197a0abf1fd0582419b80fe63abe5e1b1a930e5dd98daddd427702df1e74",
+  "tasks": {
+    "v1Milestones": "7/7",
+    "v1": "20/20",
+    "registration": "19/23",
+    "registrationP1": "6/6",
+    "registrationP2": "5/5",
+    "registrationP3": "6/6",
+    "registrationP4": "2/6",
+    "registrationWorkPackages": "3/4"
+  },
+  "unit": {
+    "pass": 421,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "receiptUnit": {
+    "pass": 57,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "nativePass": 1,
+  "totalTargetedPass": 479,
+  "checks": {
+    "exactRecipientAndCas": true,
+    "atomicSealingAudit": true,
+    "existingFormatsAndRecovery": true,
+    "strictTypes": true,
+    "browserBoundary": true,
+    "documents": true,
+    "materialGuard": true
+  },
+  "historicalEvidenceVerified": 1463,
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "realTwoDeviceTested": false,
+    "hardwareAuthenticatorTested": false,
+    "frontendChanged": false,
+    "packageDeliveryTested": true,
+    "fullReleaseInstallTested": false,
+    "performanceTested": false,
+    "physicalDiskFullTested": false,
+    "productionMigrationPerformed": false
+  }
+}

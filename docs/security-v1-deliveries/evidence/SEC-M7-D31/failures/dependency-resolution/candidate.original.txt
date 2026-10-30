@@ -1,0 +1,53 @@
+ReleaseRoot: C:\Users\51153\AppData\Local\Temp\ModeDB-Release-IMp5r5
+Building clean package: shared
+Building clean package: common
+Building clean package: data-kit
+Building clean package: data-ui
+Building clean package: sdk
+Building clean package: core
+Building clean package: server
+Installing local tarballs offline
+Building clean application: model-designer
+vite v6.4.3 building for production...
+transforming...
+✓ 290 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../apps/model-designer/index.html                                          0.91 kB │ gzip:   0.55 kB
+../../../apps/model-designer/assets/index-DhWdvLmj.css                         193.06 kB │ gzip:  31.47 kB
+../../../apps/model-designer/assets/browser-DtJ-pQ3A.js                          0.62 kB │ gzip:   0.43 kB
+../../../apps/model-designer/assets/export-model-map-Cnyh-Iv0.js                 3.66 kB │ gzip:   1.67 kB
+../../../apps/model-designer/assets/workbook-DVlLpo3l.js                        12.03 kB │ gzip:   4.54 kB
+../../../apps/model-designer/assets/OperationDesignerPanel-C-tMdcyA.js          24.57 kB │ gzip:   6.51 kB
+../../../apps/model-designer/assets/BindingSurfaceDesignerPanel-Bm_es_X-.js     49.01 kB │ gzip:  13.07 kB
+../../../apps/model-designer/assets/exceljs.min-Cvjg2HJk.js                    939.80 kB │ gzip: 271.12 kB
+../../../apps/model-designer/assets/index-rx5yKant.js                        1,178.42 kB │ gzip: 339.56 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 3.55s
+Building clean application: data-studio
+vite v6.4.3 building for production...
+transforming...
+✓ 143 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../apps/data-studio/index.html                    0.48 kB │ gzip:   0.31 kB
+../../../apps/data-studio/assets/index-BL5WTjI1.css    53.70 kB │ gzip:   9.27 kB
+../../../apps/data-studio/assets/browser-AQdqytxT.js    0.68 kB │ gzip:   0.44 kB
+../../../apps/data-studio/assets/index-BPeWGmxQ.js    413.22 kB │ gzip: 128.05 kB
+✓ built in 564ms
+Building clean application: web
+vite v6.4.3 building for production...
+transforming...
+✓ 139 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../apps/web/index.html                    0.42 kB │ gzip:   0.28 kB
+../../../apps/web/assets/index-zs0jl1FI.css    42.98 kB │ gzip:   8.81 kB
+../../../apps/web/assets/browser-CpIsxtl5.js    0.62 kB │ gzip:   0.43 kB
+../../../apps/web/assets/index-CAKpmEyg.js    373.21 kB │ gzip: 113.44 kB
+✓ built in 692ms
+SUCCESS: C:\Users\51153\AppData\Local\Temp\ModeDB-Release-IMp5r5\release-candidate.json

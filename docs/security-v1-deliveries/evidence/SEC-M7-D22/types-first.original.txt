@@ -1,0 +1,11 @@
+test/unit/security-authentication-resilience.test.ts(43,82): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(message: Serializable, callback?: ((error: Error | null) => void) | undefined): boolean', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'Serializable'.
+  Overload 2 of 3, '(message: Serializable, sendHandle?: SendHandle, callback?: ((error: Error | null) => void) | undefined): boolean', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'Serializable'.
+  Overload 3 of 3, '(message: Serializable, sendHandle?: SendHandle, options?: MessageOptions | undefined, callback?: ((error: Error | null) => void) | undefined): boolean', gave the following error.
+    Argument of type 'unknown' is not assignable to parameter of type 'Serializable'.
+
+
+2 !== 0
+

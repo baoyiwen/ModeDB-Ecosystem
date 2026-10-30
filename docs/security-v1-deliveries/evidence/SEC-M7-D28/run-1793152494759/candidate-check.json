@@ -1,0 +1,90 @@
+{
+  "format": "modeldb.browser-candidate-check.v1",
+  "task": "DR-P3.6",
+  "ok": false,
+  "platform": "win32",
+  "node": "v24.15.0",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Browser-Candidate-sWAyOx",
+  "candidateSha256": "fe1da21fc923db7bdc3f6c7e16d11da74894c96e44de45d903f72cb555f61948",
+  "groups": [
+    {
+      "name": "hosting",
+      "log": "hosting.tap",
+      "exitCode": 0,
+      "timedOut": false,
+      "durationMs": 59695,
+      "candidateSha256": "fe1da21fc923db7bdc3f6c7e16d11da74894c96e44de45d903f72cb555f61948",
+      "ok": true,
+      "unit": {
+        "pass": 2,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "native": {
+        "format": "modeldb.hosting-native.v1",
+        "ok": true,
+        "checks": {
+          "nativeDpapi": true,
+          "osAuthenticatedPipe": true,
+          "exactLiveAddress": true,
+          "dataManagementSeparated": true,
+          "anonymousAdminDenied": true,
+          "legacyLaunchBlocked": true,
+          "cookieRestartRecovery": true,
+          "closeReleasesBothPorts": true,
+          "bindFailuresReleaseRegistryAndPipe": true,
+          "invalidBuildRejected": true
+        },
+        "liveMaterialRead": false
+      },
+      "browser": {
+        "format": "modeldb.hosting-browser.v1",
+        "ok": true,
+        "browser": "Chrome/156.0.8078.48",
+        "hardwareAuthenticatorTested": false,
+        "systemTrustInstalled": false,
+        "checks": {
+          "freshDesignerBuild": true,
+          "cspRunsApplication": true,
+          "sameOriginData": true,
+          "osLaunchFragmentRemoved": true,
+          "httpOnlyStrict": true,
+          "csrfRequired": true,
+          "managementOnly": true,
+          "reloadRecovery": true,
+          "refreshAndLogout": true,
+          "localizedZhEnJa": true,
+          "wideAndNarrow": true,
+          "accessibleLanguageControl": true
+        },
+        "screenshots": 12,
+        "liveMaterialRead": false
+      }
+    }
+  ],
+  "totalNativePass": 2,
+  "build": {
+    "applications": [
+      "model-designer",
+      "data-studio",
+      "web"
+    ],
+    "configFile": false,
+    "envFile": false,
+    "existingDistUnchanged": true,
+    "singleCandidate": true,
+    "sourceUnchanged": false,
+    "buildUnchanged": false
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "lanTested": false,
+    "fullReleaseInstallTested": false
+  },
+  "failureCode": "CANDIDATE_SOURCE_CHANGED"
+}

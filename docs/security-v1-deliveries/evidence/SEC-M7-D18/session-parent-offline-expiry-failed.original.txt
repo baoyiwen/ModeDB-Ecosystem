@@ -1,0 +1,230 @@
+TAP version 13
+# Subtest: V1 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+ok 1 - V1 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+  ---
+  duration_ms: 150.2247
+  type: 'test'
+  ...
+# Subtest: V2 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+ok 2 - V2 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+  ---
+  duration_ms: 146.9006
+  type: 'test'
+  ...
+# Subtest: V3 API issuance, invitation, rotation and revocation preserve the API namespace
+ok 3 - V3 API issuance, invitation, rotation and revocation preserve the API namespace
+  ---
+  duration_ms: 119.275
+  type: 'test'
+  ...
+# Subtest: local management remains empty-scope and cannot be rotated or paired into a reusable API identity
+ok 4 - local management remains empty-scope and cannot be rotated or paired into a reusable API identity
+  ---
+  duration_ms: 94.7865
+  type: 'test'
+  ...
+# Subtest: registered parent resolves only its own live grants and never mints or inherits API credentials
+ok 5 - registered parent resolves only its own live grants and never mints or inherits API credentials
+  ---
+  duration_ms: 104.3611
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after disabled-key
+ok 6 - registered parent fails closed after disabled-key
+  ---
+  duration_ms: 94.6393
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after revoked-key
+ok 7 - registered parent fails closed after revoked-key
+  ---
+  duration_ms: 86.749
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after disabled-user
+ok 8 - registered parent fails closed after disabled-user
+  ---
+  duration_ms: 89.6706
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after disabled-principal
+ok 9 - registered parent fails closed after disabled-principal
+  ---
+  duration_ms: 86.8797
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after expired
+ok 10 - registered parent fails closed after expired
+  ---
+  duration_ms: 86.8837
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after reset
+ok 11 - registered parent fails closed after reset
+  ---
+  duration_ms: 94.4998
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: missing parent
+ok 12 - rejects malformed persisted parent: missing parent
+  ---
+  duration_ms: 84.4562
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: null parent
+ok 13 - rejects malformed persisted parent: null parent
+  ---
+  duration_ms: 82.6952
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: unknown kind
+ok 14 - rejects malformed persisted parent: unknown kind
+  ---
+  duration_ms: 85.9823
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: foreign credential
+ok 15 - rejects malformed persisted parent: foreign credential
+  ---
+  duration_ms: 84.2313
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: foreign user
+ok 16 - rejects malformed persisted parent: foreign user
+  ---
+  duration_ms: 80.5979
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: foreign principal
+ok 17 - rejects malformed persisted parent: foreign principal
+  ---
+  duration_ms: 82.6406
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: API namespace confusion
+ok 18 - rejects malformed persisted parent: API namespace confusion
+  ---
+  duration_ms: 79.8499
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: management namespace confusion
+ok 19 - rejects malformed persisted parent: management namespace confusion
+  ---
+  duration_ms: 85.3984
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with admin flag
+ok 20 - rejects malformed persisted parent: public key with admin flag
+  ---
+  duration_ms: 80.6137
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with wrong Origin
+ok 21 - rejects malformed persisted parent: public key with wrong Origin
+  ---
+  duration_ms: 81.7771
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with no absolute expiry
+ok 22 - rejects malformed persisted parent: public key with no absolute expiry
+  ---
+  duration_ms: 96.5608
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with long lifetime
+ok 23 - rejects malformed persisted parent: public key with long lifetime
+  ---
+  duration_ms: 113.132
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with long absolute expiry
+ok 24 - rejects malformed persisted parent: public key with long absolute expiry
+  ---
+  duration_ms: 86.4982
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: secret on parent
+ok 25 - rejects malformed persisted parent: secret on parent
+  ---
+  duration_ms: 85.5998
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: secret on session
+ok 26 - rejects malformed persisted parent: secret on session
+  ---
+  duration_ms: 85.789
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key pairing
+ok 27 - rejects malformed persisted parent: public key pairing
+  ---
+  duration_ms: 89.2791
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: downgraded root with new parent
+ok 28 - rejects malformed persisted parent: downgraded root with new parent
+  ---
+  duration_ms: 102.0157
+  type: 'test'
+  ...
+# Subtest: session migration and audit recover atomically at staged
+ok 29 - session migration and audit recover atomically at staged
+  ---
+  duration_ms: 101.5602
+  type: 'test'
+  ...
+# Subtest: session migration and audit recover atomically at journaled
+ok 30 - session migration and audit recover atomically at journaled
+  ---
+  duration_ms: 107.5014
+  type: 'test'
+  ...
+# Subtest: session migration and audit recover atomically at replaced
+ok 31 - session migration and audit recover atomically at replaced
+  ---
+  duration_ms: 107.682
+  type: 'test'
+  ...
+# Subtest: protection and audit failures never report a successful migration
+ok 32 - protection and audit failures never report a successful migration
+  ---
+  duration_ms: 55.7867
+  type: 'test'
+  ...
+# Subtest: V3 registration runtime still opens/closes its window, admits pending requests and expires them
+not ok 33 - V3 registration runtime still opens/closes its window, admits pending requests and expires them
+  ---
+  duration_ms: 99.5774
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:14316'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:523:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:518:5)
+    RegistrationService.save (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-service.ts:342:19)
+    RegistrationService.expire (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-service.ts:393:12)
+    new RegistrationService (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-service.ts:192:12)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:248:56)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: native Windows protection preserves API and management sessions through V3 migration and reset
+ok 34 - native Windows protection preserves API and management sessions through V3 migration and reset
+  ---
+  duration_ms: 19244.0872
+  type: 'test'
+  ...
+1..34
+# tests 34
+# suites 0
+# pass 33
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 23212.2875

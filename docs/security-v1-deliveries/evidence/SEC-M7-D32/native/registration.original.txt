@@ -1,0 +1,110 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): e50190419d9e383976c834a978271a4a231bbd58ea58138bdef7d68cbbd6f250
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:51075
+#   ➜ Local:   https://localhost:51075/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:51075
+#     HTTP RPC:  https://modeldb-a.example.test:51075/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:51075/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-bLFiCa\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-bLFiCa\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-bLFiCa\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-bLFiCa\\modeldb.config.json"
+# [modeldb-server] storage fingerprint (sha256): e50190419d9e383976c834a978271a4a231bbd58ea58138bdef7d68cbbd6f250
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:51075
+#   ➜ Local:   https://localhost:51075/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:51075
+#     HTTP RPC:  https://modeldb-a.example.test:51075/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:51075/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-bLFiCa\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-bLFiCa\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-bLFiCa\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-bLFiCa\\modeldb.config.json"
+# [modeldb-server] storage fingerprint (sha256): e50190419d9e383976c834a978271a4a231bbd58ea58138bdef7d68cbbd6f250
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:51075
+#   ➜ Local:   https://localhost:51075/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:51075
+#     HTTP RPC:  https://modeldb-a.example.test:51075/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:51075/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-bLFiCa\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-bLFiCa\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-bLFiCa\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-bLFiCa\\modeldb.config.json"
+# Subtest: required Chrome virtual authenticator, native HTTPS/DPAPI and local CLI cover approval, proof denial, competition, capacity and restart
+ok 1 - required Chrome virtual authenticator, native HTTPS/DPAPI and local CLI cover approval, proof denial, competition, capacity and restart
+  ---
+  duration_ms: 107717.9428
+  type: 'test'
+  ...
+# {"format":"modeldb.registration-virtual-authenticator.v1","ok":true,"browser":"Chrome/156.0.8078.48","checks":{"actualBrowserWebAuthn":true,"nativeHttpsDpapiCli":true,"approval":true,"proofRejected":true,"singleUseCompetition":true,"revisionConflict":true,"outstandingChallengeCapacity1000":true,"localRepairAtCapacity":true,"restartWithRegistrationDisabled":true,"noBusinessSession":true,"instanceKeyUnchanged":true},"capacityPreparation":"Synthetic unverified issued records fill all but one challenge slot; real browser exercises boundary, not 1000 authenticators","hardwareAuthenticatorTested":false,"systemTrustInstalled":false}
+# Subtest: HTTP registration, OS-local approval and private status retain exact identity, grants and audit after restart
+ok 2 - HTTP registration, OS-local approval and private status retain exact identity, grants and audit after restart
+  ---
+  duration_ms: 280.8324
+  type: 'test'
+  ...
+# Subtest: HTTP invalid proof is terminal, cannot be approved and never creates a partial identity
+ok 3 - HTTP invalid proof is terminal, cannot be approved and never creates a partial identity
+  ---
+  duration_ms: 125.4305
+  type: 'test'
+  ...
+# Subtest: in-flight verified HTTP completion loses to local rejection; two decisions with one revision commit at most once
+ok 4 - in-flight verified HTTP completion loses to local rejection; two decisions with one revision commit at most once
+  ---
+  duration_ms: 143.4589
+  type: 'test'
+  ...
+# Subtest: HTTP capacity refuses new admission while a verified local rejection remains available
+ok 5 - HTTP capacity refuses new admission while a verified local rejection remains available
+  ---
+  duration_ms: 612.3713
+  type: 'test'
+  ...
+# Subtest: HTTP final candidate write failure returns stable 503; restart rejects consumed work without a candidate or access
+ok 6 - HTTP final candidate write failure returns stable 503; restart rejects consumed work without a candidate or access
+  ---
+  duration_ms: 101.3556
+  type: 'test'
+  ...
+# Subtest: full HTTP-to-approval child process hard exit at staged recovers identity and audit together
+ok 7 - full HTTP-to-approval child process hard exit at staged recovers identity and audit together
+  ---
+  duration_ms: 928.2111
+  type: 'test'
+  ...
+# Subtest: full HTTP-to-approval child process hard exit at journaled recovers identity and audit together
+ok 8 - full HTTP-to-approval child process hard exit at journaled recovers identity and audit together
+  ---
+  duration_ms: 861.1562
+  type: 'test'
+  ...
+# Subtest: full HTTP-to-approval child process hard exit at replaced recovers identity and audit together
+ok 9 - full HTTP-to-approval child process hard exit at replaced recovers identity and audit together
+  ---
+  duration_ms: 860.1775
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 118327.077

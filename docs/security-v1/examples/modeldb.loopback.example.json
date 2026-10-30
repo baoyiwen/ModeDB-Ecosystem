@@ -1,0 +1,15 @@
+{
+  "host": "127.0.0.1",
+  "port": 9090,
+  "workspace": "vault",
+  "logDir": "logs",
+  "dev": false,
+  "designerWorkspace": "model_designer_workspace",
+  "security": {
+    "version": 1,
+    "network": {
+      "transport": { "mode": "loopback" },
+      "allowedOrigins": ["http://127.0.0.1:5175"]
+    }
+  }
+}

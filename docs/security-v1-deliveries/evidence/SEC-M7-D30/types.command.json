@@ -1,0 +1,9 @@
+{
+  "command": [
+    "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+    "scripts/security-registration-storage-check.mjs"
+  ],
+  "node": "v24.22.1",
+  "exitCode": 0,
+  "timedOut": false
+}

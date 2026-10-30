@@ -1,0 +1,28 @@
+{
+  "format": "modeldb.registration-integration-check.v1",
+  "ok": false,
+  "task": "DR-P1.6",
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Flow-Report-LVDOLQ",
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-registration-flow.test.ts",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-registration-browser.test.ts"
+  ],
+  "exitCode": 1,
+  "durationMs": 93922.534,
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Flow-Report-LVDOLQ\\integration.tap",
+  "errorCode": "REGISTRATION_INTEGRATION_PROCESS_FAILED\n\n1 !== 0\n",
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "productionRegistrationUiTested": false,
+    "publicKeyLoginImplemented": false,
+    "systemTrustInstalled": false
+  }
+}

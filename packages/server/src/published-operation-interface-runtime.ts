@@ -85,6 +85,7 @@ async function executePublishedOperationInterfaceCore(input: {
   body: ExecuteOperationInterfaceBody;
   getEngine: (atlas: string) => Promise<AuthoringEngine>;
 }): Promise<OperationInterfaceWireResult> {
+  input.authorization?.preflight(input.atlas, input.body);
   const callableName = input.body.callableName.trim();
   if (!callableName) {
     throw new Error('INTERFACE_CALLABLE_NAME_REQUIRED');
@@ -142,7 +143,7 @@ async function executePublishedOperationInterfaceCore(input: {
     input.body.parameters ?? {},
   );
   const raw = await executeDatabaseOperation(
-    { engine: target, atlas: input.atlas, flush: () => target.flushAll() },
+    { engine: target, atlas: input.atlas, flush: () => target.flushAll(), reauthorize },
     operation,
   );
   if (raw.kind !== 'mutation') {
@@ -180,7 +181,12 @@ async function executePublishedOperationBatch(input: {
       try {
         input.reauthorize();
         const raw = await executeDatabaseOperation(
-          { engine: input.target, atlas: input.atlas, flush: () => input.target.flushAll() },
+          {
+            engine: input.target,
+            atlas: input.atlas,
+            flush: () => input.target.flushAll(),
+            reauthorize: input.reauthorize,
+          },
           item.operation,
         );
         if (raw.kind !== 'mutation') {

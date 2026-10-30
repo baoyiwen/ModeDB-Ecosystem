@@ -1,0 +1,94 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): e550e2cd0c8bfc985a6e88840d8baab9aec227097b364abda4f601f866b11dc7
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:54076
+#   ➜ Local:   https://localhost:54076/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:54076
+#     HTTP RPC:  https://modeldb-a.example.test:54076/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:54076/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-v2V6lm\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-v2V6lm\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-v2V6lm\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-Flow-v2V6lm\\modeldb.config.json"
+# Subtest: required Chrome virtual authenticator, native HTTPS/DPAPI and local CLI cover approval, proof denial, competition, capacity and restart
+not ok 1 - required Chrome virtual authenticator, native HTTPS/DPAPI and local CLI cover approval, proof denial, competition, capacity and restart
+  ---
+  duration_ms: 15546.9656
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-registration-browser.test.ts:1:1172'
+  failureType: 'testCodeFailure'
+  error: 'REGISTRATION_CDP_CLOSED:Runtime.enable'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    WebSocket.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\fixtures\security-registration-browser.ts:34:87)
+    callListener (C:\workspace\web_code\ModeDB-Ecosystem\node_modules\.pnpm\ws@8.20.0\node_modules\ws\lib\event-target.js:290:14)
+    WebSocket.onClose (C:\workspace\web_code\ModeDB-Ecosystem\node_modules\.pnpm\ws@8.20.0\node_modules\ws\lib\event-target.js:220:9)
+    WebSocket.emit (node:events:514:28)
+    WebSocket.emitClose (C:\workspace\web_code\ModeDB-Ecosystem\node_modules\.pnpm\ws@8.20.0\node_modules\ws\lib\websocket.js:273:10)
+    Receiver.receiverOnFinish (C:\workspace\web_code\ModeDB-Ecosystem\node_modules\.pnpm\ws@8.20.0\node_modules\ws\lib\websocket.js:1214:20)
+    Receiver.emit (node:events:514:28)
+    finish (node:internal/streams/writable:957:10)
+    node:internal/streams/writable:938:13
+    process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+  ...
+# Subtest: HTTP registration, OS-local approval and private status retain exact identity, grants and audit after restart
+ok 2 - HTTP registration, OS-local approval and private status retain exact identity, grants and audit after restart
+  ---
+  duration_ms: 329.0612
+  type: 'test'
+  ...
+# Subtest: HTTP invalid proof is terminal, cannot be approved and never creates a partial identity
+ok 3 - HTTP invalid proof is terminal, cannot be approved and never creates a partial identity
+  ---
+  duration_ms: 136.4853
+  type: 'test'
+  ...
+# Subtest: in-flight verified HTTP completion loses to local rejection; two decisions with one revision commit at most once
+ok 4 - in-flight verified HTTP completion loses to local rejection; two decisions with one revision commit at most once
+  ---
+  duration_ms: 161.7343
+  type: 'test'
+  ...
+# Subtest: HTTP capacity refuses new admission while a verified local rejection remains available
+ok 5 - HTTP capacity refuses new admission while a verified local rejection remains available
+  ---
+  duration_ms: 619.0099
+  type: 'test'
+  ...
+# Subtest: HTTP final candidate write failure returns stable 503; restart rejects consumed work without a candidate or access
+ok 6 - HTTP final candidate write failure returns stable 503; restart rejects consumed work without a candidate or access
+  ---
+  duration_ms: 115.1482
+  type: 'test'
+  ...
+# Subtest: full HTTP-to-approval child process hard exit at staged recovers identity and audit together
+ok 7 - full HTTP-to-approval child process hard exit at staged recovers identity and audit together
+  ---
+  duration_ms: 1111.8903
+  type: 'test'
+  ...
+# Subtest: full HTTP-to-approval child process hard exit at journaled recovers identity and audit together
+ok 8 - full HTTP-to-approval child process hard exit at journaled recovers identity and audit together
+  ---
+  duration_ms: 1083.6038
+  type: 'test'
+  ...
+# Subtest: full HTTP-to-approval child process hard exit at replaced recovers identity and audit together
+ok 9 - full HTTP-to-approval child process hard exit at replaced recovers identity and audit together
+  ---
+  duration_ms: 1102.4634
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 8
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 16839.609

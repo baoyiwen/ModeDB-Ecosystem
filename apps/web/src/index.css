@@ -910,8 +910,7 @@ body {
   color: var(--web-ink);
   background:
     radial-gradient(circle at 12% 12%, rgba(40, 84, 163, 0.1), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0)),
-    transparent;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0)), transparent;
   font-family: 'Microsoft YaHei UI', 'Noto Sans SC', Aptos, sans-serif;
 }
 
@@ -1146,7 +1145,9 @@ textarea:focus {
   background:
     linear-gradient(90deg, rgba(23, 32, 51, 0.035) 1px, transparent 1px),
     linear-gradient(180deg, #edf2f7 0%, #f8fafc 100%);
-  background-size: 28px 28px, auto;
+  background-size:
+    28px 28px,
+    auto;
 }
 
 .query-manual-header {
@@ -1359,4 +1360,23 @@ button,
   background: #edf4ff;
   color: #123b73;
   font-weight: 700;
+}
+
+.web-shell .mdb-identity {
+  --identity-text: var(--web-ink);
+  --identity-muted: var(--web-muted);
+  --identity-border: var(--web-line);
+  --identity-surface: var(--web-card);
+  --identity-accent: var(--web-brand);
+  margin: 20px 0;
+}
+.web-connection-advanced {
+  border-top: 1px solid var(--web-line);
+  padding-top: 16px;
+  margin-top: 20px;
+}
+.web-connection-advanced > summary {
+  cursor: pointer;
+  margin-bottom: 16px;
+  font-size: 13px;
 }

@@ -4,6 +4,8 @@ dist
 coverage
 data
 /security/
+# Archived reports, tooling snapshots and bundles are verified by their original bytes.
+/docs/security-v1-deliveries/evidence/
 package-lock.json
 *.min.js
 

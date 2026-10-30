@@ -1,0 +1,48 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): 082f140249eaeaa15c028a8f6d49d0c1674a53b33707736b2b203486116cdfae
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:59482
+#   ➜ Local:   https://localhost:59482/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:59482
+#     HTTP RPC:  https://modeldb-a.example.test:59482/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:59482/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-ZV0dXF\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-ZV0dXF\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-ZV0dXF\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-ZV0dXF\\modeldb.config.json"
+# Subtest: required Chrome WebAuthn get, fresh SDK, native TLS/DPAPI approval and cookie recovery/refresh/logout
+not ok 1 - required Chrome WebAuthn get, fresh SDK, native TLS/DPAPI approval and cookie recovery/refresh/logout
+  ---
+  duration_ms: 21383.9781
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-authentication-browser.test.ts:1:1046'
+  failureType: 'testCodeFailure'
+  error: |-
+    Browser evaluation failed; proof and secrets are intentionally not logged
+    
+    true !== false
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: false
+  actual: true
+  operator: 'strictEqual'
+  stack: |-
+    Object.evaluate (C:\workspace\web_code\ModeDB-Ecosystem\test\fixtures\security-registration-browser.ts:45:202)
+    async TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\integration\security-authentication-browser.test.ts:58:16)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 27819.9137

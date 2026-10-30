@@ -1,0 +1,12 @@
+[
+  {
+    "database": "model_designer_workspace",
+    "resource": "*",
+    "actions": ["database.manage", "schema.manage", "model.read", "model.write"]
+  },
+  {
+    "database": "business",
+    "resource": "*",
+    "actions": ["database.manage", "schema.manage", "model.read", "model.write"]
+  }
+]

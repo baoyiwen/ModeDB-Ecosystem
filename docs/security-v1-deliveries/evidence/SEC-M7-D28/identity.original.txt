@@ -1,0 +1,196 @@
+TAP version 13
+# Subtest: identity report accepts formal UI/native checks and accurate browser limits
+ok 1 - identity report accepts formal UI/native checks and accurate browser limits
+  ---
+  duration_ms: 1.1093
+  type: 'test'
+  ...
+# Subtest: identity report rejects incomplete, skipped or ambiguous TAP summaries
+ok 2 - identity report rejects incomplete, skipped or ambiguous TAP summaries
+  ---
+  duration_ms: 1.3877
+  type: 'test'
+  ...
+# Subtest: identity report requires every formal UI check and one browser record
+ok 3 - identity report requires every formal UI check and one browser record
+  ---
+  duration_ms: 1.0174
+  type: 'test'
+  ...
+# Subtest: identity report rejects hardware/trust inflation and missing layouts
+ok 4 - identity report rejects hardware/trust inflation and missing layouts
+  ---
+  duration_ms: 0.3796
+  type: 'test'
+  ...
+# Subtest: same-origin SDK registration uses real protocol, minimum polling, terminal states and memory-only continuation
+ok 5 - same-origin SDK registration uses real protocol, minimum polling, terminal states and memory-only continuation
+  ---
+  duration_ms: 286.2071
+  type: 'test'
+  ...
+# Subtest: SDK shows application registration.reject
+ok 6 - SDK shows application registration.reject
+  ---
+  duration_ms: 108.8877
+  type: 'test'
+  ...
+# Subtest: SDK shows application expired
+ok 7 - SDK shows application expired
+  ---
+  duration_ms: 103.0314
+  type: 'test'
+  ...
+# Subtest: import accepts strict live JSON and rejects scripts, extra fields, cross-instance/origin/RP/hash/TLS, expiry and oversized UTF-8
+ok 8 - import accepts strict live JSON and rejects scripts, extra fields, cross-instance/origin/RP/hash/TLS, expiry and oversized UTF-8
+  ---
+  duration_ms: 54.6111
+  type: 'test'
+  ...
+# Subtest: SDK refuses cross-origin destinations before fetch and binding drift before WebAuthn
+ok 9 - SDK refuses cross-origin destinations before fetch and binding drift before WebAuthn
+  ---
+  duration_ms: 55.7647
+  type: 'test'
+  ...
+# Subtest: SDK sanitizes unknown failures and bounds response size; registration code errors stay machine readable
+ok 10 - SDK sanitizes unknown failures and bounds response size; registration code errors stay machine readable
+  ---
+  duration_ms: 55.7402
+  type: 'test'
+  ...
+# Subtest: cancelled WebAuthn never completes or grants access; abort is passed to the browser
+ok 11 - cancelled WebAuthn never completes or grants access; abort is passed to the browser
+  ---
+  duration_ms: 65.7332
+  type: 'test'
+  ...
+# Subtest: public login binding survives registration expiry and contains no private identity material
+ok 12 - public login binding survives registration expiry and contains no private identity material
+  ---
+  duration_ms: 103.4848
+  type: 'test'
+  ...
+# Subtest: an aborted registration never submits the returned browser proof
+ok 13 - an aborted registration never submits the returned browser proof
+  ---
+  duration_ms: 63.4707
+  type: 'test'
+  ...
+# Subtest: stale begin binding is rejected before invoking the authenticator
+ok 14 - stale begin binding is rejected before invoking the authenticator
+  ---
+  duration_ms: 63.9415
+  type: 'test'
+  ...
+# Subtest: UI error category cancelled: {"name":"NotAllowedError"}
+ok 15 - UI error category cancelled: {"name":"NotAllowedError"}
+  ---
+  duration_ms: 0.1469
+  type: 'test'
+  ...
+# Subtest: UI error category cancelled: {"name":"AbortError"}
+ok 16 - UI error category cancelled: {"name":"AbortError"}
+  ---
+  duration_ms: 0.0278
+  type: 'test'
+  ...
+# Subtest: UI error category unsupported: {"name":"NotSupportedError"}
+ok 17 - UI error category unsupported: {"name":"NotSupportedError"}
+  ---
+  duration_ms: 0.0181
+  type: 'test'
+  ...
+# Subtest: UI error category rejected: {"code":"SECURITY_REGISTRATION_REJECTED"}
+ok 18 - UI error category rejected: {"code":"SECURITY_REGISTRATION_REJECTED"}
+  ---
+  duration_ms: 0.0661
+  type: 'test'
+  ...
+# Subtest: UI error category expired: {"code":"SECURITY_REGISTRATION_CHALLENGE_EXPIRED"}
+ok 19 - UI error category expired: {"code":"SECURITY_REGISTRATION_CHALLENGE_EXPIRED"}
+  ---
+  duration_ms: 0.0455
+  type: 'test'
+  ...
+# Subtest: UI error category descriptor: {"code":"SECURITY_REGISTRATION_INSTANCE_MISMATCH"}
+ok 20 - UI error category descriptor: {"code":"SECURITY_REGISTRATION_INSTANCE_MISMATCH"}
+  ---
+  duration_ms: 0.0538
+  type: 'test'
+  ...
+# Subtest: UI error category identity: {"code":"SECURITY_AUTHENTICATION_PROOF_INVALID"}
+ok 21 - UI error category identity: {"code":"SECURITY_AUTHENTICATION_PROOF_INVALID"}
+  ---
+  duration_ms: 0.0316
+  type: 'test'
+  ...
+# Subtest: UI error category limited: {"code":"SECURITY_REGISTRATION_RATE_LIMITED"}
+ok 22 - UI error category limited: {"code":"SECURITY_REGISTRATION_RATE_LIMITED"}
+  ---
+  duration_ms: 0.0172
+  type: 'test'
+  ...
+# Subtest: UI error category closed: {"code":"SECURITY_REGISTRATION_DISABLED"}
+ok 23 - UI error category closed: {"code":"SECURITY_REGISTRATION_DISABLED"}
+  ---
+  duration_ms: 0.0254
+  type: 'test'
+  ...
+# Subtest: UI error category unavailable: {}
+ok 24 - UI error category unavailable: {}
+  ---
+  duration_ms: 0.0179
+  type: 'test'
+  ...
+# Subtest: public identity client shares discovery, strict import and pending lifecycle without revealing continuation
+ok 25 - public identity client shares discovery, strict import and pending lifecycle without revealing continuation
+  ---
+  duration_ms: 100.5708
+  type: 'test'
+  ...
+# Subtest: public client rejects cross-origin before sending any request
+ok 26 - public client rejects cross-origin before sending any request
+  ---
+  duration_ms: 58.4662
+  type: 'test'
+  ...
+# Subtest: public client serializes authenticator actions and never replays busy requests
+ok 27 - public client serializes authenticator actions and never replays busy requests
+  ---
+  duration_ms: 62.1674
+  type: 'test'
+  ...
+# Subtest: dispose rejects late discovery results even when fetch ignores AbortSignal
+ok 28 - dispose rejects late discovery results even when fetch ignores AbortSignal
+  ---
+  duration_ms: 57.4148
+  type: 'test'
+  ...
+# Subtest: parent abort before discovery performs no fetch and dispose is idempotent
+ok 29 - parent abort before discovery performs no fetch and dispose is idempotent
+  ---
+  duration_ms: 57.1188
+  type: 'test'
+  ...
+# Subtest: dispose while authenticator is open prevents registration submission
+ok 30 - dispose while authenticator is open prevents registration submission
+  ---
+  duration_ms: 65.4221
+  type: 'test'
+  ...
+# Subtest: public client rejects changed deployment before opening login ceremony
+ok 31 - public client rejects changed deployment before opening login ceremony
+  ---
+  duration_ms: 56.258
+  type: 'test'
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 31
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2577.9009

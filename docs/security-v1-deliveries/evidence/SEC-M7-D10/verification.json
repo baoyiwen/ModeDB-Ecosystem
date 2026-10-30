@@ -1,0 +1,391 @@
+{
+  "format": "modeldb.security-s51-verification.v1",
+  "recordedAtUtc": "2026-10-26T04:54:50.229Z",
+  "delivery": "SEC-M7/D10",
+  "workspace": {
+    "head": "fd40ade27acdec54c4e5ba4dd8ddc5ac4e061a0f",
+    "uncommitted": true,
+    "sourceHashScope": "Explicit related implementation, tests and documents; not a complete repository or production deployment hash"
+  },
+  "tasks": {
+    "closed": ["S5.1", "M5-A1", "SEC-M5"],
+    "pending": ["S7.2"],
+    "v1Milestones": "6/7",
+    "v1Tasks": "19/20",
+    "registration": "0/23"
+  },
+  "scope": {
+    "syntheticOnly": true,
+    "randomLoopbackPorts": true,
+    "isolatedChromeProfile": true,
+    "realServicesAccessed": false,
+    "realConfigOrSecurityMaterialsAccessed": false,
+    "visualAndTranslationChanges": true
+  },
+  "runtime": {
+    "platform": "win32",
+    "unitNode": "v24.22.1",
+    "buildTypecheckBrowserNode": "v24.15.0",
+    "chrome": "156.0.8078.48",
+    "typescript": "5.9.3",
+    "vite": "6.4.3"
+  },
+  "unit": {
+    "command": "node node_modules/tsx/dist/cli.mjs --test test/unit/browser-pairing-launch.test.ts test/unit/browser-connection-credentials.test.ts test/unit/security-browser-session.test.ts",
+    "passed": 21,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 774.5848
+  },
+  "typechecks": {
+    "command": "node node_modules/typescript/bin/tsc --noEmit -p <project>",
+    "projects": ["tsconfig.json", "apps/model-designer/tsconfig.json"],
+    "exitCode": 0,
+    "finalRootAndDesignerRecheck": true
+  },
+  "i18n": {
+    "locales": ["en", "zh", "ja"],
+    "newKeys": 9,
+    "relatedKeys": 12,
+    "nonEmptyAndPlaceholdersMatch": true,
+    "scope": "Language control, design guidance, title and subtitle"
+  },
+  "build": {
+    "apps": ["model-designer", "data-studio", "web"],
+    "configFile": false,
+    "envFile": false,
+    "sourceAliases": ["data-kit", "data-ui", "sdk", "shared"],
+    "plugins": {
+      "all": ["@vitejs/plugin-react"],
+      "web": ["resolve-node-polyfills-shims", "vite-plugin-node-polyfills (process global)"]
+    },
+    "exitCode": 0,
+    "warnings": ["Designer chunks larger than 500 kB"],
+    "temporaryDirectoryName": "modedb-s51-build-WwBTW5",
+    "command": "@'\nimport { createRequire } from 'node:module';\nimport { mkdtempSync } from 'node:fs';\nimport { tmpdir } from 'node:os';\nimport { resolve, join } from 'node:path';\nimport { pathToFileURL } from 'node:url';\nconst repo = process.cwd();\nconst output = mkdtempSync(join(tmpdir(), 'modedb-s51-build-'));\nconsole.log('ISOLATED_APP_ROOT=' + output);\nfor (const app of ['model-designer', 'data-studio', 'web']) {\n  const appRoot = resolve(repo, 'apps', app);\n  const require = createRequire(join(appRoot, 'package.json'));\n  const { build } = await import(pathToFileURL(require.resolve('vite')).href);\n  const { default: react } = await import(pathToFileURL(require.resolve('@vitejs/plugin-react')).href);\n  const plugins = [react()];\n  if (app === 'web') {\n    const { nodePolyfills } = await import(pathToFileURL(require.resolve('vite-plugin-node-polyfills')).href);\n    plugins.unshift({ name: 'resolve-node-polyfills-shims', enforce: 'pre', resolveId(source) {\n      if (source.startsWith('vite-plugin-node-polyfills/shims/')) return require.resolve(source);\n    } });\n    plugins.push(nodePolyfills({ globals: { process: true } }));\n  }\n  await build({ configFile: false, envFile: false, root: appRoot, plugins,\n    resolve: { alias: Object.fromEntries(['data-kit', 'data-ui', 'sdk', 'shared'].map(name => ['@mode-db/' + name, resolve(repo, 'packages', name, 'src/index.ts')])) },\n    build: { outDir: join(output, app), emptyOutDir: true },\n  });\n}\nconsole.log('ISOLATED_BUILD_OK=' + output);\n'@ | node --input-type=module",
+    "files": [
+      {
+        "path": "data-studio/assets/browser-AQdqytxT.js",
+        "bytes": 675,
+        "sha256": "6e619b57f59503dad228581d53aec5dc41812c07a2b092e66fac5f06a71762c5"
+      },
+      {
+        "path": "data-studio/assets/index-4cegmEu2.js",
+        "bytes": 369927,
+        "sha256": "8c1a24d2f6e6425463d4d7d99b0ea715af3479a02a509da63a0aac8ae38e79ab"
+      },
+      {
+        "path": "data-studio/assets/index-DMmFbeZg.css",
+        "bytes": 49749,
+        "sha256": "0a656775a418847b1a2ad5d9763297ea300bcac293d26bf6cd4630e591f10756"
+      },
+      {
+        "path": "data-studio/favicon.svg",
+        "bytes": 253,
+        "sha256": "e87ad05e2ca8247926960768141dc2a5d8070b233c55b634c9c916f5f79e7ac2"
+      },
+      {
+        "path": "data-studio/index.html",
+        "bytes": 481,
+        "sha256": "f6748c01b358ae59bc17060b2a0cd251fb312d0fcbc711a8151a986f7dd32768"
+      },
+      {
+        "path": "model-designer/assets/BindingSurfaceDesignerPanel-Dzz40m64.js",
+        "bytes": 49008,
+        "sha256": "a18db34695ba0907ec46a168036212ba743fe2d3fcade271abc2dc185b5c99e7"
+      },
+      {
+        "path": "model-designer/assets/OperationDesignerPanel-BLFJxlAt.js",
+        "bytes": 24567,
+        "sha256": "bb2a9839b1ec5c0d9cdf5cc98ef9f149cf6c663682c809649b843f31c828dbc5"
+      },
+      {
+        "path": "model-designer/assets/browser-DfMR9EGW.js",
+        "bytes": 615,
+        "sha256": "9952693dc4852285299748267e20d9cbcbded28969117726efa18d8ff5d67d49"
+      },
+      {
+        "path": "model-designer/assets/exceljs.min-DxIZSSCE.js",
+        "bytes": 939804,
+        "sha256": "036a6496f26aaae93e5475ba76b67d9303a4451f63bfb5b533124ba0ca8f1d78"
+      },
+      {
+        "path": "model-designer/assets/export-model-map-CH5UsWEP.js",
+        "bytes": 3657,
+        "sha256": "6e60f998608a3c1e06c5a26688bd6f6e942f44fed1f24641f8995da17b1a6d49"
+      },
+      {
+        "path": "model-designer/assets/index-CZGm6v_c.js",
+        "bytes": 1065076,
+        "sha256": "681c5a802268330bc3261a4f519c374def2aca67f7706a5d821cf2efb13e671c"
+      },
+      {
+        "path": "model-designer/assets/index-Cf4SXfAb.css",
+        "bytes": 180243,
+        "sha256": "f653a483a024377844c7bcbf9d4579d546f1a9c1418195b67bf4aad13fb84dd7"
+      },
+      {
+        "path": "model-designer/assets/workbook-D8blH98z.js",
+        "bytes": 12034,
+        "sha256": "2b599d0f2ea8da587e90c48c7a3065be42c5b35bd4c2d4dc224c24735422b1c3"
+      },
+      {
+        "path": "model-designer/index.html",
+        "bytes": 905,
+        "sha256": "67ca6c27af560f589f8632bab382ad22aa6c017a4fe4194be9abaab08131bf34"
+      },
+      {
+        "path": "web/assets/browser-DYJx2Ovq.js",
+        "bytes": 615,
+        "sha256": "e73d84c5c370aff1628c77ede067c96b20464baaf5150eceafc622651255c3fe"
+      },
+      {
+        "path": "web/assets/index-CcDhay8W.js",
+        "bytes": 336204,
+        "sha256": "abc6a181a5115b791c74f7194207f9519f1fa4fd6a99304f922a5a1f86a69148"
+      },
+      {
+        "path": "web/assets/index-urMCSlPi.css",
+        "bytes": 38920,
+        "sha256": "ba662253ffb26440f8228b473453dca8c13277ecaf901ef7628bc76c139c6aab"
+      },
+      {
+        "path": "web/index.html",
+        "bytes": 420,
+        "sha256": "71b9ecf797b3c90e9847cb4b26f2d95950f08b65f97123db225cc2a6876ba8de"
+      }
+    ]
+  },
+  "browser": {
+    "command": "MODELDB_TEST_APP_ROOT=<isolated new build>; MODELDB_TEST_SCREENSHOTS_ROOT=<new temporary directory>; node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap test/integration/security-browser-apps.test.ts",
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "testDurationMs": 177969.5705,
+    "totalDurationMs": 183502.6192,
+    "covers": [
+      "All three applications: pairing overrides saved Token mode, workspace, reload, HttpOnly, logout",
+      "Designer connection, regular-session denied security page and standalone admin page in en/zh/ja at widths 1280 and 390, height 900",
+      "Accessible focusable language control and localized labels, lang and saved preference",
+      "Current-page locale changes despite rejected localStorage writes; Japanese connection-page locale survives reload",
+      "Canonical server origin without duplicated port",
+      "Regular business session still securityAdmin:false and admin overview 403 with a valid synthetic CSRF token",
+      "Editor security workspace fills viewport height and close returns to the connected editor",
+      "Standalone admin design guidance and command template; admin identity still has no implicit business grant",
+      "Existing admin rule preview, apply, confirm, rollback and isolated master-key maintenance"
+    ]
+  },
+  "visuals": {
+    "generatedPngs": 19,
+    "archivedPngs": 7,
+    "viewports": [
+      {
+        "width": 1280,
+        "height": 900
+      },
+      {
+        "width": 390,
+        "height": 900
+      }
+    ],
+    "screenshots": [
+      {
+        "path": "screenshots/connection-zh-1280.png",
+        "bytes": 253794,
+        "sha256": "48dc266b5e35d321d8ccec6fe78fb5d04a471f4d879018e3cfcf48c315198d84",
+        "visuallyReviewed": true
+      },
+      {
+        "path": "screenshots/connection-ja-390.png",
+        "bytes": 106126,
+        "sha256": "6da8d8aed364a6882e06f22ba418221545a905ef2da11781d39ab45c70e404a7",
+        "visuallyReviewed": true
+      },
+      {
+        "path": "screenshots/forbidden-zh-1280.png",
+        "bytes": 48743,
+        "sha256": "70c33a9756bcfbee76b5dd273e5364abb07a8d084f4d1063a0a95455c407c91d",
+        "visuallyReviewed": true
+      },
+      {
+        "path": "screenshots/forbidden-ja-390.png",
+        "bytes": 42269,
+        "sha256": "70e0b7a125137cbcdfdf9e2a508ca8ef2506746b88bfcc39f4d813b31e7875c5",
+        "visuallyReviewed": true
+      },
+      {
+        "path": "screenshots/security-zh-1280.png",
+        "bytes": 37594,
+        "sha256": "7b07a6c5e262558db1319f51cf285626b00706922ca36677e068361a5f264d46",
+        "visuallyReviewed": true
+      },
+      {
+        "path": "screenshots/security-ja-390.png",
+        "bytes": 35386,
+        "sha256": "a42d6b6f77eda7f163e08fc7a39452d7ad8953a90f858e27bbc159eac88a7245",
+        "visuallyReviewed": true
+      },
+      {
+        "path": "screenshots/security-guide-en-390.png",
+        "bytes": 39894,
+        "sha256": "ec78e85bb7f2f0117d55f1ee1d4a606288d50fe474eb3d2ecbf8a18ddca1f536",
+        "visuallyReviewed": true
+      }
+    ],
+    "caveats": [
+      "The first wide English forbidden screenshot caught the opening animation; archived Chinese wide screenshot shows stable full-height layout.",
+      "A temporary synthetic Reconnected toast overlaps the header in the denied-page screenshots."
+    ]
+  },
+  "developmentRuns": [
+    {
+      "stage": "initial implementation",
+      "passed": 1,
+      "testDurationMs": 182622.6749,
+      "totalDurationMs": 188283.8665,
+      "result": "Post-test image review found duplicate port and half-height editor security workspace; not the final build."
+    },
+    {
+      "stage": "address correction and initial height fix",
+      "passed": 0,
+      "failed": 1,
+      "testDurationMs": 100407.3743,
+      "totalDurationMs": 106078.9532,
+      "result": "New height assertion identified two unfilled editor wrapper containers."
+    },
+    {
+      "stage": "scoped flex fix preserving editor components",
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "result": "Final complete browser acceptance with the build files above."
+    }
+  ],
+  "documentValidation": {
+    "documentFiles": 11,
+    "localLinksAndAnchors": 167,
+    "milestoneAndTaskCounts": true,
+    "registrationTaskIds": 23,
+    "sourceFileHashes": 27
+  },
+  "sources": [
+    {
+      "path": "apps/model-designer/src/components/LanguageSelector.tsx",
+      "sha256Lf": "6147eabb4cbd21852c2c442672660a958021bf628a489767196fa19819a120b1"
+    },
+    {
+      "path": "apps/model-designer/src/components/ConnectionFlow.tsx",
+      "sha256Lf": "be2cfa284672dae0164ffe088267d2fad7eb54e4bf288ba9d767b009b8fed4a1"
+    },
+    {
+      "path": "apps/model-designer/src/components/SecurityCenterWorkspace.tsx",
+      "sha256Lf": "09326f38b9f3463ef7ec7c7cb5cdcd94541ffe3281b599c75a90bb19eae7749a"
+    },
+    {
+      "path": "apps/model-designer/src/components/EditorChrome.tsx",
+      "sha256Lf": "d8bf97eea10b99c66a6b4d7fd096040a6db87705a3d356990022f8ea22e59584"
+    },
+    {
+      "path": "apps/model-designer/src/styles/designer-shell.css",
+      "sha256Lf": "63a15a1c335fd43cb90e89fc1859d479cead399d0a51e580066eec90573c269e"
+    },
+    {
+      "path": "apps/model-designer/src/i18n/locales/en/ui.json",
+      "sha256Lf": "c3d1cd8a58ed58ac1631d8752df051222556a62d2044d5a6c2619adce26ee054"
+    },
+    {
+      "path": "apps/model-designer/src/i18n/locales/zh/ui.json",
+      "sha256Lf": "d38a314d5e30dd6aa13419540aa47cce310388552b550cddd347762b8f6895e5"
+    },
+    {
+      "path": "apps/model-designer/src/i18n/locales/ja/ui.json",
+      "sha256Lf": "b33bc44c7892e120c5a42f84c1a93ebed574482d041df7a76685b61613b8f644"
+    },
+    {
+      "path": "apps/model-designer/src/managers/i18n-manager.ts",
+      "sha256Lf": "b4635020ea882052ea4be98b2d966717b49a6a8c437ca9333e46bc7f371007ee"
+    },
+    {
+      "path": "apps/model-designer/src/config/connection-prefs.ts",
+      "sha256Lf": "e695a17d32a7b96887d581720d7b353dfff069c3f591d16ad1ab085375335fbf"
+    },
+    {
+      "path": "apps/data-studio/src/config/connection-prefs.ts",
+      "sha256Lf": "3d7859a14dcb8415a41107bf29cf291fecfa81b78c529e406476527bafe88f97"
+    },
+    {
+      "path": "apps/web/src/session/connection-credentials.ts",
+      "sha256Lf": "837c1c5bd9aa5ff1f164e8cc1ce36b6349a7986c6631933b6755d6a8fea691dc"
+    },
+    {
+      "path": "test/unit/browser-pairing-launch.test.ts",
+      "sha256Lf": "00af2baaad043e6ee9090d32a11c80d624860a591425eecb11212f5de1bdd94e"
+    },
+    {
+      "path": "test/unit/browser-connection-credentials.test.ts",
+      "sha256Lf": "ebe654080a4b97e5bec87fddaab45c7b157c198a3a0b71d2276e3c9f6e887f9c"
+    },
+    {
+      "path": "test/unit/security-browser-session.test.ts",
+      "sha256Lf": "b83b089cdfed58f13a5a84b3b56358d60cc4d56fa51685d9c0812ea5935613a9"
+    },
+    {
+      "path": "test/integration/security-browser-apps.test.ts",
+      "sha256Lf": "e7e91d45f87646459a16e2f117ba6a114c5ed3bcd4234a20ec6c3f3c7ae2023a"
+    },
+    {
+      "path": "apps/AGENTS.md",
+      "sha256Lf": "1c97a6edd63c2c9f6d2ec5e79a6d116e6cd047f5eb0c97bbdf6c2627c6c64258"
+    },
+    {
+      "path": "apps/model-designer/AGENTS.md",
+      "sha256Lf": "03912e6bb7dbc055cc767e8b45a60a3d9ae7dabf053ce176c9e954b95c64679d"
+    },
+    {
+      "path": "docs/security-v1/AGENTS.md",
+      "sha256Lf": "9429d833410e260c9d3ec84412308816d4d456159c6c83d450cad35ebd7f8436"
+    },
+    {
+      "path": "docs/security-v1-milestones.md",
+      "sha256Lf": "255e3603834d1af47a35961fadf4a86a4d075de6ad380f482c4020801c9f697c"
+    },
+    {
+      "path": "docs/security-v1-deliveries/SEC-M5.md",
+      "sha256Lf": "c45fc85d02fc7294b9aaef08911448aa481190aaff36ced0f0923be6a29a8f6c"
+    },
+    {
+      "path": "docs/security-v1-deliveries/SEC-M7.md",
+      "sha256Lf": "403d63bb0b4852577636c44b108f4719396d7f14c45d7ab7c1fce0180bb1c591"
+    },
+    {
+      "path": "docs/security-v1/user-guide.md",
+      "sha256Lf": "7b87eb06f48f7844f313a866d831e7bc27642bb3e4f33841f4f18bab09acd0e1"
+    },
+    {
+      "path": "docs/security-v1/overview.md",
+      "sha256Lf": "a283cf62989aad1929fdc3317e3085ed62b062d508259c2414f3a6015e818aae"
+    },
+    {
+      "path": "docs/security-v1/windows-lan-walkthrough.md",
+      "sha256Lf": "8dd1d181f1953e19c28dd75853b8a0ed387ebdc0b5debb1574410305c75dec9d"
+    },
+    {
+      "path": "docs/security-browser-sessions.md",
+      "sha256Lf": "887ec57907aef15de591a44242abf4d984e51d5b9f0c76aa91ef912cb2a7db7b"
+    },
+    {
+      "path": "test/README.md",
+      "sha256Lf": "b960639e823ac134c96ccfd2933d61290ecb0f374d5562f11fa8b1b1d023237c"
+    }
+  ],
+  "limitations": [
+    "S7.2 related regression and current delivery evidence reconciliation remain pending.",
+    "No full 424-test, package/offline-install, asset-browser or performance rerun in D10.",
+    "No new WebAuthn/device-registration implementation or two-device acceptance.",
+    "No real LAN, existing business Vault, migration, production capacity, publish or deployment acceptance.",
+    "Historical receipts remain unchanged; old source hash differences after current edits are expected.",
+    "D09 first browser process-level exit remains unexplained; no recurrence observed here.",
+    "Full repository check and lint not run; existing ESLint ignores apps and test.",
+    "Typechecks/build used ordinary-user dependency access because the sandbox could not resolve installed ExcelJS/Day.js; no dependency installation or ACL changes."
+  ]
+}

@@ -1,0 +1,28 @@
+Early diagnostic excerpts; full early outputs remain in the conversation tool record.
+These are not successful acceptance reports and are not counted as final test runs.
+
+SDK consumer first run:
+TS18048: 'reader' is possibly 'undefined'.
+TS18048: 'd' is possibly 'undefined'.
+TS2322: readonly pubKeyCredParams cannot be assigned to mutable PublicKeyCredentialParameters[].
+TS18047: 'credential' is possibly 'null'.
+Corrected never-return control-flow declaration and copied the readonly parameters.
+
+Designer next run:
+BrowserIdentityPanel.tsx(27,22): TS2554: Expected 1 arguments, but got 0.
+Existing exceljs/dayjs modules could not be read in the sandbox (TS2307 and derived TS7006).
+Added an explicit ref initial value; the same isolated consumer check passed in the normal environment.
+
+First SDK/state unit run: tests 18, pass 17, fail 1, cancelled 0, skipped 0, todo 0.
+Missing expected exception in the TLS import test: the proposed public-ca variant was identical to the original fixture.
+Changed the negative variant to a different owner-pinned binding. Final SDK/state and report suite: 24/24.
+
+Scoped lint first run: 19 curly errors, 0 warnings. Fixed braces in the new SDK and tooling code.
+No page/server validation was relaxed.
+
+Native browser recheck: retained identity-selection-first.original.txt and identity-selection-first-report.json.
+The virtual authenticator could select the prior rejected resident credential. The fixture now explicitly
+clears that rejected synthetic credential before the new application. The final formal UI run passed.
+
+The first launch-compat log contains 18 tests because the singleton credential file was not selected.
+It is retained as launch-compat-earlier.original.txt. launch-final.command.json records the complete 19/19 run.

@@ -1387,7 +1387,7 @@ function QueryInterfaceDocCard(props: {
             onClick={props.onEdit}
           >
             <IconLink />
-            <span>{props.editLabel}</span>
+            <span>{i18n.t('ui', 'queryInterfaceEditQuery')}</span>
           </button>
           {publishedRelease?.queryInterface.status === 'active' ? (
             <button
@@ -1407,7 +1407,7 @@ function QueryInterfaceDocCard(props: {
         <div className="query-interface-doc-details">
           <div className="query-interface-doc-actions">
             <button type="button" onClick={props.onOpen}>
-              {props.configureLabel}
+              {i18n.t('ui', 'queryInterfaceConfigure')}
             </button>
             <button type="button" onClick={() => setRenaming((value) => !value)}>
               {TEXT_RENAME_INTERFACE}

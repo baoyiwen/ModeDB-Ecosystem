@@ -1,0 +1,255 @@
+TAP version 13
+# Subtest: public-key HTTP/RPC uses live own grants and rejects raw cross-database, relations, import and management escalation
+ok 1 - public-key HTTP/RPC uses live own grants and rejects raw cross-database, relations, import and management escalation
+  ---
+  duration_ms: 589.6037
+  type: 'test'
+  ...
+# Subtest: restriction is local-only, CAS checked, cannot add scopes/change a digest and ordinary storage cannot mutate grants
+ok 2 - restriction is local-only, CAS checked, cannot add scopes/change a digest and ordinary storage cannot mutate grants
+  ---
+  duration_ms: 220.9424
+  type: 'test'
+  ...
+# Subtest: credential subscriptions isolate a key while user invalidation fans out to every key for that user
+ok 3 - credential subscriptions isolate a key while user invalidation fans out to every key for that user
+  ---
+  duration_ms: 270.3701
+  type: 'test'
+  ...
+# Subtest: durable disabled invalidates HTTP, new login, refresh and remains denied after reopen
+ok 4 - durable disabled invalidates HTTP, new login, refresh and remains denied after reopen
+  ---
+  duration_ms: 269.9264
+  type: 'test'
+  ...
+# Subtest: durable revoked invalidates HTTP, new login, refresh and remains denied after reopen
+ok 5 - durable revoked invalidates HTTP, new login, refresh and remains denied after reopen
+  ---
+  duration_ms: 261.9445
+  type: 'test'
+  ...
+# Subtest: durable user invalidates HTTP, new login, refresh and remains denied after reopen
+ok 6 - durable user invalidates HTTP, new login, refresh and remains denied after reopen
+  ---
+  duration_ms: 261.3942
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on restrict without receiving another message
+ok 7 - idle public-key WS closes on restrict without receiving another message
+  ---
+  duration_ms: 224.4981
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on disabled without receiving another message
+ok 8 - idle public-key WS closes on disabled without receiving another message
+  ---
+  duration_ms: 215.2733
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on revoked without receiving another message
+ok 9 - idle public-key WS closes on revoked without receiving another message
+  ---
+  duration_ms: 222.2881
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on user without receiving another message
+ok 10 - idle public-key WS closes on user without receiving another message
+  ---
+  duration_ms: 222.3583
+  type: 'test'
+  ...
+# Subtest: idle public-key WS expires on the server deadline without a client message
+ok 11 - idle public-key WS expires on the server deadline without a client message
+  ---
+  duration_ms: 276.4551
+  type: 'test'
+  ...
+# Subtest: registry failure closes streams and denies the restriction; reopening preserves the last durable grant set
+ok 12 - registry failure closes streams and denies the restriction; reopening preserves the last durable grant set
+  ---
+  duration_ms: 223.9514
+  type: 'test'
+  ...
+# Subtest: queued raw write rechecks before opening an engine
+ok 13 - queued raw write rechecks before opening an engine
+  ---
+  duration_ms: 221.6968
+  type: 'test'
+  ...
+# Subtest: queued operation write rechecks before opening an engine
+ok 14 - queued operation write rechecks before opening an engine
+  ---
+  duration_ms: 217.7992
+  type: 'test'
+  ...
+# Subtest: queued binding write rechecks before opening an engine
+ok 15 - queued binding write rechecks before opening an engine
+  ---
+  duration_ms: 211.203
+  type: 'test'
+  ...
+# Subtest: engine-await and asynchronous authorization microtask cannot preserve a removed write capability
+ok 16 - engine-await and asynchronous authorization microtask cannot preserve a removed write capability
+  ---
+  duration_ms: 415.8215
+  type: 'test'
+  ...
+# Subtest: published query rechecks exact release and parent after child engine waits
+ok 17 - published query rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 291.8652
+  type: 'test'
+  ...
+# Subtest: published operation rechecks exact release and parent after child engine waits
+ok 18 - published operation rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 242.0373
+  type: 'test'
+  ...
+# Subtest: published binding-read rechecks exact release and parent after child engine waits
+ok 19 - published binding-read rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 240.2438
+  type: 'test'
+  ...
+# Subtest: published binding-write rechecks exact release and parent after child engine waits
+ok 20 - published binding-write rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 236.3538
+  type: 'test'
+  ...
+# Subtest: publication batch rechecks every earlier business scope after all metadata awaits
+ok 21 - publication batch rechecks every earlier business scope after all metadata awaits
+  ---
+  duration_ms: 212.7687
+  type: 'test'
+  ...
+# Subtest: published batch preserves first commit and rejects later items after operation scope removal
+ok 22 - published batch preserves first commit and rejects later items after operation scope removal
+  ---
+  duration_ms: 253.5797
+  type: 'test'
+  ...
+# Subtest: published batch preserves first commit and rejects later items after parent surface scope removal
+ok 23 - published batch preserves first commit and rejects later items after parent surface scope removal
+  ---
+  duration_ms: 257.6893
+  type: 'test'
+  ...
+# Subtest: already committed single write remains successful after in-flight revocation with a durable success audit
+ok 24 - already committed single write remains successful after in-flight revocation with a durable success audit
+  ---
+  duration_ms: 237.0457
+  type: 'test'
+  ...
+# Subtest: permission reduction persists across reopen and signing counter updates do not invalidate streams
+ok 25 - permission reduction persists across reopen and signing counter updates do not invalidate streams
+  ---
+  duration_ms: 254.5705
+  type: 'test'
+  ...
+# Subtest: re-enabling disabled requires a new login and never revives an existing session
+ok 26 - re-enabling disabled requires a new login and never revives an existing session
+  ---
+  duration_ms: 236.3653
+  type: 'test'
+  ...
+# Subtest: re-enabling user requires a new login and never revives an existing session
+ok 27 - re-enabling user requires a new login and never revives an existing session
+  ---
+  duration_ms: 242.2904
+  type: 'test'
+  ...
+# Subtest: a registered key change leaves a sibling API stream and its independent session usable
+ok 28 - a registered key change leaves a sibling API stream and its independent session usable
+  ---
+  duration_ms: 257.53
+  type: 'test'
+  ...
+# Subtest: queued WS mutation is rejected after revocation and its socket closes before another operation
+ok 29 - queued WS mutation is rejected after revocation and its socket closes before another operation
+  ---
+  duration_ms: 297.4935
+  type: 'test'
+  ...
+# Subtest: raw query withholds results revoked during asynchronous execution
+ok 30 - raw query withholds results revoked during asynchronous execution
+  ---
+  duration_ms: 222.8109
+  type: 'test'
+  ...
+# Subtest: published query withholds results revoked during asynchronous execution
+ok 31 - published query withholds results revoked during asynchronous execution
+  ---
+  duration_ms: 226.1938
+  type: 'test'
+  ...
+# Subtest: binding read checks both pins after its asynchronous call log, while completed mutation keeps refreshFailed
+not ok 32 - binding read checks both pins after its asynchronous call log, while completed mutation keeps refreshFailed
+  ---
+  duration_ms: 483.353
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-dynamic-authorization.test.ts:1:22713'
+  failureType: 'testCodeFailure'
+  error: |-
+    {"error":"INTERFACE_BINDING_SURFACE_RELEASE_NOT_FOUND","requestId":"70bcf338-e7fb-419b-b663-575eabc5668c","errorDetail":{"code":"INTERFACE_BINDING_SURFACE_RELEASE_NOT_FOUND","message":"INTERFACE_BINDING_SURFACE_RELEASE_NOT_FOUND","category":"not_found","retryable":false}}
+    
+    400 !== 200
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 200
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-dynamic-authorization.test.ts:264:128)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: public-key callable HTTP route pins its release and cannot inherit raw or child grants
+ok 33 - public-key callable HTTP route pins its release and cannot inherit raw or child grants
+  ---
+  duration_ms: 262.5115
+  type: 'test'
+  ...
+# Subtest: public-key relation and bulk writes require live whole-database write/import scopes
+ok 34 - public-key relation and bulk writes require live whole-database write/import scopes
+  ---
+  duration_ms: 312.1467
+  type: 'test'
+  ...
+# Subtest: audit failures reject before execution and report uncertainty after a committed public-key write
+ok 35 - audit failures reject before execution and report uncertainty after a committed public-key write
+  ---
+  duration_ms: 209.2816
+  type: 'test'
+  ...
+# Subtest: restriction staged failure closes the writer and recovers one atomic grant/audit outcome
+ok 36 - restriction staged failure closes the writer and recovers one atomic grant/audit outcome
+  ---
+  duration_ms: 251.6114
+  type: 'test'
+  ...
+# Subtest: restriction journaled failure closes the writer and recovers one atomic grant/audit outcome
+ok 37 - restriction journaled failure closes the writer and recovers one atomic grant/audit outcome
+  ---
+  duration_ms: 230.7793
+  type: 'test'
+  ...
+# Subtest: restriction replaced failure closes the writer and recovers one atomic grant/audit outcome
+ok 38 - restriction replaced failure closes the writer and recovers one atomic grant/audit outcome
+  ---
+  duration_ms: 227.9153
+  type: 'test'
+  ...
+1..38
+# tests 38
+# suites 0
+# pass 37
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 11347.7601

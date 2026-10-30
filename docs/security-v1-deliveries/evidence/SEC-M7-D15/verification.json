@@ -1,0 +1,151 @@
+{
+  "format": "modeldb.security-registration-api-verification.v1",
+  "revision": "SEC-M7-D15",
+  "task": "DR-P1.4",
+  "date": "2026-10-27",
+  "timezone": "Asia/Shanghai",
+  "baseCommit": "fd40ade27acdec54c4e5ba4dd8ddc5ac4e061a0f",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "tasks": {
+    "v1Milestones": "7/7",
+    "v1": "20/20",
+    "registration": "4/23",
+    "registrationP1": "4/6",
+    "registrationWorkPackages": "0/4"
+  },
+  "runtimeRegistrationImplemented": true,
+  "registrationStorageImplemented": true,
+  "approvalImplemented": false,
+  "publicKeyLoginImplemented": false,
+  "unit": {
+    "pass": 74,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "runtimeUnit": {
+    "pass": 22,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "storageUnit": {
+    "pass": 23,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "contractUnit": {
+    "pass": 29,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "legacyRegistryUnit": {
+    "pass": 10,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "networkUnit": {
+    "pass": 9,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "evidenceToolUnit": {
+    "pass": 16,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "totalTargetedUnit": {
+    "pass": 109,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "checks": {
+    "defaultDisabled": true,
+    "sameOriginBeforeParsing": true,
+    "singleUseClaims": true,
+    "noSessionsOrGrants": true,
+    "privateStatus": true,
+    "expiryReclamation": true,
+    "boundedBudgetsAndQueue": true,
+    "nativeDpapiHttps": true,
+    "serverTypecheck": true,
+    "strictRuntimeTypes": true,
+    "browserBoundary": true,
+    "scopedFormatting": true,
+    "scopedLint": true,
+    "materialGuard": true,
+    "scopedDiff": true,
+    "rootDependencyGraph": true,
+    "offlineSelectedGraphInstall": true
+  },
+  "documentValidation": {
+    "ok": true,
+    "documentFiles": 13,
+    "localLinksAndAnchors": 237,
+    "failures": [],
+    "registrationTaskRows": 23,
+    "completedRegistrationTasks": 4
+  },
+  "failureHistory": [
+    {
+      "scope": "Initial strict typecheck",
+      "cause": "Never arrow helper did not narrow inputs; changed to function declaration and fixed unused/test-variable issues.",
+      "rawFailureLogArchived": false
+    },
+    {
+      "scope": "Storage negative case",
+      "cause": "Enabled mode is now supported; replaced outdated rejection case with unknown mode.",
+      "rawFailureLogArchived": false
+    },
+    {
+      "scope": "Queue test",
+      "cause": "Same challenge repeated could not measure queue capacity; used 37 independent applications to verify 4 active + 32 queued.",
+      "rawFailureLogArchived": false
+    },
+    {
+      "scope": "Native HTTPS test",
+      "cause": "Removed duplicate listen on an already-listening server; fixed DNS lookup family=4 without disabling TLS verification.",
+      "rawFailureLogArchived": false
+    },
+    {
+      "scope": "Initial lint/format",
+      "cause": "Fixed import ordering, braces and formatting; final scoped checks passed.",
+      "rawFailureLogArchived": false
+    }
+  ],
+  "scope": {
+    "onlyTemporarySyntheticInstances": true,
+    "liveInstanceAccessed": false,
+    "liveConfigurationOrSecretsOrDataAccessed": false,
+    "uiOrTranslationsChanged": false,
+    "fullRepositoryCheckRun": false,
+    "fullBusinessOrBrowserRegressionRun": false,
+    "newReleaseInstallOrPerformanceRun": false,
+    "realAuthenticatorOrTwoMachineAuthenticationRun": false,
+    "hardwarePowerLossOrPhysicalDiskExhaustionRun": false
+  },
+  "limitations": [
+    "Registration stores pending candidates only. No approval CLI, business grants, public-key sessions or production registration pages.",
+    "Synthetic none attestation is processed by the actual library; it proves neither hardware provenance nor private-key possession. Approval and authentication challenges remain necessary.",
+    "Limits and queue behavior are functional checks, not a performance, flood-load or production capacity acceptance.",
+    "Only the exact selected dependency graph was newly installed offline. Root graph differences were checked semantically; complete workspace/release installation remains future work.",
+    "Windows Node 24.22.1 tested. Node 22, Windows Hello and new two-machine authentication have not been tested.",
+    "Type checks reuse installed common/core declarations; existing dist unchanged. test/** remains excluded from lint/format."
+  ],
+  "nextTask": "DR-P1.5"
+}

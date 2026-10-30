@@ -1,0 +1,133 @@
+{
+  "format": "modeldb.security-authentication-resilience-verification.v1",
+  "revision": "SEC-M7-D22",
+  "task": "DR-P2.5",
+  "date": "2026-10-27",
+  "timezone": "America/New_York",
+  "baseCommit": "fd40ade27acdec54c4e5ba4dd8ddc5ac4e061a0f",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "tasks": {
+    "v1Milestones": "7/7",
+    "v1": "20/20",
+    "registration": "11/23",
+    "registrationP1": "6/6",
+    "registrationP2": "5/5",
+    "registrationWorkPackages": "2/4"
+  },
+  "dynamicUnit": {
+    "pass": 42,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "authenticationUnit": {
+    "pass": 55,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "regressionUnit": {
+    "pass": 169,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "toolsUnit": {
+    "pass": 37,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "browserUnit": {
+    "pass": 1,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "totalTargetedPass": 392,
+  "checks": {
+    "ownLiveGrants": true,
+    "credentialSubscriptions": true,
+    "userFanout": true,
+    "durableSessionRevocation": true,
+    "idleWsDeadline": true,
+    "queuedBeforeEngine": true,
+    "asyncFinalGuard": true,
+    "publicationScopeSet": true,
+    "compositeDelegation": true,
+    "partialCommitHonest": true,
+    "atomicRestrictionRecovery": true,
+    "auditFailureClosed": true,
+    "serverTypecheck": true,
+    "strictDynamicTypes": true,
+    "freshCoreDeclarations": true,
+    "browserBoundary": true,
+    "scopedFormatting": true,
+    "scopedLint": true,
+    "scopedDiff": true,
+    "materialGuard": true,
+    "verifiedOsLocalOnly": true,
+    "credentialUserSeparation": true,
+    "boundedMetadata": true,
+    "atomicReplacement": true,
+    "lostCredentialReapproval": true,
+    "newSignatureLogin": true,
+    "terminalRevocation": true,
+    "nativeDpapiCliMaintenance": true,
+    "maintenanceFaultRecovery": true,
+    "strictMaintenanceTypes": true,
+    "samePublicKeyNormalization": true,
+    "hardProcessExits": true,
+    "atomicSessionAudit": true,
+    "unknownOutcomeInspectable": true,
+    "noRevivalAfterRestart": true,
+    "disableEnableProofBarrier": true,
+    "latestReduction": true,
+    "maintenanceCas": true,
+    "legacyApiPairingManagement": true,
+    "noSecretsInLogs": true,
+    "strictAuthenticationResilienceTypecheck": true
+  },
+  "documentValidation": {
+    "ok": true,
+    "documentFiles": 12,
+    "localLinksAndAnchors": 339,
+    "failures": [],
+    "registrationTaskRows": 23,
+    "completedRegistrationTasks": 11,
+    "cliExamplesKnown": true
+  },
+  "scope": {
+    "liveMaterialRead": false,
+    "productionMigrationPerformed": false,
+    "managementMaintenanceImplemented": true,
+    "uiChanged": false,
+    "physicalAuthenticatorTested": false,
+    "hardProcessExitTested": true,
+    "performanceTested": false,
+    "fullReleaseInstallTested": false,
+    "physicalDiskFullTested": false
+  },
+  "historicalEvidenceVerified": 266,
+  "maintenanceUnit": {
+    "pass": 33,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "browserNode": "v24.15.0",
+  "resilienceUnit": {
+    "pass": 55,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  }
+}

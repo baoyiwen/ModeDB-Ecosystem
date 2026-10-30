@@ -1,0 +1,2 @@
+EVIDENCE_DEVELOPMENT_PATH_REQUIRED
+Missing explicit public fixtures: test/fixtures/security-tls/localhost.crt, test/fixtures/security-tls/localhost.key

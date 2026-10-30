@@ -1,0 +1,82 @@
+
+════════════════════════════════════════════════════════════
+  0. Reset workspace + logical library directory
+════════════════════════════════════════════════════════════
+  ✓ workspace C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\relate_forest_workspace ready
+
+════════════════════════════════════════════════════════════
+  1. AuthoringEngine: self-relation model + seed hierarchy (with one shared child)
+════════════════════════════════════════════════════════════
+  ✓ registered Division(self children/parent) + 5 rows + 4 edges (X shared by A1 & B1)
+
+════════════════════════════════════════════════════════════
+  2. Start ModelDB server
+════════════════════════════════════════════════════════════
+[modeldb-server] storage fingerprint (sha256): 1046e5f8aa656da3fb05088e420f82343ba30626f5ce0b273e75e293ef166628
+[ModelDB] Engine is running
+  Listen: 127.0.0.1:56973
+  ➜ Local:   http://localhost:56973/ (本机访问)
+  Direct client addresses:
+    HTTP:      http://127.0.0.1:56973 (HTTP API 根地址)
+    Action:    http://127.0.0.1:56973/v2/action (单次操作接口)
+    Bulk:      http://127.0.0.1:56973/v2/bulk (批量操作接口)
+    Health:    http://127.0.0.1:56973/health (健康检查)
+    Status:    http://127.0.0.1:56973/api/v1/management/status (引擎状态)
+    WebSocket: ws://127.0.0.1:56973/ (实时 RPC)
+    Stream:    ws://127.0.0.1:56973/v2/stream (流式 RPC)
+
+  Console commands:
+    Stop:      Ctrl+C
+    Status:    modeldb-server info -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\relate_forest_workspace\modeldb.config.json"
+    Databases: modeldb-server ls -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\relate_forest_workspace\modeldb.config.json"
+    Create DB: modeldb-server create-db <db-name> -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\relate_forest_workspace\modeldb.config.json"
+    Backup:    modeldb-server backup <db-name> --reason manual -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\relate_forest_workspace\modeldb.config.json"
+
+  Note: management URLs require the configured connect token in the request header.
+  Remote access: disabled by the loopback bind. Start with --host 0.0.0.0 for direct LAN access.
+  ✓ listening on 127.0.0.1:56973
+
+════════════════════════════════════════════════════════════
+  3. Query all + relate(children) + includeRelates → conserved forest
+════════════════════════════════════════════════════════════
+[ModeDB] START Connection: open websocket trace=ef9cb2e5
+  说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+  请求摘要: { url: 'ws://127.0.0.1:56973/v2/stream' }
+[modeldb-server] connect 127.0.0.1
+[ModeDB] OK Connection: open websocket trace=ef9cb2e5 5.36ms
+  结果: { ms: 5.36, url: 'ws://127.0.0.1:56973/v2/stream' }
+[ModeDB] START WebSocket RPC: handshake trace=612097c4
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: { database: 'relate_conserved_forest' }
+[ModeDB] OK WebSocket RPC: handshake trace=612097c4 769.69ms
+  结果: { ms: 769.69, database: 'relate_conserved_forest' }
+[ModeDB] START WebSocket RPC: executeQuery trace=127ed6b7
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '10c17d2c-40f4-49be-936e-dac9e1c8aa23',
+    database: 'relate_conserved_forest',
+    op: 'executeQuery',
+    model: 'Division',
+    page: 0,
+    cursor: undefined,
+    limit: undefined
+  }
+[modeldb-server][rpc] START executeQuery db=relate_conserved_forest id=10c17d2c-40f4-49be-936e-dac9e1c8aa23 {
+  op: 'executeQuery',
+  model: 'Division',
+  page: 0,
+  cursor: undefined,
+  limit: undefined
+}
+[modeldb-server][rpc] OK executeQuery db=relate_conserved_forest id=10c17d2c-40f4-49be-936e-dac9e1c8aa23 755.02ms { kind: 'rows', rows: 2 }
+[ModeDB] OK WebSocket RPC: executeQuery trace=127ed6b7 756.81ms
+  结果: { ms: 756.81, kind: 'rows', rows: 2 }
+  ✓ execute returned an array
+  ✓ top-level only roots without a parent: [10, 20] (expected 10, 20)
+  ✓ entity total conserved across forest: 5 distinct (expected 5 seeded)
+  ✓ no top-level entity also appears nested (a / b never demoted)
+  ✓ demoted cities A1 / B1 still present as nested children
+  ✓ m2m exception: shared District X nested under both parents (occurrences=2)
+  ✓ depth preserved: A → A1 → X (single-hop relate assembled as nested tree)
+
+relate-conserved-forest: 10 passed, 0 failed

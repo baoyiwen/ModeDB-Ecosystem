@@ -1,0 +1,5 @@
+/** Preserve a known public smoke report, never an instance or secret directory. */
+import { copyFileSync, writeFileSync } from 'node:fs';
+const base = 'docs/security-v1-deliveries/evidence/SEC-M7-D34/';
+copyFileSync('C:/Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-12f8a940105c4c0abd92a7a34c3e3f28/smoke-report.json', base + 'pre-final/smoke-report.json');
+writeFileSync(base + 'development-failures.txt', 'Development observations (summary, not original process transcripts):\nInitial TLS test: ERR_INVALID_IP_ADDRESS from the lookup callback; explicit IPv4 fixed it.\nInitial native smoke: VAULT_PROTECTION_UNAVAILABLE because an inherited-ACL directory was created before protector validation; now the protector creates a fresh directory.\nFirst frozen run: 58 unit checks and native smoke passed; static Unicode wrapper expectation failed because assertion redaction reduced the intended pin mismatch code to DEVICE_STEP_FAILED. Original frozen logs and source manifest are retained in before-error-code-repair. A symbolic first-line extractor now preserves codes while dropping assertion actual/expected values.\n');

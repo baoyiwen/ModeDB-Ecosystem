@@ -1,0 +1,58 @@
+[
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/prettier/bin/prettier.cjs",
+      "--check",
+      "packages/server/src/security/authentication-service.ts",
+      "scripts/security-authentication-resilience-check.mjs",
+      "scripts/security-registration-storage-check.mjs",
+      "scripts/security-release-evidence.mjs",
+      "docs/security-v1/device-registration-protocol-contract.md",
+      "docs/security-v1/device-registration-runtime-guide.md",
+      "docs/security-v1/overview.md",
+      "docs/security-v1/user-guide.md",
+      "docs/security-v1-identity-contract.md",
+      "docs/security-v1-authorization-contract.md",
+      "docs/security-browser-sessions.md",
+      "docs/security-v1-plan.md",
+      "docs/security-v1/AGENTS.md",
+      "docs/security-v1-milestones.md",
+      "docs/security-v1-deliveries/SEC-M7.md",
+      "package.json"
+    ],
+    "exitCode": 0,
+    "log": "format.original.txt"
+  },
+  {
+    "command": [
+      "git",
+      "diff",
+      "--check",
+      "--",
+      "packages/server/src/security/authentication-service.ts",
+      "scripts/security-authentication-resilience-check.mjs",
+      "scripts/security-registration-storage-check.mjs",
+      "scripts/security-release-evidence.mjs",
+      "docs/security-v1/device-registration-protocol-contract.md",
+      "docs/security-v1/device-registration-runtime-guide.md",
+      "docs/security-v1/overview.md",
+      "docs/security-v1/user-guide.md",
+      "docs/security-v1-identity-contract.md",
+      "docs/security-v1-authorization-contract.md",
+      "docs/security-browser-sessions.md",
+      "docs/security-v1-plan.md",
+      "docs/security-v1/AGENTS.md",
+      "docs/security-v1-milestones.md",
+      "docs/security-v1-deliveries/SEC-M7.md",
+      "package.json",
+      "test/fixtures/security-authentication-exit-child.ts",
+      "test/unit/security-authentication-resilience.test.ts",
+      "test/unit/security-authentication-resilience-report.test.mjs",
+      "test/unit/security-release-evidence.test.mjs",
+      "test/README.md"
+    ],
+    "exitCode": 0,
+    "log": "diff.original.txt"
+  }
+]

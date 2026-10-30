@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import {
   RemoteModelDBClient,
+  createBrowserIdentityClient,
+  browserIdentityIssue,
   getBrowserSession,
   pairBrowserSession,
   type ManagementCatalogResponse,
   type ManagementDatabaseInfo,
 } from '@mode-db/sdk';
+import { BrowserIdentityPanel } from '@mode-db/data-ui';
 import { formatDisplayWithUnique } from '@mode-db/data-kit';
 import {
   getStoredHost,
@@ -53,6 +56,9 @@ function databaseOptionLabel(
   return formatDisplayWithUnique(info.name, displayNameForLocale(info.displayName, locale));
 }
 
+const createIdentityClient = () =>
+  createBrowserIdentityClient({ host: location.origin, port: Number(location.port) || 443 });
+
 /** Minimal Engine connection gate for Data Studio. */
 export function ConnectionPanel(props: ConnectionPanelProps): ReactElement {
   const { onConnected } = props;
@@ -87,39 +93,52 @@ export function ConnectionPanel(props: ConnectionPanelProps): ReactElement {
     });
   }, []);
 
-  const listLibraries = useCallback(async (): Promise<void> => {
-    setBusy(true);
-    setErr(null);
-    try {
-      persistBrowserSessionMode(browserSession);
-      if (browserSession) {
-        const endpoint = { host: host.trim(), port };
-        if (pairingCode.trim()) {
-          await pairBrowserSession(endpoint, pairingCode.trim());
-          clearPairingLaunch();
-          setPairingCode('');
-        } else await getBrowserSession(endpoint);
+  const listLibraries = useCallback(
+    async (publicKeySession = false): Promise<void> => {
+      const connectionHost = publicKeySession ? location.origin : host.trim();
+      const connectionPort = publicKeySession ? Number(location.port) || 443 : port;
+      const useBrowserSession = publicKeySession || browserSession;
+      if (publicKeySession) {
+        setHost(connectionHost);
+        setPort(connectionPort);
+        setBrowserSession(true);
+        setToken('');
+        setPairingCode('');
       }
-      persistConnection(host, port, token);
-      const infos = await RemoteModelDBClient.listDatabases({
-        host: host.trim(),
-        port,
-        token: token.trim(),
-        browserSession,
-      });
-      setLibraries(infos);
-      if (infos.length > 0 && !infos.some((info) => info.name === library)) {
-        setLibrary(infos[0]!.name);
+      setBusy(true);
+      setErr(null);
+      try {
+        persistBrowserSessionMode(useBrowserSession);
+        if (useBrowserSession) {
+          const endpoint = { host: connectionHost, port: connectionPort };
+          if (!publicKeySession && pairingCode.trim()) {
+            await pairBrowserSession(endpoint, pairingCode.trim());
+            clearPairingLaunch();
+            setPairingCode('');
+          } else await getBrowserSession(endpoint);
+        }
+        persistConnection(connectionHost, connectionPort, publicKeySession ? '' : token);
+        const infos = await RemoteModelDBClient.listDatabases({
+          host: connectionHost,
+          port: connectionPort,
+          token: publicKeySession ? '' : token.trim(),
+          browserSession: useBrowserSession,
+        });
+        setLibraries(infos);
+        if (infos.length > 0 && !infos.some((info) => info.name === library)) {
+          setLibrary(infos[0]!.name);
+        }
+        setStep('library');
+      } catch (e) {
+        const msg = connectionErrorMessage(e, i18n);
+        setErr(msg);
+        notify.error(i18n.t('connect'), msg);
+      } finally {
+        setBusy(false);
       }
-      setStep('library');
-    } catch (e) {
-      const msg = connectionErrorMessage(e, i18n);
-      setErr(msg);
-      notify.error(i18n.t('connect'), msg);
-    } finally {
-      setBusy(false);
-    }
-  }, [host, port, token, library, notify, i18n, browserSession, pairingCode]);
+    },
+    [host, port, token, library, notify, i18n, browserSession, pairingCode],
+  );
 
   useEffect(() => {
     if (launch && !launched.current) {
@@ -164,7 +183,7 @@ export function ConnectionPanel(props: ConnectionPanelProps): ReactElement {
   }, [step, libraries.length]);
 
   return (
-    <div className="studio-connect-wrap">
+    <div className="studio-connect-wrap" lang={i18n.locale}>
       <div className="studio-connect-card">
         <div
           style={{
@@ -200,61 +219,77 @@ export function ConnectionPanel(props: ConnectionPanelProps): ReactElement {
 
         {step === 'credentials' ? (
           <>
-            <label className="studio-field">
-              {i18n.t('host')}
-              <input
-                className="studio-input"
-                value={host}
-                placeholder="127.0.0.1 / https://db.example.com"
-                title={i18n.t('security_transportHint')}
-                onChange={(e) => setHost(e.target.value)}
-                autoComplete="off"
+            {location.protocol === 'https:' && !launch && (
+              <BrowserIdentityPanel
+                createClient={createIdentityClient}
+                issueFor={browserIdentityIssue}
+                translate={(key) => i18n.t('identity_' + key)}
+                locale={i18n.locale}
+                onContinue={() => void listLibraries(true)}
+                connecting={busy}
               />
-            </label>
-            <label className="studio-field">
-              {i18n.t('port')}
-              <input
-                className="studio-input"
-                type="number"
-                value={port}
-                onChange={(e) => setPort(Number(e.target.value) || 0)}
-              />
-            </label>
-            <label className="studio-field">
-              {i18n.t('sessionAuthMode')}
-              <select
-                className="studio-select"
-                value={browserSession ? 'browser' : 'token'}
-                onChange={(e) => {
-                  setBrowserSession(e.target.value === 'browser');
-                  setToken('');
-                }}
-              >
-                <option value="browser">{i18n.t('sessionBrowserMode')}</option>
-                <option value="token">{i18n.t('sessionTokenMode')}</option>
-              </select>
-            </label>
-            <label className="studio-field">
-              {i18n.t(browserSession ? 'sessionPairingCode' : 'token')}
-              <input
-                className="studio-input"
-                type="password"
-                value={browserSession ? pairingCode : token}
-                onChange={(e) =>
-                  browserSession ? setPairingCode(e.target.value) : setToken(e.target.value)
-                }
-                autoComplete="off"
-              />
-            </label>
-            <button
-              type="button"
-              className="studio-btn-primary"
-              disabled={busy || (!browserSession && !token.trim())}
-              onClick={() => void listLibraries()}
+            )}
+            <details
+              className="studio-connection-advanced"
+              open={location.protocol !== 'https:' || !!launch}
             >
-              {busy ? i18n.t('connecting') : i18n.t('connect')}
-            </button>
-            <p>{i18n.t(browserSession ? 'sessionPairingHint' : 'security_memoryOnly')}</p>
+              <summary>{i18n.t('identity_advanced')}</summary>
+              <label className="studio-field">
+                {i18n.t('host')}
+                <input
+                  className="studio-input"
+                  value={host}
+                  placeholder="127.0.0.1 / https://db.example.com"
+                  title={i18n.t('security_transportHint')}
+                  onChange={(e) => setHost(e.target.value)}
+                  autoComplete="off"
+                />
+              </label>
+              <label className="studio-field">
+                {i18n.t('port')}
+                <input
+                  className="studio-input"
+                  type="number"
+                  value={port}
+                  onChange={(e) => setPort(Number(e.target.value) || 0)}
+                />
+              </label>
+              <label className="studio-field">
+                {i18n.t('sessionAuthMode')}
+                <select
+                  className="studio-select"
+                  value={browserSession ? 'browser' : 'token'}
+                  onChange={(e) => {
+                    setBrowserSession(e.target.value === 'browser');
+                    setToken('');
+                  }}
+                >
+                  <option value="browser">{i18n.t('sessionBrowserMode')}</option>
+                  <option value="token">{i18n.t('sessionTokenMode')}</option>
+                </select>
+              </label>
+              <label className="studio-field">
+                {i18n.t(browserSession ? 'sessionPairingCode' : 'token')}
+                <input
+                  className="studio-input"
+                  type="password"
+                  value={browserSession ? pairingCode : token}
+                  onChange={(e) =>
+                    browserSession ? setPairingCode(e.target.value) : setToken(e.target.value)
+                  }
+                  autoComplete="off"
+                />
+              </label>
+              <button
+                type="button"
+                className="studio-btn-primary"
+                disabled={busy || (!browserSession && !token.trim())}
+                onClick={() => void listLibraries()}
+              >
+                {busy ? i18n.t('connecting') : i18n.t('connect')}
+              </button>
+              <p>{i18n.t(browserSession ? 'sessionPairingHint' : 'security_memoryOnly')}</p>
+            </details>
           </>
         ) : (
           <>

@@ -1,0 +1,6 @@
+{
+  "releaseRoot": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Release-zELT8z",
+  "manifestSha256": "6f737648713e86c5049efe343b0f5ea89e3d84a11899a987aae44e4410a07fcc",
+  "retention": "Local temporary directory only; archives and installed trees hashed during recorded run, not copied into Git. Integrity tool verifies recorded evidence, not current tarball availability.",
+  "runtimeStateArchived": false
+}

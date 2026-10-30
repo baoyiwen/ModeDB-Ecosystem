@@ -1,0 +1,8 @@
+{
+  "ok": true,
+  "rootImporterExact": true,
+  "graphMatchesSelection": true,
+  "selectedPackages": 25,
+  "rootLockSha256": "9f71e0c630dd5e66d117599fbc7e5719220e8b429e2ef24a8e16ed1daaecd84d",
+  "onlySelectedRootGraphChanges": true
+}

@@ -1,0 +1,29 @@
+[
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "scripts/security-registration-storage-check.mjs"
+    ],
+    "exitCode": 0,
+    "stdout": "{\n  \"format\": \"modeldb.registration-storage-types.v1\",\n  \"ok\": true,\n  \"node\": \"v24.22.1\",\n  \"root\": \"C:\\\\Users\\\\51153\\\\AppData\\\\Local\\\\Temp\\\\ModeDB-Registration-Storage-Types-IERV5c\",\n  \"checks\": {\n    \"freshSharedDeclarations\": true,\n    \"entireServerTypecheck\": true,\n    \"strictStorageTestTypecheck\": true,\n    \"strictSessionParentTypecheck\": true,\n    \"strictAuthenticationTypecheck\": true,\n    \"strictRegistrationRuntimeTypecheck\": true,\n    \"strictRegistrationApprovalTypecheck\": true,\n    \"strictRegistrationIntegrationTypecheck\": true,\n    \"existingDistUnchanged\": true\n  }\n}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "scripts/security-registration-consumer-check.mjs"
+    ],
+    "exitCode": 0,
+    "stdout": "{\n  \"ok\": true,\n  \"format\": \"modeldb.registration-consumer-check.v1\",\n  \"node\": \"v24.22.1\",\n  \"root\": \"C:\\\\Users\\\\51153\\\\AppData\\\\Local\\\\Temp\\\\ModeDB-Registration-Consumers-X589Ds\",\n  \"checks\": {\n    \"freshSharedDeclarations\": true,\n    \"strictSdkConsumer\": true,\n    \"domTypesWithoutNode\": true,\n    \"sharedBrowserBundle\": true,\n    \"sdkBrowserBundle\": true,\n    \"serverLibraryExcluded\": true\n  },\n  \"bundles\": [\n    {\n      \"entry\": \"packages/shared/src/index.ts\",\n      \"bytes\": 87304,\n      \"sha256\": \"4f5aa34eb00f123cc2dfc2b537281b2804c68ff40d32816a012406959531640b\"\n    },\n    {\n      \"entry\": \"packages/sdk/src/index.ts\",\n      \"bytes\": 150572,\n      \"sha256\": \"6e7d7a81567c9ebf107ca79a30e7c41336afe3088c869cca9ffead459a459cce\"\n    }\n  ]\n}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "scripts/assert-no-security-material.mjs"
+    ],
+    "exitCode": 0,
+    "stdout": "{\"ok\":true,\"trackedRuntimeEntries\":0,\"materialRead\":false}\n",
+    "stderr": ""
+  }
+]

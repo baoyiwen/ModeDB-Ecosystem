@@ -1,0 +1,47 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): 22cd06aa56f059553753a469a9cec1673002ff4a8b100317506a42aeecbc97d5
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:55442
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:55442
+#     HTTP RPC:  https://modeldb-a.example.test:55442/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:55442/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-u85ljq\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:55442/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-u85ljq\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-u85ljq\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-u85ljq\\modeldb.config.json"
+# [modeldb-server] storage fingerprint (sha256): 22cd06aa56f059553753a469a9cec1673002ff4a8b100317506a42aeecbc97d5
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:55442
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:55442
+#     HTTP RPC:  https://modeldb-a.example.test:55442/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:55442/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-u85ljq\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:55442/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-u85ljq\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-u85ljq\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-u85ljq\\modeldb.config.json"
+# Subtest: formal Designer registration, pending/rejection/approval, Passkey login, recovery and localized layouts
+ok 1 - formal Designer registration, pending/rejection/approval, Passkey login, recovery and localized layouts
+  ---
+  duration_ms: 72261.0915
+  type: 'test'
+  ...
+# {"format":"modeldb.designer-identity-browser.v1","ok":true,"browser":"Chrome/156.0.8078.48","screenshots":24,"hardwareAuthenticatorTested":false,"systemTrustInstalled":false,"liveMaterialRead":false,"checks":{"syntheticSaveReadback":true,"freshDesignerBuild":true,"formalRegistration":true,"pendingNoAuthority":true,"rejectedState":true,"localOsApproval":true,"approvalRequiresLogin":true,"actualWebAuthnLogin":true,"syntheticDataScope":true,"managementDenied":true,"httpOnlySecureStrict":true,"reloadRestoresSession":true,"continuationNotPersisted":true,"logout":true,"expiredWindowLogin":true,"revocationDenied":true,"cancelledExplained":true,"localizedZhEnJa":true,"wideAndNarrow":true,"labelsAndFocus":true}}
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 78223.5318

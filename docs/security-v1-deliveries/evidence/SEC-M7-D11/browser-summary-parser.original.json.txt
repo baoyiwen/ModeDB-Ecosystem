@@ -1,0 +1,17 @@
+{
+  "format": "modeldb.security-browser-revalidation.v1",
+  "timestampUtc": "2026-10-26T05:11:32.962Z",
+  "exitCode": 0,
+  "tests": 2,
+  "pass": 2,
+  "fail": 0,
+  "cancelled": 0,
+  "skip": -1,
+  "todo": 0,
+  "duration_ms": 385084.3184,
+  "source": "Fresh candidate apps, Windows Chrome, synthetic temporary instances and isolated profiles",
+  "testDurationsMs": [
+    190907.6375,
+    187537.7711
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "scripts/security-registration-consumer-check.mjs"
+  ],
+  "exitCode": 0
+}

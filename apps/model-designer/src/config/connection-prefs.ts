@@ -1,8 +1,19 @@
 import { logoutBrowserSession, takeBrowserPairingLink } from '@mode-db/sdk';
 
 const PREFIX = 'model-designer:';
+/** Presentation defaults only. Listener and session roles are enforced on the server. */
+export function getHostedBrowserRole(): 'data' | 'management' | undefined {
+  const role =
+    typeof document === 'undefined'
+      ? undefined
+      : document.querySelector('meta[name="modeldb-hosting-role"]')?.getAttribute('content');
+  return role === 'data' || role === 'management' ? role : undefined;
+}
 let activeToken = '';
 let pairingLaunch = takeBrowserPairingLink();
+let browserSessionMode: boolean | undefined;
+// A validated launcher link takes precedence over an earlier service-token preference.
+if (pairingLaunch) persistBrowserSessionMode(true);
 export function getPairingLaunch(): typeof pairingLaunch {
   return pairingLaunch;
 }
@@ -10,9 +21,10 @@ export function clearPairingLaunch(): void {
   pairingLaunch = undefined;
 }
 export function isBrowserSessionMode(): boolean {
-  return safeGet('authMode') !== 'token';
+  return browserSessionMode ?? safeGet('authMode') !== 'token';
 }
 export function persistBrowserSessionMode(browser: boolean): void {
+  browserSessionMode = browser;
   safeSet('authMode', browser ? 'browser' : 'token');
 }
 export function getConnectionAuth(): { token: string; browserSession: boolean } {
@@ -68,11 +80,14 @@ function safeSet(key: string, value: string): void {
 }
 
 export function getStoredHost(fallback: string): string {
+  if (getHostedBrowserRole()) return location.origin;
   const v = safeGet('host');
   return v != null && v.trim() !== '' ? v.trim() : fallback;
 }
 
 export function getStoredPort(fallback: number): number {
+  if (getHostedBrowserRole())
+    return Number(location.port) || (location.protocol === 'https:' ? 443 : 80);
   const v = safeGet('port');
   if (v == null || v.trim() === '') {
     return fallback;
@@ -83,6 +98,7 @@ export function getStoredPort(fallback: number): number {
 
 /** Public HTTP(S) origin advertised by the server; empty means use host/port. */
 export function getStoredPublicBaseUrl(fallback = ''): string {
+  if (getHostedBrowserRole()) return location.origin;
   const v = safeGet('publicBaseUrl');
   return normalizePublicBaseUrl(v != null && v.trim() !== '' ? v : fallback);
 }

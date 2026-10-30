@@ -1,0 +1,341 @@
+TAP version 13
+# Subtest: actual hard exit login at staged restores a complete identity/session/audit outcome
+ok 1 - actual hard exit login at staged restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1457.152
+  type: 'test'
+  ...
+# Subtest: actual hard exit login at journaled restores a complete identity/session/audit outcome
+ok 2 - actual hard exit login at journaled restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1182.498
+  type: 'test'
+  ...
+# Subtest: actual hard exit login at replaced restores a complete identity/session/audit outcome
+ok 3 - actual hard exit login at replaced restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1203.5192
+  type: 'test'
+  ...
+# Subtest: actual hard exit claim at staged restores a complete identity/session/audit outcome
+ok 4 - actual hard exit claim at staged restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1182.7975
+  type: 'test'
+  ...
+# Subtest: actual hard exit claim at journaled restores a complete identity/session/audit outcome
+ok 5 - actual hard exit claim at journaled restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1127.5947
+  type: 'test'
+  ...
+# Subtest: actual hard exit claim at replaced restores a complete identity/session/audit outcome
+ok 6 - actual hard exit claim at replaced restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1154.4722
+  type: 'test'
+  ...
+# Subtest: actual hard exit refresh at staged restores a complete identity/session/audit outcome
+ok 7 - actual hard exit refresh at staged restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1114.1054
+  type: 'test'
+  ...
+# Subtest: actual hard exit refresh at journaled restores a complete identity/session/audit outcome
+ok 8 - actual hard exit refresh at journaled restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1146.9438
+  type: 'test'
+  ...
+# Subtest: actual hard exit refresh at replaced restores a complete identity/session/audit outcome
+ok 9 - actual hard exit refresh at replaced restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1096.0876
+  type: 'test'
+  ...
+# Subtest: actual hard exit logout at staged restores a complete identity/session/audit outcome
+ok 10 - actual hard exit logout at staged restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1125.8357
+  type: 'test'
+  ...
+# Subtest: actual hard exit logout at journaled restores a complete identity/session/audit outcome
+ok 11 - actual hard exit logout at journaled restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1089.3538
+  type: 'test'
+  ...
+# Subtest: actual hard exit logout at replaced restores a complete identity/session/audit outcome
+ok 12 - actual hard exit logout at replaced restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1077.5131
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.credential.disable at staged restores a complete identity/session/audit outcome
+ok 13 - actual hard exit registration.credential.disable at staged restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1073.3053
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.credential.disable at journaled restores a complete identity/session/audit outcome
+ok 14 - actual hard exit registration.credential.disable at journaled restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1095.6532
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.credential.disable at replaced restores a complete identity/session/audit outcome
+ok 15 - actual hard exit registration.credential.disable at replaced restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1077.0111
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.credential.revoke at staged restores a complete identity/session/audit outcome
+ok 16 - actual hard exit registration.credential.revoke at staged restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1080.4157
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.credential.revoke at journaled restores a complete identity/session/audit outcome
+ok 17 - actual hard exit registration.credential.revoke at journaled restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1109.2842
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.credential.revoke at replaced restores a complete identity/session/audit outcome
+ok 18 - actual hard exit registration.credential.revoke at replaced restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1113.533
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.user.disable at staged restores a complete identity/session/audit outcome
+ok 19 - actual hard exit registration.user.disable at staged restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1109.3129
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.user.disable at journaled restores a complete identity/session/audit outcome
+ok 20 - actual hard exit registration.user.disable at journaled restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1062.7446
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.user.disable at replaced restores a complete identity/session/audit outcome
+ok 21 - actual hard exit registration.user.disable at replaced restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1070.9986
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.credential.restrict at staged restores a complete identity/session/audit outcome
+ok 22 - actual hard exit registration.credential.restrict at staged restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1126.3981
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.credential.restrict at journaled restores a complete identity/session/audit outcome
+ok 23 - actual hard exit registration.credential.restrict at journaled restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1093.495
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.credential.restrict at replaced restores a complete identity/session/audit outcome
+ok 24 - actual hard exit registration.credential.restrict at replaced restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1069.4717
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.credential.replace at staged restores a complete identity/session/audit outcome
+ok 25 - actual hard exit registration.credential.replace at staged restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1126.4945
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.credential.replace at journaled restores a complete identity/session/audit outcome
+ok 26 - actual hard exit registration.credential.replace at journaled restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1147.4887
+  type: 'test'
+  ...
+# Subtest: actual hard exit registration.credential.replace at replaced restores a complete identity/session/audit outcome
+ok 27 - actual hard exit registration.credential.replace at replaced restores a complete identity/session/audit outcome
+  ---
+  duration_ms: 1204.34
+  type: 'test'
+  ...
+# Subtest: actual V2-to-V4 migration hard exit at staged preserves API and pairing identity
+ok 28 - actual V2-to-V4 migration hard exit at staged preserves API and pairing identity
+  ---
+  duration_ms: 1219.2602
+  type: 'test'
+  ...
+# Subtest: actual V2-to-V4 migration hard exit at journaled preserves API and pairing identity
+ok 29 - actual V2-to-V4 migration hard exit at journaled preserves API and pairing identity
+  ---
+  duration_ms: 1211.5257
+  type: 'test'
+  ...
+# Subtest: actual V2-to-V4 migration hard exit at replaced preserves API and pairing identity
+ok 30 - actual V2-to-V4 migration hard exit at replaced preserves API and pairing identity
+  ---
+  duration_ms: 1262.9109
+  type: 'test'
+  ...
+# Subtest: verified proof racing local disable has a live, durable outcome
+ok 31 - verified proof racing local disable has a live, durable outcome
+  ---
+  duration_ms: 289.5557
+  type: 'test'
+  ...
+# Subtest: verified proof racing local revoke has a live, durable outcome
+ok 32 - verified proof racing local revoke has a live, durable outcome
+  ---
+  duration_ms: 223.9929
+  type: 'test'
+  ...
+# Subtest: verified proof racing local user has a live, durable outcome
+ok 33 - verified proof racing local user has a live, durable outcome
+  ---
+  duration_ms: 343.1212
+  type: 'test'
+  ...
+# Subtest: verified proof racing local replace has a live, durable outcome
+ok 34 - verified proof racing local replace has a live, durable outcome
+  ---
+  duration_ms: 249.5842
+  type: 'test'
+  ...
+# Subtest: verified proof racing local disable-enable has a live, durable outcome
+ok 35 - verified proof racing local disable-enable has a live, durable outcome
+  ---
+  duration_ms: 237.8305
+  type: 'test'
+  ...
+# Subtest: verified proof racing local user-disable-enable has a live, durable outcome
+ok 36 - verified proof racing local user-disable-enable has a live, durable outcome
+  ---
+  duration_ms: 241.0062
+  type: 'test'
+  ...
+# Subtest: verified proof racing local restrict has a live, durable outcome
+ok 37 - verified proof racing local restrict has a live, durable outcome
+  ---
+  duration_ms: 188.8712
+  type: 'test'
+  ...
+# Subtest: verified proof racing local unrelated has a live, durable outcome
+ok 38 - verified proof racing local unrelated has a live, durable outcome
+  ---
+  duration_ms: 199.6642
+  type: 'test'
+  ...
+# Subtest: refresh and key revocation serialize in revocation order without revival
+ok 39 - refresh and key revocation serialize in revocation order without revival
+  ---
+  duration_ms: 179.9349
+  type: 'test'
+  ...
+# Subtest: refresh and user stop serialize in revocation order without revival
+ok 40 - refresh and user stop serialize in revocation order without revival
+  ---
+  duration_ms: 168.7708
+  type: 'test'
+  ...
+# Subtest: refresh and key revocation serialize in session order without revival
+ok 41 - refresh and key revocation serialize in session order without revival
+  ---
+  duration_ms: 188.9068
+  type: 'test'
+  ...
+# Subtest: refresh and user stop serialize in session order without revival
+ok 42 - refresh and user stop serialize in session order without revival
+  ---
+  duration_ms: 181.7514
+  type: 'test'
+  ...
+# Subtest: logout and key revocation serialize in revocation order without revival
+ok 43 - logout and key revocation serialize in revocation order without revival
+  ---
+  duration_ms: 167.9166
+  type: 'test'
+  ...
+# Subtest: logout and user stop serialize in revocation order without revival
+ok 44 - logout and user stop serialize in revocation order without revival
+  ---
+  duration_ms: 179.0383
+  type: 'test'
+  ...
+# Subtest: logout and key revocation serialize in session order without revival
+ok 45 - logout and key revocation serialize in session order without revival
+  ---
+  duration_ms: 196.7177
+  type: 'test'
+  ...
+# Subtest: logout and user stop serialize in session order without revival
+ok 46 - logout and user stop serialize in session order without revival
+  ---
+  duration_ms: 182.773
+  type: 'test'
+  ...
+# Subtest: queued proof cannot revive after credential disable-enable
+ok 47 - queued proof cannot revive after credential disable-enable
+  ---
+  duration_ms: 366.8462
+  type: 'test'
+  ...
+# Subtest: queued proof cannot revive after user disable-enable
+ok 48 - queued proof cannot revive after user disable-enable
+  ---
+  duration_ms: 376.3857
+  type: 'test'
+  ...
+# Subtest: audit full at claim does not return success or partially mutate identity
+ok 49 - audit full at claim does not return success or partially mutate identity
+  ---
+  duration_ms: 201.5438
+  type: 'test'
+  ...
+# Subtest: audit full at login does not return success or partially mutate identity
+ok 50 - audit full at login does not return success or partially mutate identity
+  ---
+  duration_ms: 382.7704
+  type: 'test'
+  ...
+# Subtest: audit full at refresh does not return success or partially mutate identity
+ok 51 - audit full at refresh does not return success or partially mutate identity
+  ---
+  duration_ms: 199.6361
+  type: 'test'
+  ...
+# Subtest: audit full at replace does not return success or partially mutate identity
+ok 52 - audit full at replace does not return success or partially mutate identity
+  ---
+  duration_ms: 203.7403
+  type: 'test'
+  ...
+# Subtest: competing replacement and revoke with one revision commit at most one local decision
+ok 53 - competing replacement and revoke with one revision commit at most one local decision
+  ---
+  duration_ms: 247.1611
+  type: 'test'
+  ...
+# Subtest: mixed API, public-key and local-management sessions retain separate scopes through restart and user stop
+ok 54 - mixed API, public-key and local-management sessions retain separate scopes through restart and user stop
+  ---
+  duration_ms: 260.7539
+  type: 'test'
+  ...
+# Subtest: resilience matrix records every hard exit, signed race, audit failure and compatibility case
+ok 55 - resilience matrix records every hard exit, signed race, audit failure and compatibility case
+  ---
+  duration_ms: 0.1876
+  type: 'test'
+  ...
+# {"format":"modeldb.authentication-resilience-matrix.v1","ok":true,"hardExitCases":30,"signedRaceCases":10,"auditFaultCases":4,"checks":{"hardProcessExits":true,"atomicSessionAudit":true,"unknownOutcomeInspectable":true,"noRevivalAfterRestart":true,"disableEnableProofBarrier":true,"latestReduction":true,"maintenanceCas":true,"legacyApiPairingManagement":true,"noSecretsInLogs":true},"liveMaterialRead":false,"hardwareAuthenticatorTested":false}
+1..55
+# tests 55
+# suites 0
+# pass 55
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 41089.6225

@@ -1,0 +1,14 @@
+{
+  "format": "modeldb.registration-storage-types.v1",
+  "ok": true,
+  "node": "v24.22.1",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Storage-Types-2DsF98",
+  "checks": {
+    "freshSharedDeclarations": true,
+    "entireServerTypecheck": true,
+    "strictStorageTestTypecheck": true,
+    "strictRegistrationRuntimeTypecheck": true,
+    "strictRegistrationApprovalTypecheck": true,
+    "existingDistUnchanged": true
+  }
+}

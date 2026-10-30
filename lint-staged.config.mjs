@@ -1,8 +1,14 @@
 import path from 'node:path';
 
-/** Staged paths relative to repo root: skip test/ and templates/. */
+/** Keep archived evidence byte-for-byte; skip test/ and templates/ as before. */
 function keepForLintFormat(file) {
   const rel = path.relative(process.cwd(), path.resolve(file)).replace(/\\/g, '/');
+  if (
+    rel === 'docs/security-v1-deliveries/evidence' ||
+    rel.startsWith('docs/security-v1-deliveries/evidence/')
+  ) {
+    return false;
+  }
   if (rel === 'test' || rel.startsWith('test/')) {
     return false;
   }

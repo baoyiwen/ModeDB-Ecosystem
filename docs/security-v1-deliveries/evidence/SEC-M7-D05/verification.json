@@ -1,0 +1,60 @@
+{
+  "format": "modeldb.security-config-documentation-check.v1",
+  "revision": "SEC-M7-D05",
+  "date": "2026-10-25",
+  "status": "passed",
+  "nodeVersion": "v24.15.0",
+  "typescriptVersion": "5.9.3",
+  "checks": [
+    "three-example-json-files-parse",
+    "loopback-config-loader-and-network-policy",
+    "lan-both-planes-allow-a-b-loopback-and-deny-other-sources",
+    "lan-rejects-plaintext-and-wrong-origins",
+    "lan-config-loader-and-network-policy",
+    "host-only-change-rejected",
+    "exact-two-database-grants-pass-shared-typecheck",
+    "documented-vite-fragment-typescript-syntax",
+    "seven-documents-local-links-and-anchors"
+  ],
+  "documents": 7,
+  "localLinks": 138,
+  "boundaries": {
+    "temporaryConfigCopiesOnly": true,
+    "tlsMaterialRead": false,
+    "serviceStarted": false,
+    "networkConnections": false,
+    "realConfigOrSecurityMaterialRead": false,
+    "browserOrTwoDeviceDeploymentReexecuted": false
+  },
+  "additionalChecks": {
+    "powershellSnippetSyntax": { "status": "passed", "blocks": 16, "commandsExecuted": false },
+    "evidenceScriptEslint": { "status": "passed", "exitCode": 0 },
+    "runtimeGitPathGuard": {
+      "status": "passed",
+      "trackedRuntimeEntries": 0,
+      "materialRead": false
+    },
+    "scopedWhitespaceDiff": { "status": "passed", "exitCode": 0 },
+    "explicitFileFormat": { "status": "passed", "files": 13, "exitCode": 0 },
+    "evidenceIntegrity": {
+      "status": "passed",
+      "pass": 8,
+      "fail": 0,
+      "checks": [
+        "complete-baseline-accepted",
+        "development-eol-only-change-accepted",
+        "development-content-change-rejected",
+        "historical-d04-byte-change-rejected",
+        "current-d05-byte-change-rejected",
+        "runtime-path-rejected-before-read",
+        "incomplete-verification-rejected",
+        "directory-junction-rejected"
+      ],
+      "temporaryDevelopmentCopyOnly": true,
+      "runtimeMaterialRead": false
+    }
+  },
+  "toolingNotes": [
+    "First repeat of the temporary checker stopped with EEXIST on its own fixture subdirectory; changed it to create a new subdirectory per run, then all documentation checks passed."
+  ]
+}

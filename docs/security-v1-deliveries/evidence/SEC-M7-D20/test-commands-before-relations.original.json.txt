@@ -1,0 +1,63 @@
+[
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-dynamic-authorization.test.ts"
+    ],
+    "exitCode": 0,
+    "log": "dynamic.original.txt",
+    "stderr": "dynamic.stderr.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-authentication.test.ts",
+      "test/unit/security-authentication-storage.test.ts"
+    ],
+    "exitCode": 0,
+    "log": "authentication.original.txt",
+    "stderr": "authentication.stderr.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-session-parent.test.ts",
+      "test/unit/security-registration-contract.test.mjs",
+      "test/unit/security-device-registration-contract.test.ts",
+      "test/unit/security-registration-storage.test.ts",
+      "test/unit/security-registration-runtime.test.ts",
+      "test/unit/security-registration-approval.test.ts",
+      "test/unit/security-registry.test.ts",
+      "test/unit/security-windows-keys.test.ts",
+      "test/unit/security-browser-session.test.ts",
+      "test/unit/security-network.test.ts",
+      "test/unit/security-authorization.test.ts",
+      "test/unit/security-registry-http.test.ts"
+    ],
+    "exitCode": 0,
+    "log": "regression.original.txt",
+    "stderr": "regression.stderr.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-release-evidence.test.mjs",
+      "test/unit/security-authentication-report.test.mjs"
+    ],
+    "exitCode": 0,
+    "log": "tools.original.txt",
+    "stderr": "tools.stderr.original.txt"
+  }
+]

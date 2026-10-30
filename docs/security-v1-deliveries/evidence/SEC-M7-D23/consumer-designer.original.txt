@@ -1,0 +1,7 @@
+apps/model-designer/src/components/SecurityCenterWorkspace.tsx(800,35): error TS1005: '{' expected.
+apps/model-designer/src/components/SecurityCenterWorkspace.tsx(816,21): error TS1005: ')' expected.
+apps/model-designer/src/components/SecurityCenterWorkspace.tsx(817,17): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+
+2 !== 0
+

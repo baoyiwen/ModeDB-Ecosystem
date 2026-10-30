@@ -1,0 +1,262 @@
+TAP version 13
+# Subtest: public-key HTTP/RPC uses live own grants and rejects raw cross-database, relations, import and management escalation
+ok 1 - public-key HTTP/RPC uses live own grants and rejects raw cross-database, relations, import and management escalation
+  ---
+  duration_ms: 837.9148
+  type: 'test'
+  ...
+# Subtest: restriction is local-only, CAS checked, cannot add scopes/change a digest and ordinary storage cannot mutate grants
+ok 2 - restriction is local-only, CAS checked, cannot add scopes/change a digest and ordinary storage cannot mutate grants
+  ---
+  duration_ms: 248.4695
+  type: 'test'
+  ...
+# Subtest: credential subscriptions isolate a key while user invalidation fans out to every key for that user
+ok 3 - credential subscriptions isolate a key while user invalidation fans out to every key for that user
+  ---
+  duration_ms: 303.9176
+  type: 'test'
+  ...
+# Subtest: durable disabled invalidates HTTP, new login, refresh and remains denied after reopen
+ok 4 - durable disabled invalidates HTTP, new login, refresh and remains denied after reopen
+  ---
+  duration_ms: 335.9961
+  type: 'test'
+  ...
+# Subtest: durable revoked invalidates HTTP, new login, refresh and remains denied after reopen
+ok 5 - durable revoked invalidates HTTP, new login, refresh and remains denied after reopen
+  ---
+  duration_ms: 298.3251
+  type: 'test'
+  ...
+# Subtest: durable user invalidates HTTP, new login, refresh and remains denied after reopen
+ok 6 - durable user invalidates HTTP, new login, refresh and remains denied after reopen
+  ---
+  duration_ms: 465.4751
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on restrict without receiving another message
+ok 7 - idle public-key WS closes on restrict without receiving another message
+  ---
+  duration_ms: 280.7656
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on disabled without receiving another message
+ok 8 - idle public-key WS closes on disabled without receiving another message
+  ---
+  duration_ms: 229.0459
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on revoked without receiving another message
+ok 9 - idle public-key WS closes on revoked without receiving another message
+  ---
+  duration_ms: 242.8578
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on user without receiving another message
+ok 10 - idle public-key WS closes on user without receiving another message
+  ---
+  duration_ms: 255.4597
+  type: 'test'
+  ...
+# Subtest: idle public-key WS expires on the server deadline without a client message
+ok 11 - idle public-key WS expires on the server deadline without a client message
+  ---
+  duration_ms: 309.0138
+  type: 'test'
+  ...
+# Subtest: registry failure closes streams and denies the restriction; reopening preserves the last durable grant set
+ok 12 - registry failure closes streams and denies the restriction; reopening preserves the last durable grant set
+  ---
+  duration_ms: 266.7989
+  type: 'test'
+  ...
+# Subtest: queued raw write rechecks before opening an engine
+ok 13 - queued raw write rechecks before opening an engine
+  ---
+  duration_ms: 250.0696
+  type: 'test'
+  ...
+# Subtest: queued operation write rechecks before opening an engine
+ok 14 - queued operation write rechecks before opening an engine
+  ---
+  duration_ms: 246.9407
+  type: 'test'
+  ...
+# Subtest: queued binding write rechecks before opening an engine
+ok 15 - queued binding write rechecks before opening an engine
+  ---
+  duration_ms: 240.5196
+  type: 'test'
+  ...
+# Subtest: engine-await and asynchronous authorization microtask cannot preserve a removed write capability
+ok 16 - engine-await and asynchronous authorization microtask cannot preserve a removed write capability
+  ---
+  duration_ms: 475.6073
+  type: 'test'
+  ...
+# Subtest: published query rechecks exact release and parent after child engine waits
+ok 17 - published query rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 266.0439
+  type: 'test'
+  ...
+# Subtest: published operation rechecks exact release and parent after child engine waits
+ok 18 - published operation rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 262.0416
+  type: 'test'
+  ...
+# Subtest: published binding-read rechecks exact release and parent after child engine waits
+ok 19 - published binding-read rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 271.5537
+  type: 'test'
+  ...
+# Subtest: published binding-write rechecks exact release and parent after child engine waits
+ok 20 - published binding-write rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 281.1771
+  type: 'test'
+  ...
+# Subtest: publication batch rechecks every earlier business scope after all metadata awaits
+ok 21 - publication batch rechecks every earlier business scope after all metadata awaits
+  ---
+  duration_ms: 245.426
+  type: 'test'
+  ...
+# Subtest: published batch preserves first commit and rejects later items after operation scope removal
+ok 22 - published batch preserves first commit and rejects later items after operation scope removal
+  ---
+  duration_ms: 297.6672
+  type: 'test'
+  ...
+# Subtest: published batch preserves first commit and rejects later items after parent surface scope removal
+ok 23 - published batch preserves first commit and rejects later items after parent surface scope removal
+  ---
+  duration_ms: 313.302
+  type: 'test'
+  ...
+# Subtest: already committed single write remains successful after in-flight revocation with a durable success audit
+ok 24 - already committed single write remains successful after in-flight revocation with a durable success audit
+  ---
+  duration_ms: 284.5484
+  type: 'test'
+  ...
+# Subtest: permission reduction persists across reopen and signing counter updates do not invalidate streams
+ok 25 - permission reduction persists across reopen and signing counter updates do not invalidate streams
+  ---
+  duration_ms: 605.682
+  type: 'test'
+  ...
+# Subtest: re-enabling disabled requires a new login and never revives an existing session
+ok 26 - re-enabling disabled requires a new login and never revives an existing session
+  ---
+  duration_ms: 267.5096
+  type: 'test'
+  ...
+# Subtest: re-enabling user requires a new login and never revives an existing session
+ok 27 - re-enabling user requires a new login and never revives an existing session
+  ---
+  duration_ms: 254.2763
+  type: 'test'
+  ...
+# Subtest: a registered key change leaves a sibling API stream and its independent session usable
+ok 28 - a registered key change leaves a sibling API stream and its independent session usable
+  ---
+  duration_ms: 251.193
+  type: 'test'
+  ...
+# Subtest: queued WS mutation is rejected after revocation and its socket closes before another operation
+ok 29 - queued WS mutation is rejected after revocation and its socket closes before another operation
+  ---
+  duration_ms: 246.3544
+  type: 'test'
+  ...
+# Subtest: raw query withholds results revoked during asynchronous execution
+ok 30 - raw query withholds results revoked during asynchronous execution
+  ---
+  duration_ms: 241.7775
+  type: 'test'
+  ...
+# Subtest: published query withholds results revoked during asynchronous execution
+ok 31 - published query withholds results revoked during asynchronous execution
+  ---
+  duration_ms: 232.6134
+  type: 'test'
+  ...
+# Subtest: binding read checks both pins after its asynchronous call log, while completed mutation keeps refreshFailed
+ok 32 - binding read checks both pins after its asynchronous call log, while completed mutation keeps refreshFailed
+  ---
+  duration_ms: 509.0646
+  type: 'test'
+  ...
+# Subtest: public-key callable HTTP route pins its release and cannot inherit raw or child grants
+ok 33 - public-key callable HTTP route pins its release and cannot inherit raw or child grants
+  ---
+  duration_ms: 270.7244
+  type: 'test'
+  ...
+# Subtest: public-key relation and bulk writes require live whole-database write/import scopes
+ok 34 - public-key relation and bulk writes require live whole-database write/import scopes
+  ---
+  duration_ms: 309.2951
+  type: 'test'
+  ...
+# Subtest: audit failures reject before execution and report uncertainty after a committed public-key write
+ok 35 - audit failures reject before execution and report uncertainty after a committed public-key write
+  ---
+  duration_ms: 219.9408
+  type: 'test'
+  ...
+# Subtest: restriction staged failure closes the writer and recovers one atomic grant/audit outcome
+ok 36 - restriction staged failure closes the writer and recovers one atomic grant/audit outcome
+  ---
+  duration_ms: 220.6276
+  type: 'test'
+  ...
+# Subtest: restriction journaled failure closes the writer and recovers one atomic grant/audit outcome
+ok 37 - restriction journaled failure closes the writer and recovers one atomic grant/audit outcome
+  ---
+  duration_ms: 233.5438
+  type: 'test'
+  ...
+# Subtest: restriction replaced failure closes the writer and recovers one atomic grant/audit outcome
+ok 38 - restriction replaced failure closes the writer and recovers one atomic grant/audit outcome
+  ---
+  duration_ms: 223.5057
+  type: 'test'
+  ...
+# Subtest: raw batchUpdate rechecks each independent item and reports committed partial counts
+ok 39 - raw batchUpdate rechecks each independent item and reports committed partial counts
+  ---
+  duration_ms: 245.4279
+  type: 'test'
+  ...
+# Subtest: raw batchDelete rechecks each independent item and reports committed partial counts
+ok 40 - raw batchDelete rechecks each independent item and reports committed partial counts
+  ---
+  duration_ms: 254.6308
+  type: 'test'
+  ...
+# Subtest: relation pair rechecks after asynchronous index preparation and before first mutation
+ok 41 - relation pair rechecks after asynchronous index preparation and before first mutation
+  ---
+  duration_ms: 229.9669
+  type: 'test'
+  ...
+# Subtest: relation import lookup rechecks after asynchronous index preparation and before first mutation
+ok 42 - relation import lookup rechecks after asynchronous index preparation and before first mutation
+  ---
+  duration_ms: 234.4689
+  type: 'test'
+  ...
+1..42
+# tests 42
+# suites 0
+# pass 42
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 14027.6298

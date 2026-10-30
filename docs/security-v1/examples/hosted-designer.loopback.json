@@ -1,0 +1,17 @@
+{
+  "host": "127.0.0.1",
+  "port": 0,
+  "workspace": "vault",
+  "logDir": "logs",
+  "designerWorkspace": "model_designer_workspace",
+  "dev": false,
+  "security": {
+    "version": 1,
+    "hosting": {
+      "enabled": true,
+      "designerDirectory": "public-designer",
+      "managementPort": 0
+    }
+  },
+  "autoBackup": { "enabled": false }
+}

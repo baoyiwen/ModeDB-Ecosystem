@@ -1,0 +1,8 @@
+{
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "scripts/security-authentication-integration-check.mjs"
+  ],
+  "exitCode": 0,
+  "executionEnvironment": "outside-process-sandbox"
+}

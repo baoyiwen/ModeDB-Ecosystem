@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import {
   ModelDB,
+  createBrowserIdentityClient,
+  browserIdentityIssue,
   getBrowserSession,
   pairBrowserSession,
   logoutBrowserSession,
@@ -10,7 +12,12 @@ import {
   type ManagementCatalogResponse,
   type RemoteModelDBClient,
 } from '@mode-db/sdk';
-import { AppConfirmProvider, AppDrawer, useAppConfirm } from '@mode-db/data-ui';
+import {
+  BrowserIdentityPanel,
+  AppConfirmProvider,
+  AppDrawer,
+  useAppConfirm,
+} from '@mode-db/data-ui';
 import { LOCALE_LABEL, type LocaleId, type MessageKey } from './i18n/messages';
 import { useI18n } from './i18n/I18nContext';
 import {
@@ -31,6 +38,9 @@ import {
   loadPlaygroundSession,
   touchPlaygroundSession,
 } from './session/playground-session.js';
+
+const createIdentityClient = () =>
+  createBrowserIdentityClient({ host: location.origin, port: Number(location.port) || 443 });
 
 const LS = {
   host: 'modedb.playground.host',
@@ -234,13 +244,23 @@ function PlaygroundApp(): ReactElement {
   }, []);
 
   const connect = useCallback(
-    async (opts?: { silent?: boolean }): Promise<boolean> => {
+    async (opts?: { silent?: boolean; publicKeySession?: boolean }): Promise<boolean> => {
       if (!opts?.silent) {
         setError(null);
         setResult(null);
       }
-      const p = Number(port);
-      if ((!browserSession && !token.trim()) || !Number.isFinite(p)) {
+      const publicKeySession = opts?.publicKeySession === true;
+      const connectionHost = publicKeySession ? location.origin : host.trim();
+      const p = publicKeySession ? Number(location.port) || 443 : Number(port);
+      const useBrowserSession = publicKeySession || browserSession;
+      if (publicKeySession) {
+        setHost(connectionHost);
+        setPort(String(p));
+        setBrowserSession(true);
+        setToken('');
+        setPairingCode('');
+      }
+      if ((!useBrowserSession && !token.trim()) || !Number.isFinite(p)) {
         if (!opts?.silent) {
           setError(t('connect.needCredentials'));
         }
@@ -250,16 +270,21 @@ function PlaygroundApp(): ReactElement {
         setBusy(true);
       }
       try {
-        persistBrowserSessionMode(browserSession);
-        if (browserSession) {
-          const endpoint = { host: host.trim(), port: p };
-          if (pairingCode.trim()) {
+        persistBrowserSessionMode(useBrowserSession);
+        if (useBrowserSession) {
+          const endpoint = { host: connectionHost, port: p };
+          if (!publicKeySession && pairingCode.trim()) {
             await pairBrowserSession(endpoint, pairingCode.trim());
             clearPairingLaunch();
             setPairingCode('');
           } else await getBrowserSession(endpoint);
         }
-        const db = new ModelDB({ host: host.trim(), port: p, token: token.trim(), browserSession });
+        const db = new ModelDB({
+          host: connectionHost,
+          port: p,
+          token: publicKeySession ? '' : token.trim(),
+          browserSession: useBrowserSession,
+        });
         await loadTrees(db);
         setModelDb(db);
         if (!opts?.silent) {
@@ -666,7 +691,7 @@ function PlaygroundApp(): ReactElement {
   );
 
   return (
-    <div className="web-shell">
+    <div className="web-shell" lang={locale}>
       <div className="web-mobile-panel-actions" aria-label="Panel shortcuts">
         <button type="button" onClick={() => setMobileDrawer('sidebar')}>
           {t('app.title')}
@@ -697,54 +722,70 @@ function PlaygroundApp(): ReactElement {
           {sessionRestoring && !modelDb && <p className="meta">{t('session.restoring')}</p>}
           {!modelDb && !sessionRestoring && (
             <>
-              <label htmlFor="host">{t('connect.host')}</label>
-              <input
-                id="host"
-                placeholder="127.0.0.1 / https://db.example.com"
-                title={t('security.transportHint')}
-                value={host}
-                onChange={(e) => setHost(e.target.value)}
-                autoComplete="off"
-              />
-              <label htmlFor="port">{t('connect.port')}</label>
-              <input
-                id="port"
-                value={port}
-                onChange={(e) => setPort(e.target.value)}
-                autoComplete="off"
-              />
-              <label htmlFor="authMode">{t('session.authMode')}</label>
-              <select
-                id="authMode"
-                value={browserSession ? 'browser' : 'token'}
-                onChange={(e) => {
-                  setBrowserSession(e.target.value === 'browser');
-                  setToken('');
-                }}
+              {location.protocol === 'https:' && !launch && (
+                <BrowserIdentityPanel
+                  createClient={createIdentityClient}
+                  issueFor={browserIdentityIssue}
+                  translate={(key) => t(('identity_' + key) as MessageKey)}
+                  locale={locale}
+                  onContinue={() => void connect({ publicKeySession: true })}
+                  connecting={busy}
+                />
+              )}
+              <details
+                className="web-connection-advanced"
+                open={location.protocol !== 'https:' || !!launch}
               >
-                <option value="browser">{t('session.browserMode')}</option>
-                <option value="token">{t('session.tokenMode')}</option>
-              </select>
-              <label htmlFor="token">
-                {t(browserSession ? 'session.pairingCode' : 'connect.token')}
-              </label>
-              <input
-                id="token"
-                value={browserSession ? pairingCode : token}
-                onChange={(e) =>
-                  browserSession ? setPairingCode(e.target.value) : setToken(e.target.value)
-                }
-                autoComplete="off"
-                type="password"
-              />
-              <p className="meta">
-                {t(browserSession ? 'session.pairingHint' : 'security.memoryOnly')}
-              </p>
-              <div className="actions">
-                <button type="button" disabled={busy} onClick={() => void connect()}>
-                  {t('connect.button')}
-                </button>
-              </div>
+                <summary>{t('identity_advanced')}</summary>
+                <label htmlFor="host">{t('connect.host')}</label>
+                <input
+                  id="host"
+                  placeholder="127.0.0.1 / https://db.example.com"
+                  title={t('security.transportHint')}
+                  value={host}
+                  onChange={(e) => setHost(e.target.value)}
+                  autoComplete="off"
+                />
+                <label htmlFor="port">{t('connect.port')}</label>
+                <input
+                  id="port"
+                  value={port}
+                  onChange={(e) => setPort(e.target.value)}
+                  autoComplete="off"
+                />
+                <label htmlFor="authMode">{t('session.authMode')}</label>
+                <select
+                  id="authMode"
+                  value={browserSession ? 'browser' : 'token'}
+                  onChange={(e) => {
+                    setBrowserSession(e.target.value === 'browser');
+                    setToken('');
+                  }}
+                >
+                  <option value="browser">{t('session.browserMode')}</option>
+                  <option value="token">{t('session.tokenMode')}</option>
+                </select>
+                <label htmlFor="token">
+                  {t(browserSession ? 'session.pairingCode' : 'connect.token')}
+                </label>
+                <input
+                  id="token"
+                  value={browserSession ? pairingCode : token}
+                  onChange={(e) =>
+                    browserSession ? setPairingCode(e.target.value) : setToken(e.target.value)
+                  }
+                  autoComplete="off"
+                  type="password"
+                />
+                <p className="meta">
+                  {t(browserSession ? 'session.pairingHint' : 'security.memoryOnly')}
+                </p>
+                <div className="actions">
+                  <button type="button" disabled={busy} onClick={() => void connect()}>
+                    {t('connect.button')}
+                  </button>
+                </div>
+              </details>
             </>
           )}
           {modelDb && (

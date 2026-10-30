@@ -1,0 +1,55 @@
+{"executable":"C:\\nvm4w\\nodejs\\node.exe","args":["--check","scripts/security-device-drill.mjs"],"exitCode":0}
+{"executable":"C:\\nvm4w\\nodejs\\node.exe","args":["--check","scripts/security-device-drill-contract.mjs"],"exitCode":0}
+{"executable":"C:\\nvm4w\\nodejs\\node.exe","args":["--check","scripts/security-device-drill-browser.mjs"],"exitCode":0}
+{"executable":"C:\\nvm4w\\nodejs\\node.exe","args":["--check","scripts/security-device-drill-runner.mjs"],"exitCode":0}
+{"executable":"C:\\nvm4w\\nodejs\\node.exe","args":["--check","scripts/security-device-drill-evidence.mjs"],"exitCode":0}
+{"executable":"C:\\nvm4w\\nodejs\\node.exe","args":["--check","scripts/security-release-evidence.mjs"],"exitCode":0}
+{"executable":"C:\\nvm4w\\nodejs\\node.exe","args":["node_modules/eslint/bin/eslint.js","scripts/security-device-drill.mjs","scripts/security-device-drill-contract.mjs","scripts/security-device-drill-browser.mjs","scripts/security-device-drill-runner.mjs","scripts/security-device-drill-evidence.mjs","scripts/security-release-evidence.mjs"],"exitCode":0}
+{"executable":"C:\\nvm4w\\nodejs\\node.exe","args":["node_modules/prettier/bin/prettier.cjs","--check","scripts/security-device-drill.mjs","scripts/security-device-drill-contract.mjs","scripts/security-device-drill-browser.mjs","scripts/security-device-drill-runner.mjs","scripts/security-device-drill-evidence.mjs","scripts/security-release-evidence.mjs","docs/security-v1/windows-device-drill-guide.md"],"exitCode":0}
+Checking formatting...
+All matched files use Prettier code style!
+{"executable":"C:\\nvm4w\\nodejs\\node.exe","args":["scripts/assert-no-security-material.mjs"],"exitCode":0}
+{"ok":true,"trackedRuntimeEntries":0,"materialRead":false}
+{"executable":"C:\\nvm4w\\nodejs\\node.exe","args":["scripts/assert-no-build-artifacts-in-src.mjs"],"exitCode":0}
+{"executable":"C:\\nvm4w\\nodejs\\node.exe","args":["scripts/assert-sdk-client-only.mjs"],"exitCode":0}
+{"executable":"git","args":["diff","--check"],"exitCode":0}
+warning: in the working copy of 'apps/data-studio/src/components/ConnectionPanel.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/data-studio/src/i18n/locales/en/ui.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/data-studio/src/i18n/locales/ja/ui.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/data-studio/src/i18n/locales/zh/ui.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/model-designer/src/i18n/locales/en/ui.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/model-designer/src/i18n/locales/ja/ui.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/model-designer/src/i18n/locales/zh/ui.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'apps/web/src/App.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/security-v1-deliveries/SEC-M7.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/security-v1-identity-contract.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/security-v1-milestones.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/security-v1-plan.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/security-v1/AGENTS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/security-v1/overview.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/security-v1/release-guide.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/security-v1/user-guide.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'packages/server/src/security/security-registry.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'pnpm-lock.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/security-release-evidence.mjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'test/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'test/integration/security-browser-apps.test.ts', LF will be replaced by CRLF the next time Git touches it
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: POWERSHELL_UNICODE_ARGUMENTS_FAILED
+    at file:///C:/workspace/web_code/ModeDB-Ecosystem/docs/security-v1-deliveries/evidence/SEC-M7-D34/static-checks.mjs:28:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async node:internal/modules/esm/loader:639:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.15.0

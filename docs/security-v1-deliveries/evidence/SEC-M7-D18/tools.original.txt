@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: selects the current receipt and allows only development CRLF/LF differences
+ok 1 - selects the current receipt and allows only development CRLF/LF differences
+  ---
+  duration_ms: 49.1061
+  type: 'test'
+  ...
+# Subtest: rejects changed source text
+ok 2 - rejects changed source text
+  ---
+  duration_ms: 23.6913
+  type: 'test'
+  ...
+# Subtest: rejects changed historical screenshot bytes
+ok 3 - rejects changed historical screenshot bytes
+  ---
+  duration_ms: 28.0154
+  type: 'test'
+  ...
+# Subtest: rejects modified verification artifacts
+ok 4 - rejects modified verification artifacts
+  ---
+  duration_ms: 27.8556
+  type: 'test'
+  ...
+# Subtest: does not accept skipped tests even with matching artifact hashes
+ok 5 - does not accept skipped tests even with matching artifact hashes
+  ---
+  duration_ms: 31.7318
+  type: 'test'
+  ...
+# Subtest: rejects runtime and traversal paths before opening them
+ok 6 - rejects runtime and traversal paths before opening them
+  ---
+  duration_ms: 58.3206
+  type: 'test'
+  ...
+# Subtest: rejects linked source ancestors
+ok 7 - rejects linked source ancestors
+  ---
+  duration_ms: 19.7404
+  type: 'test'
+  ...
+# Subtest: fails closed for incomplete newest evidence and duplicate source paths
+ok 8 - fails closed for incomplete newest evidence and duplicate source paths
+  ---
+  duration_ms: 23.6807
+  type: 'test'
+  ...
+# Subtest: verifies a registration-contract receipt separately from historical runtime acceptance
+ok 9 - verifies a registration-contract receipt separately from historical runtime acceptance
+  ---
+  duration_ms: 38.8729
+  type: 'test'
+  ...
+# Subtest: rejects incomplete registration evidence without falling back to a passed D11 receipt
+ok 10 - rejects incomplete registration evidence without falling back to a passed D11 receipt
+  ---
+  duration_ms: 127.2331
+  type: 'test'
+  ...
+# Subtest: validates protocol evidence and the separately locked offline dependency graph
+ok 11 - validates protocol evidence and the separately locked offline dependency graph
+  ---
+  duration_ms: 47.0048
+  type: 'test'
+  ...
+# Subtest: fails closed for protocol skips, unavailable offline install and unverified browser boundary
+ok 12 - fails closed for protocol skips, unavailable offline install and unverified browser boundary
+  ---
+  duration_ms: 174.5447
+  type: 'test'
+  ...
+# Subtest: verifies storage acceptance without turning it into runtime registration acceptance
+ok 13 - verifies storage acceptance without turning it into runtime registration acceptance
+  ---
+  duration_ms: 53.1909
+  type: 'test'
+  ...
+# Subtest: does not fall back to D13 for skipped storage, failed legacy compatibility or missing DPAPI/hard-exit evidence
+ok 14 - does not fall back to D13 for skipped storage, failed legacy compatibility or missing DPAPI/hard-exit evidence
+  ---
+  duration_ms: 220.3333
+  type: 'test'
+  ...
+# Subtest: accepts registration API evidence without claiming approval or public-key login
+ok 15 - accepts registration API evidence without claiming approval or public-key login
+  ---
+  duration_ms: 103.7136
+  type: 'test'
+  ...
+# Subtest: refuses skipped runtime, missing native HTTPS or dependency drift without falling back to storage evidence
+ok 16 - refuses skipped runtime, missing native HTTPS or dependency drift without falling back to storage evidence
+  ---
+  duration_ms: 364.2532
+  type: 'test'
+  ...
+# Subtest: accepts OS-local approval evidence without claiming public-key login or full registration integration
+ok 17 - accepts OS-local approval evidence without claiming public-key login or full registration integration
+  ---
+  duration_ms: 53.4821
+  type: 'test'
+  ...
+# Subtest: refuses approval skips, failed OS identity, scopes, atomic audit or native CLI without falling back to D15
+ok 18 - refuses approval skips, failed OS identity, scopes, atomic audit or native CLI without falling back to D15
+  ---
+  duration_ms: 301.1975
+  type: 'test'
+  ...
+# Subtest: accepts full registration integration evidence separately from hardware and public-key login acceptance
+ok 19 - accepts full registration integration evidence separately from hardware and public-key login acceptance
+  ---
+  duration_ms: 60.7316
+  type: 'test'
+  ...
+# Subtest: rejects missing virtual/native, skipped flow, hard-exit, capacity or session evidence without falling back to D16
+ok 20 - rejects missing virtual/native, skipped flow, hard-exit, capacity or session evidence without falling back to D16
+  ---
+  duration_ms: 381.5972
+  type: 'test'
+  ...
+# Subtest: accepts explicit session-parent migration evidence without claiming a public-key login
+ok 21 - accepts explicit session-parent migration evidence without claiming a public-key login
+  ---
+  duration_ms: 55.0118
+  type: 'test'
+  ...
+# Subtest: rejects incomplete or misbound session-parent evidence without falling back to D17
+ok 22 - rejects incomplete or misbound session-parent evidence without falling back to D17
+  ---
+  duration_ms: 434.9823
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2927.6172

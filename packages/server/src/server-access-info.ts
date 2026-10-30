@@ -159,12 +159,13 @@ export function formatModelDBStartupInfo(cfg: ResolvedModelDBServerConfig, port:
   const publicBaseUrl = resolveModelDBPublicBaseUrl(cfg, port);
 
   if (
+    !cfg.securityHosting?.enabled &&
     (isLoopbackHost(cfg.host) || isWildcardHost(cfg.host)) &&
     cfg.securityNetwork?.transport?.mode !== 'proxy'
   ) {
     lines.push(`  ➜ Local:   ${registryUrl(cfg, 'localhost', port)}/ (本机访问)`);
   }
-  for (const host of getModelDBNetworkHosts(cfg)) {
+  for (const host of cfg.securityHosting?.enabled ? [] : getModelDBNetworkHosts(cfg)) {
     if (cfg.securityNetwork?.transport?.mode !== 'proxy') {
       lines.push(`  ➜ Network: ${registryUrl(cfg, host, port)}/ (网络访问入口)`);
     }
@@ -185,7 +186,14 @@ export function formatModelDBStartupInfo(cfg: ResolvedModelDBServerConfig, port:
         : []),
       '  Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.',
       `    Status:      ${commandWithConfig('security status', cfg.configFilePath)}`,
-      `    Designer:    ${commandWithConfig(`security browser-open --url ${cfg.securityNetwork?.transport?.mode === 'tls' || cfg.securityNetwork?.transport?.mode === 'proxy' ? 'https' : 'http'}://127.0.0.1:5175/`, cfg.configFilePath)}`,
+      ...(cfg.securityHosting?.enabled
+        ? [
+            `    Designer:    ${cfg.publicBaseUrl || registryUrl(cfg, cfg.host, port)}/designer/ (same-origin; data permission still required)`,
+            `    Management:  ${commandWithConfig('security security-open', cfg.configFilePath)} (OS-authenticated launcher; 127.0.0.1 only)`,
+          ]
+        : [
+            `    Designer:    ${commandWithConfig(`security browser-open --url ${cfg.securityNetwork?.transport?.mode === 'tls' || cfg.securityNetwork?.transport?.mode === 'proxy' ? 'https' : 'http'}://127.0.0.1:5175/`, cfg.configFilePath)}`,
+          ]),
       `    Credentials: ${commandWithConfig('security credentials', cfg.configFilePath)}`,
       `    Help:        ${commandWithConfig('security help', cfg.configFilePath)}`,
     );

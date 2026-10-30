@@ -1,0 +1,48 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): c7e35c3d8a43fd3ea62d0203d3525a9206c9a0e50042393b17731e722138fa78
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:54297
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:54297/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:54297/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hostile-Browser-thOSYH\\modeldb.config.json"
+#     Designer:    http://127.0.0.1:54297/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hostile-Browser-thOSYH\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hostile-Browser-thOSYH\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hostile-Browser-thOSYH\\modeldb.config.json"
+# Subtest: native browser hostile page, same-site CSRF, null Origin, rebinding and proxy spoof cannot reach management
+not ok 1 - native browser hostile page, same-site CSRF, null Origin, rebinding and proxy spoof cannot reach management
+  ---
+  duration_ms: 24103.7856
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-hostile-browser.test.ts:1:1383'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'blocked'
+    - 'opaque'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'opaque'
+  actual: 'blocked'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\integration\security-hostile-browser.test.ts:80:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 30123.4567

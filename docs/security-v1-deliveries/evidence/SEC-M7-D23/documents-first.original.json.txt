@@ -1,0 +1,20 @@
+{
+  "ok": false,
+  "documentFiles": 14,
+  "localLinksAndAnchors": 376,
+  "failures": [
+    {
+      "path": "docs/security-v1-deliveries/SEC-M7.md",
+      "link": "evidence/SEC-M7-D23/verification.json",
+      "reason": "missing"
+    },
+    {
+      "path": "docs/security-v1-deliveries/SEC-M7.md",
+      "link": "evidence/SEC-M7-D23/acceptance.json",
+      "reason": "missing"
+    }
+  ],
+  "registrationTaskRows": 23,
+  "completedRegistrationTasks": 12,
+  "cliExamplesKnown": true
+}

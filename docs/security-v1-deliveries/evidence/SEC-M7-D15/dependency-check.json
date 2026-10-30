@@ -1,0 +1,234 @@
+{
+  "format": "modeldb.registration-library-check.v1",
+  "ok": true,
+  "node": "v24.22.1",
+  "library": {
+    "name": "@simplewebauthn/server",
+    "version": "14.0.3",
+    "license": "MIT",
+    "engines": {
+      "node": ">=20.0.0"
+    }
+  },
+  "lockSha256": "9ce653344dbca0656967850303cf3027b562fd1513f2aac956580bda6e748d4e",
+  "lockSha256Lf": "9ce653344dbca0656967850303cf3027b562fd1513f2aac956580bda6e748d4e",
+  "licenseSha256": "bd9e3f45696472076c7160c7f66e54b2d62d38bc2646c812d19be83ee4400c63",
+  "packages": [
+    {
+      "name": "@hexagon/base64",
+      "version": "1.1.28",
+      "license": "MIT",
+      "engines": null
+    },
+    {
+      "name": "@levischuck/tiny-cbor",
+      "version": "0.2.11",
+      "license": "MIT",
+      "engines": null
+    },
+    {
+      "name": "@peculiar/asn1-android",
+      "version": "2.11.1",
+      "license": "MIT",
+      "engines": {
+        "node": ">=14"
+      }
+    },
+    {
+      "name": "@peculiar/asn1-asym-key",
+      "version": "2.11.1",
+      "license": "MIT",
+      "engines": {
+        "node": ">=14"
+      }
+    },
+    {
+      "name": "@peculiar/asn1-cms",
+      "version": "2.11.1",
+      "license": "MIT",
+      "engines": {
+        "node": ">=14"
+      }
+    },
+    {
+      "name": "@peculiar/asn1-csr",
+      "version": "2.11.1",
+      "license": "MIT",
+      "engines": {
+        "node": ">=14"
+      }
+    },
+    {
+      "name": "@peculiar/asn1-ecc",
+      "version": "2.11.1",
+      "license": "MIT",
+      "engines": {
+        "node": ">=14"
+      }
+    },
+    {
+      "name": "@peculiar/asn1-pfx",
+      "version": "2.11.1",
+      "license": "MIT",
+      "engines": {
+        "node": ">=14"
+      }
+    },
+    {
+      "name": "@peculiar/asn1-pkcs8",
+      "version": "2.11.1",
+      "license": "MIT",
+      "engines": {
+        "node": ">=14"
+      }
+    },
+    {
+      "name": "@peculiar/asn1-pkcs9",
+      "version": "2.11.1",
+      "license": "MIT",
+      "engines": {
+        "node": ">=14"
+      }
+    },
+    {
+      "name": "@peculiar/asn1-rsa",
+      "version": "2.11.1",
+      "license": "MIT",
+      "engines": {
+        "node": ">=14"
+      }
+    },
+    {
+      "name": "@peculiar/asn1-schema",
+      "version": "2.11.1",
+      "license": "MIT",
+      "engines": {
+        "node": ">=14"
+      }
+    },
+    {
+      "name": "@peculiar/asn1-x509-attr",
+      "version": "2.11.1",
+      "license": "MIT",
+      "engines": {
+        "node": ">=14"
+      }
+    },
+    {
+      "name": "@peculiar/asn1-x509-post-quantum",
+      "version": "2.11.1",
+      "license": "MIT",
+      "engines": {
+        "node": ">=14"
+      }
+    },
+    {
+      "name": "@peculiar/asn1-x509",
+      "version": "2.11.1",
+      "license": "MIT",
+      "engines": {
+        "node": ">=14"
+      }
+    },
+    {
+      "name": "@peculiar/utils",
+      "version": "2.0.3",
+      "license": "MIT",
+      "engines": null
+    },
+    {
+      "name": "@peculiar/x509",
+      "version": "2.2.0",
+      "license": "MIT",
+      "engines": {
+        "node": ">=20.0.0"
+      }
+    },
+    {
+      "name": "@simplewebauthn/server",
+      "version": "14.0.3",
+      "license": "MIT",
+      "engines": {
+        "node": ">=20.0.0"
+      }
+    },
+    {
+      "name": "asn1js",
+      "version": "3.1.0",
+      "license": "BSD-3-Clause",
+      "engines": {
+        "node": ">=12.0.0"
+      }
+    },
+    {
+      "name": "pvtsutils",
+      "version": "1.3.6",
+      "license": "MIT",
+      "engines": null
+    },
+    {
+      "name": "pvutils",
+      "version": "1.2.0",
+      "license": "MIT",
+      "engines": {
+        "node": ">=16.0.0"
+      }
+    },
+    {
+      "name": "reflect-metadata",
+      "version": "0.2.2",
+      "license": "Apache-2.0",
+      "engines": null
+    },
+    {
+      "name": "tslib",
+      "version": "1.14.1",
+      "license": "0BSD",
+      "engines": null
+    },
+    {
+      "name": "tslib",
+      "version": "2.8.1",
+      "license": "0BSD",
+      "engines": null
+    },
+    {
+      "name": "tsyringe",
+      "version": "4.10.0",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 6.0.0"
+      }
+    }
+  ],
+  "checks": {
+    "import": true,
+    "creationOptions": true,
+    "authenticationOptions": true,
+    "malformedProofRejected": true,
+    "exactLock": true,
+    "licenseText": true
+  },
+  "rootImporterExact": true,
+  "graphMatchesSelection": true,
+  "selectedPackages": 25,
+  "rootLockSha256": "9f71e0c630dd5e66d117599fbc7e5719220e8b429e2ef24a8e16ed1daaecd84d",
+  "onlySelectedRootGraphChanges": true,
+  "probeScope": {
+    "runtimeRegistrationImplemented": false,
+    "authenticatorVerified": false,
+    "description": "Library selection probe only; application runtime acceptance is in verification.json"
+  },
+  "offlineInstall": {
+    "exitCode": 0,
+    "reused": 25,
+    "downloaded": 0,
+    "ignoreScripts": true,
+    "frozenLockfile": true,
+    "offline": true,
+    "pnpm": "11.25.0",
+    "installationScope": "Fresh isolated selection graph, not the complete root workspace or a release package",
+    "stdout": "install.original.txt"
+  },
+  "rootLockSha256Lf": "1b56f10929471c4951b1c98e571b1e6e470cc1e6fbbb684b5d1258791c3587a2"
+}

@@ -1,0 +1,17 @@
+{
+  "status": "failed-before-fixture-repair",
+  "node": "v24.15.0",
+  "tests": 353,
+  "pass": 351,
+  "fail": 2,
+  "skip": 0,
+  "log": "failed-unit-native-unit.original.txt",
+  "command": "failed-unit-native-unit.command.json",
+  "failures": [
+    "OS launch is exact, one-use, management-only and never consumed by a wrong session role",
+    "hosted management idle 15 minutes and absolute 60 minutes survive refresh and restart"
+  ],
+  "diagnosis": "The unit HTTP helper reused a pooled socket from the old listener after restarting on the same port, producing ECONNRESET. The same two failures reproduced in the hosting file alone. Requests now use agent:false without retries or changed assertions; all 32 hosting tests passed. The full original 20-file set is rerun separately.",
+  "productionBoundaryChanged": false,
+  "realServiceTouched": false
+}

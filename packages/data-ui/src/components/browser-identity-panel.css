@@ -1,0 +1,186 @@
+.mdb-identity {
+  display: grid;
+  gap: 16px;
+  color: var(--identity-text, #172033);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.mdb-identity .designer-identity-heading {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.mdb-identity .designer-identity-symbol {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #e0e7ff;
+  color: #4338ca;
+  font-size: 25px;
+}
+.mdb-identity h2 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+.mdb-identity h3 {
+  margin: 16px 0 4px;
+  font-size: 13px;
+}
+.mdb-identity p {
+  margin: 6px 0;
+}
+.mdb-identity .designer-identity-heading p,
+.mdb-identity .designer-identity-footnote {
+  color: var(--identity-muted, #64748b);
+  font-size: 12px;
+}
+.mdb-identity .designer-identity-server,
+.mdb-identity .designer-identity-status dl {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3px;
+  margin: 0;
+}
+.mdb-identity .designer-identity-server {
+  border: 1px solid var(--identity-border, #d7deea);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.45);
+}
+.mdb-identity dt {
+  color: var(--identity-muted, #64748b);
+  font-size: 11px;
+}
+.mdb-identity dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+.mdb-identity dd + dt {
+  margin-top: 7px;
+}
+.mdb-identity .designer-identity-actions,
+.mdb-identity .designer-identity-file {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.mdb-identity .designer-identity-actions > p {
+  flex-basis: 100%;
+}
+.mdb-identity .designer-btn {
+  white-space: normal;
+  max-width: 100%;
+  min-height: 40px;
+  line-height: 1.4;
+}
+.mdb-identity .designer-identity-actions > .designer-btn-primary {
+  flex: 1 1 100%;
+}
+.mdb-identity .designer-identity-details {
+  border-top: 1px solid var(--identity-border, #d7deea);
+  padding-top: 14px;
+  min-width: 0;
+}
+.mdb-identity .designer-identity-details summary {
+  cursor: pointer;
+  color: var(--identity-text, #172033);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.mdb-identity .designer-identity-details[open] > summary {
+  margin-bottom: 12px;
+}
+.mdb-identity .designer-identity-details > p {
+  color: var(--identity-muted, #64748b);
+}
+.mdb-identity .designer-identity-details > .designer-connection-field {
+  margin: 14px 0 10px;
+}
+.mdb-identity .designer-identity-file {
+  margin-top: 14px;
+}
+.mdb-identity input[type='file'] {
+  font-size: 12px;
+  width: 100%;
+  min-width: 0;
+}
+.mdb-identity .designer-identity-notice,
+.mdb-identity .designer-identity-status {
+  padding: 14px;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #3730a3;
+  overflow-wrap: anywhere;
+}
+.mdb-identity .designer-identity-error,
+.mdb-identity .designer-identity-status.is-rejected {
+  background: #fff1f2;
+  color: #9f1239;
+}
+.mdb-identity .designer-identity-status.is-approved {
+  background: #ecfdf5;
+  color: #065f46;
+}
+.mdb-identity .designer-identity-status.is-expired {
+  background: #fffbeb;
+  color: #92400e;
+}
+.mdb-identity .designer-identity-status dl {
+  margin: 12px 0;
+}
+.mdb-identity :focus-visible,
+.mdb-identity .designer-identity-details summary:focus-visible {
+  outline: 3px solid #6366f1;
+  outline-offset: 3px;
+}
+
+.mdb-identity {
+  min-width: 0;
+}
+.mdb-identity .designer-btn {
+  font: inherit;
+  padding: 10px 14px;
+  border: 1px solid var(--identity-border, #d7deea);
+  border-radius: 8px;
+  background: var(--identity-surface, #fff);
+  color: var(--identity-text, #172033);
+  cursor: pointer;
+}
+.mdb-identity .designer-btn-primary {
+  background: var(--identity-accent, #4f46e5);
+  border-color: var(--identity-accent, #4f46e5);
+  color: white;
+}
+.mdb-identity .designer-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.mdb-identity .designer-connection-field {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 6px;
+}
+.mdb-identity input {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+.mdb-identity input:not([type='file']) {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--identity-border, #d7deea);
+  border-radius: 8px;
+  background: var(--identity-surface, #fff);
+  color: var(--identity-text, #172033);
+  font: inherit;
+}
+.mdb-identity .designer-identity-server {
+  background: var(--identity-surface, #fff);
+}

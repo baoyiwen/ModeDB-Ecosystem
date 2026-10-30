@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "documentFiles": 14,
+  "localLinksAndAnchors": 392,
+  "failures": [],
+  "registrationTaskRows": 23,
+  "completedRegistrationTasks": 14,
+  "cliExamplesKnown": true
+}

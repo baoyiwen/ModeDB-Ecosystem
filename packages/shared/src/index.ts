@@ -163,6 +163,7 @@ export type {
 } from './wire-query-plan.js';
 export type {
   SecurityActor,
+  SecuritySessionParent,
   DataSecurityEvent,
   RecoveryKeyEnvelopeV1,
   SecurityGrant,
@@ -189,5 +190,55 @@ export type {
   SecurityControlRequest,
   SecurityControlResult,
 } from './security-contracts.js';
+export {
+  DEVICE_REGISTRATION_CAPACITY_V1,
+  DEVICE_REGISTRATION_API_V1,
+  DEVICE_REGISTRATION_CHALLENGE_BYTES,
+  DEVICE_REGISTRATION_DESCRIPTOR_FORMAT,
+  DEVICE_REGISTRATION_FORMAT,
+  DEVICE_REGISTRATION_PROTOCOL_VERSION,
+  DEVICE_REGISTRATION_SCHEMA_VERSION,
+  DeviceRegistrationContractError,
+  assertDeviceRegistrationAuditEvent,
+  assertDeviceRegistrationCapacity,
+  assertDeviceRegistrationCompleteRequest,
+  assertDeviceRegistrationConnectionDescriptor,
+  assertDeviceRegistrationInstanceBinding,
+  assertDeviceRegistrationBeginRequest,
+  assertDeviceRegistrationBeginResponse,
+  assertDeviceRegistrationCapabilities,
+  assertDeviceRegistrationDescriptorBinding,
+  assertDeviceRegistrationStatusRequest,
+  assertDeviceRegistrationStatusResponse,
+  assertDeviceRegistrationTransition,
+  canTransitionDeviceRegistrationApplication,
+  canTransitionDeviceRegistrationChallenge,
+  canTransitionDeviceRegistrationCredential,
+  isDeviceRegistrationInstanceId,
+} from './device-registration-contracts.js';
+export type {
+  DeviceRegistrationApplicationState,
+  DeviceRegistrationAuditEventV1,
+  DeviceRegistrationBeginRequestV1,
+  DeviceRegistrationBeginResponseV1,
+  DeviceRegistrationCapabilitiesV1,
+  DeviceRegistrationCapacityContractV1,
+  DeviceRegistrationChallengeState,
+  DeviceRegistrationCompleteRequestV1,
+  DeviceRegistrationConnectionDescriptorV1,
+  DeviceRegistrationCredentialRecordV1,
+  DeviceRegistrationCredentialState,
+  DeviceRegistrationErrorCode,
+  DeviceRegistrationErrorResponseV1,
+  DeviceRegistrationMode,
+  DeviceRegistrationOutcome,
+  DeviceRegistrationProofV1,
+  DeviceRegistrationStatusRequestV1,
+  DeviceRegistrationStatusResponseV1,
+} from './device-registration-contracts.js';
 export { securityReleaseDigest } from './security-release.js';
 export { designerInheritanceRelationId } from './designer-references.js';
+export * from './device-authentication-contracts.js';
+export * from './registered-identity-admin.js';
+export * from './deployment-wizard.js';
+export * from './recipient-keys.js';

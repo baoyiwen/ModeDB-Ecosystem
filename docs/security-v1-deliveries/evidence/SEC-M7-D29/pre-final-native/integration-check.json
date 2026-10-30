@@ -1,0 +1,72 @@
+{
+  "format": "modeldb.recipient-check.v1",
+  "task": "DR-P4.1",
+  "ok": true,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-p4tvx8",
+  "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-p4tvx8\\designer-build",
+  "screenshots": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-p4tvx8\\screenshots",
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-p4tvx8\\native.original.txt",
+  "exitCode": 0,
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-recipient-keys-browser.test.ts"
+  ],
+  "candidateSha256": "89b58dde9c58877bd0def46287b222951195db782c21d5aedafec37301b36508",
+  "unit": {
+    "pass": 1,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "browser": {
+    "format": "modeldb.recipient-browser.v1",
+    "ok": true,
+    "browser": "Chrome/156.0.8078.48",
+    "screenshots": 18,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "liveMaterialRead": false,
+    "checks": {
+      "freshDesignerBuild": true,
+      "nativeDpapi": true,
+      "osPairedManagement": true,
+      "explicitMigration": true,
+      "uiPublicImport": true,
+      "uiChallengeDownload": true,
+      "offlineInspect": true,
+      "offlineProof": true,
+      "wrongBindingRejected": true,
+      "noOverwrite": true,
+      "explicitConfirmation": true,
+      "uiAssociation": true,
+      "uiReplacement": true,
+      "uiRetirement": true,
+      "conflictRequiresReload": true,
+      "noWebStorageSecrets": true,
+      "restartHistory": true,
+      "localizedZhEnJa": true,
+      "wideAndNarrow": true,
+      "labelsAndFocus": true
+    }
+  },
+  "build": {
+    "ok": true,
+    "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-p4tvx8\\designer-build",
+    "configFile": false,
+    "envFile": false,
+    "existingDistUnchanged": true
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "recipientUiTested": true
+  }
+}

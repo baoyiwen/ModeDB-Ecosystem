@@ -1,0 +1,219 @@
+TAP version 13
+# Subtest: real -7 signature issues only a public-key child, with recovery, rotation, CSRF and logout
+ok 1 - real -7 signature issues only a public-key child, with recovery, rotation, CSRF and logout
+  ---
+  duration_ms: 385.1899
+  type: 'test'
+  ...
+# Subtest: real -257 signature issues only a public-key child, with recovery, rotation, CSRF and logout
+ok 2 - real -257 signature issues only a public-key child, with recovery, rotation, CSRF and logout
+  ---
+  duration_ms: 236.6338
+  type: 'test'
+  ...
+# Subtest: reject wrong challenge even with a valid signature
+ok 3 - reject wrong challenge even with a valid signature
+  ---
+  duration_ms: 139.2214
+  type: 'test'
+  ...
+# Subtest: reject wrong origin even with a valid signature
+ok 4 - reject wrong origin even with a valid signature
+  ---
+  duration_ms: 135.3871
+  type: 'test'
+  ...
+# Subtest: reject wrong type even with a valid signature
+ok 5 - reject wrong type even with a valid signature
+  ---
+  duration_ms: 127.8151
+  type: 'test'
+  ...
+# Subtest: reject iframe even with a valid signature
+ok 6 - reject iframe even with a valid signature
+  ---
+  duration_ms: 128.1506
+  type: 'test'
+  ...
+# Subtest: reject topOrigin even with a valid signature
+ok 7 - reject topOrigin even with a valid signature
+  ---
+  duration_ms: 125.4769
+  type: 'test'
+  ...
+# Subtest: reject missing presence/UV or changed device type: 0
+ok 8 - reject missing presence/UV or changed device type: 0
+  ---
+  duration_ms: 136.362
+  type: 'test'
+  ...
+# Subtest: reject missing presence/UV or changed device type: 1
+ok 9 - reject missing presence/UV or changed device type: 1
+  ---
+  duration_ms: 129.118
+  type: 'test'
+  ...
+# Subtest: reject missing presence/UV or changed device type: 4
+ok 10 - reject missing presence/UV or changed device type: 4
+  ---
+  duration_ms: 126.6945
+  type: 'test'
+  ...
+# Subtest: reject missing presence/UV or changed device type: 13
+ok 11 - reject missing presence/UV or changed device type: 13
+  ---
+  duration_ms: 128.091
+  type: 'test'
+  ...
+# Subtest: reject missing-cookie
+ok 12 - reject missing-cookie
+  ---
+  duration_ms: 108.6312
+  type: 'test'
+  ...
+# Subtest: reject wrong-cookie
+ok 13 - reject wrong-cookie
+  ---
+  duration_ms: 108.1111
+  type: 'test'
+  ...
+# Subtest: reject wrong-handle
+ok 14 - reject wrong-handle
+  ---
+  duration_ms: 127.0555
+  type: 'test'
+  ...
+# Subtest: reject missing-handle
+ok 15 - reject missing-handle
+  ---
+  duration_ms: 127.2573
+  type: 'test'
+  ...
+# Subtest: reject wrong-hint
+ok 16 - reject wrong-hint
+  ---
+  duration_ms: 172.1394
+  type: 'test'
+  ...
+# Subtest: reject unknown-key
+ok 17 - reject unknown-key
+  ---
+  duration_ms: 155.7406
+  type: 'test'
+  ...
+# Subtest: reject bad-signature
+ok 18 - reject bad-signature
+  ---
+  duration_ms: 150.8475
+  type: 'test'
+  ...
+# Subtest: reject wrong-rp
+ok 19 - reject wrong-rp
+  ---
+  duration_ms: 143.9682
+  type: 'test'
+  ...
+# Subtest: non-discoverable hint permits absent userHandle but still requires the exact signature
+ok 20 - non-discoverable hint permits absent userHandle but still requires the exact signature
+  ---
+  duration_ms: 159.8216
+  type: 'test'
+  ...
+# Subtest: single-use claim rejects competing/replayed proofs and duplicate single-device counters
+ok 21 - single-use claim rejects competing/replayed proofs and duplicate single-device counters
+  ---
+  duration_ms: 264.0486
+  type: 'test'
+  ...
+# Subtest: multi-device counter rollback alone does not reject a valid synchronized passkey
+ok 22 - multi-device counter rollback alone does not reject a valid synchronized passkey
+  ---
+  duration_ms: 234.5223
+  type: 'test'
+  ...
+# Subtest: lifecycle expiry
+ok 23 - lifecycle expiry
+  ---
+  duration_ms: 137.0769
+  type: 'test'
+  ...
+# Subtest: lifecycle restart
+ok 24 - lifecycle restart
+  ---
+  duration_ms: 162.8601
+  type: 'test'
+  ...
+# Subtest: lifecycle reset
+ok 25 - lifecycle reset
+  ---
+  duration_ms: 143.8908
+  type: 'test'
+  ...
+# Subtest: lifecycle disabled-key
+ok 26 - lifecycle disabled-key
+  ---
+  duration_ms: 175.1548
+  type: 'test'
+  ...
+# Subtest: lifecycle disabled-user
+ok 27 - lifecycle disabled-user
+  ---
+  duration_ms: 139.0174
+  type: 'test'
+  ...
+# Subtest: lifecycle registration-closed
+ok 28 - lifecycle registration-closed
+  ---
+  duration_ms: 143.5295
+  type: 'test'
+  ...
+# Subtest: lifecycle descriptor-expired
+ok 29 - lifecycle descriptor-expired
+  ---
+  duration_ms: 138.3968
+  type: 'test'
+  ...
+# Subtest: authentication config is explicit; disabled service does not authorize or migrate legacy storage
+ok 30 - authentication config is explicit; disabled service does not authorize or migrate legacy storage
+  ---
+  duration_ms: 96.144
+  type: 'test'
+  ...
+# Subtest: HTTP cookie lifecycle, precise admission and CSRF use the existing session routes
+not ok 31 - HTTP cookie lifecycle, precise admission and CSRF use the existing session routes
+  ---
+  duration_ms: 171.1628
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-authentication.test.ts:1:8304'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    400 !== 403
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 403
+  actual: 400
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-authentication.test.ts:108:263)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: strict public contracts reject secrets, noncanonical binary, unknown fields and excessive bodies
+ok 32 - strict public contracts reject secrets, noncanonical binary, unknown fields and excessive bodies
+  ---
+  duration_ms: 109.4313
+  type: 'test'
+  ...
+1..32
+# tests 32
+# suites 0
+# pass 31
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6119.6321

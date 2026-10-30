@@ -1,0 +1,148 @@
+{
+  "format": "modeldb.security-follow-up-verification.v1",
+  "revision": "SEC-M7-D04",
+  "date": "2026-10-24",
+  "unit": {
+    "files": 8,
+    "pass": 38,
+    "fail": 0,
+    "skip": 0,
+    "groups": [
+      {
+        "log": "ModeDB-D04-targeted.log",
+        "sha256": "9a6131f769c59a3c1184aa7d4c6aad36d0a26d3857f51547760187613ffd14c5",
+        "pass": 8,
+        "fail": 0,
+        "skip": 0
+      },
+      {
+        "log": "ModeDB-D04-pivot-final.log",
+        "sha256": "a0c33a3d38b06161e7abfaad9adc2360517e30f90e652ade6f68b47dcaf23754",
+        "pass": 17,
+        "fail": 0,
+        "skip": 0
+      },
+      {
+        "log": "ModeDB-D04-pivot-additional.log",
+        "sha256": "b8166f8e2998a150f8126c9a15a7329a329a497e0df96163f922ce74f6675f22",
+        "pass": 13,
+        "fail": 0,
+        "skip": 0
+      }
+    ]
+  },
+  "browser": {
+    "files": 1,
+    "pass": 1,
+    "fail": 0,
+    "skip": 0,
+    "durationMs": 199861.3596,
+    "coverage": "Three browser clients, local pipe pairing, reload, HttpOnly, logout, interface docs and independent security center.",
+    "log": "ModeDB-D04-browser-final.log",
+    "logSha256": "f40246bd1762499dc9525f14d8c7b25ee61772891e1c15adafd1d59459d3eb8e"
+  },
+  "designerTypecheck": {
+    "command": "pnpm.cmd --filter model-designer typecheck",
+    "exitCode": 0,
+    "log": "ModeDB-D04-designer-typecheck.log",
+    "logSha256": "1cf2901532fbb9704d020e86a3080befd45cf7d34de72f3f7f52f7ef266192bd"
+  },
+  "static": {
+    "command": "pnpm.cmd run check",
+    "exitCode": 0,
+    "lintErrors": 0,
+    "existingLintWarnings": 44,
+    "formatFiles": 604,
+    "log": "ModeDB-D04-check-final.log",
+    "logSha256": "db069337aaa81aa819d4bc46b41d1187f744a95c492fea0634f6823d1e2fe964"
+  },
+  "documents": {
+    "files": 7,
+    "localLinksAndAnchors": 119,
+    "completeTasks": 20
+  },
+  "translations": {
+    "locales": ["zh", "en", "ja"],
+    "uiKeys": 973
+  },
+  "candidate": {
+    "path": "docs/security-v1-deliveries/evidence/SEC-M7-D04/release-candidate.original.json.txt",
+    "sha256": "d39644fe8cdf63d1693cf4833ed24200c9e01e6fc0c0da883e9944343a473bda",
+    "packages": 7,
+    "apps": 3,
+    "node": "v24.15.0",
+    "typescript": "5.9.3",
+    "pnpm": "10.33.0",
+    "docs": "Build-time documentation snapshot; subsequent final D04 conclusions are bound by the development receipt."
+  },
+  "smoke": {
+    "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\security-designer-sandbox.ps1 -Smoke",
+    "exitCode": 0,
+    "report": "docs/security-v1-deliveries/evidence/SEC-M7-D04/sandbox.json",
+    "log": "ModeDB-D04-sandbox-release-final.log",
+    "logSha256": "0987725183a57868fecb1ea9dfee6627bb26b223651117c18aaecb0b9174310e",
+    "checks": {
+      "paired": true,
+      "httpOnly": true,
+      "replayDenied": true,
+      "authorizedQuery": true,
+      "anonymousDenied": true,
+      "designerPage": true,
+      "configNotServed": true
+    },
+    "temporaryServicesStopped": true
+  },
+  "boundaries": {
+    "temporaryFixturesOnly": true,
+    "real9091Touched": false,
+    "realMaterialsReadOrModified": false,
+    "historyRewritten": false,
+    "committedOrPushed": false,
+    "publishedOrDeployed": false
+  },
+  "historicalRegressionReexecuted": false,
+  "limitations": [
+    "No real service or business migration performed.",
+    "Historical material exposure, rotation and history cleanup require a separate scope.",
+    "D02 performance and full regression remain historical results."
+  ],
+  "evidenceIntegrity": {
+    "ok": true,
+    "pass": 8,
+    "fail": 0,
+    "checks": [
+      {
+        "name": "baseline",
+        "passed": true
+      },
+      {
+        "name": "development-only-EOL",
+        "passed": true
+      },
+      {
+        "name": "development-body-rejected",
+        "passed": true
+      },
+      {
+        "name": "historical-byte-change-rejected",
+        "passed": true
+      },
+      {
+        "name": "current-artifact-byte-change-rejected",
+        "passed": true
+      },
+      {
+        "name": "runtime-path-rejected",
+        "passed": true
+      },
+      {
+        "name": "incomplete-verification-rejected",
+        "passed": true
+      },
+      {
+        "name": "directory-link-rejected",
+        "passed": true
+      }
+    ]
+  }
+}

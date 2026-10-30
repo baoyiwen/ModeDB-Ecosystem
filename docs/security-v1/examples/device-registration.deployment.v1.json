@@ -1,0 +1,68 @@
+{
+  "format": "modeldb.device-registration-deployment.v1",
+  "descriptorVersion": 1,
+  "instanceId": "3f1d6f1f-b6c8-4b6a-9d72-6c9b4d5c7e10",
+  "serverOrigin": "https://modeldb-a.example.test",
+  "rpId": "modeldb-a.example.test",
+  "registration": {
+    "mode": "planned",
+    "publicDownload": true
+  },
+  "tls": {
+    "mode": "public-ca",
+    "minVersion": "TLS1.2"
+  },
+  "binding": {
+    "strategy": "instance-id-exact",
+    "requireExactInstanceId": true,
+    "allowHostDerivedIdentity": false
+  },
+  "supportMatrix": {
+    "browsers": [
+      {
+        "name": "chrome",
+        "minimumMajor": 120,
+        "secureContext": true,
+        "userVerification": "required"
+      },
+      {
+        "name": "edge",
+        "minimumMajor": 120,
+        "secureContext": true,
+        "userVerification": "required"
+      },
+      {
+        "name": "firefox",
+        "minimumMajor": 122,
+        "secureContext": true,
+        "userVerification": "required"
+      },
+      {
+        "name": "safari",
+        "minimumMajor": 17,
+        "secureContext": true,
+        "userVerification": "required"
+      }
+    ],
+    "node": { "runtime": "node", "minimumMajor": 22, "supportedMajors": [22, 24] }
+  },
+  "performanceBaseline": {
+    "version": 1,
+    "method": "isolated-synthetic-ab",
+    "samples": {
+      "registrationBegin": 30,
+      "registrationVerify": 30,
+      "login": 60,
+      "revoke": 30,
+      "queryAfterLogin": 60
+    },
+    "p95LimitsMs": {
+      "registrationBegin": 500,
+      "registrationVerify": 1500,
+      "login": 1000,
+      "revoke": 1000,
+      "queryAfterLogin": 1500
+    },
+    "excluded": "user-verification-prompt"
+  }
+}

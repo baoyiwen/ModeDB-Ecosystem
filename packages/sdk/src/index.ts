@@ -46,6 +46,26 @@ export type {
   SecurityGrant,
   SecurityCredentialInfo,
 } from '@mode-db/shared';
+// Public schema only; registration network clients are delivered separately.
+export type {
+  DeviceAuthenticationBindingV1,
+  DeviceAuthenticationBeginRequestV1,
+  DeviceAuthenticationBeginResponseV1,
+  DeviceAuthenticationCompleteRequestV1,
+  DeviceAuthenticationCapabilitiesV1,
+  DeviceAuthenticationProofV1,
+  DeviceAuthenticationErrorCode,
+  DeviceRegistrationBeginRequestV1,
+  DeviceRegistrationBeginResponseV1,
+  DeviceRegistrationCapabilitiesV1,
+  DeviceRegistrationCompleteRequestV1,
+  DeviceRegistrationConnectionDescriptorV1,
+  DeviceRegistrationErrorCode,
+  DeviceRegistrationErrorResponseV1,
+  DeviceRegistrationProofV1,
+  DeviceRegistrationStatusRequestV1,
+  DeviceRegistrationStatusResponseV1,
+} from '@mode-db/shared';
 export type {
   AggregateOp,
   AggregateInputEntry,
@@ -113,15 +133,26 @@ export type {
 
 /** Alias for binary payloads: **Uint8Array** everywhere (no Node `Buffer`). */
 export type WireBinaryBytes = Uint8Array;
+export {
+  getBrowserPublicKeyContext,
+  getBrowserRegistrationDescriptor,
+  parseBrowserRegistrationDescriptor,
+  registerBrowserCredential,
+  type BrowserPublicKeyContext,
+  type BrowserRegistration,
+  type BrowserRegistrationConfig,
+} from './browser-registration.js';
 export { connectionOrigin } from './connection-endpoint.js';
 export type { ConnectionEndpoint } from './connection-endpoint.js';
 export {
   getBrowserSession,
   logoutBrowserSession,
   pairBrowserSession,
+  loginBrowserSession,
   refreshBrowserSession,
   takeBrowserPairingLink,
   type BrowserSessionConfig,
+  type BrowserPublicKeyLoginConfig,
   type BrowserSessionInfo,
 } from './browser-session.js';
 export {
@@ -129,7 +160,29 @@ export {
   getSecurityAudit,
   getSecurityCenterOverview,
   securityControl,
+  manageRegisteredIdentity,
+  manageRecipientKey,
+  deploymentWizard,
 } from './security-center.js';
+export type {
+  DeploymentDraft,
+  DeploymentPlan,
+  DeploymentPreview,
+  DeploymentWizardStatus,
+  DeploymentWizardCommand,
+  DeploymentWizardResult,
+} from '@mode-db/shared';
+export type {
+  RegisteredIdentityCommand,
+  RegisteredIdentityResult,
+  RegisteredApplicationInfo,
+  RegisteredUserInfo,
+  RegisteredCredentialInfo,
+  RegisteredApplicationPage,
+  RegisteredUserPage,
+  RegisteredCredentialPage,
+  RegisteredSessionPage,
+} from '@mode-db/shared';
 export type {
   SecurityRegistryStatus,
   SecurityCenterPrincipal,
@@ -152,3 +205,8 @@ export type {
   SecurityControlRequest,
   SecurityControlResult,
 } from '@mode-db/shared';
+export { createBrowserIdentityClient, browserIdentityIssue } from './browser-identity-client.js';
+export type {
+  BrowserIdentityClient,
+  BrowserIdentityClientConfig,
+} from './browser-identity-client.js';

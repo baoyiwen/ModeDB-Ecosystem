@@ -1,0 +1,115 @@
+{
+  "format": "modeldb.public-clients-check.v1",
+  "task": "DR-P3.5",
+  "ok": true,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-Qs8RPS",
+  "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-Qs8RPS\\builds",
+  "screenshots": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-Qs8RPS\\screenshots",
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-Qs8RPS\\integration.tap",
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-public-clients-browser.test.ts",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-browser-apps.test.ts"
+  ],
+  "exitCode": 0,
+  "unit": {
+    "pass": 3,
+    "fail": 0,
+    "cancelled": 0,
+    "skip": 0,
+    "todo": 0
+  },
+  "browsers": [
+    {
+      "format": "modeldb.public-identity-browser.v1",
+      "app": "data-studio",
+      "ok": true,
+      "browser": "Chrome/156.0.8078.48",
+      "screenshots": 24,
+      "hardwareAuthenticatorTested": false,
+      "systemTrustInstalled": false,
+      "liveMaterialRead": false,
+      "checks": {
+        "freshApplicationBuild": true,
+        "publicClient": true,
+        "libraryConnection": true,
+        "formalRegistration": true,
+        "pendingNoAuthority": true,
+        "rejectedState": true,
+        "localOsApproval": true,
+        "approvalRequiresLogin": true,
+        "actualWebAuthnLogin": true,
+        "syntheticDataScope": true,
+        "managementDenied": true,
+        "httpOnlySecureStrict": true,
+        "reloadRestoresSession": true,
+        "continuationNotPersisted": true,
+        "logout": true,
+        "expiredWindowLogin": true,
+        "revocationDenied": true,
+        "cancelledExplained": true,
+        "supportedLocales": true,
+        "wideAndNarrow": true,
+        "labelsAndFocus": true
+      }
+    },
+    {
+      "format": "modeldb.public-identity-browser.v1",
+      "app": "web",
+      "ok": true,
+      "browser": "Chrome/156.0.8078.48",
+      "screenshots": 16,
+      "hardwareAuthenticatorTested": false,
+      "systemTrustInstalled": false,
+      "liveMaterialRead": false,
+      "checks": {
+        "freshApplicationBuild": true,
+        "publicClient": true,
+        "libraryConnection": true,
+        "formalRegistration": true,
+        "pendingNoAuthority": true,
+        "rejectedState": true,
+        "localOsApproval": true,
+        "approvalRequiresLogin": true,
+        "actualWebAuthnLogin": true,
+        "syntheticDataScope": true,
+        "managementDenied": true,
+        "httpOnlySecureStrict": true,
+        "reloadRestoresSession": true,
+        "continuationNotPersisted": true,
+        "logout": true,
+        "expiredWindowLogin": true,
+        "revocationDenied": true,
+        "cancelledExplained": true,
+        "supportedLocales": true,
+        "wideAndNarrow": true,
+        "labelsAndFocus": true
+      }
+    }
+  ],
+  "legacyThreeApplications": true,
+  "applicationCredentialMode": true,
+  "build": {
+    "configFile": false,
+    "envFile": false,
+    "existingDistUnchanged": true,
+    "applications": [
+      "model-designer",
+      "data-studio",
+      "web"
+    ]
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "formalRegistrationUiTested": true
+  },
+  "report": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-Qs8RPS\\integration-check.json"
+}

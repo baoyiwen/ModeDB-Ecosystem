@@ -1,5 +1,5 @@
 import type { VaultKeyProvider } from '@mode-db/common';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
 import {
@@ -33,7 +33,16 @@ import {
   requireRecentSecurityPairing,
   type SecurityControl,
 } from './security-control.js';
-import { securityOrigin } from './network-policy.js';
+import {
+  browserOrigin,
+  cookieHeader,
+  sessionCookie,
+  sessionCookieName,
+  csrfHeader,
+  unsafeMethod,
+} from './browser-session-http.js';
+import { authenticationPath } from './authentication-routes.js';
+import { registrationPath } from './registration-routes.js';
 
 const NAME = /^[a-zA-Z0-9_-]{1,96}$/;
 function record(value: unknown): value is Record<string, unknown> {
@@ -133,85 +142,27 @@ function bearer(request: FastifyRequest, registry: SecurityRegistry, secure: boo
 function isSession(value: string): boolean {
   return value.startsWith('mdbs_v1_');
 }
-function cookies(request: FastifyRequest): Record<string, string> {
-  const raw = request.headers.cookie;
-  if (typeof raw !== 'string' || raw.length > 8192) {
-    return {};
-  }
-  const result: Record<string, string> = {};
-  for (const part of raw.split(';')) {
-    const index = part.indexOf('=');
-    if (index <= 0) {
-      continue;
-    }
-    const key = part.slice(0, index).trim();
-    const value = part.slice(index + 1).trim();
-    if (/^[A-Za-z0-9_-]{1,64}$/.test(key) && value.length <= 512) {
-      if (Object.hasOwn(result, key)) {
-        throw new SecurityError('SECURITY_CREDENTIAL_INVALID');
-      }
-      result[key] = value;
-    }
-  }
-  return result;
-}
-function sessionCookieName(request: FastifyRequest, secure: boolean): string {
-  const scope = `${browserOrigin(request, secure)}|${secure ? 'https' : 'http'}://${request.headers.host}`;
-  return `mdbs_session_${createHash('sha256').update(scope).digest('hex').slice(0, 24)}`;
-}
-function sessionCookie(request: FastifyRequest, secure: boolean): string | undefined {
-  const parsed = cookies(request);
-  if (!Object.keys(parsed).some((key) => key.startsWith('mdbs_session_'))) {
-    return undefined;
-  }
-  const value = parsed[sessionCookieName(request, secure)];
-  return value && /^mdbs_v1_[A-Za-z0-9-]{36}_[A-Za-z0-9_-]{43}$/.test(value) ? value : undefined;
-}
-function csrfHeader(request: FastifyRequest): string {
-  const supplied = request.headers['x-modeldb-csrf'];
-  if (typeof supplied !== 'string' || !/^[a-f0-9]{64}$/.test(supplied)) {
-    throw new SecurityError('SECURITY_CSRF_REQUIRED');
-  }
-  return supplied;
-}
-function browserOrigin(request: FastifyRequest, secure: boolean): string {
-  const origin = request.headers.origin;
-  if (typeof origin === 'string' && origin !== 'null') {
-    return securityOrigin(origin);
-  }
-  // Same-origin GET fetches may omit Origin. Fetch Metadata is browser-owned.
-  if (
-    origin === undefined &&
-    request.headers['sec-fetch-site'] === 'same-origin' &&
-    request.headers.host
-  ) {
-    return securityOrigin(`${secure ? 'https' : 'http'}://${request.headers.host}`);
-  }
-  throw new SecurityError('SECURITY_ORIGIN_DENIED');
-}
-function unsafeMethod(method: string): boolean {
-  return method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
-}
-function cookieHeader(name: string, value: string, maxAge: number, secure: boolean): string {
-  return `${name}=${value}; Path=/; Max-Age=${maxAge}; HttpOnly; SameSite=Strict${secure ? '; Secure' : ''}`;
-}
 function failure(error: unknown, requestId: string): { status: number; body: unknown } {
   if (error instanceof SecurityError) {
-    const status = /RATE_LIMITED|TEMPORARILY_BANNED/.test(error.code)
-      ? 429
-      : /POLICY_CONFLICT/.test(error.code)
-        ? 409
-        : /CREDENTIAL/.test(error.code)
-          ? 401
-          : error.code === 'SECURITY_PROTOCOL_UNSUPPORTED'
-            ? 426
-            : /FORBIDDEN|REAUTH_REQUIRED|RELEASE_SCOPE_CHANGED|SOURCE_DENIED|ORIGIN_DENIED|TLS_REQUIRED|PROXY_UNTRUSTED|CSRF_REQUIRED/.test(
-                  error.code,
-                )
-              ? 403
-              : error.code === 'SECURITY_INVALID_REQUEST' || error.code === 'SECURITY_CSRF_REQUIRED'
-                ? 400
-                : 503;
+    const status =
+      error.code === 'SECURITY_NOT_FOUND'
+        ? 404
+        : /RATE_LIMITED|TEMPORARILY_BANNED/.test(error.code)
+          ? 429
+          : /POLICY_CONFLICT/.test(error.code)
+            ? 409
+            : /CREDENTIAL/.test(error.code)
+              ? 401
+              : error.code === 'SECURITY_PROTOCOL_UNSUPPORTED'
+                ? 426
+                : /FORBIDDEN|LOCAL_IDENTITY_DENIED|REAUTH_REQUIRED|RELEASE_SCOPE_CHANGED|SOURCE_DENIED|ORIGIN_DENIED|TLS_REQUIRED|PROXY_UNTRUSTED|CSRF_REQUIRED/.test(
+                      error.code,
+                    )
+                  ? 403
+                  : error.code === 'SECURITY_INVALID_REQUEST' ||
+                      error.code === 'SECURITY_CONFIRMATION_REQUIRED'
+                    ? 400
+                    : 503;
     return { status, body: { error: error.code, requestId } };
   }
   const detail = queryInterfaceErrorDetailFromMessage(error instanceof Error ? error.message : '');
@@ -255,6 +206,9 @@ export function installRegistryEntrypoints(input: {
   registry: SecurityRegistry;
   network?: SecurityNetworkPolicy;
   securityControl?: SecurityControl;
+  /** Omitted preserves the existing standalone frontend deployment. */
+  listenerRole?: 'data' | 'management';
+  publicAssetPaths?: ReadonlySet<string>;
   dispatcher: WireRequestDispatcher;
   designerWorkspace: string;
   workspace: string;
@@ -273,6 +227,21 @@ export function installRegistryEntrypoints(input: {
   const { app, registry } = input;
   const databaseSockets = new Map<WebSocket, string>();
   const secureCookies = input.network?.mode === 'tls' || input.network?.mode === 'proxy';
+  const checkBrowserRole = (verified: ReturnType<SecurityRegistry['verifyBrowserSession']>) => {
+    if (
+      (input.listenerRole === 'management' && !verified.securityAdmin) ||
+      (input.listenerRole === 'data' && verified.securityAdmin)
+    ) {
+      throw new SecurityError('SECURITY_FORBIDDEN');
+    }
+    if (
+      input.listenerRole === 'management' &&
+      Date.parse(verified.absoluteExpiresAt) >
+        Date.parse(verified.credential.createdAt) + 60 * 60000
+    ) {
+      throw new SecurityError('SECURITY_FORBIDDEN');
+    }
+  };
   const access = (request: FastifyRequest): string => {
     const token = bearer(request, registry, secureCookies);
     const source = guard(request);
@@ -387,250 +356,282 @@ export function installRegistryEntrypoints(input: {
       networkSource,
     );
 
-  app.get('/api/v1/security/context', async (request, reply) => {
-    const requestId = randomUUID();
-    try {
-      const token = access(request);
-      const query = request.query as { database?: unknown };
-      const database = name(query.database);
-      context(token, database);
-      const verified = verify(token);
-      return { version: 1, database, actor: verified.actor, policyVersion: verified.policyVersion };
-    } catch (error) {
-      return sendFailure(reply, error, requestId, input.securityControl?.protection.retryAfter());
-    }
-  });
-  app.post('/api/v1/rpc', async (request, reply) => {
-    const requestId = randomUUID();
-    try {
-      const token = access(request);
-      const raw = request.body;
-      if (!record(raw) || raw.version !== 1) {
-        throw new SecurityError('SECURITY_PROTOCOL_UNSUPPORTED');
-      }
-      const user = request.headers['x-modeldb-user-subject'];
-      const result = await execute(
-        token,
-        name(raw.database),
-        operation(raw.operation),
-        requestId,
-        'http',
-        typeof user === 'string' ? user : undefined,
-        () => guard(request),
-        guard(request),
-      );
-      return { version: 1, result, requestId };
-    } catch (error) {
-      return sendFailure(reply, error, requestId, input.securityControl?.protection.retryAfter());
-    }
-  });
-
-  app.get('/api/v1/stream', { websocket: true }, (socket: WebSocket, request) => {
-    let session: { token: string; database: string } | undefined;
-    let busy = false;
-    let initialSource: NetworkSource | undefined;
-    let untrack: (() => void) | undefined;
-    const recheck = (): void => {
+  if (input.listenerRole !== 'management') {
+    app.get('/api/v1/security/context', async (request, reply) => {
+      const requestId = randomUUID();
       try {
-        guard(request);
+        const token = access(request);
+        const query = request.query as { database?: unknown };
+        const database = name(query.database);
+        context(token, database);
+        const verified = verify(token);
+        return {
+          version: 1,
+          database,
+          actor: verified.actor,
+          policyVersion: verified.policyVersion,
+        };
       } catch (error) {
-        try {
-          if (initialSource) {
-            input.securityControl?.protection.event(
-              'network.reject',
-              'denied',
-              initialSource,
-              error instanceof SecurityError ? error.code : 'SECURITY_SOURCE_DENIED',
-              undefined,
-              undefined,
-              'data',
-              'websocket',
-            );
-          }
-          socket.close(
-            1008,
-            error instanceof SecurityError ? error.code : 'SECURITY_SOURCE_DENIED',
-          );
-        } catch {
-          socket.close(1011, 'SECURITY_STORE_WRITE_FAILED');
-        }
+        return sendFailure(reply, error, requestId, input.securityControl?.protection.retryAfter());
       }
-    };
-    try {
-      initialSource = guard(request);
-      untrack = initialSource
-        ? input.network?.trackConnection(socket, initialSource.clientIp, 'data', recheck)
-        : undefined;
-    } catch {
-      socket.close(1008, 'SECURITY_SOURCE_DENIED');
-      return;
-    }
-    const timer = setTimeout(() => socket.close(1008, 'SECURITY_CREDENTIAL_INVALID'), 5000);
-    const unsubscribe = registry.onInvalidation(() => {
-      if (!session) {
-        return;
-      }
+    });
+    app.post('/api/v1/rpc', async (request, reply) => {
+      const requestId = randomUUID();
       try {
-        verify(session.token);
-      } catch {
-        socket.close(1008, 'SECURITY_CREDENTIAL_REVOKED');
+        const token = access(request);
+        const raw = request.body;
+        if (!record(raw) || raw.version !== 1) {
+          throw new SecurityError('SECURITY_PROTOCOL_UNSUPPORTED');
+        }
+        const user = request.headers['x-modeldb-user-subject'];
+        const result = await execute(
+          token,
+          name(raw.database),
+          operation(raw.operation),
+          requestId,
+          'http',
+          typeof user === 'string' ? user : undefined,
+          () => guard(request),
+          guard(request),
+        );
+        return { version: 1, result, requestId };
+      } catch (error) {
+        return sendFailure(reply, error, requestId, input.securityControl?.protection.retryAfter());
       }
     });
-    socket.on('close', () => {
-      databaseSockets.delete(socket);
-      clearTimeout(timer);
-      unsubscribe();
-      untrack?.();
-    });
-    socket.on('error', () => socket.close());
-    socket.on('message', (data) => {
-      if (socket.readyState !== 1) {
-        return;
-      }
-      // Bound the handshake/message queue; clients can open independent sessions for concurrency.
-      const bytes = Array.isArray(data)
-        ? data.reduce((total, chunk) => total + chunk.byteLength, 0)
-        : data.byteLength;
-      if (busy || bytes > 8 * 1024 * 1024) {
-        socket.close(1008, 'SECURITY_INVALID_REQUEST');
-        return;
-      }
-      busy = true;
-      void (async () => {
-        const requestId = randomUUID();
-        let id: string | undefined;
+
+    app.get('/api/v1/stream', { websocket: true }, (socket: WebSocket, request) => {
+      let session: { token: string; database: string; grants: string } | undefined;
+      let busy = false;
+      let initialSource: NetworkSource | undefined;
+      let untrack: (() => void) | undefined;
+      const recheck = (): void => {
         try {
-          const source = guard(request);
-          if (source) {
-            input.securityControl?.protection.consume(source, 'data');
-          }
-          const raw: unknown = JSON.parse(data.toString());
-          if (!record(raw) || raw.version !== 1) {
-            throw new SecurityError('SECURITY_PROTOCOL_UNSUPPORTED');
-          }
-          if (!session) {
-            if (raw.type !== 'security.hello') {
-              throw new SecurityError('SECURITY_CREDENTIAL_INVALID');
-            }
-            const initialAccess =
-              typeof raw.token === 'string' ? raw.token : sessionCookie(request, secureCookies);
-            if (!initialAccess) {
-              throw new SecurityError('SECURITY_CREDENTIAL_INVALID');
-            }
-            if (raw.token !== undefined) {
-              if (!initialAccess.startsWith('mdbt_v1_')) {
-                throw new SecurityError('SECURITY_CREDENTIAL_INVALID');
-              }
-            } else {
-              if (typeof raw.csrf !== 'string') {
-                throw new SecurityError('SECURITY_CSRF_REQUIRED');
-              }
-              registry.verifyBrowserSession(
-                initialAccess,
-                browserOrigin(request, secureCookies),
-                raw.csrf,
-              );
-            }
-            const database = name(raw.database);
-            context(initialAccess, database);
-            if (source) {
-              input.securityControl?.protection.consume(
-                source,
-                'data',
-                verify(initialAccess).actor.principalId,
-              );
-            }
-            session = { token: initialAccess, database };
-            databaseSockets.set(socket, database);
-            clearTimeout(timer);
-            socket.send(JSON.stringify({ type: 'security.ready', version: 1, database }));
-          } else {
-            if (source) {
-              input.securityControl?.protection.consume(
-                source,
-                'data',
-                verify(session.token).actor.principalId,
-              );
-            }
-            id = name(raw.id);
-            if (raw.type !== 'security.rpc') {
-              throw new SecurityError('SECURITY_INVALID_REQUEST');
-            }
-            const result = await execute(
-              session.token,
-              session.database,
-              operation(raw.operation),
-              requestId,
-              'websocket',
-              undefined,
-              () => {
-                if (socket.readyState !== 1) {
-                  throw new SecurityError('SECURITY_CLOSED');
-                }
-                guard(request);
-              },
-              guard(request),
-            );
-            socket.send(
-              JSON.stringify({ type: 'security.result', version: 1, id, result, requestId }),
-            );
-          }
+          guard(request);
         } catch (error) {
-          const failed = failure(error, requestId);
-          if (initialSource && failed.status === 401) {
-            try {
-              input.securityControl?.protection.event(
-                'authentication.reject',
-                'denied',
-                initialSource,
-                'SECURITY_CREDENTIAL_INVALID',
-                undefined,
-                undefined,
-                'data',
-                'websocket',
-              );
-              input.securityControl?.protection.authenticationFailed(initialSource, 'data');
-            } catch {
-              socket.close(1011, 'SECURITY_STORE_WRITE_FAILED');
-              return;
-            }
-          }
-          if (initialSource && (failed.status === 403 || failed.status === 429)) {
-            try {
+          try {
+            if (initialSource) {
               input.securityControl?.protection.event(
                 'network.reject',
                 'denied',
                 initialSource,
-                (failed.body as { error: string }).error,
+                error instanceof SecurityError ? error.code : 'SECURITY_SOURCE_DENIED',
                 undefined,
                 undefined,
                 'data',
                 'websocket',
               );
-            } catch {
-              socket.close(1011, 'SECURITY_STORE_WRITE_FAILED');
-              return;
             }
+            socket.close(
+              1008,
+              error instanceof SecurityError ? error.code : 'SECURITY_SOURCE_DENIED',
+            );
+          } catch {
+            socket.close(1011, 'SECURITY_STORE_WRITE_FAILED');
           }
-          socket.send(
-            JSON.stringify({
-              type: 'security.error',
-              version: 1,
-              id,
-              status: failed.status,
-              ...(failed.body as object),
-            }),
-          );
-          if (!session || failed.status === 401) {
-            socket.close(1008, 'SECURITY_CREDENTIAL_INVALID');
-          }
-        } finally {
-          busy = false;
         }
-      })();
+      };
+      try {
+        initialSource = guard(request);
+        untrack = initialSource
+          ? input.network?.trackConnection(socket, initialSource.clientIp, 'data', recheck)
+          : undefined;
+      } catch {
+        socket.close(1008, 'SECURITY_SOURCE_DENIED');
+        return;
+      }
+      let timer = setTimeout(() => socket.close(1008, 'SECURITY_CREDENTIAL_INVALID'), 5000);
+      const checkAccess = (): void => {
+        if (!session) {
+          return;
+        }
+        try {
+          context(session.token, session.database);
+          const remaining = registry.accessRemainingMs(session.token);
+          clearTimeout(timer);
+          timer = setTimeout(checkAccess, Math.min(remaining, 2147483647));
+        } catch {
+          socket.close(1008, 'SECURITY_CREDENTIAL_REVOKED');
+        }
+      };
+      let unsubscribe = registry.onInvalidation(checkAccess);
+      socket.on('close', () => {
+        databaseSockets.delete(socket);
+        clearTimeout(timer);
+        unsubscribe();
+        untrack?.();
+      });
+      socket.on('error', () => socket.close());
+      socket.on('message', (data) => {
+        if (socket.readyState !== 1) {
+          return;
+        }
+        // Bound the handshake/message queue; clients can open independent sessions for concurrency.
+        const bytes = Array.isArray(data)
+          ? data.reduce((total, chunk) => total + chunk.byteLength, 0)
+          : data.byteLength;
+        if (busy || bytes > 8 * 1024 * 1024) {
+          socket.close(1008, 'SECURITY_INVALID_REQUEST');
+          return;
+        }
+        busy = true;
+        void (async () => {
+          const requestId = randomUUID();
+          let id: string | undefined;
+          try {
+            const source = guard(request);
+            if (source) {
+              input.securityControl?.protection.consume(source, 'data');
+            }
+            const raw: unknown = JSON.parse(data.toString());
+            if (!record(raw) || raw.version !== 1) {
+              throw new SecurityError('SECURITY_PROTOCOL_UNSUPPORTED');
+            }
+            if (!session) {
+              if (raw.type !== 'security.hello') {
+                throw new SecurityError('SECURITY_CREDENTIAL_INVALID');
+              }
+              const initialAccess =
+                typeof raw.token === 'string' ? raw.token : sessionCookie(request, secureCookies);
+              if (!initialAccess) {
+                throw new SecurityError('SECURITY_CREDENTIAL_INVALID');
+              }
+              if (raw.token !== undefined) {
+                if (!initialAccess.startsWith('mdbt_v1_')) {
+                  throw new SecurityError('SECURITY_CREDENTIAL_INVALID');
+                }
+              } else {
+                if (typeof raw.csrf !== 'string') {
+                  throw new SecurityError('SECURITY_CSRF_REQUIRED');
+                }
+                registry.verifyBrowserSession(
+                  initialAccess,
+                  browserOrigin(request, secureCookies),
+                  raw.csrf,
+                );
+              }
+              const database = name(raw.database);
+              context(initialAccess, database);
+              if (source) {
+                input.securityControl?.protection.consume(
+                  source,
+                  'data',
+                  verify(initialAccess).actor.principalId,
+                );
+              }
+              session = {
+                token: initialAccess,
+                database,
+                grants: JSON.stringify(verify(initialAccess).credential.grants),
+              };
+              databaseSockets.set(socket, database);
+              clearTimeout(timer);
+              unsubscribe();
+              const credentialId = verify(initialAccess).credential.id;
+              unsubscribe = registry.onInvalidation((event) => {
+                if (!event.credentialIds.includes(credentialId)) {
+                  checkAccess();
+                  return;
+                }
+                try {
+                  context(initialAccess, database);
+                  // Only a changed scope or this session's invalidation requires rehandshake.
+                  if (JSON.stringify(verify(initialAccess).credential.grants) !== session?.grants) {
+                    socket.close(1008, 'SECURITY_REAUTH_REQUIRED');
+                  }
+                } catch {
+                  socket.close(1008, 'SECURITY_CREDENTIAL_REVOKED');
+                }
+              }, credentialId);
+              checkAccess();
+              socket.send(JSON.stringify({ type: 'security.ready', version: 1, database }));
+            } else {
+              if (source) {
+                input.securityControl?.protection.consume(
+                  source,
+                  'data',
+                  verify(session.token).actor.principalId,
+                );
+              }
+              id = name(raw.id);
+              if (raw.type !== 'security.rpc') {
+                throw new SecurityError('SECURITY_INVALID_REQUEST');
+              }
+              const result = await execute(
+                session.token,
+                session.database,
+                operation(raw.operation),
+                requestId,
+                'websocket',
+                undefined,
+                () => {
+                  if (socket.readyState !== 1) {
+                    throw new SecurityError('SECURITY_CLOSED');
+                  }
+                  guard(request);
+                },
+                guard(request),
+              );
+              socket.send(
+                JSON.stringify({ type: 'security.result', version: 1, id, result, requestId }),
+              );
+            }
+          } catch (error) {
+            const failed = failure(error, requestId);
+            if (initialSource && failed.status === 401) {
+              try {
+                input.securityControl?.protection.event(
+                  'authentication.reject',
+                  'denied',
+                  initialSource,
+                  'SECURITY_CREDENTIAL_INVALID',
+                  undefined,
+                  undefined,
+                  'data',
+                  'websocket',
+                );
+                input.securityControl?.protection.authenticationFailed(initialSource, 'data');
+              } catch {
+                socket.close(1011, 'SECURITY_STORE_WRITE_FAILED');
+                return;
+              }
+            }
+            if (initialSource && (failed.status === 403 || failed.status === 429)) {
+              try {
+                input.securityControl?.protection.event(
+                  'network.reject',
+                  'denied',
+                  initialSource,
+                  (failed.body as { error: string }).error,
+                  undefined,
+                  undefined,
+                  'data',
+                  'websocket',
+                );
+              } catch {
+                socket.close(1011, 'SECURITY_STORE_WRITE_FAILED');
+                return;
+              }
+            }
+            socket.send(
+              JSON.stringify({
+                type: 'security.error',
+                version: 1,
+                id,
+                status: failed.status,
+                ...(failed.body as object),
+              }),
+            );
+            if (!session || failed.status === 401) {
+              socket.close(1008, 'SECURITY_CREDENTIAL_INVALID');
+            }
+          } finally {
+            busy = false;
+          }
+        })();
+      });
     });
-  });
-
+  }
   const setBrowserSession = (
     reply: FastifyReply,
     session: { session: string; expiresAt: string },
@@ -667,8 +668,14 @@ export function installRegistryEntrypoints(input: {
         throw new SecurityError('SECURITY_INVALID_REQUEST');
       }
       const origin = browserOrigin(request, secureCookies);
-      const session = registry.consumePairing(raw.code, origin);
+      const session = registry.consumePairing(
+        raw.code,
+        origin,
+        input.listenerRole === 'management' ? 15 : 30,
+        input.listenerRole,
+      );
       const verified = registry.verifyBrowserSession(session.session, origin);
+      checkBrowserRole(verified);
       setBrowserSession(reply, session, request);
       return {
         version: 1,
@@ -695,6 +702,7 @@ export function installRegistryEntrypoints(input: {
         session,
         browserOrigin(request, secureCookies),
       );
+      checkBrowserRole(verified);
       return {
         version: 1,
         expiresAt: verified.sessionExpiresAt,
@@ -719,8 +727,11 @@ export function installRegistryEntrypoints(input: {
         throw new SecurityError('SECURITY_CREDENTIAL_INVALID');
       }
       const origin = browserOrigin(request, secureCookies);
-      registry.verifyBrowserSession(current, origin, csrfHeader(request));
-      const session = registry.rotateSession(current);
+      checkBrowserRole(registry.verifyBrowserSession(current, origin, csrfHeader(request)));
+      const session = registry.rotateSession(
+        current,
+        input.listenerRole === 'management' ? 15 : 30,
+      );
       const verified = registry.verifyBrowserSession(session.session, origin);
       setBrowserSession(reply, session, request);
       return {
@@ -743,10 +754,12 @@ export function installRegistryEntrypoints(input: {
       if (!current) {
         throw new SecurityError('SECURITY_CREDENTIAL_INVALID');
       }
-      registry.verifyBrowserSession(
-        current,
-        browserOrigin(request, secureCookies),
-        csrfHeader(request),
+      checkBrowserRole(
+        registry.verifyBrowserSession(
+          current,
+          browserOrigin(request, secureCookies),
+          csrfHeader(request),
+        ),
       );
       registry.revokeSession(current);
       clearBrowserSession(reply, request);
@@ -769,6 +782,7 @@ export function installRegistryEntrypoints(input: {
         session,
         browserOrigin(request, secureCookies),
       );
+      checkBrowserRole(verified);
       if (!verified.securityAdmin) {
         throw new SecurityError('SECURITY_FORBIDDEN');
       }
@@ -797,6 +811,7 @@ export function installRegistryEntrypoints(input: {
         browserOrigin(request, secureCookies),
         csrfHeader(request),
       );
+      checkBrowserRole(verified);
       if (!verified.securityAdmin) {
         throw new SecurityError('SECURITY_FORBIDDEN');
       }
@@ -824,7 +839,32 @@ export function installRegistryEntrypoints(input: {
               : {}),
           },
         },
-        () => dispatchSecurityControl(input.securityControl!, request.body, source),
+        () => {
+          if (
+            record(request.body) &&
+            typeof request.body.action === 'string' &&
+            request.body.action.startsWith('deployment.') &&
+            input.listenerRole !== 'management'
+          ) {
+            throw new SecurityError('SECURITY_FORBIDDEN');
+          }
+          if (
+            record(request.body) &&
+            typeof request.body.action === 'string' &&
+            request.body.action.startsWith('registration.')
+          ) {
+            if (input.listenerRole !== 'management') {
+              throw new SecurityError('SECURITY_FORBIDDEN');
+            }
+            return registry.manageHostedIdentity(
+              session,
+              browserOrigin(request, secureCookies),
+              csrfHeader(request)!,
+              request.body,
+            );
+          }
+          return dispatchSecurityControl(input.securityControl!, request.body, source);
+        },
       );
     } catch (error) {
       return sendFailure(reply, error, requestId, input.securityControl?.protection.retryAfter());
@@ -844,6 +884,7 @@ export function installRegistryEntrypoints(input: {
         session,
         browserOrigin(request, secureCookies),
       );
+      checkBrowserRole(verified);
       if (!verified.securityAdmin) {
         throw new SecurityError('SECURITY_FORBIDDEN');
       }
@@ -867,6 +908,7 @@ export function installRegistryEntrypoints(input: {
         session,
         browserOrigin(request, secureCookies),
       );
+      checkBrowserRole(verified);
       if (!verified.securityAdmin) {
         throw new SecurityError('SECURITY_FORBIDDEN');
       }
@@ -892,7 +934,10 @@ export function installRegistryEntrypoints(input: {
   app.addHook('preHandler', async (request, reply) => {
     const path = request.url.split('?')[0];
     if (
+      (['GET', 'HEAD'].includes(request.method) && input.publicAssetPaths?.has(path ?? '')) ||
       request.method === 'OPTIONS' ||
+      registrationPath(request.url) ||
+      authenticationPath(request.url) ||
       path === '/health' ||
       path === '/api/v1/rpc' ||
       path === '/api/v1/security/context' ||
@@ -927,9 +972,14 @@ export function installRegistryEntrypoints(input: {
         const database = name(decodeURIComponent(catalog[1]!));
         auth.require(database, 'model.read');
         const engine = await input.getEngine(database);
-        await auth.operation(database, { op: 'executeQuery', snapshot: {} }, engine);
+        const recheck = await auth.operation(
+          database,
+          { op: 'executeQuery', snapshot: {} },
+          engine,
+        );
+        recheck();
         const result = await input.catalog(database);
-        auth.require(database, 'model.read');
+        recheck();
         return reply.send(result);
       }
       const callable = /^\/api\/v1\/databases\/([^/]+)\/query-interfaces\/([^/]+)$/.exec(

@@ -1,0 +1,142 @@
+{
+  "format": "modeldb.security-regression.v1",
+  "timestampUtc": "2026-10-26T05:09:29.318Z",
+  "unitFiles": [
+    "backup-management-http.test.ts",
+    "backup-management.test.ts",
+    "binding-surface-compiler.test.ts",
+    "binding-surface-publication.test.ts",
+    "browser-connection-credentials.test.ts",
+    "browser-pairing-launch.test.ts",
+    "core-query-filter.test.ts",
+    "data-kit-apply-outcome.test.ts",
+    "data-kit-bind-only-import.test.ts",
+    "data-kit-binding-surface-session.test.ts",
+    "data-kit-binding.test.ts",
+    "data-kit-coerce-import.test.ts",
+    "data-kit-insert-many-failures.test.ts",
+    "data-kit-phase2.test.ts",
+    "data-kit-phase3.test.ts",
+    "data-kit-query-adapter.test.ts",
+    "data-kit-relation-bind.test.ts",
+    "data-transfer-http.test.ts",
+    "data-transfer.test.ts",
+    "data-ui-binding-surface.test.tsx",
+    "designer-mode-manager.test.ts",
+    "field-defs.test.ts",
+    "interface-call-docs.test.ts",
+    "interface-release-management.test.ts",
+    "interface-transfer.test.ts",
+    "model-map.test.ts",
+    "operation-interface-compiler.test.ts",
+    "pivot-display.test.ts",
+    "pivot-interface-http.test.ts",
+    "pivot-interface-input.test.ts",
+    "pivot-presentation.test.ts",
+    "pivot-result-model.test.ts",
+    "pivot-sources.test.ts",
+    "published-binding-surface-runtime.test.ts",
+    "published-interface-runtime.test.ts",
+    "published-operation-interface-runtime.test.ts",
+    "query-cursor-pagination.test.ts",
+    "query-distinct-aggregation.test.ts",
+    "query-execution-compiler.test.ts",
+    "query-having.test.ts",
+    "query-interface-audit-summary.test.ts",
+    "query-interface-errors.test.ts",
+    "query-interface-publication.test.ts",
+    "query-ordering.test.ts",
+    "query-related-aggregation.test.ts",
+    "query-relation-quantifier.test.ts",
+    "relation-pair-geometry.test.ts",
+    "sdk-revive-tree.test.ts",
+    "security-asset.test.ts",
+    "security-authorization.test.ts",
+    "security-backup.test.ts",
+    "security-browser-session.test.ts",
+    "security-designer-asset.test.ts",
+    "security-designer-references.test.ts",
+    "security-designer-sandbox.test.mjs",
+    "security-fault-acceptance.test.ts",
+    "security-git-guard.test.mjs",
+    "security-network.test.ts",
+    "security-protection.test.ts",
+    "security-recovery-drill.test.ts",
+    "security-recovery.test.ts",
+    "security-registry-http.test.ts",
+    "security-registry.test.ts",
+    "security-release-apps.test.mjs",
+    "security-release-evidence.test.mjs",
+    "security-reset-recovery.test.ts",
+    "security-vault-v2.test.ts",
+    "security-windows-keys.test.ts",
+    "server-config-path.test.ts",
+    "server-directory-layout.test.ts"
+  ],
+  "unit": {
+    "tests": 471,
+    "pass": 471,
+    "fail": 0,
+    "cancelled": 0,
+    "skip": 0,
+    "todo": 0
+  },
+  "integrationScripts": [
+    "e2e-engine-workflow",
+    "relate-conserved-forest",
+    "children-tree-query",
+    "group-lateral-attach",
+    "multi-branch-network",
+    "protocol-operations"
+  ],
+  "results": [
+    {
+      "name": "unit",
+      "exitCode": 0,
+      "durationMs": 302264.3853,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-byzceH\\unit.log"
+    },
+    {
+      "name": "e2e-engine-workflow",
+      "exitCode": 0,
+      "durationMs": 6872.957500000019,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-byzceH\\e2e-engine-workflow.log"
+    },
+    {
+      "name": "relate-conserved-forest",
+      "exitCode": 0,
+      "durationMs": 5699.148600000015,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-byzceH\\relate-conserved-forest.log"
+    },
+    {
+      "name": "children-tree-query",
+      "exitCode": 0,
+      "durationMs": 6209.45199999999,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-byzceH\\children-tree-query.log"
+    },
+    {
+      "name": "group-lateral-attach",
+      "exitCode": 0,
+      "durationMs": 6225.698600000003,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-byzceH\\group-lateral-attach.log"
+    },
+    {
+      "name": "multi-branch-network",
+      "exitCode": 0,
+      "durationMs": 6205.072500000009,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-byzceH\\multi-branch-network.log"
+    },
+    {
+      "name": "protocol-operations",
+      "exitCode": 0,
+      "durationMs": 8149.002000000037,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-byzceH\\protocol-operations.log"
+    }
+  ],
+  "summaryCorrection": {
+    "reason": "Original reporting parser looked for # skip, while Node TAP emits # skipped. Functional commands all exited 0. Corrected counts read from the unchanged original TAP log.",
+    "originalReportSha256": "fdd8403a12b47beea517b317ffe8f2607c6fb423b34597cb9e1644cd2e9147c4",
+    "unitLogSha256": "b6a2fde6911b1a97a3289d3c6ba64e6bcf7563a779eab466d55ef1f3aca0c948",
+    "summaryOnly": true
+  }
+}

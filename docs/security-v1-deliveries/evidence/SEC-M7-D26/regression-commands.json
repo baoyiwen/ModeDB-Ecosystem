@@ -1,0 +1,141 @@
+[
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-authentication.test.ts",
+      "test/unit/security-authentication-storage.test.ts"
+    ],
+    "exitCode": 0,
+    "durationMs": 8407,
+    "log": "docs/security-v1-deliveries/evidence/SEC-M7-D26/authentication.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-dynamic-authorization.test.ts"
+    ],
+    "exitCode": 0,
+    "durationMs": 12290,
+    "log": "docs/security-v1-deliveries/evidence/SEC-M7-D26/dynamic.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-session-parent.test.ts",
+      "test/unit/security-registration-contract.test.mjs",
+      "test/unit/security-device-registration-contract.test.ts",
+      "test/unit/security-registration-storage.test.ts",
+      "test/unit/security-registration-runtime.test.ts",
+      "test/unit/security-registration-approval.test.ts",
+      "test/unit/security-registry.test.ts",
+      "test/unit/security-windows-keys.test.ts",
+      "test/unit/security-browser-session.test.ts",
+      "test/unit/security-network.test.ts",
+      "test/unit/security-authorization.test.ts",
+      "test/unit/security-registry-http.test.ts"
+    ],
+    "exitCode": 0,
+    "durationMs": 152722,
+    "log": "docs/security-v1-deliveries/evidence/SEC-M7-D26/regression.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-registration-maintenance.test.ts"
+    ],
+    "exitCode": 0,
+    "durationMs": 80980,
+    "log": "docs/security-v1-deliveries/evidence/SEC-M7-D26/maintenance.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-hosting.test.ts",
+      "test/unit/security-hosting-report.test.mjs"
+    ],
+    "exitCode": 0,
+    "durationMs": 4007,
+    "log": "docs/security-v1-deliveries/evidence/SEC-M7-D26/hosting.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-identity-admin.test.ts",
+      "test/unit/security-identity-admin-report.test.mjs"
+    ],
+    "exitCode": 0,
+    "durationMs": 3428,
+    "log": "docs/security-v1-deliveries/evidence/SEC-M7-D26/identity-admin.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-designer-identity.test.ts",
+      "test/unit/security-designer-identity-report.test.mjs"
+    ],
+    "exitCode": 0,
+    "durationMs": 2286,
+    "log": "docs/security-v1-deliveries/evidence/SEC-M7-D26/identity.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-release-evidence.test.mjs",
+      "test/unit/security-authentication-report.test.mjs",
+      "test/unit/security-authentication-resilience-report.test.mjs"
+    ],
+    "exitCode": 0,
+    "durationMs": 17490,
+    "log": "docs/security-v1-deliveries/evidence/SEC-M7-D26/tools.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/browser-pairing-launch.test.ts",
+      "test/unit/browser-connection-credentials.test.ts"
+    ],
+    "exitCode": 0,
+    "durationMs": 566,
+    "log": "docs/security-v1-deliveries/evidence/SEC-M7-D26/launch-compat.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-deployment-wizard.test.ts",
+      "test/unit/security-deployment-wizard-report.test.mjs"
+    ],
+    "exitCode": 0,
+    "durationMs": 2960,
+    "log": "docs/security-v1-deliveries/evidence/SEC-M7-D26/deployment.original.txt"
+  }
+]

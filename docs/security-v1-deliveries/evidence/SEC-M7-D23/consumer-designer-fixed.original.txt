@@ -1,0 +1,18 @@
+apps/model-designer/src/data-transfer/workbook.ts(1,21): error TS2307: Cannot find module 'exceljs' or its corresponding type declarations.
+apps/model-designer/src/data-transfer/workbook.ts(51,29): error TS7006: Parameter 'cell' implicitly has an 'any' type.
+apps/model-designer/src/data-transfer/workbook.ts(402,29): error TS7006: Parameter 'cell' implicitly has an 'any' type.
+apps/model-designer/src/data-transfer/workbook.ts(402,35): error TS7006: Parameter 'col' implicitly has an 'any' type.
+apps/model-designer/src/data-transfer/workbook.ts(419,31): error TS7006: Parameter 'cell' implicitly has an 'any' type.
+apps/model-designer/src/data-transfer/workbook.ts(419,37): error TS7006: Parameter 'column' implicitly has an 'any' type.
+apps/model-designer/src/data-transfer/workbook.ts(551,31): error TS7006: Parameter 'sheet' implicitly has an 'any' type.
+apps/model-designer/src/model-map/export-model-map.ts(1,21): error TS2307: Cannot find module 'exceljs' or its corresponding type declarations.
+apps/model-designer/src/model-map/export-model-map.ts(52,22): error TS7006: Parameter 'cell' implicitly has an 'any' type.
+apps/model-designer/src/model-map/export-model-map.ts(71,19): error TS7006: Parameter 'cell' implicitly has an 'any' type.
+apps/model-designer/src/model-map/export-model-map.ts(71,25): error TS7006: Parameter 'column' implicitly has an 'any' type.
+apps/model-designer/src/pivot/date-time.ts(1,35): error TS2307: Cannot find module 'dayjs' or its corresponding type declarations.
+apps/model-designer/src/pivot/date-time.ts(2,31): error TS2307: Cannot find module 'dayjs/plugin/customParseFormat.js' or its corresponding type declarations.
+apps/model-designer/src/pivot/date-time.ts(3,17): error TS2307: Cannot find module 'dayjs/plugin/utc.js' or its corresponding type declarations.
+
+
+2 !== 0
+

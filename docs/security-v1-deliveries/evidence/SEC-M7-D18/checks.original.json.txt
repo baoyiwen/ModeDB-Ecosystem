@@ -1,0 +1,228 @@
+{
+  "format": "modeldb.security-session-parent-checks.v1",
+  "task": "DR-P2.1",
+  "checks": [
+    {
+      "artifact": "types.original.json.txt",
+      "result": [
+        {
+          "command": "node scripts/security-registration-storage-check.mjs",
+          "exitCode": 0,
+          "stdout": "{\n  \"format\": \"modeldb.registration-storage-types.v1\",\n  \"ok\": true,\n  \"node\": \"v24.22.1\",\n  \"root\": \"C:\\\\Users\\\\51153\\\\AppData\\\\Local\\\\Temp\\\\ModeDB-Registration-Storage-Types-mhZvnY\",\n  \"checks\": {\n    \"freshSharedDeclarations\": true,\n    \"entireServerTypecheck\": true,\n    \"strictStorageTestTypecheck\": true,\n    \"strictSessionParentTypecheck\": true,\n    \"strictRegistrationRuntimeTypecheck\": true,\n    \"strictRegistrationApprovalTypecheck\": true,\n    \"strictRegistrationIntegrationTypecheck\": true,\n    \"existingDistUnchanged\": true\n  }\n}\n",
+          "stderr": ""
+        },
+        {
+          "command": "node scripts/security-registration-consumer-check.mjs",
+          "exitCode": 0,
+          "stdout": "{\n  \"ok\": true,\n  \"format\": \"modeldb.registration-consumer-check.v1\",\n  \"node\": \"v24.22.1\",\n  \"root\": \"C:\\\\Users\\\\51153\\\\AppData\\\\Local\\\\Temp\\\\ModeDB-Registration-Consumers-k3aZuW\",\n  \"checks\": {\n    \"freshSharedDeclarations\": true,\n    \"strictSdkConsumer\": true,\n    \"domTypesWithoutNode\": true,\n    \"sharedBrowserBundle\": true,\n    \"sdkBrowserBundle\": true,\n    \"serverLibraryExcluded\": true\n  },\n  \"bundles\": [\n    {\n      \"entry\": \"packages/shared/src/index.ts\",\n      \"bytes\": 82579,\n      \"sha256\": \"17261afe09010d9a0fb2a807fa1a4433d9de25a955fda59fc2b81428f7c2ec74\"\n    },\n    {\n      \"entry\": \"packages/sdk/src/index.ts\",\n      \"bytes\": 142077,\n      \"sha256\": \"e53f60cf5ce92f6f2405721834561dea301fff5ae16c3a14563885d2b15cb125\"\n    }\n  ]\n}\n",
+          "stderr": ""
+        }
+      ]
+    },
+    {
+      "artifact": "lint.original.json.txt",
+      "result": {
+        "command": [
+          "node",
+          "node_modules/eslint/bin/eslint.js",
+          "packages/shared/src/security-contracts.ts",
+          "packages/shared/src/index.ts",
+          "packages/server/src/security/security-registry.ts",
+          "packages/server/src/security/registration-service.ts",
+          "scripts/security-registration-storage-check.mjs",
+          "scripts/security-release-evidence.mjs"
+        ],
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    },
+    {
+      "artifact": "format.original.json.txt",
+      "result": {
+        "command": [
+          "node",
+          "node_modules/prettier/bin/prettier.cjs",
+          "--check",
+          "package.json",
+          "packages/shared/src/security-contracts.ts",
+          "packages/shared/src/index.ts",
+          "packages/server/src/security/security-registry.ts",
+          "packages/server/src/security/registration-service.ts",
+          "scripts/security-registration-storage-check.mjs",
+          "scripts/security-release-evidence.mjs",
+          "docs/security-v1/AGENTS.md",
+          "docs/security-v1/overview.md",
+          "docs/security-v1/user-guide.md",
+          "docs/security-v1/release-guide.md",
+          "docs/security-v1/device-registration-protocol-contract.md",
+          "docs/security-v1/device-registration-runtime-guide.md",
+          "docs/security-v1-milestones.md",
+          "docs/security-v1-plan.md",
+          "docs/security-v1-identity-contract.md",
+          "docs/security-browser-sessions.md",
+          "docs/security-v1-deliveries/SEC-M7.md"
+        ],
+        "exitCode": 0,
+        "stdout": "Checking formatting...\nAll matched files use Prettier code style!\n",
+        "stderr": ""
+      }
+    },
+    {
+      "artifact": "diff.original.json.txt",
+      "result": {
+        "command": [
+          "git",
+          "diff",
+          "--check",
+          "--",
+          "package.json",
+          "packages/shared/src/security-contracts.ts",
+          "packages/shared/src/index.ts",
+          "packages/server/src/security/security-registry.ts",
+          "packages/server/src/security/registration-service.ts",
+          "scripts/security-registration-storage-check.mjs",
+          "scripts/security-release-evidence.mjs",
+          "test/unit/security-session-parent.test.ts",
+          "test/unit/security-registration-storage.test.ts",
+          "test/unit/security-release-evidence.test.mjs",
+          "docs/security-v1/AGENTS.md",
+          "docs/security-v1/overview.md",
+          "docs/security-v1/user-guide.md",
+          "docs/security-v1/release-guide.md",
+          "docs/security-v1/device-registration-protocol-contract.md",
+          "docs/security-v1/device-registration-runtime-guide.md",
+          "docs/security-v1-milestones.md",
+          "docs/security-v1-plan.md",
+          "docs/security-v1-identity-contract.md",
+          "docs/security-browser-sessions.md",
+          "docs/security-v1-deliveries/SEC-M7.md",
+          "test/README.md"
+        ],
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": "warning: in the working copy of 'docs/security-v1-deliveries/SEC-M7.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-identity-contract.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-milestones.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-plan.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/AGENTS.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/overview.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/release-guide.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/user-guide.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'packages/server/src/security/security-registry.ts', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'test/README.md', LF will be replaced by CRLF the next time Git touches it\n"
+      }
+    },
+    {
+      "artifact": "material-guard.original.json.txt",
+      "result": {
+        "command": "node scripts/assert-no-security-material.mjs",
+        "exitCode": 0,
+        "stdout": "{\"ok\":true,\"trackedRuntimeEntries\":0,\"materialRead\":false}\n",
+        "stderr": ""
+      }
+    },
+    {
+      "artifact": "documents.original.json.txt",
+      "result": {
+        "script": "docs/security-v1-deliveries/evidence/SEC-M7-D18/documents-check.original.mjs.txt",
+        "exitCode": 0,
+        "stdout": "{\n  \"ok\": true,\n  \"documentFiles\": 15,\n  \"localLinksAndAnchors\": 289,\n  \"failures\": [],\n  \"registrationTaskRows\": 23,\n  \"completedRegistrationTasks\": 7\n}\n",
+        "stderr": ""
+      }
+    }
+  ],
+  "testCommands": [
+    {
+      "command": [
+        "node",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-session-parent.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "session-parent.original.txt",
+      "unit": {
+        "pass": 35,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "todo": 0
+      }
+    },
+    {
+      "command": [
+        "node",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-registration-contract.test.mjs",
+        "test/unit/security-device-registration-contract.test.ts",
+        "test/unit/security-registration-storage.test.ts",
+        "test/unit/security-registration-runtime.test.ts",
+        "test/unit/security-registration-approval.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "registration.original.txt",
+      "unit": {
+        "pass": 95,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "todo": 0
+      }
+    },
+    {
+      "command": [
+        "node",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-registry.test.ts",
+        "test/unit/security-windows-keys.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "registry.original.txt",
+      "unit": {
+        "pass": 13,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "todo": 0
+      }
+    },
+    {
+      "command": [
+        "node",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-browser-session.test.ts",
+        "test/unit/security-network.test.ts",
+        "test/unit/security-authorization.test.ts",
+        "test/unit/security-registry-http.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "compatibility.original.txt",
+      "unit": {
+        "pass": 26,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "todo": 0
+      }
+    },
+    {
+      "command": [
+        "node",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-release-evidence.test.mjs"
+      ],
+      "exitCode": 0,
+      "log": "tools.original.txt",
+      "unit": {
+        "pass": 22,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "todo": 0
+      }
+    }
+  ],
+  "historicalEvidenceVerified": 90,
+  "preexistingSecurityIndexDeletionsPreserved": 4
+}

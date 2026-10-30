@@ -1,0 +1,41 @@
+{
+  "format": "modeldb.install-verification.v1",
+  "revision": "SEC-M7-D31",
+  "task": "DR-P4.3",
+  "date": "2026-10-28",
+  "timezone": "Asia/Shanghai",
+  "candidateSha256": "6f737648713e86c5049efe343b0f5ea89e3d84a11899a987aae44e4410a07fcc",
+  "tasks": {
+    "registration": "20/23",
+    "registrationP4": "3/6",
+    "registrationWorkPackages": "3/4"
+  },
+  "unit": {
+    "pass": 234,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "receiptUnit": {
+    "pass": 66,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "nativePass": 1,
+  "totalTargetedPass": 301,
+  "historicalEvidenceVerified": 1504,
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "installedCandidateTested": true,
+    "liveMaterialRead": false,
+    "realTwoDeviceTested": false,
+    "hardwareAuthenticatorTested": false,
+    "performanceTested": false,
+    "fullHistoricalPackageDowngradeTested": false,
+    "productionMigrationPerformed": false,
+    "frontendChanged": false
+  }
+}

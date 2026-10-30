@@ -1,0 +1,155 @@
+{
+  "format": "modeldb.security-registration-approval-verification.v1",
+  "revision": "SEC-M7-D16",
+  "task": "DR-P1.5",
+  "date": "2026-10-27",
+  "timezone": "Asia/Shanghai",
+  "baseCommit": "fd40ade27acdec54c4e5ba4dd8ddc5ac4e061a0f",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "tasks": {
+    "v1Milestones": "7/7",
+    "v1": "20/20",
+    "registration": "5/23",
+    "registrationP1": "5/6",
+    "registrationWorkPackages": "0/4"
+  },
+  "registrationStorageImplemented": true,
+  "runtimeRegistrationImplemented": true,
+  "approvalImplemented": true,
+  "publicKeyLoginImplemented": false,
+  "unit": {
+    "pass": 95,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "approvalUnit": {
+    "pass": 21,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "runtimeUnit": {
+    "pass": 22,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "storageUnit": {
+    "pass": 23,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "contractUnit": {
+    "pass": 29,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "legacyRegistryUnit": {
+    "pass": 10,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "networkUnit": {
+    "pass": 9,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "evidenceToolUnit": {
+    "pass": 18,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "totalTargetedUnit": {
+    "pass": 132,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "checks": {
+    "verifiedOsLocalOnly": true,
+    "exactScopes": true,
+    "atomicIdentityAndAudit": true,
+    "revisionConflicts": true,
+    "terminalRejection": true,
+    "noPollingSession": true,
+    "approvalWriteFaults": true,
+    "legacyMissingGrantsDeny": true,
+    "nativeDpapiCli": true,
+    "serverTypecheck": true,
+    "strictApprovalTypes": true,
+    "browserBoundary": true,
+    "scopedFormatting": true,
+    "scopedLint": true,
+    "materialGuard": true,
+    "scopedDiff": true
+  },
+  "documentValidation": {
+    "ok": true,
+    "documentFiles": 13,
+    "localLinksAndAnchors": 250,
+    "failures": [],
+    "registrationTaskRows": 23,
+    "completedRegistrationTasks": 5
+  },
+  "failureHistory": [
+    {
+      "scope": "Initial approval unit run",
+      "result": "16/17",
+      "cause": "Returned grants shared the in-memory ledger array. Fixed by returning a deep copy; mutation cannot alter in-memory or reopened state.",
+      "rawFailureLogArchived": false
+    },
+    {
+      "scope": "Credential-ID negative case",
+      "cause": "Expected existing SECURITY_CREDENTIAL_INVALID instead of a generic authorization error; no authentication relaxation.",
+      "rawFailureLogArchived": false
+    },
+    {
+      "scope": "Initial scoped lint",
+      "cause": "New callable guard arrow parameter formatting corrected; final lint and formatting passed.",
+      "rawFailureLogArchived": false
+    }
+  ],
+  "scope": {
+    "onlyTemporarySyntheticInstances": true,
+    "liveInstanceAccessed": false,
+    "liveConfigurationOrSecretsOrDataAccessed": false,
+    "liveAclChanged": false,
+    "uiOrTranslationsChanged": false,
+    "fullRepositoryCheckRun": false,
+    "fullBusinessOrBrowserRegressionRun": false,
+    "newReleaseInstallOrPerformanceRun": false,
+    "realAuthenticatorOrTwoMachineAuthenticationRun": false,
+    "realForeignOsAccountPipeConnectionRun": false,
+    "hardwarePowerLossOrPhysicalDiskExhaustionRun": false,
+    "dependencyGraphChanged": false,
+    "dependenciesReinstalled": false
+  },
+  "limitations": [
+    "Approval persists an operator/user/public-key identity and explicit database grants. It issues no token, pairing code, Cookie or business session. Public-key login remains DR-P2.",
+    "Approval fixtures use explicitly trusted candidate storage input. The actual WebAuthn library is exercised separately by the runtime tests; end-to-end virtual-authenticator registration/pending/approval remains DR-P1.6.",
+    "None attestation establishes neither hardware provenance nor private-key possession. Administrators must corroborate the request and key fingerprint out of band.",
+    "OS identity rules have positive and negative pure tests plus native owner pipe/CLI tests. No second Windows account was created for a real foreign-SID pipe attempt.",
+    "Existing V2 credentials without grants have no grants and cannot inherit bearer permissions. New immutable grants fields are refused by older V2 readers; direct binary downgrade is unsupported.",
+    "Global revision includes persistent audit writes. After a conflict, refresh and review; do not automatically replay approval. Journaled write failure may already have committed and requires reopen/inspection.",
+    "Node 24.22.1 on Windows tested. Node 22, Windows Hello, new two-machine authentication, production capacity, full release installation, physical disk exhaustion and hardware power loss are untested.",
+    "No UI or translation change. Existing test/** lint/format exclusions remain; test execution and strict type checks are recorded independently. Existing dist is unchanged; common/core declarations reuse the installed build.",
+    "D15 dependency installation evidence is preserved as historical evidence only. No dependency graph or lock changed and no installation was performed in D16."
+  ],
+  "nextTask": "DR-P1.6"
+}

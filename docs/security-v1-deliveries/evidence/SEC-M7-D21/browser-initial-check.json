@@ -1,0 +1,27 @@
+{
+  "format": "modeldb.authentication-integration-check.v1",
+  "ok": false,
+  "task": "DR-P2.2",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Flow-Report-zBcRBd",
+  "command": [
+    "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-authentication-browser.test.ts"
+  ],
+  "exitCode": 1,
+  "durationMs": 19725.8322,
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Flow-Report-zBcRBd\\integration.tap",
+  "errorCode": "AUTHENTICATION_INTEGRATION_PROCESS_FAILED",
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "productionRegistrationUiTested": false,
+    "publicKeyLoginImplemented": true,
+    "systemTrustInstalled": false
+  }
+}

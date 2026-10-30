@@ -1,0 +1,218 @@
+TAP version 13
+# Subtest: V1 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+ok 1 - V1 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+  ---
+  duration_ms: 150.343
+  type: 'test'
+  ...
+# Subtest: V2 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+ok 2 - V2 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+  ---
+  duration_ms: 150.1907
+  type: 'test'
+  ...
+# Subtest: V3 API issuance, invitation, rotation and revocation preserve the API namespace
+ok 3 - V3 API issuance, invitation, rotation and revocation preserve the API namespace
+  ---
+  duration_ms: 123.4565
+  type: 'test'
+  ...
+# Subtest: local management remains empty-scope and cannot be rotated or paired into a reusable API identity
+ok 4 - local management remains empty-scope and cannot be rotated or paired into a reusable API identity
+  ---
+  duration_ms: 97.5382
+  type: 'test'
+  ...
+# Subtest: registered parent resolves only its own live grants and never mints or inherits API credentials
+ok 5 - registered parent resolves only its own live grants and never mints or inherits API credentials
+  ---
+  duration_ms: 108.075
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after disabled-key
+ok 6 - registered parent fails closed after disabled-key
+  ---
+  duration_ms: 86.4968
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after revoked-key
+ok 7 - registered parent fails closed after revoked-key
+  ---
+  duration_ms: 89.8377
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after disabled-user
+ok 8 - registered parent fails closed after disabled-user
+  ---
+  duration_ms: 88.7038
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after disabled-principal
+ok 9 - registered parent fails closed after disabled-principal
+  ---
+  duration_ms: 88.3529
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after expired
+ok 10 - registered parent fails closed after expired
+  ---
+  duration_ms: 101.8705
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after reset
+ok 11 - registered parent fails closed after reset
+  ---
+  duration_ms: 96.5864
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: missing parent
+ok 12 - rejects malformed persisted parent: missing parent
+  ---
+  duration_ms: 85.5457
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: null parent
+ok 13 - rejects malformed persisted parent: null parent
+  ---
+  duration_ms: 83.7558
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: unknown kind
+ok 14 - rejects malformed persisted parent: unknown kind
+  ---
+  duration_ms: 85.6012
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: foreign credential
+ok 15 - rejects malformed persisted parent: foreign credential
+  ---
+  duration_ms: 84.5182
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: foreign user
+ok 16 - rejects malformed persisted parent: foreign user
+  ---
+  duration_ms: 83.9291
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: foreign principal
+ok 17 - rejects malformed persisted parent: foreign principal
+  ---
+  duration_ms: 83.7993
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: API namespace confusion
+ok 18 - rejects malformed persisted parent: API namespace confusion
+  ---
+  duration_ms: 83.9188
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: management namespace confusion
+ok 19 - rejects malformed persisted parent: management namespace confusion
+  ---
+  duration_ms: 85.011
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with admin flag
+ok 20 - rejects malformed persisted parent: public key with admin flag
+  ---
+  duration_ms: 87.1468
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with wrong Origin
+ok 21 - rejects malformed persisted parent: public key with wrong Origin
+  ---
+  duration_ms: 85.3037
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with no absolute expiry
+ok 22 - rejects malformed persisted parent: public key with no absolute expiry
+  ---
+  duration_ms: 83.5557
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with long lifetime
+ok 23 - rejects malformed persisted parent: public key with long lifetime
+  ---
+  duration_ms: 82.0591
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with long absolute expiry
+ok 24 - rejects malformed persisted parent: public key with long absolute expiry
+  ---
+  duration_ms: 91.6314
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: secret on parent
+ok 25 - rejects malformed persisted parent: secret on parent
+  ---
+  duration_ms: 85.0185
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: secret on session
+ok 26 - rejects malformed persisted parent: secret on session
+  ---
+  duration_ms: 84.9958
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key pairing
+not ok 27 - rejects malformed persisted parent: public key pairing
+  ---
+  duration_ms: 95.7505
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12530'
+  failureType: 'testCodeFailure'
+  error: 'Missing expected exception.'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    code: 'SECURITY_STORE_INVALID'
+  operator: 'throws'
+  stack: |-
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:199:14)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+    Test.run (node:internal/test_runner/test:1467:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: rejects malformed persisted parent: downgraded root with new parent
+ok 28 - rejects malformed persisted parent: downgraded root with new parent
+  ---
+  duration_ms: 84.2997
+  type: 'test'
+  ...
+# Subtest: session migration and audit recover atomically at staged
+ok 29 - session migration and audit recover atomically at staged
+  ---
+  duration_ms: 102.2516
+  type: 'test'
+  ...
+# Subtest: session migration and audit recover atomically at journaled
+ok 30 - session migration and audit recover atomically at journaled
+  ---
+  duration_ms: 114.0131
+  type: 'test'
+  ...
+# Subtest: session migration and audit recover atomically at replaced
+ok 31 - session migration and audit recover atomically at replaced
+  ---
+  duration_ms: 109.3369
+  type: 'test'
+  ...
+# Subtest: protection and audit failures never report a successful migration
+ok 32 - protection and audit failures never report a successful migration
+  ---
+  duration_ms: 57.0142
+  type: 'test'
+  ...
+1..32
+# tests 32
+# suites 0
+# pass 31
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3365.6083

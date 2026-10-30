@@ -1,0 +1,62 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): 5bb96a238d795b3f2b93d9d72b9ab0332aca6a614c4df2be510689b9cc20732b
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:52181
+#   ➜ Local:   https://localhost:52181/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:52181
+#     HTTP RPC:  https://modeldb-a.example.test:52181/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:52181/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-mvh8ja\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-mvh8ja\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-mvh8ja\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-mvh8ja\\modeldb.config.json"
+# [modeldb-server] storage fingerprint (sha256): 5bb96a238d795b3f2b93d9d72b9ab0332aca6a614c4df2be510689b9cc20732b
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:52181
+#   ➜ Local:   https://localhost:52181/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:52181
+#     HTTP RPC:  https://modeldb-a.example.test:52181/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:52181/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-mvh8ja\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-mvh8ja\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-mvh8ja\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-mvh8ja\\modeldb.config.json"
+# [modeldb-server] storage fingerprint (sha256): 5bb96a238d795b3f2b93d9d72b9ab0332aca6a614c4df2be510689b9cc20732b
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:52181
+#   ➜ Local:   https://localhost:52181/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:52181
+#     HTTP RPC:  https://modeldb-a.example.test:52181/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:52181/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-mvh8ja\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-mvh8ja\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-mvh8ja\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-mvh8ja\\modeldb.config.json"
+# Subtest: required Chrome WebAuthn get, fresh SDK, native TLS/DPAPI approval and cookie recovery/refresh/logout
+ok 1 - required Chrome WebAuthn get, fresh SDK, native TLS/DPAPI approval and cookie recovery/refresh/logout
+  ---
+  duration_ms: 103204.6579
+  type: 'test'
+  ...
+# {"format":"modeldb.authentication-browser.v1","ok":true,"browser":"Chrome/156.0.8078.48","checks":{"actualBrowserWebAuthnGet":true,"freshSdkBundle":true,"nativeTlsDpapiApproval":true,"pendingDenied":true,"httpOnlySecureStrict":true,"dataScope":true,"adminDenied":true,"reloadRecovery":true,"csrfRotation":true,"logout":true,"restartRecovery":true,"disabledNewLogin":true,"expiredRegistrationIndependent":true,"noApiCredential":true,"instanceKeyUnchanged":true},"hardwareAuthenticatorTested":false,"systemTrustInstalled":false}
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 109093.2774

@@ -1,0 +1,107 @@
+
+════════════════════════════════════════════════════════════
+  0. Reset workspace + logical library directory
+════════════════════════════════════════════════════════════
+  ✓ workspace C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\multi_branch_workspace ready
+
+════════════════════════════════════════════════════════════
+  1. AuthoringEngine: two independent 2-hop chains from Hub
+════════════════════════════════════════════════════════════
+  ✓ Hub→Dept→Member and Hub→Tag→Color seeded
+
+════════════════════════════════════════════════════════════
+  2. Start ModelDB server
+════════════════════════════════════════════════════════════
+[modeldb-server] storage fingerprint (sha256): 92537ede77de5914ea708f92a2ad693917d0872c99a00db4900d82a5b34bd571
+[ModelDB] Engine is running
+  Listen: 127.0.0.1:56982
+  ➜ Local:   http://localhost:56982/ (本机访问)
+  Direct client addresses:
+    HTTP:      http://127.0.0.1:56982 (HTTP API 根地址)
+    Action:    http://127.0.0.1:56982/v2/action (单次操作接口)
+    Bulk:      http://127.0.0.1:56982/v2/bulk (批量操作接口)
+    Health:    http://127.0.0.1:56982/health (健康检查)
+    Status:    http://127.0.0.1:56982/api/v1/management/status (引擎状态)
+    WebSocket: ws://127.0.0.1:56982/ (实时 RPC)
+    Stream:    ws://127.0.0.1:56982/v2/stream (流式 RPC)
+
+  Console commands:
+    Stop:      Ctrl+C
+    Status:    modeldb-server info -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\multi_branch_workspace\modeldb.config.json"
+    Databases: modeldb-server ls -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\multi_branch_workspace\modeldb.config.json"
+    Create DB: modeldb-server create-db <db-name> -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\multi_branch_workspace\modeldb.config.json"
+    Backup:    modeldb-server backup <db-name> --reason manual -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\multi_branch_workspace\modeldb.config.json"
+
+  Note: management URLs require the configured connect token in the request header.
+  Remote access: disabled by the loopback bind. Start with --host 0.0.0.0 for direct LAN access.
+  ✓ listening on 127.0.0.1:56982
+[ModeDB] START Connection: open websocket trace=8866ed1e
+  说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+  请求摘要: { url: 'ws://127.0.0.1:56982/v2/stream' }
+[modeldb-server] connect 127.0.0.1
+[ModeDB] OK Connection: open websocket trace=8866ed1e 5.37ms
+  结果: { ms: 5.37, url: 'ws://127.0.0.1:56982/v2/stream' }
+[ModeDB] START WebSocket RPC: handshake trace=219fdc32
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: { database: 'multi_branch_network' }
+[ModeDB] OK WebSocket RPC: handshake trace=219fdc32 785.14ms
+  结果: { ms: 785.14, database: 'multi_branch_network' }
+
+════════════════════════════════════════════════════════════
+  3. Data network: two deep branches from one Hub via group(...build)
+════════════════════════════════════════════════════════════
+[ModeDB] START WebSocket RPC: executeQuery trace=b990e424
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: 'e62afd71-ca12-417c-b7ef-761631df52ac',
+    database: 'multi_branch_network',
+    op: 'executeQuery',
+    model: 'Hub',
+    page: 0,
+    cursor: undefined,
+    limit: undefined
+  }
+[modeldb-server][rpc] START executeQuery db=multi_branch_network id=e62afd71-ca12-417c-b7ef-761631df52ac {
+  op: 'executeQuery',
+  model: 'Hub',
+  page: 0,
+  cursor: undefined,
+  limit: undefined
+}
+[modeldb-server][rpc] OK executeQuery db=multi_branch_network id=e62afd71-ca12-417c-b7ef-761631df52ac 763.69ms { kind: 'rows', rows: 1 }
+[ModeDB] OK WebSocket RPC: executeQuery trace=b990e424 765.39ms
+  结果: { ms: 765.39, kind: 'rows', rows: 1 }
+  ✓ single Hub at top level (subject preserved by group), got 1
+  ✓ branch-1 level-1: depts = [Engineering, Sales]
+  ✓ branch-1 level-2: Engineering.members = [Ann, Bob]
+  ✓ branch-2 level-1: tags = [backlog, urgent]
+  ✓ branch-2 level-2: urgent.colors = [#f00]
+  ✓ both branches coexist under the same Hub (a data network, not a single chain)
+
+════════════════════════════════════════════════════════════
+  4. relate(name, target, build): forward spine with a nested sub-chain
+════════════════════════════════════════════════════════════
+[ModeDB] START WebSocket RPC: executeQuery trace=9e6b27ef
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '17bcfddd-e4f5-4e53-9349-11e430a92a8b',
+    database: 'multi_branch_network',
+    op: 'executeQuery',
+    model: 'Hub',
+    page: 0,
+    cursor: undefined,
+    limit: undefined
+  }
+[modeldb-server][rpc] START executeQuery db=multi_branch_network id=17bcfddd-e4f5-4e53-9349-11e430a92a8b {
+  op: 'executeQuery',
+  model: 'Hub',
+  page: 0,
+  cursor: undefined,
+  limit: undefined
+}
+[modeldb-server][rpc] OK executeQuery db=multi_branch_network id=17bcfddd-e4f5-4e53-9349-11e430a92a8b 0.48ms { kind: 'rows', rows: 1 }
+[ModeDB] OK WebSocket RPC: executeQuery trace=9e6b27ef 1.35ms
+  结果: { ms: 1.35, kind: 'rows', rows: 1 }
+  ✓ relate build sub-chain: Sales.members = [Cara]
+
+multi-branch-network: 10 passed, 0 failed

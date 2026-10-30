@@ -1,0 +1,76 @@
+{
+  "format": "modeldb.security-performance-registration.v1",
+  "registeredAt": "2026-10-28T13:20:45.587Z",
+  "methodSha256": "48bfecff115e4aa0794424d2f0fdd07c87746a3d08b3d450b0934fbb47738c98",
+  "sourceSha256": "825e9c69e211dc89edf34e03554b185b2e784cffe312d1435476cdd17934c9e4",
+  "candidateSha256": "f4ac0c00af6737fad960fcb5d12d3a418b7edae56154d568b2fdbb7e32f5bec3",
+  "nodeVersion": "v24.15.0",
+  "explorationSha256": "2f6dd3db8c8a3eda188220e2382d1abda43057af158edf722066dcfcb6d65689",
+  "limits": {
+    "A.credentialIssue": {
+      "clientP95Ms": 1250,
+      "serverP95Ms": 1250
+    },
+    "A.query1000": {
+      "clientP95Ms": 2750,
+      "serverP95Ms": 2750
+    },
+    "A.batchSave": {
+      "clientP95Ms": 2500,
+      "serverP95Ms": 2500
+    },
+    "A.static": {
+      "clientP95Ms": 500,
+      "serverP95Ms": 500
+    },
+    "A.revoke": {
+      "clientP95Ms": 1250,
+      "serverP95Ms": 1250
+    },
+    "A.revocationProbe": {
+      "clientP95Ms": 1500,
+      "serverP95Ms": 1500
+    },
+    "B.registrationStart": {
+      "clientP95Ms": 1250,
+      "serverP95Ms": 1250
+    },
+    "B.registrationProof": {
+      "clientP95Ms": 2500,
+      "serverP95Ms": 2500
+    },
+    "B.login": {
+      "clientP95Ms": 3750,
+      "serverP95Ms": 3750
+    },
+    "B.refresh": {
+      "clientP95Ms": 1500,
+      "serverP95Ms": 1500
+    },
+    "B.query1000": {
+      "clientP95Ms": 2750,
+      "serverP95Ms": 2750
+    },
+    "B.batchSave": {
+      "clientP95Ms": 2750,
+      "serverP95Ms": 2750
+    },
+    "B.static": {
+      "clientP95Ms": 500,
+      "serverP95Ms": 500
+    },
+    "B.revoke": {
+      "clientP95Ms": 1500,
+      "serverP95Ms": 1500
+    },
+    "B.revocationProbe": {
+      "clientP95Ms": 1250,
+      "serverP95Ms": 1250
+    }
+  },
+  "nodeRssMiB": 1024,
+  "nodeCpuMaxMs": 10000,
+  "queueMaxMs": 1000,
+  "localRepairMaxMs": 15000,
+  "floodMaxRequestMs": 60000
+}

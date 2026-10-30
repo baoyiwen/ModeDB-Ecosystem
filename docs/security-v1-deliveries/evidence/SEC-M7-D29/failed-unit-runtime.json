@@ -1,0 +1,5 @@
+{
+  "status": "interrupted",
+  "reason": "Bundled Node 24.22.1 stalled in the isolated security-registry-http.test.ts; only the three verified test processes were stopped. Revalidation uses normal Windows Node with a per-test timeout.",
+  "liveServiceStopped": false
+}

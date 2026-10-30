@@ -1,0 +1,78 @@
+{
+  "format": "modeldb.hosting-integration-check.v1",
+  "task": "DR-P3.1",
+  "ok": true,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-QJfyBf",
+  "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-QJfyBf\\designer-build",
+  "screenshots": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-QJfyBf\\screenshots",
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-QJfyBf\\integration.tap",
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-hosting-browser.test.ts"
+  ],
+  "exitCode": 0,
+  "unit": {
+    "pass": 2,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "native": {
+    "format": "modeldb.hosting-native.v1",
+    "ok": true,
+    "checks": {
+      "nativeDpapi": true,
+      "osAuthenticatedPipe": true,
+      "exactLiveAddress": true,
+      "dataManagementSeparated": true,
+      "anonymousAdminDenied": true,
+      "legacyLaunchBlocked": true,
+      "cookieRestartRecovery": true,
+      "closeReleasesBothPorts": true,
+      "bindFailuresReleaseRegistryAndPipe": true,
+      "invalidBuildRejected": true
+    },
+    "liveMaterialRead": false
+  },
+  "browser": {
+    "format": "modeldb.hosting-browser.v1",
+    "ok": true,
+    "browser": "Chrome/156.0.8078.48",
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "checks": {
+      "freshDesignerBuild": true,
+      "cspRunsApplication": true,
+      "sameOriginData": true,
+      "osLaunchFragmentRemoved": true,
+      "httpOnlyStrict": true,
+      "csrfRequired": true,
+      "managementOnly": true,
+      "reloadRecovery": true,
+      "refreshAndLogout": true,
+      "localizedZhEnJa": true,
+      "wideAndNarrow": true,
+      "accessibleLanguageControl": true
+    },
+    "screenshots": 12,
+    "liveMaterialRead": false
+  },
+  "build": {
+    "configFile": false,
+    "envFile": false,
+    "existingDistUnchanged": true
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "productionRegistrationUiTested": false
+  }
+}

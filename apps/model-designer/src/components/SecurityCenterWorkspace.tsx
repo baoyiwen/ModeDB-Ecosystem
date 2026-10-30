@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import {
   ConnectionSecurityError,
+  connectionOrigin,
   exportSecurityAudit,
   getSecurityAudit,
   getBrowserSession,
@@ -11,11 +12,18 @@ import {
 } from '@mode-db/sdk';
 import { connectionSecurityIssue } from '@mode-db/sdk';
 import { useDesigner } from '../context/designer-context.js';
-import { getStoredHost, getStoredPort } from '../config/connection-prefs.js';
+import { getStoredHost, getStoredPort, getHostedBrowserRole } from '../config/connection-prefs.js';
 import { SecurityProtectionPanel } from './SecurityProtectionPanel.js';
+import { LanguageSelector } from './LanguageSelector.js';
+import { RegisteredIdentityPanel } from './RegisteredIdentityPanel.js';
+import { DeploymentWizardPanel } from './DeploymentWizardPanel.js';
+import { RecipientKeysPanel } from './RecipientKeysPanel.js';
 
 type Section =
   | 'overview'
+  | 'registered'
+  | 'recipients'
+  | 'deployment'
   | 'principals'
   | 'credentials'
   | 'sessions'
@@ -59,6 +67,9 @@ const EMPTY_AUDIT_DRAFT: AuditFilterDraft = {
 
 const sections: readonly Section[] = [
   'overview',
+  'registered',
+  'recipients',
+  'deployment',
   'principals',
   'credentials',
   'sessions',
@@ -77,6 +88,8 @@ export function SecurityCenterWorkspace({
   onDisconnect,
 }: { onDisconnect?: () => void } = {}): ReactElement {
   const { i18n } = useDesigner();
+  const [, redraw] = useState(0);
+  useEffect(() => i18n.subscribe(() => redraw((value) => value + 1)), [i18n]);
   const [section, setSection] = useState<Section>('overview');
   const [overview, setOverview] = useState<SecurityCenterOverview>();
   const [audit, setAudit] = useState<SecurityAuditPage>();
@@ -239,6 +252,25 @@ export function SecurityCenterWorkspace({
       );
     }
 
+    if (section === 'registered') {
+      return (
+        <RegisteredIdentityPanel
+          instanceId={registry.status.instanceId}
+          refreshKey={registry.status.revision}
+        />
+      );
+    }
+    if (section === 'deployment') {
+      return <DeploymentWizardPanel />;
+    }
+    if (section === 'recipients') {
+      return (
+        <RecipientKeysPanel
+          key={registry.status.instanceId}
+          instanceId={registry.status.instanceId}
+        />
+      );
+    }
     if (section === 'overview') {
       const metrics = [
         [t('securityCenterPrincipals'), registry.status.principals],
@@ -741,27 +773,41 @@ export function SecurityCenterWorkspace({
   };
 
   const sectionTitle = (value: Section): string => t(`securityCenterTab_${value}`);
+  let serverAddress = t('securityCenterUnavailable');
+  try {
+    serverAddress = connectionOrigin({
+      host: getStoredHost('127.0.0.1'),
+      port: getStoredPort(9090),
+    });
+  } catch {
+    // An invalid saved endpoint must not expose URL credentials or break the access-error page.
+  }
 
   return (
-    <div className="security-center-workspace">
+    <div className="security-center-workspace" lang={i18n.locale}>
       <aside className="security-center-navigation">
         <div className="security-center-navigation-title">
           <strong>{t('securityCenterTitle')}</strong>
-          <span>
-            {getStoredHost('127.0.0.1')}:{getStoredPort(9090)}
-          </span>
+          <span title={serverAddress}>{serverAddress}</span>
         </div>
+        <LanguageSelector />
         <nav aria-label={t('securityCenterTitle')}>
-          {sections.map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-current={section === value ? 'page' : undefined}
-              onClick={() => setSection(value)}
-            >
-              {sectionTitle(value)}
-            </button>
-          ))}
+          {sections
+            .filter(
+              (value) =>
+                !['registered', 'recipients'].includes(value) ||
+                getHostedBrowserRole() === 'management',
+            )
+            .map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-current={section === value ? 'page' : undefined}
+                onClick={() => setSection(value)}
+              >
+                {sectionTitle(value)}
+              </button>
+            ))}
         </nav>
         {onDisconnect ? (
           <button type="button" className="designer-btn" onClick={onDisconnect}>
@@ -784,6 +830,25 @@ export function SecurityCenterWorkspace({
             {t('securityCenterRefresh')}
           </button>
         </header>
+        {onDisconnect && getHostedBrowserRole() !== 'management' ? (
+          <details className="security-center-design-guide">
+            <summary>{t('securityCenterDesignGuide')}</summary>
+            <div>
+              <p>{t('securityCenterDesignBoundary')}</p>
+              <ol>
+                <li>{t('securityCenterDesignLocal')}</li>
+                <li>{t('securityCenterDesignRemote')}</li>
+                <li>{t('securityCenterDesignChoose')}</li>
+              </ol>
+              <p>{t('securityCenterDesignCommandHint')}</p>
+              <code>
+                {
+                  'modeldb-server security browser-open -c <config> --url <designer-url> --server <server-origin> --databases <business-db>'
+                }
+              </code>
+            </div>
+          </details>
+        ) : null}
         <div className="security-center-content">{content()}</div>
       </main>
     </div>

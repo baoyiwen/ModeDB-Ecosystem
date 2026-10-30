@@ -1,0 +1,202 @@
+{
+  "format": "modeldb.security-performance.v1",
+  "phase": "explore",
+  "ok": false,
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Performance-z24K0I",
+  "startedAt": "2026-10-28T10:23:59.463Z",
+  "finishedAt": "2026-10-28T10:24:30.010Z",
+  "platform": "win32",
+  "nodeVersion": "v24.15.0",
+  "method": {
+    "format": "modeldb.security-performance-method.v1",
+    "order": [
+      "A",
+      "B",
+      "B",
+      "A"
+    ],
+    "baseline": "registry API credential",
+    "candidate": "registry software WebAuthn and browser session",
+    "rows": 1000,
+    "batchRows": 10,
+    "concurrency": 1,
+    "warmupQueriesPerBlock": 2,
+    "counts": {
+      "registrationStart": 30,
+      "registrationProof": 30,
+      "login": 60,
+      "refresh": 30,
+      "query1000": 60,
+      "batchSave": 12,
+      "static": 30,
+      "revoke": 30,
+      "revocationProbe": 30
+    },
+    "baselineCounts": {
+      "credentialIssue": 30,
+      "query1000": 60,
+      "batchSave": 12,
+      "static": 30,
+      "revoke": 30,
+      "revocationProbe": 30
+    },
+    "floodRequests": 48,
+    "floodConcurrency": 48,
+    "pendingCapacity": 1000,
+    "tls": "new verified loopback TLS connection per request; no TLS session reuse",
+    "resources": "server Node process CPU and peak RSS; DPAPI child wall time included, child CPU/RSS unmeasured",
+    "userVerification": "software only; PIN/biometric/touch time excluded and unmeasured",
+    "audit": "normal durable registry audit; no audit or OS protection bypass"
+  },
+  "sourceSha256": "161d703ed1348c79f2e1755f16f431ae1ed0c41efaf9267a2e9c78ef7d161256",
+  "candidateSha256": "f4ac0c00af6737fad960fcb5d12d3a418b7edae56154d568b2fdbb7e32f5bec3",
+  "sourceUnchanged": true,
+  "blocks": [],
+  "samples": [
+    {
+      "id": "0-credentialIssue-7",
+      "group": "A",
+      "block": 0,
+      "scenario": "credentialIssue",
+      "ok": true,
+      "serverMs": 752.0522000000019,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 0,
+      "verificationMs": 0,
+      "nodeCpuMs": 15,
+      "nodeRssMiB": 137.85546875,
+      "clientMs": 752.7921999999999
+    },
+    {
+      "id": "0-query1000-8",
+      "group": "A",
+      "block": 0,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1526.4579999999987,
+      "queueMs": 0,
+      "protectionMs": 1501.9419999999955,
+      "verificationMs": 0,
+      "nodeCpuMs": 79,
+      "nodeRssMiB": 137.85546875,
+      "tlsMs": 1.2039000000004307,
+      "clientMs": 1530.9830000000002
+    },
+    {
+      "id": "0-query1000-9",
+      "group": "A",
+      "block": 0,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1518.4446000000025,
+      "queueMs": 0,
+      "protectionMs": 1489.8514000000032,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 137.85546875,
+      "tlsMs": 1.219600000000355,
+      "clientMs": 1523.3525999999983
+    }
+  ],
+  "summary": {
+    "A.credentialIssue": {
+      "count": 1,
+      "failures": 0,
+      "clientMs": {
+        "p50": 752.7921999999999,
+        "p95": 752.7921999999999,
+        "max": 752.7921999999999
+      },
+      "serverMs": {
+        "p50": 752.0522000000019,
+        "p95": 752.0522000000019,
+        "max": 752.0522000000019
+      },
+      "tlsMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 15,
+        "p95": 15,
+        "max": 15
+      },
+      "nodeRssMiB": {
+        "p50": 137.85546875,
+        "p95": 137.85546875,
+        "max": 137.85546875
+      }
+    },
+    "A.query1000": {
+      "count": 2,
+      "failures": 0,
+      "clientMs": {
+        "p50": 1523.3525999999983,
+        "p95": 1530.9830000000002,
+        "max": 1530.9830000000002
+      },
+      "serverMs": {
+        "p50": 1518.4446000000025,
+        "p95": 1526.4579999999987,
+        "max": 1526.4579999999987
+      },
+      "tlsMs": {
+        "p50": 1.2039000000004307,
+        "p95": 1.219600000000355,
+        "max": 1.219600000000355
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 1489.8514000000032,
+        "p95": 1501.9419999999955,
+        "max": 1501.9419999999955
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 0,
+        "p95": 79,
+        "max": 79
+      },
+      "nodeRssMiB": {
+        "p50": 137.85546875,
+        "p95": 137.85546875,
+        "max": 137.85546875
+      }
+    }
+  },
+  "errorCode": "PERFORMANCE_CHECK_FAILED",
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "realTwoDeviceTested": false,
+    "productionCapacityClaimed": false,
+    "childProcessResourcesMeasured": false,
+    "frontendChanged": false
+  }
+}

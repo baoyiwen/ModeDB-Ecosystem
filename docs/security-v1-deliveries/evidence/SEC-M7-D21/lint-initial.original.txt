@@ -1,0 +1,26 @@
+
+C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-maintenance.ts
+   56:52  error  Expected { after 'while' condition  curly
+   62:21  error  Expected { after 'if' condition     curly
+   79:15  error  Expected { after 'if' condition     curly
+  127:27  error  Expected { after 'if' condition     curly
+
+C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts
+   785:35  error  Expected { after 'if' condition  curly
+  1089:49  error  Expected { after 'if' condition  curly
+  1147:17  error  Expected { after 'if' condition  curly
+  1153:18  error  Expected { after 'if' condition  curly
+  1155:37  error  Expected { after 'if' condition  curly
+  1157:9   error  Expected { after 'if' condition  curly
+  1164:17  error  Expected { after 'if' condition  curly
+  1168:36  error  Expected { after 'if' condition  curly
+  1175:9   error  Expected { after 'if' condition  curly
+  1189:9   error  Expected { after 'if' condition  curly
+  1195:65  error  Expected { after 'if' condition  curly
+  1203:19  error  Expected { after 'if' condition  curly
+  1209:11  error  Expected { after 'if' condition  curly
+  1217:11  error  Expected { after 'if' condition  curly
+
+✖ 18 problems (18 errors, 0 warnings)
+  18 errors and 0 warnings potentially fixable with the `--fix` option.
+

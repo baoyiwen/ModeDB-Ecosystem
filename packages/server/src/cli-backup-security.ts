@@ -1,7 +1,6 @@
-import { createPublicKey } from 'node:crypto';
 import { closeSync, existsSync, fsyncSync, openSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { assertFlatGraphSegment } from '@mode-db/common';
+import { assertFlatGraphSegment, fileDigest } from '@mode-db/common';
 import {
   createDatabaseBackup,
   importMigrationBackup,
@@ -9,7 +8,7 @@ import {
   readDatabaseBackupFile,
 } from './backup-manager.js';
 import { loadModelDBServerConfig } from './config-loader.js';
-import { backupRecipientId } from './security/backup-package.js';
+import { backupRecipientId, MAX_BACKUP_VAULT_BYTES } from './security/backup-package.js';
 import { createMigrationKey, openMigrationKey } from './security/migration-key.js';
 import { assertRecoveryPath, readRecoveryPassphraseFile } from './security/recovery-material.js';
 import { LocalVaultKeyProvider } from './security/local-vault-key-provider.js';
@@ -17,33 +16,50 @@ import { SecurityRegistry } from './security/security-registry.js';
 import { SecurityError } from './security/security-errors.js';
 import { WindowsSecretProtector } from './security/windows-secret-protector.js';
 import { AuthoringBridge } from './authoring-bridge.js';
+import { selectCliExportRecipient } from './cli-recipient-delivery.js';
+import { recipientDeliveryOptions } from './security/recipient-delivery.js';
 
 export async function runBackupSecurityCli(argv: string[]): Promise<void> {
   const action = argv[0],
     options = new Map<string, string>();
+  const allowed: Record<string, readonly string[]> = {
+    'backup-key-create': ['--output', '--passphrase-file'],
+    'backup-export': [
+      '-c',
+      '--config',
+      '--instance',
+      '--database',
+      '--output',
+      '--public-key',
+      ...recipientDeliveryOptions,
+    ],
+    'backup-import': [
+      '-c',
+      '--config',
+      '--instance',
+      '--database',
+      '--private-key',
+      '--package',
+      '--passphrase-file',
+    ],
+  };
+  if (!action || !Object.hasOwn(allowed, action)) {
+    throw new SecurityError('SECURITY_INVALID_REQUEST');
+  }
   let yes = false;
   for (let index = 1; index < argv.length; index++) {
     const arg = argv[index]!;
     if (arg === '--yes') {
-      if (yes) {
+      if (yes || action === 'backup-key-create') {
         throw new SecurityError('SECURITY_INVALID_REQUEST');
       }
       yes = true;
       continue;
     }
     if (
-      ![
-        '-c',
-        '--config',
-        '--instance',
-        '--database',
-        '--output',
-        '--public-key',
-        '--private-key',
-        '--package',
-        '--passphrase-file',
-      ].includes(arg) ||
+      !allowed[action]!.includes(arg) ||
       !argv[index + 1] ||
+      argv[index + 1]!.startsWith('--') ||
       options.has(arg)
     ) {
       throw new SecurityError('SECURITY_INVALID_REQUEST');
@@ -109,6 +125,7 @@ export async function runBackupSecurityCli(argv: string[]): Promise<void> {
     auditLimit: cfg.securityAudit.maxEvents,
     auditRetentionDays: cfg.securityAudit.retentionDays,
   });
+  let outputAttempted = false;
   try {
     if (registry.status().instanceId !== required('--instance')) {
       throw new SecurityError('SECURITY_CONFIRMATION_REQUIRED');
@@ -116,7 +133,12 @@ export async function runBackupSecurityCli(argv: string[]): Promise<void> {
     const provider = new LocalVaultKeyProvider(directory),
       database = required('--database');
     assertFlatGraphSegment(database, 'database');
+    const selected =
+      action === 'backup-export'
+        ? selectCliExportRecipient(registry, options, required('--instance'), yes, protector)
+        : undefined;
     registry.recordMaintenance('backup.task.started');
+    const deliveryRevision = registry.status().revision;
     let result: unknown;
     if (action === 'backup-export') {
       const output = assertRecoveryPath(required('--output'));
@@ -131,7 +153,13 @@ export async function runBackupSecurityCli(argv: string[]): Promise<void> {
       if (inside(directory) || inside(cfg.storageRoot) || existsSync(output)) {
         throw new SecurityError('SECURITY_INVALID_REQUEST');
       }
-      const recipient = createPublicKey(readBackupBytes(required('--public-key'), 8192));
+      const nested = assertRecoveryPath(join(cfg.storageRoot, database, 'atlas.mld'));
+      const flat = assertRecoveryPath(join(cfg.storageRoot, database + '.mld'));
+      if (existsSync(nested) === existsSync(flat)) {
+        throw new SecurityError('SECURITY_INVALID_REQUEST');
+      }
+      readBackupBytes(existsSync(nested) ? nested : flat, MAX_BACKUP_VAULT_BYTES);
+      const recipient = selected!.key;
       const authoring = new AuthoringBridge(cfg.storageRoot, provider);
       let backup;
       try {
@@ -149,8 +177,26 @@ export async function runBackupSecurityCli(argv: string[]): Promise<void> {
         await authoring.close();
       }
       const file = readDatabaseBackupFile(cfg.storageRoot, backup.fileName, provider);
+      const packageSha256 = fileDigest(file.content);
+      if (selected?.selection) {
+        registry.withLocalActor(selected.sid, () =>
+          registry.recordSealedRecipientDelivery(
+            { ...selected.selection, revision: deliveryRevision },
+            database,
+            'backup',
+            packageSha256,
+          ),
+        );
+      }
+      outputAttempted = true;
       writeNew(output, file.content);
-      result = { ok: true, recipientId: backupRecipientId(recipient), backup };
+      result = {
+        ok: true,
+        recipientId: backupRecipientId(recipient),
+        packageSha256,
+        ...(selected?.recipient ? { recipient: selected.recipient } : {}),
+        backup,
+      };
     } else if (action === 'backup-import') {
       const privatePath = assertRecoveryPath(required('--private-key'));
       protector.ensureDirectory(dirname(privatePath));
@@ -173,6 +219,9 @@ export async function runBackupSecurityCli(argv: string[]): Promise<void> {
       registry.recordMaintenance('backup.task.failed');
     } catch {
       /* Preserve the original failure. */
+    }
+    if (outputAttempted) {
+      throw new SecurityError('SECURITY_OUTCOME_UNCONFIRMED');
     }
     throw error;
   } finally {

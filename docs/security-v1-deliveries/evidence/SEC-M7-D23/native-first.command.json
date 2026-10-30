@@ -1,0 +1,7 @@
+{
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "scripts/security-hosting-integration-check.mjs"
+  ],
+  "exitCode": 1
+}

@@ -1,0 +1,72 @@
+{
+  "format": "modeldb.identity-admin-check.v1",
+  "task": "DR-P3.3",
+  "ok": true,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-S23iLU",
+  "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-S23iLU\\designer-build",
+  "screenshots": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-S23iLU\\screenshots",
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-S23iLU\\integration.tap",
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-identity-admin-browser.test.ts"
+  ],
+  "exitCode": 0,
+  "unit": {
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skip": 0,
+    "todo": 0
+  },
+  "browser": {
+    "format": "modeldb.identity-admin-browser.v1",
+    "ok": true,
+    "browser": "Chrome/156.0.8078.48",
+    "screenshots": 24,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "liveMaterialRead": false,
+    "checks": {
+      "freshDesignerBuild": true,
+      "nativeDpapi": true,
+      "osPairedManagement": true,
+      "uiApproval": true,
+      "uiRejection": true,
+      "exactGrants": true,
+      "approvalRequiresLogin": true,
+      "actualWebAuthnLogin": true,
+      "dataListenerDenied": true,
+      "uiUserMaintenance": true,
+      "uiCredentialMaintenance": true,
+      "uiRestriction": true,
+      "uiReplacement": true,
+      "uiSessionRevoke": true,
+      "explicitConfirmation": true,
+      "conflictRequiresReload": true,
+      "noAutomaticRetry": true,
+      "pagination": true,
+      "localizedZhEnJa": true,
+      "wideAndNarrow": true,
+      "labelsAndFocus": true
+    }
+  },
+  "build": {
+    "ok": true,
+    "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-S23iLU\\designer-build",
+    "configFile": false,
+    "envFile": false,
+    "existingDistUnchanged": true
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "identityMaintenanceUiTested": true
+  }
+}

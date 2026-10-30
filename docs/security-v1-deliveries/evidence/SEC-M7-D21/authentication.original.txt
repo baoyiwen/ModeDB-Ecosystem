@@ -1,0 +1,340 @@
+TAP version 13
+# Subtest: V1 migration to V4 is explicit, CAS, atomic, preserves old credentials and is idempotent
+ok 1 - V1 migration to V4 is explicit, CAS, atomic, preserves old credentials and is idempotent
+  ---
+  duration_ms: 240.4777
+  type: 'test'
+  ...
+# Subtest: V2 migration to V4 is explicit, CAS, atomic, preserves old credentials and is idempotent
+ok 2 - V2 migration to V4 is explicit, CAS, atomic, preserves old credentials and is idempotent
+  ---
+  duration_ms: 259.3949
+  type: 'test'
+  ...
+# Subtest: V3 migration to V4 is explicit, CAS, atomic, preserves old credentials and is idempotent
+ok 3 - V3 migration to V4 is explicit, CAS, atomic, preserves old credentials and is idempotent
+  ---
+  duration_ms: 244.0397
+  type: 'test'
+  ...
+# Subtest: V4 migration recovery at staged
+ok 4 - V4 migration recovery at staged
+  ---
+  duration_ms: 161.1319
+  type: 'test'
+  ...
+# Subtest: V4 migration recovery at journaled
+ok 5 - V4 migration recovery at journaled
+  ---
+  duration_ms: 156.9015
+  type: 'test'
+  ...
+# Subtest: V4 migration recovery at replaced
+ok 6 - V4 migration recovery at replaced
+  ---
+  duration_ms: 170.3865
+  type: 'test'
+  ...
+# Subtest: reject malformed authentication persistence: missing-store
+ok 7 - reject malformed authentication persistence: missing-store
+  ---
+  duration_ms: 116.3345
+  type: 'test'
+  ...
+# Subtest: reject malformed authentication persistence: unknown-field
+ok 8 - reject malformed authentication persistence: unknown-field
+  ---
+  duration_ms: 124.708
+  type: 'test'
+  ...
+# Subtest: reject malformed authentication persistence: future-version
+ok 9 - reject malformed authentication persistence: future-version
+  ---
+  duration_ms: 112.2983
+  type: 'test'
+  ...
+# Subtest: reject malformed authentication persistence: downgrade-with-store
+ok 10 - reject malformed authentication persistence: downgrade-with-store
+  ---
+  duration_ms: 147.0688
+  type: 'test'
+  ...
+# Subtest: login commit failure never exposes a session; restart does not retry the claimed proof
+ok 11 - login commit failure never exposes a session; restart does not retry the claimed proof
+  ---
+  duration_ms: 498.139
+  type: 'test'
+  ...
+# Subtest: absolute eight-hour expiry survives repeated sliding refreshes
+ok 12 - absolute eight-hour expiry survives repeated sliding refreshes
+  ---
+  duration_ms: 543.7836
+  type: 'test'
+  ...
+# Subtest: verified login, counter and audit recover atomically after staged
+ok 13 - verified login, counter and audit recover atomically after staged
+  ---
+  duration_ms: 316.9329
+  type: 'test'
+  ...
+# Subtest: verified login, counter and audit recover atomically after journaled
+ok 14 - verified login, counter and audit recover atomically after journaled
+  ---
+  duration_ms: 297.6124
+  type: 'test'
+  ...
+# Subtest: verified login, counter and audit recover atomically after replaced
+ok 15 - verified login, counter and audit recover atomically after replaced
+  ---
+  duration_ms: 294.1688
+  type: 'test'
+  ...
+# Subtest: 1000 retained login challenges fail closed; expired records reclaim capacity and local list still works
+ok 16 - 1000 retained login challenges fail closed; expired records reclaim capacity and local list still works
+  ---
+  duration_ms: 373.5497
+  type: 'test'
+  ...
+# Subtest: real -7 signature issues only a public-key child, with recovery, rotation, CSRF and logout
+ok 17 - real -7 signature issues only a public-key child, with recovery, rotation, CSRF and logout
+  ---
+  duration_ms: 727.9364
+  type: 'test'
+  ...
+# Subtest: real -257 signature issues only a public-key child, with recovery, rotation, CSRF and logout
+ok 18 - real -257 signature issues only a public-key child, with recovery, rotation, CSRF and logout
+  ---
+  duration_ms: 388.3896
+  type: 'test'
+  ...
+# Subtest: reject wrong challenge even with a valid signature
+ok 19 - reject wrong challenge even with a valid signature
+  ---
+  duration_ms: 265.0247
+  type: 'test'
+  ...
+# Subtest: reject wrong origin even with a valid signature
+ok 20 - reject wrong origin even with a valid signature
+  ---
+  duration_ms: 227.7449
+  type: 'test'
+  ...
+# Subtest: reject wrong type even with a valid signature
+ok 21 - reject wrong type even with a valid signature
+  ---
+  duration_ms: 292.6338
+  type: 'test'
+  ...
+# Subtest: reject iframe even with a valid signature
+ok 22 - reject iframe even with a valid signature
+  ---
+  duration_ms: 256.0014
+  type: 'test'
+  ...
+# Subtest: reject topOrigin even with a valid signature
+ok 23 - reject topOrigin even with a valid signature
+  ---
+  duration_ms: 265.5196
+  type: 'test'
+  ...
+# Subtest: reject missing presence/UV or changed device type: 0
+ok 24 - reject missing presence/UV or changed device type: 0
+  ---
+  duration_ms: 273.2283
+  type: 'test'
+  ...
+# Subtest: reject missing presence/UV or changed device type: 1
+ok 25 - reject missing presence/UV or changed device type: 1
+  ---
+  duration_ms: 263.9025
+  type: 'test'
+  ...
+# Subtest: reject missing presence/UV or changed device type: 4
+ok 26 - reject missing presence/UV or changed device type: 4
+  ---
+  duration_ms: 257.6391
+  type: 'test'
+  ...
+# Subtest: reject missing presence/UV or changed device type: 13
+ok 27 - reject missing presence/UV or changed device type: 13
+  ---
+  duration_ms: 256.2858
+  type: 'test'
+  ...
+# Subtest: reject missing-cookie
+ok 28 - reject missing-cookie
+  ---
+  duration_ms: 203.121
+  type: 'test'
+  ...
+# Subtest: reject wrong-cookie
+ok 29 - reject wrong-cookie
+  ---
+  duration_ms: 207.8928
+  type: 'test'
+  ...
+# Subtest: reject wrong-handle
+ok 30 - reject wrong-handle
+  ---
+  duration_ms: 263.5733
+  type: 'test'
+  ...
+# Subtest: reject missing-handle
+ok 31 - reject missing-handle
+  ---
+  duration_ms: 240.8064
+  type: 'test'
+  ...
+# Subtest: reject wrong-hint
+ok 32 - reject wrong-hint
+  ---
+  duration_ms: 247.4267
+  type: 'test'
+  ...
+# Subtest: reject unknown-key
+ok 33 - reject unknown-key
+  ---
+  duration_ms: 235.3263
+  type: 'test'
+  ...
+# Subtest: reject bad-signature
+ok 34 - reject bad-signature
+  ---
+  duration_ms: 230.0917
+  type: 'test'
+  ...
+# Subtest: reject wrong-rp
+ok 35 - reject wrong-rp
+  ---
+  duration_ms: 232.0569
+  type: 'test'
+  ...
+# Subtest: non-discoverable hint permits absent userHandle but still requires the exact signature
+ok 36 - non-discoverable hint permits absent userHandle but still requires the exact signature
+  ---
+  duration_ms: 216.8044
+  type: 'test'
+  ...
+# Subtest: single-use claim rejects competing/replayed proofs and duplicate single-device counters
+ok 37 - single-use claim rejects competing/replayed proofs and duplicate single-device counters
+  ---
+  duration_ms: 755.456
+  type: 'test'
+  ...
+# Subtest: multi-device counter rollback alone does not reject a valid synchronized passkey
+ok 38 - multi-device counter rollback alone does not reject a valid synchronized passkey
+  ---
+  duration_ms: 297.731
+  type: 'test'
+  ...
+# Subtest: lifecycle expiry
+ok 39 - lifecycle expiry
+  ---
+  duration_ms: 186.2204
+  type: 'test'
+  ...
+# Subtest: lifecycle restart
+ok 40 - lifecycle restart
+  ---
+  duration_ms: 299.1632
+  type: 'test'
+  ...
+# Subtest: lifecycle reset
+ok 41 - lifecycle reset
+  ---
+  duration_ms: 423.6113
+  type: 'test'
+  ...
+# Subtest: lifecycle disabled-key
+ok 42 - lifecycle disabled-key
+  ---
+  duration_ms: 280.821
+  type: 'test'
+  ...
+# Subtest: lifecycle disabled-user
+ok 43 - lifecycle disabled-user
+  ---
+  duration_ms: 254.2625
+  type: 'test'
+  ...
+# Subtest: lifecycle registration-closed
+ok 44 - lifecycle registration-closed
+  ---
+  duration_ms: 291.4263
+  type: 'test'
+  ...
+# Subtest: lifecycle descriptor-expired
+ok 45 - lifecycle descriptor-expired
+  ---
+  duration_ms: 223.5871
+  type: 'test'
+  ...
+# Subtest: authentication config is explicit; disabled service does not authorize or migrate legacy storage
+ok 46 - authentication config is explicit; disabled service does not authorize or migrate legacy storage
+  ---
+  duration_ms: 155.7952
+  type: 'test'
+  ...
+# Subtest: HTTP cookie lifecycle, precise admission and CSRF use the existing session routes
+ok 47 - HTTP cookie lifecycle, precise admission and CSRF use the existing session routes
+  ---
+  duration_ms: 523.0074
+  type: 'test'
+  ...
+# Subtest: strict public contracts reject secrets, noncanonical binary, unknown fields and excessive bodies
+ok 48 - strict public contracts reject secrets, noncanonical binary, unknown fields and excessive bodies
+  ---
+  duration_ms: 158.253
+  type: 'test'
+  ...
+# Subtest: rechecks authority after asynchronous verification: expiry
+ok 49 - rechecks authority after asynchronous verification: expiry
+  ---
+  duration_ms: 175.137
+  type: 'test'
+  ...
+# Subtest: rechecks authority after asynchronous verification: reset
+ok 50 - rechecks authority after asynchronous verification: reset
+  ---
+  duration_ms: 198.5638
+  type: 'test'
+  ...
+# Subtest: rechecks authority after asynchronous verification: disable-key
+ok 51 - rechecks authority after asynchronous verification: disable-key
+  ---
+  duration_ms: 217.9704
+  type: 'test'
+  ...
+# Subtest: rechecks authority after asynchronous verification: close
+ok 52 - rechecks authority after asynchronous verification: close
+  ---
+  duration_ms: 176.4337
+  type: 'test'
+  ...
+# Subtest: rechecks authority after asynchronous verification: source
+ok 53 - rechecks authority after asynchronous verification: source
+  ---
+  duration_ms: 202.5967
+  type: 'test'
+  ...
+# Subtest: proof queue is bounded at four active and 32 waiting; local maintenance remains available
+ok 54 - proof queue is bounded at four active and 32 waiting; local maintenance remains available
+  ---
+  duration_ms: 1841.762
+  type: 'test'
+  ...
+# Subtest: rate limits use attributed source and instance budgets and reset only in a new window
+ok 55 - rate limits use attributed source and instance budgets and reset only in a new window
+  ---
+  duration_ms: 137.7199
+  type: 'test'
+  ...
+1..55
+# tests 55
+# suites 0
+# pass 55
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 15038.8318

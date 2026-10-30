@@ -1,0 +1,142 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): 0d609d226791a256bfddc77481a0e3d9a2c575b48fef5c0581f83ef6b878b2ac
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:51920
+#   ➜ Local:   http://localhost:51920/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:51920/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:51920/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-browser-apps-xHvGP7\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url http://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-browser-apps-xHvGP7\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-browser-apps-xHvGP7\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-browser-apps-xHvGP7\\modeldb.config.json"
+# [security-browser] connection: zh/en/ja, wide/narrow layout, label/focus and blocked preference writes passed
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [security-browser] forbidden: zh/en/ja, wide/narrow layout, label/focus and blocked preference writes passed
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [security-browser] Query interface: complete POST URL, Bearer example and Postman download passed
+# [security-browser] security: zh/en/ja, wide/narrow layout, label/focus and blocked preference writes passed
+# [security-browser] administrator: independent entry and business isolation passed
+# [security-browser] administrator: aggregate audit counts, row details and narrow layout passed
+# [security-browser] administrator: rule preview/apply/confirm passed
+# [security-browser] administrator: independent entry, reload, rule preview/apply/confirm/rollback, master rotation, narrow layout and logout passed
+# [security-browser] model-designer: application credential controls, scoped listing and memory-only reload passed
+# [security-browser] model-designer: pairing, workspace, reload, HttpOnly and logout passed
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [security-browser] data-studio: application credential controls, scoped listing and memory-only reload passed
+# [security-browser] data-studio: pairing, workspace, reload, HttpOnly and logout passed
+# [modeldb-server][catalog] model_designer_workspace: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] model_designer_workspace: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] model_designer_workspace: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] model_designer_workspace: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] model_designer_workspace: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] model_designer_workspace: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [security-browser] web: application credential controls, scoped listing and memory-only reload passed
+# [security-browser] web: pairing, workspace, reload, HttpOnly and logout passed
+# Subtest: three production browser apps pair through the Windows pipe, restore after reload and revoke on logout
+ok 1 - three production browser apps pair through the Windows pipe, restore after reload and revoke on logout
+  ---
+  duration_ms: 213351.4173
+  type: 'test'
+  ...
+# [modeldb-server] storage fingerprint (sha256): 722e9482e4fec6e16deefa95719898dd728dcbba9b26df7f03565f62e3247713
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:51880
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:51880
+#     HTTP RPC:  https://modeldb-a.example.test:51880/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:51880/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-HLdnPQ\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:51880/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-HLdnPQ\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-HLdnPQ\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-HLdnPQ\\modeldb.config.json"
+# [modeldb-server][catalog] synthetic_business: metadataSource=synthetic_business displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server] storage fingerprint (sha256): 722e9482e4fec6e16deefa95719898dd728dcbba9b26df7f03565f62e3247713
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:51880
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:51880
+#     HTTP RPC:  https://modeldb-a.example.test:51880/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:51880/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-HLdnPQ\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:51880/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-HLdnPQ\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-HLdnPQ\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-HLdnPQ\\modeldb.config.json"
+# Subtest: data-studio public identity registration, approval, Passkey and library connection
+ok 2 - data-studio public identity registration, approval, Passkey and library connection
+  ---
+  duration_ms: 68464.7621
+  type: 'test'
+  ...
+# {"format":"modeldb.public-identity-browser.v1","app":"data-studio","ok":true,"browser":"Chrome/156.0.8078.48","screenshots":24,"hardwareAuthenticatorTested":false,"systemTrustInstalled":false,"liveMaterialRead":false,"checks":{"freshApplicationBuild":true,"publicClient":true,"libraryConnection":true,"formalRegistration":true,"pendingNoAuthority":true,"rejectedState":true,"localOsApproval":true,"approvalRequiresLogin":true,"actualWebAuthnLogin":true,"syntheticDataScope":true,"managementDenied":true,"httpOnlySecureStrict":true,"reloadRestoresSession":true,"continuationNotPersisted":true,"logout":true,"expiredWindowLogin":true,"revocationDenied":true,"cancelledExplained":true,"supportedLocales":true,"wideAndNarrow":true,"labelsAndFocus":true}}
+# [modeldb-server] storage fingerprint (sha256): 5aaff7f8e8f030492f5c10b3d11995109bb1d4837dac7512e1d16f4e755bb047
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:55012
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:55012
+#     HTTP RPC:  https://modeldb-a.example.test:55012/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:55012/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-RaonZH\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:55012/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-RaonZH\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-RaonZH\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-RaonZH\\modeldb.config.json"
+# [modeldb-server][catalog] synthetic_business: metadataSource=synthetic_business displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server] storage fingerprint (sha256): 5aaff7f8e8f030492f5c10b3d11995109bb1d4837dac7512e1d16f4e755bb047
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:55012
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:55012
+#     HTTP RPC:  https://modeldb-a.example.test:55012/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:55012/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-RaonZH\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:55012/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-RaonZH\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-RaonZH\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-RaonZH\\modeldb.config.json"
+# Subtest: web public identity registration, approval, Passkey and library connection
+ok 3 - web public identity registration, approval, Passkey and library connection
+  ---
+  duration_ms: 69186.0243
+  type: 'test'
+  ...
+# {"format":"modeldb.public-identity-browser.v1","app":"web","ok":true,"browser":"Chrome/156.0.8078.48","screenshots":16,"hardwareAuthenticatorTested":false,"systemTrustInstalled":false,"liveMaterialRead":false,"checks":{"freshApplicationBuild":true,"publicClient":true,"libraryConnection":true,"formalRegistration":true,"pendingNoAuthority":true,"rejectedState":true,"localOsApproval":true,"approvalRequiresLogin":true,"actualWebAuthnLogin":true,"syntheticDataScope":true,"managementDenied":true,"httpOnlySecureStrict":true,"reloadRestoresSession":true,"continuationNotPersisted":true,"logout":true,"expiredWindowLogin":true,"revocationDenied":true,"cancelledExplained":true,"supportedLocales":true,"wideAndNarrow":true,"labelsAndFocus":true}}
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 219473.7778

@@ -1,0 +1,144 @@
+TAP version 13
+# Subtest: keeps audit exports outside the registry even when a directory junction is used
+ok 1 - keeps audit exports outside the registry even when a directory junction is used
+  ---
+  duration_ms: 10.3842
+  type: 'test'
+  ...
+# Subtest: prunes expired audit events and reports capacity health; JSONL excludes its own export event
+ok 2 - prunes expired audit events and reports capacity health; JSONL excludes its own export event
+  ---
+  duration_ms: 1314.4445
+  type: 'test'
+  ...
+# Subtest: returns bounded newest-first audit pages with source attribution and aggregates
+ok 3 - returns bounded newest-first audit pages with source attribution and aggregates
+  ---
+  duration_ms: 6617.5996
+  type: 'test'
+  ...
+# Subtest: persists scoped credentials, rotation grace, expiry, revoked sessions and audited reset without changing data keys
+ok 4 - persists scoped credentials, rotation grace, expiry, revoked sessions and audited reset without changing data keys
+  ---
+  duration_ms: 22121.4713
+  type: 'test'
+  ...
+# Subtest: fails closed on audit capacity and damaged or missing security material
+ok 5 - fails closed on audit capacity and damaged or missing security material
+  ---
+  duration_ms: 10133.0028
+  type: 'test'
+  ...
+# Subtest: critical audit persistence failure refuses mutations and retains the last committed ledger
+ok 6 - critical audit persistence failure refuses mutations and retains the last committed ledger
+  ---
+  duration_ms: 7462.0587
+  type: 'test'
+  ...
+# Subtest: recovers the same initialized identity and audit commit after a separate process exits
+ok 7 - recovers the same initialized identity and audit commit after a separate process exits
+  ---
+  duration_ms: 7419.6953
+  type: 'test'
+  ...
+# Subtest: concurrent processes cannot own or independently initialize the same security registry
+ok 8 - concurrent processes cannot own or independently initialize the same security registry
+  ---
+  duration_ms: 7122.9457
+  type: 'test'
+  ...
+# [modeldb-server] storage fingerprint (sha256): 3f7a2491abad07b80dcc1b214faffaf912c00f2251a43fbb931aeacd815e2985
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:56773
+#   ➜ Local:   http://localhost:56773/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:56773/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:56773/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-security-server-hlK68H\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url http://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-security-server-hlK68H\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-security-server-hlK68H\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-security-server-hlK68H\\modeldb.config.json"
+# Subtest: registry-mode servers reject unauthenticated management and legacy WebSocket upgrades
+ok 9 - registry-mode servers reject unauthenticated management and legacy WebSocket upgrades
+  ---
+  duration_ms: 22150.465
+  type: 'test'
+  ...
+# Subtest: uses a Windows-authenticated local pipe and CLI one-time protected delivery
+ok 10 - uses a Windows-authenticated local pipe and CLI one-time protected delivery
+  ---
+  duration_ms: 40232.4517
+  type: 'test'
+  ...
+# [modeldb-server] storage fingerprint (sha256): 2366c83b43333496ab663423674793ae07e970a630e91ceecb5f6635df6aa9d0
+# Subtest: offline factory-reset CLI verifies DPAPI backup, refuses a live instance and preserves configuration
+ok 11 - offline factory-reset CLI verifies DPAPI backup, refuses a live instance and preserves configuration
+  ---
+  duration_ms: 24910.2091
+  type: 'test'
+  ...
+# Subtest: DPAPI protects independent per-database keys and survives a fresh provider
+ok 12 - DPAPI protects independent per-database keys and survives a fresh provider
+  ---
+  duration_ms: 9294.2121
+  type: 'test'
+  ...
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:52276
+#   ➜ Local:   http://localhost:52276/ (本机访问)
+#   Direct client addresses:
+#     HTTP:      http://127.0.0.1:52276 (HTTP API 根地址)
+#     Action:    http://127.0.0.1:52276/v2/action (单次操作接口)
+#     Bulk:      http://127.0.0.1:52276/v2/bulk (批量操作接口)
+#     Health:    http://127.0.0.1:52276/health (健康检查)
+#     Status:    http://127.0.0.1:52276/api/v1/management/status (引擎状态)
+#     WebSocket: ws://127.0.0.1:52276/ (实时 RPC)
+#     Stream:    ws://127.0.0.1:52276/v2/stream (流式 RPC)
+#   Console commands:
+#     Stop:      Ctrl+C
+#     Status:    modeldb-server info -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-CXJMyG\\modeldb.config.json"
+#     Databases: modeldb-server ls -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-CXJMyG\\modeldb.config.json"
+#     Create DB: modeldb-server create-db <db-name> -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-CXJMyG\\modeldb.config.json"
+#     Backup:    modeldb-server backup <db-name> --reason manual -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-CXJMyG\\modeldb.config.json"
+#   Note: management URLs require the configured connect token in the request header.
+#   Remote access: disabled by the loopback bind. Start with --host 0.0.0.0 for direct LAN access.
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server] storage fingerprint (sha256): 2366c83b43333496ab663423674793ae07e970a630e91ceecb5f6635df6aa9d0
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:57197
+#   ➜ Local:   http://localhost:57197/ (本机访问)
+#   Direct client addresses:
+#     HTTP:      http://127.0.0.1:57197 (HTTP API 根地址)
+#     Action:    http://127.0.0.1:57197/v2/action (单次操作接口)
+#     Bulk:      http://127.0.0.1:57197/v2/bulk (批量操作接口)
+#     Health:    http://127.0.0.1:57197/health (健康检查)
+#     Status:    http://127.0.0.1:57197/api/v1/management/status (引擎状态)
+#     WebSocket: ws://127.0.0.1:57197/ (实时 RPC)
+#     Stream:    ws://127.0.0.1:57197/v2/stream (流式 RPC)
+#   Console commands:
+#     Stop:      Ctrl+C
+#     Status:    modeldb-server info -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-CXJMyG\\modeldb.config.json"
+#     Databases: modeldb-server ls -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-CXJMyG\\modeldb.config.json"
+#     Create DB: modeldb-server create-db <db-name> -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-CXJMyG\\modeldb.config.json"
+#     Backup:    modeldb-server backup <db-name> --reason manual -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-CXJMyG\\modeldb.config.json"
+#   Note: management URLs require the configured connect token in the request header.
+#   Remote access: disabled by the loopback bind. Start with --host 0.0.0.0 for direct LAN access.
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# Subtest: reopens the same server database with a different network credential
+ok 13 - reopens the same server database with a different network credential
+  ---
+  duration_ms: 4145.6458
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 126028.1124

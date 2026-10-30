@@ -1,0 +1,55 @@
+{
+  "format": "modeldb.registration-integration-check.v1",
+  "ok": true,
+  "task": "DR-P1.6",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Flow-Report-OQVXjS",
+  "command": [
+    "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-registration-flow.test.ts",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-registration-browser.test.ts"
+  ],
+  "exitCode": 0,
+  "durationMs": 135108.5098,
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Flow-Report-OQVXjS\\integration.tap",
+  "unit": {
+    "pass": 9,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "browser": {
+    "format": "modeldb.registration-virtual-authenticator.v1",
+    "ok": true,
+    "browser": "Chrome/156.0.8078.48",
+    "checks": {
+      "actualBrowserWebAuthn": true,
+      "nativeHttpsDpapiCli": true,
+      "approval": true,
+      "proofRejected": true,
+      "singleUseCompetition": true,
+      "revisionConflict": true,
+      "outstandingChallengeCapacity1000": true,
+      "localRepairAtCapacity": true,
+      "restartWithRegistrationDisabled": true,
+      "noBusinessSession": true,
+      "instanceKeyUnchanged": true
+    },
+    "capacityPreparation": "Synthetic unverified issued records fill all but one challenge slot; real browser exercises boundary, not 1000 authenticators",
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "productionRegistrationUiTested": false,
+    "publicKeyLoginImplemented": false,
+    "systemTrustInstalled": false
+  }
+}

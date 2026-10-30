@@ -3,6 +3,12 @@ import { existsSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import type { VaultKeyProvider } from '@mode-db/common';
 import type { SecurityNetworkConfig } from './security/network-policy.js';
+import type { AuthenticationConfig } from './security/authentication-service.js';
+import type { RegistrationConfig } from './security/registration-service.js';
+import {
+  validateBrowserHostingConfig,
+  type BrowserHostingConfig,
+} from './security/browser-hosting.js';
 
 import { resolveModelDbConfigPathFromCli } from './modeldb-default-home.js';
 
@@ -11,6 +17,10 @@ export interface ModelDBServerFileConfig {
   readonly security?: {
     readonly version: 1;
     readonly network?: SecurityNetworkConfig;
+    /** Non-secret, exact deployment/window binding. Omitted by default. */
+    readonly registration?: RegistrationConfig;
+    readonly authentication?: AuthenticationConfig;
+    readonly hosting?: BrowserHostingConfig;
     readonly audit?: {
       /** Audit event retention period; defaults to 365 days. */
       readonly retentionDays?: number;
@@ -81,6 +91,9 @@ export interface ResolvedModelDBServerConfig {
   readonly securityMode?: 'registry' | 'legacy';
   /** Registry transport/source policy; legacy does not opt into this contract. */
   readonly securityNetwork?: SecurityNetworkConfig;
+  readonly securityRegistration?: RegistrationConfig;
+  readonly securityAuthentication?: AuthenticationConfig;
+  readonly securityHosting?: BrowserHostingConfig;
   readonly securityAudit: { readonly retentionDays: number; readonly maxEvents: number };
   /** Local embedding/test injection; never loaded from JSON or exposed to clients. */
   readonly vaultKeyProvider?: VaultKeyProvider;
@@ -307,6 +320,7 @@ export async function loadModelDBServerConfig(
   const autoBackup = resolveAutoBackupConfig(file.autoBackup);
 
   const securityMode = file.security === undefined ? 'legacy' : 'registry';
+  validateBrowserHostingConfig(file.security?.hosting);
   if (securityMode === 'registry' && (file.security?.version !== 1 || connectToken)) {
     throw new Error('SECURITY_INVALID_CONFIG: registry mode rejects legacy credentials.');
   }
@@ -336,6 +350,13 @@ export async function loadModelDBServerConfig(
   return {
     securityMode,
     ...(file.security?.network ? { securityNetwork: file.security.network } : {}),
+    ...(file.security?.authentication !== undefined
+      ? { securityAuthentication: file.security.authentication }
+      : {}),
+    ...(file.security?.hosting !== undefined ? { securityHosting: file.security.hosting } : {}),
+    ...(file.security?.registration !== undefined
+      ? { securityRegistration: file.security.registration }
+      : {}),
     securityAudit,
     port,
     host,

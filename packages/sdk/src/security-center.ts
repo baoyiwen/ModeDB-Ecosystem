@@ -4,10 +4,82 @@ import type {
   SecurityCenterOverview,
   SecurityControlRequest,
   SecurityControlResult,
+  RegisteredIdentityCommand,
+  RegisteredIdentityResult,
+  DeploymentWizardCommand,
+  DeploymentWizardResult,
+  RecipientKeyCommand,
+  RecipientKeyResult,
 } from '@mode-db/shared';
 import { browserSessionRequestInit } from './browser-session.js';
 import { connectionOrigin, type ConnectionEndpoint } from './connection-endpoint.js';
 import { remoteResponseError } from './connection-security.js';
+
+/** Dedicated OS-paired management only. Never uploads recipient private keys. */
+export async function manageRecipientKey<T extends RecipientKeyCommand>(
+  endpoint: ConnectionEndpoint,
+  command: T,
+  fetchImpl: typeof fetch = fetch,
+): Promise<RecipientKeyResult<T>> {
+  const origin = connectionOrigin(endpoint),
+    session = await browserSessionRequestInit(origin);
+  const response = await fetchImpl(`${origin}/api/v1/security/admin/control`, {
+    method: 'POST',
+    redirect: 'error',
+    credentials: 'include',
+    cache: 'no-store',
+    headers: { ...session.headers, 'content-type': 'application/json' },
+    body: JSON.stringify(command),
+  });
+  if (!response.ok) {
+    throw await remoteResponseError(response);
+  }
+  return (await response.json()) as RecipientKeyResult<T>;
+}
+
+/** First-deployment preview only; never writes config or restarts a service over HTTP. */
+export async function deploymentWizard<T extends DeploymentWizardCommand>(
+  endpoint: ConnectionEndpoint,
+  command: T,
+  fetchImpl: typeof fetch = fetch,
+): Promise<DeploymentWizardResult<T>> {
+  const origin = connectionOrigin(endpoint),
+    session = await browserSessionRequestInit(origin);
+  const response = await fetchImpl(`${origin}/api/v1/security/admin/control`, {
+    method: 'POST',
+    redirect: 'error',
+    credentials: 'include',
+    cache: 'no-store',
+    headers: { ...session.headers, 'content-type': 'application/json' },
+    body: JSON.stringify(command),
+  });
+  if (!response.ok) {
+    throw await remoteResponseError(response);
+  }
+  return (await response.json()) as DeploymentWizardResult<T>;
+}
+
+/** Dedicated local management only; the server checks listener, Cookie, Origin and CSRF. */
+export async function manageRegisteredIdentity<T extends RegisteredIdentityCommand>(
+  endpoint: ConnectionEndpoint,
+  command: T,
+  fetchImpl: typeof fetch = fetch,
+): Promise<RegisteredIdentityResult<T>> {
+  const origin = connectionOrigin(endpoint);
+  const session = await browserSessionRequestInit(origin);
+  const response = await fetchImpl(`${origin}/api/v1/security/admin/control`, {
+    method: 'POST',
+    redirect: 'error',
+    credentials: 'include',
+    cache: 'no-store',
+    headers: { ...session.headers, 'content-type': 'application/json' },
+    body: JSON.stringify(command),
+  });
+  if (!response.ok) {
+    throw await remoteResponseError(response);
+  }
+  return (await response.json()) as RegisteredIdentityResult<T>;
+}
 
 /** Paired administrator + Origin + CSRF protected management commands. */
 export async function securityControl<T extends SecurityControlRequest>(

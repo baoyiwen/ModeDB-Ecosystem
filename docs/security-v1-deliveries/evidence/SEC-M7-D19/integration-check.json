@@ -1,0 +1,58 @@
+{
+  "format": "modeldb.authentication-integration-check.v1",
+  "ok": true,
+  "task": "DR-P2.2",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Flow-Report-E9AEFK",
+  "command": [
+    "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-authentication-browser.test.ts"
+  ],
+  "exitCode": 0,
+  "durationMs": 111934.64779999999,
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Flow-Report-E9AEFK\\integration.tap",
+  "unit": {
+    "pass": 1,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "browser": {
+    "format": "modeldb.authentication-browser.v1",
+    "ok": true,
+    "browser": "Chrome/156.0.8078.48",
+    "checks": {
+      "actualBrowserWebAuthnGet": true,
+      "freshSdkBundle": true,
+      "nativeTlsDpapiApproval": true,
+      "pendingDenied": true,
+      "httpOnlySecureStrict": true,
+      "dataScope": true,
+      "adminDenied": true,
+      "reloadRecovery": true,
+      "csrfRotation": true,
+      "logout": true,
+      "restartRecovery": true,
+      "disabledNewLogin": true,
+      "expiredRegistrationIndependent": true,
+      "noApiCredential": true,
+      "instanceKeyUnchanged": true
+    },
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "productionRegistrationUiTested": false,
+    "publicKeyLoginImplemented": true,
+    "systemTrustInstalled": false
+  },
+  "report": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Flow-Report-E9AEFK\\integration-check.json"
+}

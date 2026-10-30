@@ -1,0 +1,69 @@
+DrillRoot: C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17
+vite v6.4.3 building for production...
+transforming...
+✓ 290 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17/designer/index.html                                          0.91 kB │ gzip:   0.55 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17/designer/assets/index-DhWdvLmj.css                         193.06 kB │ gzip:  31.47 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17/designer/assets/browser-clAr8Xmf.js                          0.62 kB │ gzip:   0.43 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17/designer/assets/export-model-map-CKtdAv1p.js                 3.66 kB │ gzip:   1.67 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17/designer/assets/workbook-95WS8Chp.js                        12.03 kB │ gzip:   4.54 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17/designer/assets/OperationDesignerPanel-R0M7EQkF.js          24.57 kB │ gzip:   6.51 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17/designer/assets/BindingSurfaceDesignerPanel-BwMcl-qS.js     49.01 kB │ gzip:  13.08 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17/designer/assets/exceljs.min-D4HsmyYJ.js                    939.80 kB │ gzip: 271.12 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17/designer/assets/index-NHQl-PY-.js                        1,178.80 kB │ gzip: 339.79 kB
+✓ built in 5.05s
+{
+  "prepared": true,
+  "drillRoot": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17",
+  "transferOnly": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17\\transfer",
+  "pin": "fc360341953bb1d06d6a0b426b08d3db3993448216585325bdce233e361355a2",
+  "report": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17\\prepare-report.json",
+  "expiresAtUtc": "2026-10-29T07:12:12.123Z",
+  "taskComplete": false
+}
+[modeldb-server] storage fingerprint (sha256): 8d74c25e67ef91426a1fc5eab28703e9311e608dad2e0439444f293ea63b6115
+[ModelDB] Engine is running
+  Listen: 127.0.0.1:54913
+
+  Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+  Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+  Transport: tls; source/Origin policy is enforced.
+  Public base URL: https://drill-ea14b2d9-eba2-4da4-9752-e13ae06e7f41.example.test:54913
+    HTTP RPC:  https://drill-ea14b2d9-eba2-4da4-9752-e13ae06e7f41.example.test:54913/api/v1/rpc
+    WebSocket: wss://drill-ea14b2d9-eba2-4da4-9752-e13ae06e7f41.example.test:54913/api/v1/stream
+  Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+    Status:      modeldb-server security status -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17\modeldb.config.json"
+    Designer:    https://drill-ea14b2d9-eba2-4da4-9752-e13ae06e7f41.example.test:54913/designer/ (same-origin; data permission still required)
+    Management:  modeldb-server security security-open -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+    Credentials: modeldb-server security credentials -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17\modeldb.config.json"
+    Help:        modeldb-server security help -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17\modeldb.config.json"
+[modeldb-server] storage fingerprint (sha256): 8d74c25e67ef91426a1fc5eab28703e9311e608dad2e0439444f293ea63b6115
+[ModelDB] Engine is running
+  Listen: 127.0.0.1:54913
+
+  Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+  Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+  Transport: tls; source/Origin policy is enforced.
+  Public base URL: https://drill-ea14b2d9-eba2-4da4-9752-e13ae06e7f41.example.test:54913
+    HTTP RPC:  https://drill-ea14b2d9-eba2-4da4-9752-e13ae06e7f41.example.test:54913/api/v1/rpc
+    WebSocket: wss://drill-ea14b2d9-eba2-4da4-9752-e13ae06e7f41.example.test:54913/api/v1/stream
+  Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+    Status:      modeldb-server security status -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17\modeldb.config.json"
+    Designer:    https://drill-ea14b2d9-eba2-4da4-9752-e13ae06e7f41.example.test:54913/designer/ (same-origin; data permission still required)
+    Management:  modeldb-server security security-open -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+    Credentials: modeldb-server security credentials -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17\modeldb.config.json"
+    Help:        modeldb-server security help -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17\modeldb.config.json"
+{
+  "ok": true,
+  "report": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Device-Drill-0ff2f775f3ff4c709b986fa14673cf17\\smoke-report.json",
+  "taskComplete": false,
+  "actualHelloTested": false,
+  "twoDeviceTested": false
+}
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.

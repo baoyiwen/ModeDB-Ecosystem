@@ -9,6 +9,7 @@ import { ensureDesignerCatalog } from '../bootstrap/designer-storage-init.js';
 import { seedDefaultWorkspaceRecords } from '../bootstrap/seed-workspace-rows.js';
 import {
   getStoredHost,
+  getHostedBrowserRole,
   getStoredLastLibrary,
   getStoredPort,
   getStoredToken,
@@ -46,6 +47,8 @@ import {
 import type { LibraryRegistryRecord } from '../types/library-registry.js';
 import { LibraryRegistryForm } from './LibraryRegistryForm.js';
 import { SecurityCenterWorkspace } from './SecurityCenterWorkspace.js';
+import { LanguageSelector } from './LanguageSelector.js';
+import { BrowserIdentityPanel } from './BrowserIdentityPanel.js';
 import { isValidUniqueName } from '../utils/name-validation.js';
 
 const CONNECT_MS = 45_000;
@@ -139,85 +142,104 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
     [],
   );
 
-  const fetchDatabases = useCallback(async (): Promise<void> => {
-    setErr(null);
-    setSaveHint(null);
-    setBusy(true);
-    try {
-      persistBrowserSessionMode(browserSession);
-      if (browserSession) {
-        const endpoint = { host: host.trim(), port };
-        let session;
-        if (pairingCode.trim()) {
-          session = await pairBrowserSession(endpoint, pairingCode.trim());
-          clearPairingLaunch();
-          setPairingCode('');
-        } else {
-          session = await getBrowserSession(endpoint);
-        }
-        if (session.securityAdmin === true) {
-          persistConnectionFields(host.trim(), port, FIXED_MODEL_DESIGNER_DATABASE);
-          clearSessionToken();
-          persistSecurityCenterActive(true);
-          setSecurityAdmin(true);
-          return;
-        }
+  const fetchDatabases = useCallback(
+    async (publicKeySession = false): Promise<void> => {
+      const connectionHost = publicKeySession ? location.origin : host.trim();
+      const connectionPort = publicKeySession ? Number(location.port) || 443 : port;
+      if (publicKeySession) {
+        setHost(connectionHost);
+        setPort(connectionPort);
       }
-      persistSecurityCenterActive(false);
-      const list = await withTimeout(
-        RClient.listDatabases({ host: host.trim(), port, token: token.trim(), browserSession }),
-        CONNECT_MS,
-        i18n.t('errors', 'connectTimeout'),
-      );
-      void RClient.getManagementStatus({
-        host: host.trim(),
-        port,
-        token: token.trim(),
-        browserSession: isBrowserSessionMode(),
-      })
-        .then((status) => persistPublicBaseUrl(status.publicBaseUrl ?? ''))
-        .catch(() => {
-          // Older servers do not expose publicBaseUrl; host/port remains the fallback.
-        });
-      const dbNames = list
-        .filter((d) => d.name !== FIXED_MODEL_DESIGNER_DATABASE)
-        .map((d) => d.name);
-
-      const client = await withTimeout(
-        ensureDesignerWorkspaceSession({
-          host: host.trim(),
-          port,
+      setErr(null);
+      setSaveHint(null);
+      setBusy(true);
+      try {
+        const sessionMode = publicKeySession || browserSession;
+        if (publicKeySession) {
+          setBrowserSession(true);
+          setToken('');
+        }
+        persistBrowserSessionMode(sessionMode);
+        if (sessionMode) {
+          const endpoint = { host: connectionHost, port: connectionPort };
+          let session;
+          if (!publicKeySession && pairingCode.trim()) {
+            session = await pairBrowserSession(endpoint, pairingCode.trim());
+            clearPairingLaunch();
+            setPairingCode('');
+          } else {
+            session = await getBrowserSession(endpoint);
+          }
+          if (session.securityAdmin === true) {
+            persistConnectionFields(connectionHost, connectionPort, FIXED_MODEL_DESIGNER_DATABASE);
+            clearSessionToken();
+            persistSecurityCenterActive(true);
+            setSecurityAdmin(true);
+            return;
+          }
+        }
+        persistSecurityCenterActive(false);
+        const list = await withTimeout(
+          RClient.listDatabases({
+            host: connectionHost,
+            port: connectionPort,
+            token: publicKeySession ? '' : token.trim(),
+            browserSession: sessionMode,
+          }),
+          CONNECT_MS,
+          i18n.t('errors', 'connectTimeout'),
+        );
+        void RClient.getManagementStatus({
+          host: connectionHost,
+          port: connectionPort,
           token: token.trim(),
           browserSession: isBrowserSessionMode(),
-          designerWorkspace: FIXED_MODEL_DESIGNER_DATABASE,
-        }),
-        CONNECT_MS,
-        i18n.t('errors', 'connectTimeout'),
-      );
-      try {
-        designerClientRef.current?.close();
-      } catch {
-        /* ignore */
-      }
-      designerClientRef.current = client;
+        })
+          .then((status) => persistPublicBaseUrl(status.publicBaseUrl ?? ''))
+          .catch(() => {
+            // Older servers do not expose publicBaseUrl; host/port remains the fallback.
+          });
+        const dbNames = list
+          .filter((d) => d.name !== FIXED_MODEL_DESIGNER_DATABASE)
+          .map((d) => d.name);
 
-      await ensureDesignerCatalog(client);
-      await refreshLibraries(client, dbNames);
+        const client = await withTimeout(
+          ensureDesignerWorkspaceSession({
+            host: connectionHost,
+            port: connectionPort,
+            token: token.trim(),
+            browserSession: isBrowserSessionMode(),
+            designerWorkspace: FIXED_MODEL_DESIGNER_DATABASE,
+          }),
+          CONNECT_MS,
+          i18n.t('errors', 'connectTimeout'),
+        );
+        try {
+          designerClientRef.current?.close();
+        } catch {
+          /* ignore */
+        }
+        designerClientRef.current = client;
 
-      if (dbNames.length > 0 && !dbNames.includes(selectedDb)) {
-        setSelectedDb(dbNames[0]!);
+        await ensureDesignerCatalog(client);
+        await refreshLibraries(client, dbNames);
+
+        if (dbNames.length > 0 && !dbNames.includes(selectedDb)) {
+          setSelectedDb(dbNames[0]!);
+        }
+        setEditorMode('existing');
+        setStep('library');
+        persistConnectionFields(connectionHost, connectionPort, FIXED_MODEL_DESIGNER_DATABASE);
+        persistToken(publicKeySession ? '' : token.trim());
+      } catch (e) {
+        persistSecurityCenterActive(false);
+        setErr(connectionErrorMessage(e, i18n));
+      } finally {
+        setBusy(false);
       }
-      setEditorMode('existing');
-      setStep('library');
-      persistConnectionFields(host.trim(), port, FIXED_MODEL_DESIGNER_DATABASE);
-      persistToken(token.trim());
-    } catch (e) {
-      persistSecurityCenterActive(false);
-      setErr(connectionErrorMessage(e, i18n));
-    } finally {
-      setBusy(false);
-    }
-  }, [host, port, token, selectedDb, i18n, refreshLibraries, browserSession, pairingCode]);
+    },
+    [host, port, token, selectedDb, i18n, refreshLibraries, browserSession, pairingCode],
+  );
 
   useEffect(() => {
     if ((launch || isSecurityCenterActive()) && !launched.current) {
@@ -441,74 +463,96 @@ export function ConnectionFlow(props: ConnectionFlowProps): ReactElement {
   }
 
   return (
-    <div className="designer-connection-flow designer-scrollbar-hide">
+    <div className="designer-connection-flow designer-scrollbar-hide" lang={locale}>
+      <div className="designer-connection-toolbar">
+        <span className="designer-connection-brand">Model Designer</span>
+        <LanguageSelector />
+      </div>
       <div className="designer-connection-card designer-glass-panel">
         <h1>{i18n.t('ui', 'gateTitle')}</h1>
         <p className="designer-connection-lead">{i18n.t('ui', 'gateHintStorage')}</p>
 
         {step === 'credentials' && (
           <>
-            <label className={fieldClass}>
-              <span>{i18n.t('ui', 'host')}</span>
-              <input
-                className="designer-input"
-                value={host}
-                placeholder="127.0.0.1 / https://db.example.com"
-                title={i18n.t('errors', 'security_transportHint')}
-                onChange={(e) => setHost(e.target.value)}
+            {getHostedBrowserRole() === 'data' && (
+              <BrowserIdentityPanel
+                connecting={busy}
+                onContinue={() => void fetchDatabases(true)}
               />
-            </label>
-            <label className={fieldClass}>
-              <span>{i18n.t('ui', 'port')}</span>
-              <input
-                className="designer-input"
-                type="number"
-                value={port}
-                onChange={(e) => setPort(Number(e.target.value))}
-              />
-            </label>
-            <label className={fieldClass}>
-              <span>{i18n.t('ui', 'sessionAuthMode')}</span>
-              <select
-                className="designer-select"
-                value={browserSession ? 'browser' : 'token'}
-                onChange={(e) => {
-                  setBrowserSession(e.target.value === 'browser');
-                  setToken('');
-                }}
-              >
-                <option value="browser">{i18n.t('ui', 'sessionBrowserMode')}</option>
-                <option value="token">{i18n.t('ui', 'sessionTokenMode')}</option>
-              </select>
-            </label>
-            <label className={fieldClass}>
-              <span>{i18n.t('ui', browserSession ? 'sessionPairingCode' : 'connectToken')}</span>
-              <input
-                className="designer-input"
-                type="password"
-                value={browserSession ? pairingCode : token}
-                onChange={(e) =>
-                  browserSession ? setPairingCode(e.target.value) : setToken(e.target.value)
-                }
-                autoComplete="off"
-              />
-            </label>
-            <p className="designer-connection-lead">
-              {browserSession
-                ? i18n.t('ui', 'sessionPairingHint')
-                : i18n.t('errors', 'security_memoryOnly')}
-            </p>
-            {err ? <div style={{ color: '#b91c1c', fontSize: 12 }}>{err}</div> : null}
-            <div className="designer-connection-actions">
-              <button
-                type="button"
-                className="designer-btn designer-btn-primary"
-                disabled={busy}
-                onClick={() => void fetchDatabases()}
-              >
-                {busy ? i18n.t('ui', 'connecting') : i18n.t('ui', 'btnListLibraries')}
-              </button>
-            </div>
+            )}
+            <details className="designer-identity-details" open={getHostedBrowserRole() !== 'data'}>
+              <summary>{i18n.t('ui', 'identity_legacy')}</summary>
+              <label className={fieldClass}>
+                <span>{i18n.t('ui', 'host')}</span>
+                <input
+                  className="designer-input"
+                  value={host}
+                  placeholder="127.0.0.1 / https://db.example.com"
+                  title={i18n.t('errors', 'security_transportHint')}
+                  onChange={(e) => setHost(e.target.value)}
+                />
+              </label>
+              <label className={fieldClass}>
+                <span>{i18n.t('ui', 'port')}</span>
+                <input
+                  className="designer-input"
+                  type="number"
+                  value={port}
+                  onChange={(e) => setPort(Number(e.target.value))}
+                />
+              </label>
+              <label className={fieldClass}>
+                <span>{i18n.t('ui', 'sessionAuthMode')}</span>
+                <select
+                  className="designer-select"
+                  value={browserSession ? 'browser' : 'token'}
+                  onChange={(e) => {
+                    setBrowserSession(e.target.value === 'browser');
+                    setToken('');
+                  }}
+                >
+                  <option value="browser">{i18n.t('ui', 'sessionBrowserMode')}</option>
+                  <option value="token">{i18n.t('ui', 'sessionTokenMode')}</option>
+                </select>
+              </label>
+              <label className={fieldClass}>
+                <span>{i18n.t('ui', browserSession ? 'sessionPairingCode' : 'connectToken')}</span>
+                <input
+                  className="designer-input"
+                  type="password"
+                  value={browserSession ? pairingCode : token}
+                  onChange={(e) =>
+                    browserSession ? setPairingCode(e.target.value) : setToken(e.target.value)
+                  }
+                  autoComplete="off"
+                />
+              </label>
+              <p className="designer-connection-lead">
+                {browserSession
+                  ? i18n.t('ui', 'sessionPairingHint')
+                  : i18n.t('errors', 'security_memoryOnly')}
+              </p>
+              {err ? (
+                <div className="designer-connection-error" role="alert">
+                  {err}
+                </div>
+              ) : null}
+              <div className="designer-connection-actions">
+                <button
+                  type="button"
+                  className="designer-btn designer-btn-primary"
+                  disabled={busy}
+                  onClick={() => void fetchDatabases()}
+                >
+                  {busy ? i18n.t('ui', 'connecting') : i18n.t('ui', 'btnListLibraries')}
+                </button>
+              </div>
+            </details>
+            {getHostedBrowserRole() === 'data' && err && (
+              <div role="alert" className="designer-connection-error">
+                {err}
+              </div>
+            )}
           </>
         )}
 

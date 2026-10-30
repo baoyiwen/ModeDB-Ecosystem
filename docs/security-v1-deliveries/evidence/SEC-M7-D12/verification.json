@@ -1,0 +1,237 @@
+{
+  "format": "modeldb.security-registration-contract-verification.v1",
+  "revision": "SEC-M7-D12",
+  "recordedAtUtc": "2026-10-26T08:02:05.505Z",
+  "task": "DR-P1.1",
+  "workspace": {
+    "head": "fd40ade27acdec54c4e5ba4dd8ddc5ac4e061a0f",
+    "uncommitted": true,
+    "existingChangesAndStagedRuntimeRemovalsPreserved": true
+  },
+  "tasks": {
+    "closed": ["DR-P1.1"],
+    "v1Milestones": "7/7",
+    "v1Tasks": "20/20",
+    "registration": "1/23",
+    "requiredWorkPackages": "0/4",
+    "next": "DR-P1.2"
+  },
+  "runtimeRegistrationImplemented": false,
+  "checks": {
+    "descriptor": true,
+    "isolatedDnsTls": true,
+    "scopedFormatting": true,
+    "scopedLint": true,
+    "gitMaterialGuard": true
+  },
+  "runtime": {
+    "platform": "win32",
+    "node": "v24.22.1",
+    "otherNodeVersionsValidated": false,
+    "browserAuthenticatorValidated": false
+  },
+  "unit": {
+    "tests": 19,
+    "pass": 19,
+    "fail": 0,
+    "cancelled": 0,
+    "skip": 0,
+    "todo": 0
+  },
+  "evidenceToolUnit": {
+    "tests": 10,
+    "pass": 10,
+    "fail": 0,
+    "cancelled": 0,
+    "skip": 0,
+    "todo": 0
+  },
+  "commands": [
+    {
+      "name": "contract-unit",
+      "command": "node --test --test-reporter=tap test/unit/security-registration-contract.test.mjs",
+      "exitCode": 0,
+      "logSha256": "16544c254c09b6cf9426cec93484ed84005cb843b582f0a3e64922d4d3a47eeb"
+    },
+    {
+      "name": "evidence-unit",
+      "command": "node --test --test-reporter=tap test/unit/security-release-evidence.test.mjs",
+      "exitCode": 0,
+      "logSha256": "b3278d32f24557a7cd4f2efe57baef42d6865453ac419b26f2f6550929c034ad"
+    },
+    {
+      "name": "lint",
+      "command": "node node_modules/eslint/bin/eslint.js scripts/security-registration-contract.mjs scripts/security-release-evidence.mjs",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "scoped-format",
+      "command": "node node_modules/prettier/bin/prettier.cjs --check scripts/security-registration-contract.mjs scripts/security-release-evidence.mjs package.json docs/security-v1/examples/device-registration.deployment.v1.json docs/security-v1/AGENTS.md docs/security-v1-milestones.md docs/security-v1-plan.md docs/security-v1/device-registration-proposal.md docs/security-v1/device-registration-deployment-contract.md docs/security-v1/overview.md docs/security-v1/user-guide.md docs/security-v1-deliveries/SEC-M7.md test/README.md test/fixtures/security-registration-tls/README.md",
+      "exitCode": 0,
+      "logSha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+    },
+    {
+      "name": "descriptor",
+      "command": "node scripts/security-registration-contract.mjs",
+      "exitCode": 0,
+      "logSha256": "269df9fa2ef6691c4a84591f7fbbeecd4c5982dd30f2eafce46371e5f948ecfa"
+    },
+    {
+      "name": "git-material-guard",
+      "command": "node scripts/assert-no-security-material.mjs",
+      "exitCode": 0,
+      "logSha256": "a7e7fc2ec8f1a80a462896ab55e74f9fffd4ce24edc7a542c6b8ef18a0a6e49f"
+    }
+  ],
+  "isolatedTls": {
+    "requestLocalDns": true,
+    "randomLoopbackPort": true,
+    "successfulHttpRequests": 2,
+    "rejectedBeforeHttp": 3,
+    "certificateSanValidityAndSpki": true,
+    "unknownRootWrongSanWrongPinRejected": true,
+    "osDnsChanged": false,
+    "certificateTrustInstalled": false,
+    "publicCaDeploymentAcceptance": false
+  },
+  "documentValidation": {
+    "ok": true,
+    "documentFiles": 10,
+    "localLinksAndAnchors": 189,
+    "failures": [],
+    "registrationTaskRows": 23,
+    "completedRegistrationTasks": 1
+  },
+  "sources": [
+    {
+      "path": "scripts/security-registration-contract.mjs",
+      "sha256": "cb5a267d638564821cc365fd9b28afa81658d040ede9595690f42d708f5b48f0",
+      "sha256Lf": "cb5a267d638564821cc365fd9b28afa81658d040ede9595690f42d708f5b48f0"
+    },
+    {
+      "path": "scripts/security-release-evidence.mjs",
+      "sha256": "3baa6ecda6bb54701dc32557fa3f5c56698be6e943ebf25d36bdcd542ca58fe7",
+      "sha256Lf": "1da4ed5155daa1611f2617cc54f61115b7ed3d8f158742811260ac3871f2b882"
+    },
+    {
+      "path": "package.json",
+      "sha256": "f435d74facf497fdea9d435e7f31c0beffa6cff644b2108e403e9e96e276b707",
+      "sha256Lf": "a6a7ad343c77db58054dd0f37aab45fe944e548ee42dcbc60d0004c76d58a6a4"
+    },
+    {
+      "path": "docs/security-v1/examples/device-registration.deployment.v1.json",
+      "sha256": "316f6db2dea17d4606d42dc3c723513d905ce433b3ca62a58cb28a8bc9c489ac",
+      "sha256Lf": "316f6db2dea17d4606d42dc3c723513d905ce433b3ca62a58cb28a8bc9c489ac"
+    },
+    {
+      "path": "docs/security-v1/AGENTS.md",
+      "sha256": "3243d235b516f7b0971fdd8b24347771805b7237d072ac00566ed6fbb9cf8b7f",
+      "sha256Lf": "ce10a588eeaa50f5d299b177a93d71dc7561cf7640d03c5cb9ff4bfbaa103575"
+    },
+    {
+      "path": "docs/security-v1-milestones.md",
+      "sha256": "0fb7aadedb54b1e9a114aaa05e9641cddcda7d613cc7afe6f3ba5d9ce72a342a",
+      "sha256Lf": "0fb7aadedb54b1e9a114aaa05e9641cddcda7d613cc7afe6f3ba5d9ce72a342a"
+    },
+    {
+      "path": "docs/security-v1-plan.md",
+      "sha256": "4f496eb61d38a3ee0033be512bc53982596d8fbaf27fa508b883c875b23ad25c",
+      "sha256Lf": "656acb70c220087136bb834cec7d65128d03f84556caaf4121c78c9c543ec0b9"
+    },
+    {
+      "path": "docs/security-v1/device-registration-proposal.md",
+      "sha256": "2ddd2e7ff1b2ced7c99e485c546affcc3a7fcf6fccc9eea2219998fef015eaf8",
+      "sha256Lf": "2ddd2e7ff1b2ced7c99e485c546affcc3a7fcf6fccc9eea2219998fef015eaf8"
+    },
+    {
+      "path": "docs/security-v1/device-registration-deployment-contract.md",
+      "sha256": "1d072f419df0a72768e00ca9edd7d9905e7d97f04ac21c89c507e4ed74328558",
+      "sha256Lf": "1d072f419df0a72768e00ca9edd7d9905e7d97f04ac21c89c507e4ed74328558"
+    },
+    {
+      "path": "docs/security-v1/overview.md",
+      "sha256": "18226414b64e75feb9530733019f9a082caefc4c846cc8cd7ff9a411eef20833",
+      "sha256Lf": "f0080810a9fb97f9dda89697dcc752677b1988e00ce77bb8c8e7bcc82c6b229d"
+    },
+    {
+      "path": "docs/security-v1/user-guide.md",
+      "sha256": "28ff3b7347fbcb4de016122f014253c3c6ff494c891091c25aa47d487a284ade",
+      "sha256Lf": "e4b5861590ed667f623d9f0297684adda6e828717b587512b10feb544ee06e32"
+    },
+    {
+      "path": "docs/security-v1-deliveries/SEC-M7.md",
+      "sha256": "8fdecda03787cb464262781079de332e2cdc742ec506ec6617e808de25a78bdc",
+      "sha256Lf": "d55439c9af764845733ed3c5bca3a336f2003d701d0f2d0df1b8802f70df1f9f"
+    },
+    {
+      "path": "test/README.md",
+      "sha256": "e5900258acd70180628405a145216ea238c0797279683e0f62a1b6e47d6f27f1",
+      "sha256Lf": "0f56ef2cff014d234622363ee067530a9cad17cadde3631c545fd43afdec8db6"
+    },
+    {
+      "path": "test/fixtures/security-registration-tls/README.md",
+      "sha256": "1d6ac0175c11695df3c26d3a603adfefd09437fa6e152582c21e302afdc44957",
+      "sha256Lf": "1d6ac0175c11695df3c26d3a603adfefd09437fa6e152582c21e302afdc44957"
+    },
+    {
+      "path": "test/unit/security-registration-contract.test.mjs",
+      "sha256": "a2844e75f80aeb4f9cc18c44714e6d8aa8e5388b1fd773a788242bca6b8a3185",
+      "sha256Lf": "a2844e75f80aeb4f9cc18c44714e6d8aa8e5388b1fd773a788242bca6b8a3185"
+    },
+    {
+      "path": "test/unit/security-release-evidence.test.mjs",
+      "sha256": "65a15b4eb45d62d1982f62994ade2e1d17ea31db42958dee4026ffa6c165cd63",
+      "sha256Lf": "65a15b4eb45d62d1982f62994ade2e1d17ea31db42958dee4026ffa6c165cd63"
+    },
+    {
+      "path": "test/fixtures/security-registration-tls/modeldb-a.crt",
+      "sha256": "11e6daaeb24fc20a7041c4f8fd03916889bfde3b5ea09e4e05475253af20f871",
+      "sha256Lf": "11e6daaeb24fc20a7041c4f8fd03916889bfde3b5ea09e4e05475253af20f871"
+    },
+    {
+      "path": "test/fixtures/security-registration-tls/modeldb-a.key",
+      "sha256": "ad536c9c74bd77cbcc39f3ac00217162fc1a41dd07900700dce6b246488c4cdd",
+      "sha256Lf": "ad536c9c74bd77cbcc39f3ac00217162fc1a41dd07900700dce6b246488c4cdd"
+    }
+  ],
+  "boundaries": {
+    "realServicesAccessed": false,
+    "realConfigurationModified": false,
+    "realCertificatesKeysVaultBusinessDataOrAclAccessed": false,
+    "syntheticCertificatesAndKeyOnly": true,
+    "realConfigurationReadBoundary": "One unintended check-format.mjs --help invocation ran its repository-wide read-only formatter; it may have read tracked local config JSON. No config content was returned or written. Subsequent checks used explicit development paths only.",
+    "publishedDeployedOrCommitted": false
+  },
+  "failuresAndRepairs": [
+    {
+      "kind": "pnpm-exec",
+      "result": "pnpm exec attempted a dependency/store status operation and failed with unable to open database file. Used installed local Node entry points; no dependency or lockfile change."
+    },
+    {
+      "kind": "format",
+      "result": "Initial new script/contract/example formatting mismatches; scoped formatting and recheck passed. test/** remains ignored by existing lint/format policy."
+    },
+    {
+      "kind": "unintended-read-only-scan",
+      "command": "node scripts/check-format.mjs --help",
+      "result": "Tool does not implement help; performed repository development-file scan. No writes or config contents returned. Recorded as a boundary deviation, not a no-real-config-read claim."
+    },
+    {
+      "kind": "evidence-test-fixture",
+      "result": "Initial added test suite: 9/10; tamper fixture lacked LF digest metadata. Added fixture metadata; final 10/10. Failed temporary log retained."
+    },
+    {
+      "kind": "fixture-generation",
+      "result": "Python launcher unavailable; generated only public synthetic cert/key using in-memory .NET CertificateRequest; no certificate-store access."
+    }
+  ],
+  "limitations": [
+    "Deployment contract and offline/isolated validation only; no WebAuthn registration/login/approval runtime implemented.",
+    "Node 22/24 and browser matrix are targets; this run validates Node 24 only.",
+    "No real LAN, Windows Hello, other-device authentication, public CA deployment or performance measurement.",
+    "Performance numbers in synthetic JSON are candidate initial values; final gates require baseline evidence before independent acceptance.",
+    "No new package installation/full regression/typecheck/browser run; previous D11 reports remain historical.",
+    "No page or translated UI changes; no visual/i18n acceptance performed."
+  ]
+}

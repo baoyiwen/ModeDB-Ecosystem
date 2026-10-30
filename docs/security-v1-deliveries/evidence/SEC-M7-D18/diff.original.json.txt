@@ -1,0 +1,33 @@
+{
+  "command": [
+    "git",
+    "diff",
+    "--check",
+    "--",
+    "package.json",
+    "packages/shared/src/security-contracts.ts",
+    "packages/shared/src/index.ts",
+    "packages/server/src/security/security-registry.ts",
+    "packages/server/src/security/registration-service.ts",
+    "scripts/security-registration-storage-check.mjs",
+    "scripts/security-release-evidence.mjs",
+    "test/unit/security-session-parent.test.ts",
+    "test/unit/security-registration-storage.test.ts",
+    "test/unit/security-release-evidence.test.mjs",
+    "docs/security-v1/AGENTS.md",
+    "docs/security-v1/overview.md",
+    "docs/security-v1/user-guide.md",
+    "docs/security-v1/release-guide.md",
+    "docs/security-v1/device-registration-protocol-contract.md",
+    "docs/security-v1/device-registration-runtime-guide.md",
+    "docs/security-v1-milestones.md",
+    "docs/security-v1-plan.md",
+    "docs/security-v1-identity-contract.md",
+    "docs/security-browser-sessions.md",
+    "docs/security-v1-deliveries/SEC-M7.md",
+    "test/README.md"
+  ],
+  "exitCode": 0,
+  "stdout": "",
+  "stderr": "warning: in the working copy of 'docs/security-v1-deliveries/SEC-M7.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-identity-contract.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-milestones.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-plan.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/AGENTS.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/overview.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/release-guide.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/user-guide.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'packages/server/src/security/security-registry.ts', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'test/README.md', LF will be replaced by CRLF the next time Git touches it\n"
+}

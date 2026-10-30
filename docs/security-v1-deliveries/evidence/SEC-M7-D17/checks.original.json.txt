@@ -1,0 +1,130 @@
+{
+  "format": "modeldb.security-registration-integration-checks.v1",
+  "registration": {
+    "cmd": "node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap test/unit/security-registration-contract.test.mjs test/unit/security-device-registration-contract.test.ts test/unit/security-registration-storage.test.ts test/unit/security-registration-runtime.test.ts test/unit/security-registration-approval.test.ts",
+    "exitCode": 0,
+    "stdout": "registration.original.txt"
+  },
+  "registryAndWindowsKeys": {
+    "cmd": "node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap test/unit/security-registry.test.ts test/unit/security-windows-keys.test.ts",
+    "exitCode": 0,
+    "stdout": "registry.original.txt"
+  },
+  "integration": {
+    "cmd": "& 'C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe' scripts/security-registration-integration-check.mjs",
+    "executionEnvironment": "Approved outside execution sandbox because sandbox blocked Chrome GPU startup. Uses isolated profiles/instances only.",
+    "exitCode": 0,
+    "report": "integration-check.json",
+    "stdout": "integration.original.txt"
+  },
+  "checks": [
+    {
+      "name": "lint",
+      "cmd": "node node_modules/eslint/bin/eslint.js packages/server/src/security/windows-secret-protector.ts scripts/security-registration-storage-check.mjs scripts/security-registration-integration-check.mjs scripts/security-release-evidence.mjs",
+      "chunk_id": "47fa14",
+      "wall_time_seconds": 0.0000058,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "name": "types",
+      "cmd": "node scripts/security-registration-storage-check.mjs",
+      "exit_code": 0,
+      "output": "{\n  \"format\": \"modeldb.registration-storage-types.v1\",\n  \"ok\": true,\n  \"node\": \"v24.22.1\",\n  \"root\": \"C:\\\\Users\\\\51153\\\\AppData\\\\Local\\\\Temp\\\\ModeDB-Registration-Storage-Types-oS425o\",\n  \"checks\": {\n    \"freshSharedDeclarations\": true,\n    \"entireServerTypecheck\": true,\n    \"strictStorageTestTypecheck\": true,\n    \"strictRegistrationRuntimeTypecheck\": true,\n    \"strictRegistrationApprovalTypecheck\": true,\n    \"strictRegistrationIntegrationTypecheck\": true,\n    \"existingDistUnchanged\": true\n  }\n}\n"
+    },
+    {
+      "name": "consumer",
+      "cmd": "node scripts/security-registration-consumer-check.mjs",
+      "chunk_id": "f38bd5",
+      "wall_time_seconds": 9.842213,
+      "exit_code": 0,
+      "original_token_count": 187,
+      "output": "{\n  \"ok\": true,\n  \"format\": \"modeldb.registration-consumer-check.v1\",\n  \"node\": \"v24.22.1\",\n  \"root\": \"C:\\\\Users\\\\51153\\\\AppData\\\\Local\\\\Temp\\\\ModeDB-Registration-Consumers-jitkCw\",\n  \"checks\": {\n    \"freshSharedDeclarations\": true,\n    \"strictSdkConsumer\": true,\n    \"domTypesWithoutNode\": true,\n    \"sharedBrowserBundle\": true,\n    \"sdkBrowserBundle\": true,\n    \"serverLibraryExcluded\": true\n  },\n  \"bundles\": [\n    {\n      \"entry\": \"packages/shared/src/index.ts\",\n      \"bytes\": 82579,\n      \"sha256\": \"17261afe09010d9a0fb2a807fa1a4433d9de25a955fda59fc2b81428f7c2ec74\"\n    },\n    {\n      \"entry\": \"packages/sdk/src/index.ts\",\n      \"bytes\": 142077,\n      \"sha256\": \"e53f60cf5ce92f6f2405721834561dea301fff5ae16c3a14563885d2b15cb125\"\n    }\n  ]\n}\n"
+    },
+    {
+      "name": "network",
+      "cmd": "node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap test/unit/security-network.test.ts test/unit/security-browser-session.test.ts",
+      "chunk_id": "d6fdd6",
+      "wall_time_seconds": 9.4140442,
+      "exit_code": 0,
+      "original_token_count": 592,
+      "output": "TAP version 13\n# Subtest: one-time browser pairing mints, rotates and revokes short sessions\nok 1 - one-time browser pairing mints, rotates and revokes short sessions\n  ---\n  duration_ms: 242.1883\n  type: 'test'\n  ...\n# Subtest: security-admin pairing has no database grants and exposes only secret-free metadata\nok 2 - security-admin pairing has no database grants and exposes only secret-free metadata\n  ---\n  duration_ms: 78.0009\n  type: 'test'\n  ...\n# Subtest: rejects unprotected remote binds, fake public TLS, bad proxy/origin/CIDR configuration\nok 3 - rejects unprotected remote binds, fake public TLS, bad proxy/origin/CIDR configuration\n  ---\n  duration_ms: 11.3555\n  type: 'test'\n  ...\n# Subtest: normalizes IPv4/IPv6, enforces deny precedence, empty allow-lists, separate planes and expiry\nok 4 - normalizes IPv4/IPv6, enforces deny precedence, empty allow-lists, separate planes and expiry\n  ---\n  duration_ms: 1.5557\n  type: 'test'\n  ...\n# Subtest: ignores forged forwarded headers on direct sockets and stops at the first untrusted proxy hop\nok 5 - ignores forged forwarded headers on direct sockets and stops at the first untrusted proxy hop\n  ---\n  duration_ms: 2.1954\n  type: 'test'\n  ...\n# Subtest: rejects disallowed Origins before parsing bodies or executing handlers; CORS permits exact origins only\nok 6 - rejects disallowed Origins before parsing bodies or executing handlers; CORS permits exact origins only\n  ---\n  duration_ms: 4108.5535\n  type: 'test'\n  ...\n# Subtest: SDK endpoint handling preserves HTTPS/IPv6 and rejects remote plaintext before sending credentials\nok 7 - SDK endpoint handling preserves HTTPS/IPv6 and rejects remote plaintext before sending credentials\n  ---\n  duration_ms: 1.3779\n  type: 'test'\n  ...\n# Subtest: real HTTPS/WSS SDK round trips require trusted certificates and reject mismatched certificate names\nok 8 - real HTTPS/WSS SDK round trips require trusted certificates and reject mismatched certificate names\n  ---\n  duration_ms: 665.0346\n  type: 'test'\n  ...\n# Subtest: SDK refuses redirects instead of following a secure request toward a different transport\nok 9 - SDK refuses redirects instead of following a secure request toward a different transport\n  ---\n  duration_ms: 22.1738\n  type: 'test'\n  ...\n1..9\n# tests 9\n# suites 0\n# pass 9\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 8919.2713\n"
+    },
+    {
+      "name": "report-and-evidence-tools",
+      "cmd": "node --test --test-reporter=tap test/unit/security-release-evidence.test.mjs test/unit/security-registration-integration-report.test.mjs",
+      "chunk_id": "5b7b40",
+      "wall_time_seconds": 2.4937528,
+      "exit_code": 0,
+      "original_token_count": 1401,
+      "output": "TAP version 13\n# Subtest: integration report requires all nine cases and actual virtual-authenticator evidence\nok 1 - integration report requires all nine cases and actual virtual-authenticator evidence\n  ---\n  duration_ms: 1.0107\n  type: 'test'\n  ...\n# Subtest: integration report rejects failure, skip, cancellation, todo, count drift and duplicate summaries\nok 2 - integration report rejects failure, skip, cancellation, todo, count drift and duplicate summaries\n  ---\n  duration_ms: 1.0014\n  type: 'test'\n  ...\n# Subtest: integration report fails closed if native/browser/capacity or no-session checks are missing\nok 3 - integration report fails closed if native/browser/capacity or no-session checks are missing\n  ---\n  duration_ms: 0.4474\n  type: 'test'\n  ...\n# Subtest: integration evidence cannot claim hardware testing or install system trust\nok 4 - integration evidence cannot claim hardware testing or install system trust\n  ---\n  duration_ms: 0.2073\n  type: 'test'\n  ...\n# Subtest: selects the current receipt and allows only development CRLF/LF differences\nok 5 - selects the current receipt and allows only development CRLF/LF differences\n  ---\n  duration_ms: 156.5413\n  type: 'test'\n  ...\n# Subtest: rejects changed source text\nok 6 - rejects changed source text\n  ---\n  duration_ms: 21.9108\n  type: 'test'\n  ...\n# Subtest: rejects changed historical screenshot bytes\nok 7 - rejects changed historical screenshot bytes\n  ---\n  duration_ms: 26.1392\n  type: 'test'\n  ...\n# Subtest: rejects modified verification artifacts\nok 8 - rejects modified verification artifacts\n  ---\n  duration_ms: 27.4803\n  type: 'test'\n  ...\n# Subtest: does not accept skipped tests even with matching artifact hashes\nok 9 - does not accept skipped tests even with matching artifact hashes\n  ---\n  duration_ms: 31.7734\n  type: 'test'\n  ...\n# Subtest: rejects runtime and traversal paths before opening them\nok 10 - rejects runtime and traversal paths before opening them\n  ---\n  duration_ms: 59.6406\n  type: 'test'\n  ...\n# Subtest: rejects linked source ancestors\nok 11 - rejects linked source ancestors\n  ---\n  duration_ms: 21.1552\n  type: 'test'\n  ...\n# Subtest: fails closed for incomplete newest evidence and duplicate source paths\nok 12 - fails closed for incomplete newest evidence and duplicate source paths\n  ---\n  duration_ms: 23.1624\n  type: 'test'\n  ...\n# Subtest: verifies a registration-contract receipt separately from historical runtime acceptance\nok 13 - verifies a registration-contract receipt separately from historical runtime acceptance\n  ---\n  duration_ms: 39.2543\n  type: 'test'\n  ...\n# Subtest: rejects incomplete registration evidence without falling back to a passed D11 receipt\nok 14 - rejects incomplete registration evidence without falling back to a passed D11 receipt\n  ---\n  duration_ms: 115.7596\n  type: 'test'\n  ...\n# Subtest: validates protocol evidence and the separately locked offline dependency graph\nok 15 - validates protocol evidence and the separately locked offline dependency graph\n  ---\n  duration_ms: 42.8352\n  type: 'test'\n  ...\n# Subtest: fails closed for protocol skips, unavailable offline install and unverified browser boundary\nok 16 - fails closed for protocol skips, unavailable offline install and unverified browser boundary\n  ---\n  duration_ms: 168.728\n  type: 'test'\n  ...\n# Subtest: verifies storage acceptance without turning it into runtime registration acceptance\nok 17 - verifies storage acceptance without turning it into runtime registration acceptance\n  ---\n  duration_ms: 50.4765\n  type: 'test'\n  ...\n# Subtest: does not fall back to D13 for skipped storage, failed legacy compatibility or missing DPAPI/hard-exit evidence\nok 18 - does not fall back to D13 for skipped storage, failed legacy compatibility or missing DPAPI/hard-exit evidence\n  ---\n  duration_ms: 214.0723\n  type: 'test'\n  ...\n# Subtest: accepts registration API evidence without claiming approval or public-key login\nok 19 - accepts registration API evidence without claiming approval or public-key login\n  ---\n  duration_ms: 72.974\n  type: 'test'\n  ...\n# Subtest: refuses skipped runtime, missing native HTTPS or dependency drift without falling back to storage evidence\nok 20 - refuses skipped runtime, missing native HTTPS or dependency drift without falling back to storage evidence\n  ---\n  duration_ms: 258.4264\n  type: 'test'\n  ...\n# Subtest: accepts OS-local approval evidence without claiming public-key login or full registration integration\nok 21 - accepts OS-local approval evidence without claiming public-key login or full registration integration\n  ---\n  duration_ms: 52.2949\n  type: 'test'\n  ...\n# Subtest: refuses approval skips, failed OS identity, scopes, atomic audit or native CLI without falling back to D15\nok 22 - refuses approval skips, failed OS identity, scopes, atomic audit or native CLI without falling back to D15\n  ---\n  duration_ms: 306.8912\n  type: 'test'\n  ...\n# Subtest: accepts full registration integration evidence separately from hardware and public-key login acceptance\nok 23 - accepts full registration integration evidence separately from hardware and public-key login acceptance\n  ---\n  duration_ms: 59.4849\n  type: 'test'\n  ...\n# Subtest: rejects missing virtual/native, skipped flow, hard-exit, capacity or session evidence without falling back to D16\nok 24 - rejects missing virtual/native, skipped flow, hard-exit, capacity or session evidence without falling back to D16\n  ---\n  duration_ms: 367.1245\n  type: 'test'\n  ...\n1..24\n# tests 24\n# suites 0\n# pass 24\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 2202.4417\n"
+    },
+    {
+      "name": "documents",
+      "cmd": "@'\nconst assert = require('node:assert/strict');\nconst { readFileSync, existsSync } = require('node:fs');\nconst { dirname, resolve } = require('node:path');\nconst docs = ['docs/security-v1/AGENTS.md','docs/security-v1-milestones.md','docs/security-v1-plan.md','docs/security-v1/device-registration-proposal.md','docs/security-v1/device-registration-deployment-contract.md','docs/security-v1/device-registration-protocol-contract.md','docs/security-v1/device-registration-runtime-guide.md','docs/security-v1/overview.md','docs/security-v1/user-guide.md','docs/security-v1-deliveries/SEC-M7.md','docs/security-v1-identity-contract.md','test/README.md','test/fixtures/security-registration-legacy/README.md'];\nconst slug=s=>s.replace(/\\[([^\\]]+)\\]\\([^)]*\\)/g,'$1').replace(/<[^>]*>/g,'').replace(/[`*_]/g,'').toLowerCase().replace(/[^\\p{L}\\p{N}_ -]/gu,'').replace(/ /g,'-');\nlet count=0; const failures=[];\nfor (const file of docs) {\n const content=readFileSync(file,'utf8');\n for (const match of content.matchAll(/\\[[^\\]\\n]*\\]\\(([^)\\n]+)\\)/g)) {\n  const href=match[1].replace(/^<|>$/g,'');\n  if (/^[a-z][a-z0-9+.-]*:/i.test(href)) continue;\n  const [rel,anchor]=href.split('#');\n  const target=resolve(dirname(file),decodeURIComponent(rel||'./'+file.split('/').at(-1)));\n  count++;\n  if (!existsSync(target)) {failures.push(file+' missing '+href);continue;}\n  if (anchor && target.endsWith('.md')) {\n   const seen=new Map(), anchors=new Set();\n   for (const heading of readFileSync(target,'utf8').matchAll(/^#{1,6}\\s+(.+)$/gm)) {\n    const base=slug(heading[1]), n=seen.get(base)||0;seen.set(base,n+1);anchors.add(base+(n?'-'+n:''));\n   }\n   if (!anchors.has(decodeURIComponent(anchor))) failures.push(file+' anchor '+href);\n  }\n }\n}\nconst ledger=readFileSync('docs/security-v1-milestones.md','utf8');\nconst rows=[...ledger.matchAll(/^\\| (DR-P[1-4]\\.\\d+)\\s+\\|(.+)$/gm)];\nassert.equal(rows.length,23);assert.equal(new Set(rows.map(r=>r[1])).size,23);\nassert.equal(rows.filter(r=>r[2].includes('完成（D')).length,6);\nconsole.log(JSON.stringify({ok:failures.length===0,documentFiles:docs.length,localLinksAndAnchors:count,failures,registrationTaskRows:rows.length,completedRegistrationTasks:6},null,2));\nassert.equal(failures.length,0);\n'@ | node",
+      "chunk_id": "df1a31",
+      "wall_time_seconds": 0.0000144,
+      "exit_code": 0,
+      "original_token_count": 39,
+      "output": "{\n  \"ok\": true,\n  \"documentFiles\": 13,\n  \"localLinksAndAnchors\": 263,\n  \"failures\": [],\n  \"registrationTaskRows\": 23,\n  \"completedRegistrationTasks\": 6\n}\n"
+    },
+    {
+      "name": "format",
+      "cmd": "node node_modules/prettier/bin/prettier.cjs --check docs/security-v1-deliveries/SEC-M7.md docs/security-v1-identity-contract.md docs/security-v1-milestones.md docs/security-v1-plan.md docs/security-v1/AGENTS.md docs/security-v1/device-registration-deployment-contract.md docs/security-v1/device-registration-proposal.md docs/security-v1/device-registration-protocol-contract.md docs/security-v1/device-registration-runtime-guide.md docs/security-v1/examples/device-registration.deployment.v1.json docs/security-v1/overview.md docs/security-v1/user-guide.md package.json packages/sdk/src/index.ts packages/server/package.json packages/server/src/config-loader.ts packages/server/src/dual-track-app.ts packages/server/src/security/network-boundary.ts packages/server/src/security/registration-ledger.ts packages/server/src/security/registration-routes.ts packages/server/src/security/registration-service.ts packages/server/src/security/registry-entrypoints.ts packages/server/src/security/security-registry.ts packages/shared/src/device-registration-contracts.ts packages/shared/src/index.ts scripts/security-registration-consumer-check.mjs scripts/security-registration-contract.mjs scripts/security-registration-library-check.mjs scripts/security-registration-storage-check.mjs scripts/security-release-evidence.mjs packages/server/src/cli-security.ts packages/server/src/cli-security-registration.ts packages/server/src/security/local-management-channel.ts packages/server/src/security/registration-approval.ts packages/server/src/security/windows-secret-protector.ts scripts/security-registration-integration-check.mjs",
+      "chunk_id": "2f85f3",
+      "wall_time_seconds": 1.3806647,
+      "exit_code": 0,
+      "original_token_count": 17,
+      "output": "Checking formatting...\nAll matched files use Prettier code style!\n"
+    },
+    {
+      "name": "guard",
+      "cmd": "node scripts/assert-no-security-material.mjs",
+      "chunk_id": "75be26",
+      "wall_time_seconds": 0.2289522,
+      "exit_code": 0,
+      "original_token_count": 15,
+      "output": "{\"ok\":true,\"trackedRuntimeEntries\":0,\"materialRead\":false}\n"
+    },
+    {
+      "name": "diff",
+      "cmd": "git diff --check -- docs/security-v1-deliveries/SEC-M7.md docs/security-v1-identity-contract.md docs/security-v1-milestones.md docs/security-v1-plan.md docs/security-v1/AGENTS.md docs/security-v1/device-registration-deployment-contract.md docs/security-v1/device-registration-proposal.md docs/security-v1/device-registration-protocol-contract.md docs/security-v1/device-registration-runtime-guide.md docs/security-v1/examples/device-registration.deployment.v1.json docs/security-v1/overview.md docs/security-v1/user-guide.md package.json packages/sdk/src/index.ts packages/server/package.json packages/server/src/config-loader.ts packages/server/src/dual-track-app.ts packages/server/src/security/network-boundary.ts packages/server/src/security/registration-ledger.ts packages/server/src/security/registration-routes.ts packages/server/src/security/registration-service.ts packages/server/src/security/registry-entrypoints.ts packages/server/src/security/security-registry.ts packages/shared/src/device-registration-contracts.ts packages/shared/src/index.ts pnpm-lock.yaml scripts/security-registration-consumer-check.mjs scripts/security-registration-contract.mjs scripts/security-registration-dependencies/LICENSE.simplewebauthn.md scripts/security-registration-dependencies/package.json scripts/security-registration-dependencies/pnpm-lock.yaml scripts/security-registration-library-check.mjs scripts/security-registration-storage-check.mjs scripts/security-release-evidence.mjs test/README.md test/fixtures/security-registration-legacy/README.md test/fixtures/security-registration-legacy/security-registry-v1.original.ts.txt test/fixtures/security-registration-tls/README.md test/fixtures/security-registration-tls/modeldb-a.crt test/fixtures/security-registration-tls/modeldb-a.key test/unit/security-device-registration-contract.test.ts test/unit/security-registration-contract.test.mjs test/unit/security-registration-runtime.test.ts test/unit/security-registration-storage.test.ts test/unit/security-release-evidence.test.mjs packages/server/src/cli-security.ts packages/server/src/cli-security-registration.ts packages/server/src/security/local-management-channel.ts packages/server/src/security/registration-approval.ts test/unit/security-registration-approval.test.ts packages/server/src/security/windows-secret-protector.ts scripts/security-registration-integration-check.mjs test/fixtures/security-registration-integration.ts test/fixtures/security-registration-browser.ts test/fixtures/security-registration-approval-child.ts test/integration/security-registration-flow.test.ts test/integration/security-registration-browser.test.ts test/unit/security-registration-integration-report.test.mjs",
+      "chunk_id": "39abf2",
+      "wall_time_seconds": 0.4484968,
+      "exit_code": 0,
+      "original_token_count": 296,
+      "output": "warning: in the working copy of 'docs/security-v1-deliveries/SEC-M7.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-identity-contract.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-milestones.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-plan.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/AGENTS.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/overview.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/user-guide.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'pnpm-lock.yaml', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'test/README.md', LF will be replaced by CRLF the next time Git touches it\n"
+    }
+  ],
+  "earlyFailedChecks": [
+    {
+      "chunk_id": "8793cf",
+      "wall_time_seconds": 5.242153,
+      "exit_code": 1,
+      "original_token_count": 35,
+      "output": "test/fixtures/security-registration-integration.ts(56,291): error TS2347: Untyped function calls may not accept type arguments.\r\n\n\n2 !== 0\n\n"
+    },
+    {
+      "chunk_id": "8a115f",
+      "wall_time_seconds": 4.9201815,
+      "exit_code": 1,
+      "original_token_count": 131,
+      "output": "scripts/security-registration-integration-check.mjs 45ms\nscripts/security-registration-storage-check.mjs 8ms (unchanged)\npackage.json 4ms (unchanged)\n\nC:\\workspace\\web_code\\ModeDB-Ecosystem\\scripts\\security-registration-integration-check.mjs\n   35:5   error  Expected { after 'for-of'        curly\n   47:5   error  Expected { after 'for-of'        curly\n  121:21  error  Expected { after 'if' condition  curly\n\n✖ 3 problems (3 errors, 0 warnings)\n  3 errors and 0 warnings potentially fixable with the `--fix` option.\n\n"
+    }
+  ],
+  "browserStartupDiagnosis": {
+    "scope": "Separate temporary profile, loopback CDP only; excerpt of diagnostic tool output, not a complete stderr archive.",
+    "observed": [
+      "GPU process exited unexpectedly: exit_code=-1073741790",
+      "FATAL: GPU process isn't usable. Goodbye."
+    ]
+  },
+  "failedIntegrationReports": [
+    "integration-failed-01.json",
+    "integration-failed-02.json",
+    "integration-failed-03.json",
+    "integration-failed-04.json",
+    "integration-failed-05.json"
+  ]
+}

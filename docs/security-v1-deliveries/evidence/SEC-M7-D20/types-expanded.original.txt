@@ -1,0 +1,5 @@
+test/unit/security-dynamic-authorization.test.ts(227,28): error TS2554: Expected 2-4 arguments, but got 1.
+
+
+2 !== 0
+

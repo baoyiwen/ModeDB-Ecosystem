@@ -1,0 +1,283 @@
+{
+  "format": "modeldb.security-authentication-checks.v1",
+  "task": "DR-P2.2",
+  "testCommands": [
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-authentication.test.ts",
+        "test/unit/security-authentication-storage.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "authentication.original.txt",
+      "unit": {
+        "pass": 55,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "todo": 0
+      }
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-session-parent.test.ts",
+        "test/unit/security-registration-contract.test.mjs",
+        "test/unit/security-device-registration-contract.test.ts",
+        "test/unit/security-registration-storage.test.ts",
+        "test/unit/security-registration-runtime.test.ts",
+        "test/unit/security-registration-approval.test.ts",
+        "test/unit/security-registry.test.ts",
+        "test/unit/security-windows-keys.test.ts",
+        "test/unit/security-browser-session.test.ts",
+        "test/unit/security-network.test.ts",
+        "test/unit/security-authorization.test.ts",
+        "test/unit/security-registry-http.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "regression.original.txt",
+      "unit": {
+        "pass": 169,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "todo": 0
+      }
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-release-evidence.test.mjs",
+        "test/unit/security-authentication-report.test.mjs"
+      ],
+      "exitCode": 0,
+      "log": "tools.original.txt",
+      "unit": {
+        "pass": 28,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "todo": 0
+      }
+    }
+  ],
+  "nativeIntegration": {
+    "format": "modeldb.authentication-integration-check.v1",
+    "ok": true,
+    "task": "DR-P2.2",
+    "node": "v24.22.1",
+    "platform": "win32",
+    "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Flow-Report-E9AEFK",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-authentication-browser.test.ts"
+    ],
+    "exitCode": 0,
+    "durationMs": 111934.64779999999,
+    "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Flow-Report-E9AEFK\\integration.tap",
+    "unit": {
+      "pass": 1,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0,
+      "todo": 0
+    },
+    "browser": {
+      "format": "modeldb.authentication-browser.v1",
+      "ok": true,
+      "browser": "Chrome/156.0.8078.48",
+      "checks": {
+        "actualBrowserWebAuthnGet": true,
+        "freshSdkBundle": true,
+        "nativeTlsDpapiApproval": true,
+        "pendingDenied": true,
+        "httpOnlySecureStrict": true,
+        "dataScope": true,
+        "adminDenied": true,
+        "reloadRecovery": true,
+        "csrfRotation": true,
+        "logout": true,
+        "restartRecovery": true,
+        "disabledNewLogin": true,
+        "expiredRegistrationIndependent": true,
+        "noApiCredential": true,
+        "instanceKeyUnchanged": true
+      },
+      "hardwareAuthenticatorTested": false,
+      "systemTrustInstalled": false
+    },
+    "scope": {
+      "temporarySyntheticOnly": true,
+      "liveMaterialRead": false,
+      "hardwareAuthenticatorTested": false,
+      "productionRegistrationUiTested": false,
+      "publicKeyLoginImplemented": true,
+      "systemTrustInstalled": false
+    },
+    "report": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Flow-Report-E9AEFK\\integration-check.json"
+  },
+  "checks": [
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "scripts/security-registration-storage-check.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"format\": \"modeldb.registration-storage-types.v1\",\n  \"ok\": true,\n  \"node\": \"v24.22.1\",\n  \"root\": \"C:\\\\Users\\\\51153\\\\AppData\\\\Local\\\\Temp\\\\ModeDB-Registration-Storage-Types-IERV5c\",\n  \"checks\": {\n    \"freshSharedDeclarations\": true,\n    \"entireServerTypecheck\": true,\n    \"strictStorageTestTypecheck\": true,\n    \"strictSessionParentTypecheck\": true,\n    \"strictAuthenticationTypecheck\": true,\n    \"strictRegistrationRuntimeTypecheck\": true,\n    \"strictRegistrationApprovalTypecheck\": true,\n    \"strictRegistrationIntegrationTypecheck\": true,\n    \"existingDistUnchanged\": true\n  }\n}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "scripts/security-registration-consumer-check.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": "{\n  \"ok\": true,\n  \"format\": \"modeldb.registration-consumer-check.v1\",\n  \"node\": \"v24.22.1\",\n  \"root\": \"C:\\\\Users\\\\51153\\\\AppData\\\\Local\\\\Temp\\\\ModeDB-Registration-Consumers-X589Ds\",\n  \"checks\": {\n    \"freshSharedDeclarations\": true,\n    \"strictSdkConsumer\": true,\n    \"domTypesWithoutNode\": true,\n    \"sharedBrowserBundle\": true,\n    \"sdkBrowserBundle\": true,\n    \"serverLibraryExcluded\": true\n  },\n  \"bundles\": [\n    {\n      \"entry\": \"packages/shared/src/index.ts\",\n      \"bytes\": 87304,\n      \"sha256\": \"4f5aa34eb00f123cc2dfc2b537281b2804c68ff40d32816a012406959531640b\"\n    },\n    {\n      \"entry\": \"packages/sdk/src/index.ts\",\n      \"bytes\": 150572,\n      \"sha256\": \"6e7d7a81567c9ebf107ca79a30e7c41336afe3088c869cca9ffead459a459cce\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "scripts/assert-no-security-material.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"ok\":true,\"trackedRuntimeEntries\":0,\"materialRead\":false}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/prettier/bin/prettier.cjs",
+        "--check",
+        "package.json",
+        "packages/shared/src/device-authentication-contracts.ts",
+        "packages/shared/src/index.ts",
+        "packages/server/src/security/authentication-ledger.ts",
+        "packages/server/src/security/authentication-service.ts",
+        "packages/server/src/security/authentication-routes.ts",
+        "packages/server/src/security/browser-session-http.ts",
+        "packages/server/src/security/security-registry.ts",
+        "packages/server/src/security/registry-entrypoints.ts",
+        "packages/server/src/security/network-boundary.ts",
+        "packages/server/src/config-loader.ts",
+        "packages/server/src/dual-track-app.ts",
+        "packages/sdk/src/browser-session.ts",
+        "packages/sdk/src/index.ts",
+        "scripts/security-authentication-integration-check.mjs",
+        "scripts/security-registration-storage-check.mjs",
+        "scripts/security-registration-consumer-check.mjs",
+        "scripts/security-release-evidence.mjs",
+        "docs/security-v1/AGENTS.md",
+        "docs/security-v1-milestones.md",
+        "docs/security-v1-plan.md",
+        "docs/security-v1/device-registration-proposal.md",
+        "docs/security-v1/device-registration-deployment-contract.md",
+        "docs/security-v1/device-registration-protocol-contract.md",
+        "docs/security-v1/device-registration-runtime-guide.md",
+        "docs/security-v1/overview.md",
+        "docs/security-v1/user-guide.md",
+        "docs/security-v1/release-guide.md",
+        "docs/security-v1-deliveries/SEC-M7.md",
+        "docs/security-v1-identity-contract.md",
+        "docs/security-browser-sessions.md",
+        "docs/modeldb-config-guide.md"
+      ],
+      "exitCode": 0,
+      "stdout": "Checking formatting...\nAll matched files use Prettier code style!\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/eslint/bin/eslint.js",
+        "packages/shared/src/device-authentication-contracts.ts",
+        "packages/shared/src/index.ts",
+        "packages/server/src/security/authentication-ledger.ts",
+        "packages/server/src/security/authentication-service.ts",
+        "packages/server/src/security/authentication-routes.ts",
+        "packages/server/src/security/browser-session-http.ts",
+        "packages/server/src/security/security-registry.ts",
+        "packages/server/src/security/registry-entrypoints.ts",
+        "packages/server/src/security/network-boundary.ts",
+        "packages/server/src/config-loader.ts",
+        "packages/server/src/dual-track-app.ts",
+        "packages/sdk/src/browser-session.ts",
+        "packages/sdk/src/index.ts",
+        "scripts/security-authentication-integration-check.mjs",
+        "scripts/security-registration-storage-check.mjs",
+        "scripts/security-registration-consumer-check.mjs",
+        "scripts/security-release-evidence.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "package.json",
+        "packages/shared/src/device-authentication-contracts.ts",
+        "packages/shared/src/index.ts",
+        "packages/server/src/security/authentication-ledger.ts",
+        "packages/server/src/security/authentication-service.ts",
+        "packages/server/src/security/authentication-routes.ts",
+        "packages/server/src/security/browser-session-http.ts",
+        "packages/server/src/security/security-registry.ts",
+        "packages/server/src/security/registry-entrypoints.ts",
+        "packages/server/src/security/network-boundary.ts",
+        "packages/server/src/config-loader.ts",
+        "packages/server/src/dual-track-app.ts",
+        "packages/sdk/src/browser-session.ts",
+        "packages/sdk/src/index.ts",
+        "scripts/security-authentication-integration-check.mjs",
+        "scripts/security-registration-storage-check.mjs",
+        "scripts/security-registration-consumer-check.mjs",
+        "scripts/security-release-evidence.mjs",
+        "docs/security-v1/AGENTS.md",
+        "docs/security-v1-milestones.md",
+        "docs/security-v1-plan.md",
+        "docs/security-v1/device-registration-proposal.md",
+        "docs/security-v1/device-registration-deployment-contract.md",
+        "docs/security-v1/device-registration-protocol-contract.md",
+        "docs/security-v1/device-registration-runtime-guide.md",
+        "docs/security-v1/overview.md",
+        "docs/security-v1/user-guide.md",
+        "docs/security-v1/release-guide.md",
+        "docs/security-v1-deliveries/SEC-M7.md",
+        "docs/security-v1-identity-contract.md",
+        "docs/security-browser-sessions.md",
+        "docs/modeldb-config-guide.md",
+        "test/README.md",
+        "test/unit/security-registration-storage.test.ts",
+        "test/unit/security-release-evidence.test.mjs",
+        "test/fixtures/security-registration-integration.ts"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": "warning: in the working copy of 'docs/security-v1-deliveries/SEC-M7.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-identity-contract.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-milestones.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-plan.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/AGENTS.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/overview.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/release-guide.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/user-guide.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'packages/server/src/security/security-registry.ts', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'test/README.md', LF will be replaced by CRLF the next time Git touches it\n"
+    },
+    {
+      "script": "docs/security-v1-deliveries/evidence/SEC-M7-D19/documents-check.original.mjs.txt",
+      "exitCode": 0,
+      "stdout": "{\n  \"ok\": true,\n  \"documentFiles\": 16,\n  \"localLinksAndAnchors\": 318,\n  \"failures\": [],\n  \"registrationTaskRows\": 23,\n  \"completedRegistrationTasks\": 8\n}\n",
+      "stderr": ""
+    }
+  ],
+  "historicalEvidenceVerified": 111,
+  "preexistingSecurityIndexDeletionsPreserved": 4
+}

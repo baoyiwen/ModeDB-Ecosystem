@@ -1,0 +1,340 @@
+[
+  {
+    "name": "tools",
+    "command": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-public-rejection-audit.test.ts",
+      "test/unit/security-performance-contract.test.mjs",
+      "test/unit/security-performance-evidence.test.mjs",
+      "test/unit/security-release-evidence.test.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "tools.original.txt"
+  },
+  {
+    "name": "affected",
+    "command": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "--test-concurrency=1",
+      "test/unit/security-registration-runtime.test.ts",
+      "test/unit/security-registration-integration-report.test.mjs",
+      "test/unit/security-authentication.test.ts",
+      "test/unit/security-authentication-resilience.test.ts",
+      "test/unit/security-dynamic-authorization.test.ts",
+      "test/unit/security-registry-http.test.ts",
+      "test/unit/security-protection.test.ts",
+      "test/unit/security-network.test.ts"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "expiry-repair-affected.original.txt"
+  },
+  {
+    "name": "browser",
+    "command": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/integration/security-authentication-browser.test.ts"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "expiry-repair-browser.original.txt"
+  },
+  {
+    "name": "types",
+    "command": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "scripts/security-registration-storage-check.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "expiry-repair-types.original.txt"
+  },
+  {
+    "name": "lint",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/eslint/bin/eslint.js",
+      "scripts/security-performance-check.mjs",
+      "scripts/security-performance-contract.mjs",
+      "scripts/security-performance-evidence.mjs",
+      "scripts/security-release-evidence.mjs",
+      "scripts/security-registration-storage-check.mjs",
+      "packages/server/src/security/public-rejection-audit.ts",
+      "packages/server/src/security/registration-service.ts",
+      "packages/server/src/security/authentication-service.ts",
+      "packages/server/src/security/registration-routes.ts",
+      "packages/server/src/security/authentication-routes.ts",
+      "packages/server/src/security/security-registry.ts"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "expiry-repair-final-lint.original.txt"
+  },
+  {
+    "name": "format",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/prettier/bin/prettier.cjs",
+      "--check",
+      "scripts/security-performance-check.mjs",
+      "scripts/security-performance-contract.mjs",
+      "scripts/security-performance-evidence.mjs",
+      "scripts/security-release-evidence.mjs",
+      "scripts/security-registration-storage-check.mjs",
+      "packages/server/src/security/public-rejection-audit.ts",
+      "packages/server/src/security/registration-service.ts",
+      "packages/server/src/security/authentication-service.ts",
+      "packages/server/src/security/registration-routes.ts",
+      "packages/server/src/security/authentication-routes.ts",
+      "package.json",
+      "packages/server/src/security/security-registry.ts"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "expiry-repair-final-format.original.txt"
+  },
+  {
+    "name": "material-guard",
+    "command": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "scripts/assert-no-security-material.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "material-guard.original.txt"
+  },
+  {
+    "name": "source-guard",
+    "command": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "scripts/assert-no-build-artifacts-in-src.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "source-guard.original.txt"
+  },
+  {
+    "name": "tools-final",
+    "command": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "node_modules/tsx/dist/cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-public-rejection-audit.test.ts",
+      "test/unit/security-performance-contract.test.mjs",
+      "test/unit/security-performance-evidence.test.mjs",
+      "test/unit/security-release-evidence.test.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "expiry-repair-tools-final.original.txt"
+  },
+  {
+    "name": "final-lint",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/eslint/bin/eslint.js",
+      "scripts/security-performance-check.mjs",
+      "scripts/security-performance-contract.mjs",
+      "scripts/security-performance-evidence.mjs",
+      "scripts/security-release-evidence.mjs",
+      "scripts/security-registration-storage-check.mjs",
+      "packages/server/src/security/public-rejection-audit.ts",
+      "packages/server/src/security/registration-service.ts",
+      "packages/server/src/security/authentication-service.ts",
+      "packages/server/src/security/registration-routes.ts",
+      "packages/server/src/security/authentication-routes.ts",
+      "packages/server/src/security/security-registry.ts"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "expiry-repair-final-final-lint.original.txt"
+  },
+  {
+    "name": "documents",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/document-check.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "documents.original.txt"
+  },
+  {
+    "name": "document-format",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/prettier/bin/prettier.cjs",
+      "--check",
+      "docs/security-v1/performance-guide.md",
+      "docs/security-v1/overview.md",
+      "docs/security-v1/user-guide.md",
+      "docs/security-v1/release-guide.md",
+      "docs/security-v1/device-registration-runtime-guide.md",
+      "docs/security-v1/device-registration-deployment-contract.md",
+      "docs/security-v1-plan.md",
+      "docs/security-v1/AGENTS.md",
+      "docs/security-v1-milestones.md",
+      "docs/security-v1-deliveries/SEC-M7.md",
+      "test/README.md",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/README.md",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/archive-performance.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/complete-documents.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/document-check.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/final-static.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/finalize-receipt.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/finish-checks.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/preserve-failed-confirmation.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/repair-checks.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/run-checks.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "document-format.original.txt"
+  },
+  {
+    "name": "helper-syntax-0",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/archive-performance.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "helper-syntax-0.original.txt"
+  },
+  {
+    "name": "helper-syntax-1",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/complete-documents.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "helper-syntax-1.original.txt"
+  },
+  {
+    "name": "helper-syntax-2",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/document-check.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "helper-syntax-2.original.txt"
+  },
+  {
+    "name": "helper-syntax-3",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/final-static.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "helper-syntax-3.original.txt"
+  },
+  {
+    "name": "helper-syntax-4",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/finalize-receipt.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "helper-syntax-4.original.txt"
+  },
+  {
+    "name": "helper-syntax-5",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/finish-checks.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "helper-syntax-5.original.txt"
+  },
+  {
+    "name": "helper-syntax-6",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/preserve-failed-confirmation.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "helper-syntax-6.original.txt"
+  },
+  {
+    "name": "helper-syntax-7",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/repair-checks.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "helper-syntax-7.original.txt"
+  },
+  {
+    "name": "helper-syntax-8",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "--check",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/run-checks.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "helper-syntax-8.original.txt"
+  },
+  {
+    "name": "scoped-diff",
+    "command": [
+      "git",
+      "diff",
+      "--check",
+      "--",
+      "docs/security-v1/performance-guide.md",
+      "docs/security-v1/overview.md",
+      "docs/security-v1/user-guide.md",
+      "docs/security-v1/release-guide.md",
+      "docs/security-v1/device-registration-runtime-guide.md",
+      "docs/security-v1/device-registration-deployment-contract.md",
+      "docs/security-v1-plan.md",
+      "docs/security-v1/AGENTS.md",
+      "docs/security-v1-milestones.md",
+      "docs/security-v1-deliveries/SEC-M7.md",
+      "test/README.md",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D33/README.md",
+      "scripts/security-performance-contract.mjs",
+      "scripts/security-performance-evidence.mjs",
+      "scripts/security-release-evidence.mjs",
+      "scripts/security-registration-storage-check.mjs",
+      "packages/server/src/security/public-rejection-audit.ts",
+      "packages/server/src/security/registration-service.ts",
+      "packages/server/src/security/authentication-service.ts",
+      "packages/server/src/security/registration-routes.ts",
+      "packages/server/src/security/authentication-routes.ts",
+      "packages/server/src/security/security-registry.ts",
+      "package.json",
+      "test/unit/security-registration-runtime.test.ts"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "scoped-diff.original.txt"
+  }
+]

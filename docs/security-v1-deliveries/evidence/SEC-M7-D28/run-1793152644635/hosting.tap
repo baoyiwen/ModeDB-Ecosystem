@@ -1,0 +1,96 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): c01a51b8c158da87d7802e8b04d874354b4aea7e95bf87d2ba2db33a13827d96
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:63695
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:63695/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:63695/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json"
+#     Designer:    http://127.0.0.1:63695/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json"
+# [modeldb-server] storage fingerprint (sha256): c01a51b8c158da87d7802e8b04d874354b4aea7e95bf87d2ba2db33a13827d96
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:63695
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:63695/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:63695/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json"
+#     Designer:    http://127.0.0.1:63695/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json"
+# [modeldb-server] storage fingerprint (sha256): c01a51b8c158da87d7802e8b04d874354b4aea7e95bf87d2ba2db33a13827d96
+# [modeldb-server] storage fingerprint (sha256): c01a51b8c158da87d7802e8b04d874354b4aea7e95bf87d2ba2db33a13827d96
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:55057
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:55057/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:55057/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json"
+#     Designer:    http://127.0.0.1:55057/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json"
+# [modeldb-server] storage fingerprint (sha256): c01a51b8c158da87d7802e8b04d874354b4aea7e95bf87d2ba2db33a13827d96
+# [modeldb-server] storage fingerprint (sha256): c01a51b8c158da87d7802e8b04d874354b4aea7e95bf87d2ba2db33a13827d96
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:63738
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:63738/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:63738/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json"
+#     Designer:    http://127.0.0.1:63738/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-4iEWGr\\modeldb.config.json"
+# Subtest: native Windows hosted listeners, OS pipe, bind failure cleanup and port lifecycle
+ok 1 - native Windows hosted listeners, OS pipe, bind failure cleanup and port lifecycle
+  ---
+  duration_ms: 48174.7309
+  type: 'test'
+  ...
+# {"format":"modeldb.hosting-native.v1","ok":true,"checks":{"nativeDpapi":true,"osAuthenticatedPipe":true,"exactLiveAddress":true,"dataManagementSeparated":true,"anonymousAdminDenied":true,"legacyLaunchBlocked":true,"cookieRestartRecovery":true,"closeReleasesBothPorts":true,"bindFailuresReleaseRegistryAndPipe":true,"invalidBuildRejected":true},"liveMaterialRead":false}
+# [modeldb-server] storage fingerprint (sha256): 450051d3a0a6060f3fc2513af3335367b38937274df93512ff9a47867588ae12
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:64591
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:64591/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:64591/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-ZFj9ah\\modeldb.config.json"
+#     Designer:    http://127.0.0.1:64591/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-ZFj9ah\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-ZFj9ah\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Native-ZFj9ah\\modeldb.config.json"
+# Subtest: fresh hosted Designer and management UI in Chrome, same-origin Cookie/CSRF and localized layouts
+ok 2 - fresh hosted Designer and management UI in Chrome, same-origin Cookie/CSRF and localized layouts
+  ---
+  duration_ms: 10591.3551
+  type: 'test'
+  ...
+# {"format":"modeldb.hosting-browser.v1","ok":true,"browser":"Chrome/156.0.8078.48","hardwareAuthenticatorTested":false,"systemTrustInstalled":false,"checks":{"freshDesignerBuild":true,"cspRunsApplication":true,"sameOriginData":true,"osLaunchFragmentRemoved":true,"httpOnlyStrict":true,"csrfRequired":true,"managementOnly":true,"reloadRecovery":true,"refreshAndLogout":true,"localizedZhEnJa":true,"wideAndNarrow":true,"accessibleLanguageControl":true},"screenshots":12,"liveMaterialRead":false}
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 64772.7494

@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "scope": "Isolated copy of prior frozen public evidence; two source files reconstructed and verified against their original byte hashes. Current reader only; no instance execution or current-source acceptance claim.",
+  "result": {
+    "ok": true,
+    "revision": "SEC-M7-D32",
+    "developmentFiles": 699,
+    "normalizedFiles": 0,
+    "historicalEvidenceFiles": 1543,
+    "currentVerificationArtifacts": 64,
+    "historicalUnitPass": 424,
+    "historicalBrowserPass": 2,
+    "currentRevalidation": "passed",
+    "currentTask": "DR-P4.4",
+    "runtimeMaterialRead": false,
+    "scope": "Recorded evidence and current development files; does not rerun functional acceptance."
+  }
+}

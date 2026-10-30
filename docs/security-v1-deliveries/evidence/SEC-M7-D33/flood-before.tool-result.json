@@ -1,0 +1,21 @@
+{
+  "format": "modeldb.performance-development-observation.v1",
+  "source": "Transcribed tool output from the isolated pre-fix probe, not a frozen confirmation",
+  "root": "C:/Users/51153/AppData/Local/Temp/ModeDB-Flood-Probe-116nvt",
+  "result": {
+    "requests": 48,
+    "concurrency": 48,
+    "completed": 48,
+    "completedBeforeRepair": 1,
+    "unexpected": 0,
+    "localMutationSucceeded": true,
+    "localMutationMs": 34947.918000000005,
+    "pendingCapacity": 1000,
+    "capacityRejected": true,
+    "auditPresent": false,
+    "durationMs": 47421.9883,
+    "maxRequestMs": 46356.017,
+    "nodeRssMiB": 367.39453125
+  },
+  "note": "auditPresent used an incorrect registration.reject selector; the actual service records authentication.reject. The corrected probe checks the aggregate observedCount equals 48. No old result was rewritten."
+}

@@ -1,0 +1,550 @@
+
+============================================================
+  0. Reset workspace
+============================================================
+  ✓ workspace C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\protocol_ops_workspace ready
+
+============================================================
+  1. Core in-process: AuthoringEngine.apply / applyAll (database scope)
+============================================================
+  ✓ apply(batchRegister) registered models + relation
+  ✓ fluent registry sees Country + City after JSON DDL (dual support)
+  ✓ applyAll inserted 5 rows (all ok)
+  ✓ apply(bind MANUAL) linked 3 pairs
+  ✓ apply(relationStats): forwardKeys=2 totalLinks=3 (got 2/3)
+  ✓ apply(previewBind GLOBAL) cross-join count = 2x3 = 6 (got 6)
+  ✓ apply(update) mutated City.name
+  ✓ engine.apply rejects workspace-scope op (listDatabases)
+  ✓ applyAll(failFast) stops after first failure (2 outcomes, 2nd failed)
+
+============================================================
+  1b. Core: clearModelData / clearAllData via apply
+============================================================
+  ✓ clearModelData removed 3 City rows (got 3)
+  ✓ relation index empty after City data cleared
+  ✓ clearAllData removed remaining Country rows incl. failFast insert (got 3)
+  ✓ schema kept after clearAllData
+
+============================================================
+  2. Start ModelDB server
+============================================================
+[modeldb-server] storage fingerprint (sha256): c4f391bfd209ad03da2fed1b9720d0a907474fbca0c7df6751b91c8e6dadeba7
+[ModelDB] Engine is running
+  Listen: 127.0.0.1:65021
+  ➜ Local:   http://localhost:65021/ (本机访问)
+  Direct client addresses:
+    HTTP:      http://127.0.0.1:65021 (HTTP API 根地址)
+    Action:    http://127.0.0.1:65021/v2/action (单次操作接口)
+    Bulk:      http://127.0.0.1:65021/v2/bulk (批量操作接口)
+    Health:    http://127.0.0.1:65021/health (健康检查)
+    Status:    http://127.0.0.1:65021/api/v1/management/status (引擎状态)
+    WebSocket: ws://127.0.0.1:65021/ (实时 RPC)
+    Stream:    ws://127.0.0.1:65021/v2/stream (流式 RPC)
+
+  Console commands:
+    Stop:      Ctrl+C
+    Status:    modeldb-server info -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\protocol_ops_workspace\modeldb.config.json"
+    Databases: modeldb-server ls -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\protocol_ops_workspace\modeldb.config.json"
+    Create DB: modeldb-server create-db <db-name> -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\protocol_ops_workspace\modeldb.config.json"
+    Backup:    modeldb-server backup <db-name> --reason manual -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\protocol_ops_workspace\modeldb.config.json"
+
+  Note: management URLs require the configured connect token in the request header.
+  Remote access: disabled by the loopback bind. Start with --host 0.0.0.0 for direct LAN access.
+  ✓ listening on 127.0.0.1:65021
+
+============================================================
+  3. Workspace scope via ModelDB.apply: createDatabase / listDatabases
+============================================================
+[ModeDB] START Management API: POST /api/v1/management/databases trace=07971907
+  说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+  请求摘要: {
+    url: 'http://127.0.0.1:65021/api/v1/management/databases',
+    body: { name: 'protocol_remote' }
+  }
+[ModeDB] OK Management API: POST /api/v1/management/databases trace=07971907 790.39ms
+  结果: {
+    ms: 790.39,
+    status: 201,
+    path: '/api/v1/management/databases',
+    resultType: 'object'
+  }
+  ✓ apply(createDatabase) created logical library
+[ModeDB] START Management API: GET /api/v1/management/databases trace=82e6ce81
+  说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+  请求摘要: { url: 'http://127.0.0.1:65021/api/v1/management/databases' }
+[modeldb-server][catalog] protocol_core: metadataSource=protocol_remote displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+[modeldb-server][catalog] protocol_remote: metadataSource=protocol_core displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+[modeldb-server][catalog] protocol_core: metadataSource=protocol_core displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+[modeldb-server][catalog] protocol_remote: metadataSource=protocol_remote displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+[ModeDB] OK Management API: GET /api/v1/management/databases trace=82e6ce81 757.79ms
+  结果: {
+    ms: 757.79,
+    status: 200,
+    path: '/api/v1/management/databases',
+    databases: 2
+  }
+  ✓ apply(listDatabases) includes "protocol_remote"
+
+============================================================
+  4. Database scope via RemoteModelDBClient.apply / applyAll
+============================================================
+[ModeDB] START Connection: open websocket trace=a4ef7c2d
+  说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+  请求摘要: { url: 'ws://127.0.0.1:65021/v2/stream' }
+[modeldb-server] connect 127.0.0.1
+[ModeDB] OK Connection: open websocket trace=a4ef7c2d 4.83ms
+  结果: { ms: 4.83, url: 'ws://127.0.0.1:65021/v2/stream' }
+[ModeDB] START WebSocket RPC: handshake trace=a1f6b021
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: { database: 'protocol_remote' }
+[ModeDB] OK WebSocket RPC: handshake trace=a1f6b021 757.62ms
+  结果: { ms: 757.62, database: 'protocol_remote' }
+[ModeDB] START WebSocket RPC: batchRegister trace=7f9527b7
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: 'b75f2e76-5a12-4e58-a0fb-ed1d9b28625a',
+    database: 'protocol_remote',
+    op: 'batchRegister',
+    model: undefined,
+    relation: undefined,
+    strategy: undefined,
+    batchSize: undefined
+  }
+[modeldb-server][rpc] START batchRegister db=protocol_remote id=b75f2e76-5a12-4e58-a0fb-ed1d9b28625a {
+  op: 'batchRegister',
+  model: undefined,
+  relation: undefined,
+  strategy: undefined,
+  batchSize: undefined
+}
+[modeldb-server][rpc] OK batchRegister db=protocol_remote id=b75f2e76-5a12-4e58-a0fb-ed1d9b28625a 8.63ms {
+  kind: 'mutation',
+  op: 'batchRegister',
+  ok: true,
+  successCount: undefined,
+  failureCount: undefined,
+  pairsCount: undefined
+}
+[ModeDB] OK WebSocket RPC: batchRegister trace=7f9527b7 10.07ms
+  结果: {
+    ms: 10.07,
+    kind: 'mutation',
+    op: 'batchRegister',
+    ok: true,
+    successCount: undefined,
+    failureCount: undefined,
+    pairsCount: undefined
+  }
+[ModeDB] START WebSocket RPC: insert trace=53e1401a
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '3a400ab9-6d9e-4d63-aa7b-77f56548987e',
+    database: 'protocol_remote',
+    op: 'insert',
+    model: 'Country',
+    relation: undefined,
+    strategy: undefined,
+    batchSize: undefined
+  }
+[modeldb-server][rpc] START insert db=protocol_remote id=3a400ab9-6d9e-4d63-aa7b-77f56548987e {
+  op: 'insert',
+  model: 'Country',
+  relation: undefined,
+  strategy: undefined,
+  batchSize: undefined
+}
+[modeldb-server][rpc] OK insert db=protocol_remote id=3a400ab9-6d9e-4d63-aa7b-77f56548987e 8.27ms {
+  kind: 'mutation',
+  op: 'insert',
+  ok: undefined,
+  successCount: undefined,
+  failureCount: undefined,
+  pairsCount: undefined
+}
+[ModeDB] OK WebSocket RPC: insert trace=53e1401a 8.97ms
+  结果: {
+    ms: 8.97,
+    kind: 'mutation',
+    op: 'insert',
+    ok: undefined,
+    successCount: undefined,
+    failureCount: undefined,
+    pairsCount: undefined
+  }
+[ModeDB] START WebSocket RPC: insert trace=0f7aed8b
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: 'f2ff67e5-6137-45d4-8789-feb78907d856',
+    database: 'protocol_remote',
+    op: 'insert',
+    model: 'Country',
+    relation: undefined,
+    strategy: undefined,
+    batchSize: undefined
+  }
+[modeldb-server][rpc] START insert db=protocol_remote id=f2ff67e5-6137-45d4-8789-feb78907d856 {
+  op: 'insert',
+  model: 'Country',
+  relation: undefined,
+  strategy: undefined,
+  batchSize: undefined
+}
+[modeldb-server][rpc] OK insert db=protocol_remote id=f2ff67e5-6137-45d4-8789-feb78907d856 7.35ms {
+  kind: 'mutation',
+  op: 'insert',
+  ok: undefined,
+  successCount: undefined,
+  failureCount: undefined,
+  pairsCount: undefined
+}
+[ModeDB] OK WebSocket RPC: insert trace=0f7aed8b 8.08ms
+  结果: {
+    ms: 8.08,
+    kind: 'mutation',
+    op: 'insert',
+    ok: undefined,
+    successCount: undefined,
+    failureCount: undefined,
+    pairsCount: undefined
+  }
+[ModeDB] START WebSocket RPC: insert trace=74fd3e78
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '1eb02a37-820a-4858-8c48-401be0e6e8b1',
+    database: 'protocol_remote',
+    op: 'insert',
+    model: 'City',
+    relation: undefined,
+    strategy: undefined,
+    batchSize: undefined
+  }
+[modeldb-server][rpc] START insert db=protocol_remote id=1eb02a37-820a-4858-8c48-401be0e6e8b1 {
+  op: 'insert',
+  model: 'City',
+  relation: undefined,
+  strategy: undefined,
+  batchSize: undefined
+}
+[modeldb-server][rpc] OK insert db=protocol_remote id=1eb02a37-820a-4858-8c48-401be0e6e8b1 7.92ms {
+  kind: 'mutation',
+  op: 'insert',
+  ok: undefined,
+  successCount: undefined,
+  failureCount: undefined,
+  pairsCount: undefined
+}
+[ModeDB] OK WebSocket RPC: insert trace=74fd3e78 8.56ms
+  结果: {
+    ms: 8.56,
+    kind: 'mutation',
+    op: 'insert',
+    ok: undefined,
+    successCount: undefined,
+    failureCount: undefined,
+    pairsCount: undefined
+  }
+[ModeDB] START WebSocket RPC: insert trace=675ddd39
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '6e8f0270-7a2d-4bd7-ad4d-4d9dc99ebb10',
+    database: 'protocol_remote',
+    op: 'insert',
+    model: 'City',
+    relation: undefined,
+    strategy: undefined,
+    batchSize: undefined
+  }
+[modeldb-server][rpc] START insert db=protocol_remote id=6e8f0270-7a2d-4bd7-ad4d-4d9dc99ebb10 {
+  op: 'insert',
+  model: 'City',
+  relation: undefined,
+  strategy: undefined,
+  batchSize: undefined
+}
+[modeldb-server][rpc] OK insert db=protocol_remote id=6e8f0270-7a2d-4bd7-ad4d-4d9dc99ebb10 7.17ms {
+  kind: 'mutation',
+  op: 'insert',
+  ok: undefined,
+  successCount: undefined,
+  failureCount: undefined,
+  pairsCount: undefined
+}
+[ModeDB] OK WebSocket RPC: insert trace=675ddd39 7.69ms
+  结果: {
+    ms: 7.69,
+    kind: 'mutation',
+    op: 'insert',
+    ok: undefined,
+    successCount: undefined,
+    failureCount: undefined,
+    pairsCount: undefined
+  }
+[ModeDB] START WebSocket RPC: insert trace=fc0cdf92
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '74c1da60-f03a-49c6-9a10-de398fcbe0ec',
+    database: 'protocol_remote',
+    op: 'insert',
+    model: 'City',
+    relation: undefined,
+    strategy: undefined,
+    batchSize: undefined
+  }
+[modeldb-server][rpc] START insert db=protocol_remote id=74c1da60-f03a-49c6-9a10-de398fcbe0ec {
+  op: 'insert',
+  model: 'City',
+  relation: undefined,
+  strategy: undefined,
+  batchSize: undefined
+}
+[modeldb-server][rpc] OK insert db=protocol_remote id=74c1da60-f03a-49c6-9a10-de398fcbe0ec 15.89ms {
+  kind: 'mutation',
+  op: 'insert',
+  ok: undefined,
+  successCount: undefined,
+  failureCount: undefined,
+  pairsCount: undefined
+}
+[ModeDB] OK WebSocket RPC: insert trace=fc0cdf92 16.43ms
+  结果: {
+    ms: 16.43,
+    kind: 'mutation',
+    op: 'insert',
+    ok: undefined,
+    successCount: undefined,
+    failureCount: undefined,
+    pairsCount: undefined
+  }
+  ✓ remote.applyAll DDL + 5 inserts all ok
+[ModeDB] START WebSocket RPC: bind trace=964ad694
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: 'f9ad4d3e-611a-4b27-9db7-1d00c44b5529',
+    database: 'protocol_remote',
+    op: 'bind',
+    model: undefined,
+    relation: 'cities',
+    strategy: 'MANUAL',
+    batchSize: undefined
+  }
+[modeldb-server][rpc] START bind db=protocol_remote id=f9ad4d3e-611a-4b27-9db7-1d00c44b5529 {
+  op: 'bind',
+  model: undefined,
+  relation: 'cities',
+  strategy: 'MANUAL',
+  batchSize: undefined
+}
+[modeldb-server][rpc] OK bind db=protocol_remote id=f9ad4d3e-611a-4b27-9db7-1d00c44b5529 7.69ms {
+  kind: 'mutation',
+  op: 'bind',
+  ok: true,
+  successCount: undefined,
+  failureCount: undefined,
+  pairsCount: 3
+}
+[ModeDB] OK WebSocket RPC: bind trace=964ad694 8.33ms
+  结果: {
+    ms: 8.33,
+    kind: 'mutation',
+    op: 'bind',
+    ok: true,
+    successCount: undefined,
+    failureCount: undefined,
+    pairsCount: 3
+  }
+  ✓ remote.apply(bind) linked 3 pairs
+[ModeDB] START WebSocket RPC: relationStats trace=48b8d837
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: 'a8394fc3-93f9-45b3-ad7f-b3bd525c54a1',
+    database: 'protocol_remote',
+    op: 'relationStats',
+    model: undefined,
+    relation: 'cities',
+    strategy: undefined,
+    batchSize: undefined
+  }
+[modeldb-server][rpc] START relationStats db=protocol_remote id=a8394fc3-93f9-45b3-ad7f-b3bd525c54a1 {
+  op: 'relationStats',
+  model: undefined,
+  relation: 'cities',
+  strategy: undefined,
+  batchSize: undefined
+}
+[modeldb-server][rpc] OK relationStats db=protocol_remote id=a8394fc3-93f9-45b3-ad7f-b3bd525c54a1 0.1ms { kind: 'relationStats' }
+[ModeDB] OK WebSocket RPC: relationStats trace=48b8d837 0.51ms
+  结果: { ms: 0.51, kind: 'relationStats' }
+  ✓ remote.apply(relationStats) forwardKeys=2 totalLinks=3
+
+============================================================
+  5. Fluent vs JSON query parity (Country with cities attached)
+============================================================
+[ModeDB] START WebSocket RPC: executeQuery trace=04fa089f
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '5c491ae7-f542-49c3-9ea4-8d9e15632ebd',
+    database: 'protocol_remote',
+    op: 'executeQuery',
+    model: 'Country',
+    page: 0,
+    cursor: undefined,
+    limit: undefined
+  }
+[modeldb-server][rpc] START executeQuery db=protocol_remote id=5c491ae7-f542-49c3-9ea4-8d9e15632ebd {
+  op: 'executeQuery',
+  model: 'Country',
+  page: 0,
+  cursor: undefined,
+  limit: undefined
+}
+[modeldb-server][rpc] OK executeQuery db=protocol_remote id=5c491ae7-f542-49c3-9ea4-8d9e15632ebd 1.63ms { kind: 'rows', rows: 2 }
+[ModeDB] OK WebSocket RPC: executeQuery trace=04fa089f 2.15ms
+  结果: { ms: 2.15, kind: 'rows', rows: 2 }
+[ModeDB] START WebSocket RPC: executeQuery trace=fb2c484e
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '08a48fb5-4971-45d4-ab0b-f35a5631091d',
+    database: 'protocol_remote',
+    op: 'executeQuery',
+    model: 'Country',
+    page: 0,
+    cursor: undefined,
+    limit: undefined
+  }
+[modeldb-server][rpc] START executeQuery db=protocol_remote id=08a48fb5-4971-45d4-ab0b-f35a5631091d {
+  op: 'executeQuery',
+  model: 'Country',
+  page: 0,
+  cursor: undefined,
+  limit: undefined
+}
+[modeldb-server][rpc] OK executeQuery db=protocol_remote id=08a48fb5-4971-45d4-ab0b-f35a5631091d 0.34ms { kind: 'rows', rows: 2 }
+[ModeDB] OK WebSocket RPC: executeQuery trace=fb2c484e 1.46ms
+  结果: { ms: 1.46, kind: 'rows', rows: 2 }
+  ✓ both paths return 2 Country rows (fluent=2, json=2)
+  ✓ Japan carries 2 cities in both paths (fluent=2, json=2)
+
+============================================================
+  5b. Remote: clearModelData / clearAllData via apply
+============================================================
+[ModeDB] START WebSocket RPC: clearModelData trace=f0a12c25
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '61c937a6-3274-45ea-a8a9-80f8279f6b68',
+    database: 'protocol_remote',
+    op: 'clearModelData',
+    model: 'City',
+    relation: undefined,
+    strategy: undefined,
+    batchSize: undefined
+  }
+[modeldb-server][rpc] START clearModelData db=protocol_remote id=61c937a6-3274-45ea-a8a9-80f8279f6b68 {
+  op: 'clearModelData',
+  model: 'City',
+  relation: undefined,
+  strategy: undefined,
+  batchSize: undefined
+}
+[modeldb-server][rpc] OK clearModelData db=protocol_remote id=61c937a6-3274-45ea-a8a9-80f8279f6b68 15.61ms {
+  kind: 'mutation',
+  op: 'clearModelData',
+  ok: true,
+  successCount: undefined,
+  failureCount: undefined,
+  pairsCount: undefined
+}
+[ModeDB] OK WebSocket RPC: clearModelData trace=f0a12c25 16.09ms
+  结果: {
+    ms: 16.09,
+    kind: 'mutation',
+    op: 'clearModelData',
+    ok: true,
+    successCount: undefined,
+    failureCount: undefined,
+    pairsCount: undefined
+  }
+  ✓ remote clearModelData removed 3 cities (got 3)
+[ModeDB] START WebSocket RPC: clearAllData trace=b0c9117c
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '03b7eed5-65f3-4949-be8d-8586e6b350af',
+    database: 'protocol_remote',
+    op: 'clearAllData',
+    model: undefined,
+    relation: undefined,
+    strategy: undefined,
+    batchSize: undefined
+  }
+[modeldb-server][rpc] START clearAllData db=protocol_remote id=03b7eed5-65f3-4949-be8d-8586e6b350af {
+  op: 'clearAllData',
+  model: undefined,
+  relation: undefined,
+  strategy: undefined,
+  batchSize: undefined
+}
+[modeldb-server][rpc] OK clearAllData db=protocol_remote id=03b7eed5-65f3-4949-be8d-8586e6b350af 15.99ms {
+  kind: 'mutation',
+  op: 'clearAllData',
+  ok: true,
+  successCount: undefined,
+  failureCount: undefined,
+  pairsCount: undefined
+}
+[ModeDB] OK WebSocket RPC: clearAllData trace=b0c9117c 16.46ms
+  结果: {
+    ms: 16.46,
+    kind: 'mutation',
+    op: 'clearAllData',
+    ok: true,
+    successCount: undefined,
+    failureCount: undefined,
+    pairsCount: undefined
+  }
+  ✓ remote clearAllData removed 2 countries (got 2)
+
+============================================================
+  6. Workspace catalog + dropDatabase via ModelDB.apply
+============================================================
+[ModeDB] START Management API: GET /api/v1/management/databases/protocol_remote/catalog trace=fd4db06b
+  说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+  请求摘要: {
+    url: 'http://127.0.0.1:65021/api/v1/management/databases/protocol_remote/catalog'
+  }
+[modeldb-server][catalog] protocol_remote: metadataSource=protocol_core displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+[modeldb-server][catalog] protocol_remote: metadataSource=protocol_remote displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+[ModeDB] OK Management API: GET /api/v1/management/databases/protocol_remote/catalog trace=fd4db06b 2.5ms
+  结果: {
+    ms: 2.5,
+    status: 200,
+    path: '/api/v1/management/databases/protocol_remote/catalog',
+    database: 'protocol_remote',
+    models: 2,
+    relations: 1,
+    hasDatabaseDisplayName: false,
+    modelDisplayNames: 0,
+    fieldLabels: 0
+  }
+  ✓ apply(catalog) lists Country + City (got [Country, City])
+[ModeDB] START Management API: DELETE /api/v1/management/databases/protocol_remote trace=802d0439
+  说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+  请求摘要: {
+    url: 'http://127.0.0.1:65021/api/v1/management/databases/protocol_remote'
+  }
+[ModeDB] OK Management API: DELETE /api/v1/management/databases/protocol_remote trace=802d0439 2.52ms
+  结果: { ms: 2.52, status: 200 }
+  ✓ apply(dropDatabase) removed logical library
+[ModeDB] START Management API: GET /api/v1/management/databases trace=88a806c4
+  说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+  请求摘要: { url: 'http://127.0.0.1:65021/api/v1/management/databases' }
+[modeldb-server][catalog] protocol_core: metadataSource=protocol_core displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+[modeldb-server] disconnect 127.0.0.1 code=1005
+[ModeDB] OK Management API: GET /api/v1/management/databases trace=88a806c4 2.44ms
+  结果: {
+    ms: 2.44,
+    status: 200,
+    path: '/api/v1/management/databases',
+    databases: 1
+  }
+  ✓ listDatabases no longer includes the dropped library
+
+protocol-operations: 27 passed, 0 failed

@@ -1,0 +1,22 @@
+{
+  "format": "modeldb.device-drill-smoke.v1",
+  "ok": true,
+  "task": "DR-P4.6",
+  "taskComplete": false,
+  "runId": "16db5917-2f33-48c8-83cd-a29c12b732a1",
+  "sourceSha256": "d16a7feb7682e7196a9bb79c50776746952b5461f8c011fad6d4977ca8965ee0",
+  "actualHelloTested": false,
+  "twoDeviceTested": false,
+  "syntheticOnly": true,
+  "checks": {
+    "freshTlsDesigner": true,
+    "anonymousDenied": true,
+    "publicManagementDenied": true,
+    "registrationDescriptor": true,
+    "realLocalPipe": true,
+    "pinnedBrowserSecureContext": true,
+    "formalDesignerAvailable": true,
+    "isolatedRestart": true
+  },
+  "browser": "Chrome/156.0.8078.48"
+}

@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "passedScreenshots": 143,
+  "preservedFailureScreenshots": 59,
+  "automatedChecks": [
+    "supported languages",
+    "horizontal layout bounds",
+    "input labels",
+    "keyboard focus"
+  ],
+  "actualVisualChecks": [
+    "theme and card hierarchy",
+    "state colors",
+    "long translations and wrapping",
+    "legibility",
+    "vertical scrolling"
+  ],
+  "reviewed": [
+    "public/data-studio/approved-ja-390.png",
+    "public/data-studio/login-en-1280.png",
+    "public/data-studio/pending-ja-390.png",
+    "public/web/rejected-zh-CN-390.png",
+    "public/web/login-en-1280.png",
+    "public/web/pending-zh-CN-390.png"
+  ],
+  "liveMaterialRead": false
+}

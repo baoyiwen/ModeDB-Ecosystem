@@ -1,0 +1,306 @@
+{
+  "format": "modeldb.security-s42-verification.v1",
+  "recordedAtUtc": "2026-10-26T04:09:30.685Z",
+  "delivery": "SEC-M7/D09",
+  "tasks": {
+    "closed": ["S4.2", "M4-A3", "SEC-M4"],
+    "pending": ["S5.1", "S7.2"],
+    "v1Milestones": "5/7",
+    "v1Tasks": "18/20",
+    "registration": "0/23"
+  },
+  "scope": {
+    "syntheticOnly": true,
+    "randomLoopbackPorts": true,
+    "isolatedChromeProfile": true,
+    "realServicesAccessed": false,
+    "realConfigOrSecurityMaterialsAccessed": false,
+    "visualOrTranslationChanges": false
+  },
+  "runtime": {
+    "platform": "win32",
+    "unitNode": "v24.22.1",
+    "buildTypecheckBrowserNode": "v24.15.0",
+    "chrome": "156.0.8078.48",
+    "typescript": "5.9.3"
+  },
+  "unit": {
+    "command": "node node_modules/tsx/dist/cli.mjs --test test/unit/security-network.test.ts test/unit/security-authorization.test.ts test/unit/security-registry-http.test.ts test/unit/security-browser-session.test.ts test/unit/browser-connection-credentials.test.ts test/unit/browser-pairing-launch.test.ts test/unit/interface-call-docs.test.ts",
+    "passed": 47,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 98819.0652,
+    "newLauncherTests": 18
+  },
+  "typechecks": {
+    "command": "node node_modules/typescript/bin/tsc --noEmit -p <project>",
+    "projects": [
+      "tsconfig.json",
+      "apps/model-designer/tsconfig.json",
+      "apps/data-studio/tsconfig.json",
+      "apps/web/tsconfig.json"
+    ],
+    "exitCode": 0
+  },
+  "build": {
+    "apps": ["model-designer", "data-studio", "web"],
+    "configFile": false,
+    "envFile": false,
+    "sourceAliases": ["data-kit", "data-ui", "sdk", "shared"],
+    "plugins": {
+      "all": ["@vitejs/plugin-react"],
+      "web": ["resolve-node-polyfills-shims", "vite-plugin-node-polyfills (process global)"]
+    },
+    "exitCode": 0,
+    "warnings": ["Designer chunks larger than 500 kB"],
+    "files": [
+      {
+        "path": "data-studio/assets/browser-AQdqytxT.js",
+        "bytes": 675,
+        "sha256": "6e619b57f59503dad228581d53aec5dc41812c07a2b092e66fac5f06a71762c5"
+      },
+      {
+        "path": "data-studio/assets/index-4cegmEu2.js",
+        "bytes": 369927,
+        "sha256": "8c1a24d2f6e6425463d4d7d99b0ea715af3479a02a509da63a0aac8ae38e79ab"
+      },
+      {
+        "path": "data-studio/assets/index-DMmFbeZg.css",
+        "bytes": 49749,
+        "sha256": "0a656775a418847b1a2ad5d9763297ea300bcac293d26bf6cd4630e591f10756"
+      },
+      {
+        "path": "data-studio/favicon.svg",
+        "bytes": 253,
+        "sha256": "e87ad05e2ca8247926960768141dc2a5d8070b233c55b634c9c916f5f79e7ac2"
+      },
+      {
+        "path": "data-studio/index.html",
+        "bytes": 481,
+        "sha256": "f6748c01b358ae59bc17060b2a0cd251fb312d0fcbc711a8151a986f7dd32768"
+      },
+      {
+        "path": "model-designer/assets/BindingSurfaceDesignerPanel-CKzNUFB4.js",
+        "bytes": 49008,
+        "sha256": "c5e1485ffe37b929be0f044b507016419f7ac79646c67aabcc85dcbb0004588a"
+      },
+      {
+        "path": "model-designer/assets/OperationDesignerPanel-TQUEKqcY.js",
+        "bytes": 24567,
+        "sha256": "40f58dcc26e8ec3935f658127f766bec91b9f34e4a2e175e43866b7880663c36"
+      },
+      {
+        "path": "model-designer/assets/browser-Tu7QuJYD.js",
+        "bytes": 615,
+        "sha256": "0aabe5a499ef38c5a74b9fc2e67f4c487a03f89f878d5208429b8dc8e7dbae48"
+      },
+      {
+        "path": "model-designer/assets/exceljs.min-CfOdReeQ.js",
+        "bytes": 939804,
+        "sha256": "dbde5b88acbe2a60918b73ad38f4704d1e6584664226ad963e71358cb14ec303"
+      },
+      {
+        "path": "model-designer/assets/export-model-map-CYdtx--d.js",
+        "bytes": 3657,
+        "sha256": "d421b2d4b15bcbc6d5d254bc619272f568c152cba21f71296fee780d24395c7e"
+      },
+      {
+        "path": "model-designer/assets/index-Dd7fid5j.css",
+        "bytes": 178387,
+        "sha256": "5379c81ad8816a89c3a10f4193ed268c4cee03161b25ca1316e09eb2198fe2a8"
+      },
+      {
+        "path": "model-designer/assets/index-Dn-_OJ4o.js",
+        "bytes": 1060148,
+        "sha256": "1d9466ef31197ad01980fda21f350d071aeaa59b73f655d407d72b2b549211fc"
+      },
+      {
+        "path": "model-designer/assets/workbook-DZoErKgK.js",
+        "bytes": 12034,
+        "sha256": "433c88f464eebdc9df941af0748fbe9a12c7fec5830aab643e1ee0e6ccce0d11"
+      },
+      {
+        "path": "model-designer/index.html",
+        "bytes": 905,
+        "sha256": "f2c07a3ad832515b98b5837fb8fdb3cb93b627f01dc02bc6365d88559f00c4b2"
+      },
+      {
+        "path": "web/assets/browser-DYJx2Ovq.js",
+        "bytes": 615,
+        "sha256": "e73d84c5c370aff1628c77ede067c96b20464baaf5150eceafc622651255c3fe"
+      },
+      {
+        "path": "web/assets/index-CcDhay8W.js",
+        "bytes": 336204,
+        "sha256": "abc6a181a5115b791c74f7194207f9519f1fa4fd6a99304f922a5a1f86a69148"
+      },
+      {
+        "path": "web/assets/index-urMCSlPi.css",
+        "bytes": 38920,
+        "sha256": "ba662253ffb26440f8228b473453dca8c13277ecaf901ef7628bc76c139c6aab"
+      },
+      {
+        "path": "web/index.html",
+        "bytes": 420,
+        "sha256": "71b9ecf797b3c90e9847cb4b26f2d95950f08b65f97123db225cc2a6876ba8de"
+      }
+    ]
+  },
+  "browser": {
+    "command": "MODELDB_TEST_APP_ROOT=<isolated new build>; node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap test/integration/security-browser-apps.test.ts",
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "testDurationMs": 195303.2564,
+    "totalDurationMs": 200789.6565,
+    "covers": [
+      "saved Token preference in all three applications and Designer administrator launch",
+      "pairing and business workspace",
+      "reload and HttpOnly session",
+      "logout revocation",
+      "administrator business isolation",
+      "interface documentation/Postman download",
+      "network preview/apply/confirm/rollback",
+      "synthetic-instance master rotation",
+      "existing narrow-layout assertions"
+    ]
+  },
+  "earlierFailures": [
+    {
+      "step": "sandbox typecheck/build",
+      "reason": "Existing exceljs/dayjs dependencies not resolvable in sandbox",
+      "resolution": "Same source typecheck and isolated build passed in ordinary-user environment; no install or ACL changes"
+    },
+    {
+      "step": "first Chrome invocation",
+      "exitCode": 1,
+      "reason": "Process-level test failed after approximately 7 seconds without internal stack; root cause undetermined",
+      "resolution": "Same build and implementation passed complete TAP rerun; keep process stability in S7.2 review"
+    }
+  ],
+  "lint": {
+    "invoked": true,
+    "filesIgnoredByExistingConfig": true,
+    "claimedAsAcceptance": false
+  },
+  "sourceTrees": [
+    {
+      "root": "apps/model-designer/src",
+      "files": 161,
+      "sha256": "6f1c165d74897765a98c7b9553fa93ae82d59bd36f4a87239b1fd62c2935ddc5"
+    },
+    {
+      "root": "apps/data-studio/src",
+      "files": 21,
+      "sha256": "759cbcd36c998b7af2c310b5e156e9034b91f9e383c88bfe66406e68ba20b672"
+    },
+    {
+      "root": "apps/web/src",
+      "files": 14,
+      "sha256": "46b716617aa9df2b82ca528f8fdf508ca4ae41977b9c1347dd4af5347e690e7e"
+    },
+    {
+      "root": "packages/sdk/src",
+      "files": 7,
+      "sha256": "931646000428e1753ca24eb98ff761c58de1dff018d1d51150a5004894f3d48b"
+    },
+    {
+      "root": "packages/shared/src",
+      "files": 14,
+      "sha256": "a0f53f1a8ba0a63c126828bb3d0573a15dbd6f4c46d36d75026350044c45e4e0"
+    },
+    {
+      "root": "packages/data-kit/src",
+      "files": 33,
+      "sha256": "1af9e9db493d3d5fd4291f2252990c076bd9a67d2d774a1d351c370956c7d8c4"
+    },
+    {
+      "root": "packages/data-ui/src",
+      "files": 32,
+      "sha256": "ae42f333f1ebdbd1b88dd6362d7bd2b7b96ef65f43f61a04f04c9afd9aa45a33"
+    }
+  ],
+  "files": [
+    {
+      "path": "apps/AGENTS.md",
+      "sha256Lf": "1c97a6edd63c2c9f6d2ec5e79a6d116e6cd047f5eb0c97bbdf6c2627c6c64258"
+    },
+    {
+      "path": "apps/model-designer/AGENTS.md",
+      "sha256Lf": "03912e6bb7dbc055cc767e8b45a60a3d9ae7dabf053ce176c9e954b95c64679d"
+    },
+    {
+      "path": "apps/data-studio/AGENTS.md",
+      "sha256Lf": "195ee70d9e3188e31805430315eb258831c5af9f661eababe065567efff5d259"
+    },
+    {
+      "path": "docs/security-v1/AGENTS.md",
+      "sha256Lf": "308e00b2d6c7b1b759194f7361e8fc5c43cfd796176850de973f2c59e9b1dc0f"
+    },
+    {
+      "path": "apps/model-designer/src/config/connection-prefs.ts",
+      "sha256Lf": "e695a17d32a7b96887d581720d7b353dfff069c3f591d16ad1ab085375335fbf"
+    },
+    {
+      "path": "apps/data-studio/src/config/connection-prefs.ts",
+      "sha256Lf": "3d7859a14dcb8415a41107bf29cf291fecfa81b78c529e406476527bafe88f97"
+    },
+    {
+      "path": "apps/web/src/session/connection-credentials.ts",
+      "sha256Lf": "837c1c5bd9aa5ff1f164e8cc1ce36b6349a7986c6631933b6755d6a8fea691dc"
+    },
+    {
+      "path": "test/unit/browser-pairing-launch.test.ts",
+      "sha256Lf": "00af2baaad043e6ee9090d32a11c80d624860a591425eecb11212f5de1bdd94e"
+    },
+    {
+      "path": "test/integration/security-browser-apps.test.ts",
+      "sha256Lf": "7028d039e60cd330f883bd855a948d96a2601a47ae9f6dd90d8b94184abfef57"
+    },
+    {
+      "path": "package.json",
+      "sha256Lf": "8a6e2054bd244d29451bf41035a65c5251ed0a6cfc4cc997e2d2cfbcde0c9f0b"
+    },
+    {
+      "path": "test/README.md",
+      "sha256Lf": "69176b81ee90934d324b60a77cdf3654b1f6df43b8cf0fdb9b7301c643b2eaf1"
+    },
+    {
+      "path": "docs/security-v1-milestones.md",
+      "sha256Lf": "51a48f10d45f0846fe4f424532a3ee2778a83d64ef16c4a5d97ca9906c108b2a"
+    },
+    {
+      "path": "docs/security-v1-deliveries/SEC-M7.md",
+      "sha256Lf": "a9a1d56c975821f9774595435a060562a7aa972cbf5f531b640ffe94c2bd72e8"
+    },
+    {
+      "path": "docs/security-v1/overview.md",
+      "sha256Lf": "b92ee81ee9ba0d408b7927e11aed08bd09602cd9a0ee2a3e128abc97aaa95aa2"
+    },
+    {
+      "path": "docs/security-v1/user-guide.md",
+      "sha256Lf": "73875ed2cd59251f371356a5fc8dcaca7e04c71395bbb392b213c72bff562531"
+    },
+    {
+      "path": "docs/security-v1/windows-lan-walkthrough.md",
+      "sha256Lf": "7283796289580f5ee4018da8c03bb50e93a0c1aebd26df9674ffcfa09e0309a9"
+    },
+    {
+      "path": "docs/security-browser-sessions.md",
+      "sha256Lf": "2d6c02107845a389267135605f6473665f0e495bb4f1cdeac01f3480bb1211e3"
+    }
+  ],
+  "limitations": [
+    "S5.1 and S7.2 remain pending",
+    "No full release/package/offline-install/performance rerun",
+    "No new WebAuthn or device-registration implementation or two-device acceptance",
+    "Historical D02-D05 receipts remain unchanged"
+  ],
+  "documentValidation": {
+    "documentFiles": 11,
+    "localLinksAndAnchors": 157,
+    "receiptFileHashes": 17,
+    "milestoneAndTaskCounts": true,
+    "agentRequirements": true
+  }
+}

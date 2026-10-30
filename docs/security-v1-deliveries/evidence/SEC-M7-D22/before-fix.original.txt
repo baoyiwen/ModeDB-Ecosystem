@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: verified proof racing local disable-enable has a live, durable outcome
+not ok 1 - verified proof racing local disable-enable has a live, durable outcome
+  ---
+  duration_ms: 416.426
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-authentication-resilience.test.ts:1:7876'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'fulfilled'
+    - 'rejected'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'rejected'
+  actual: 'fulfilled'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-authentication-resilience.test.ts:138:12)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+# Subtest: verified proof racing local user-disable-enable has a live, durable outcome
+not ok 2 - verified proof racing local user-disable-enable has a live, durable outcome
+  ---
+  duration_ms: 183.2363
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-authentication-resilience.test.ts:1:7876'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+    
+    + 'fulfilled'
+    - 'rejected'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'rejected'
+  actual: 'fulfilled'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-authentication-resilience.test.ts:138:12)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1749.9111

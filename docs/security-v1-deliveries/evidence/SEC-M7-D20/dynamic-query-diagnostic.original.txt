@@ -1,0 +1,30 @@
+TAP version 13
+# Subtest: public-key HTTP/RPC uses live own grants and rejects raw cross-database, relations, import and management escalation
+not ok 1 - public-key HTTP/RPC uses live own grants and rejects raw cross-database, relations, import and management escalation
+  ---
+  duration_ms: 409.1921
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-dynamic-authorization.test.ts:1:7402'
+  failureType: 'testCodeFailure'
+  error: "Cannot read properties of undefined (reading 'type')"
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    walk (C:\workspace\web_code\ModeDB-Ecosystem\packages\shared\src\wire-query-plan.ts:634:14)
+    queryPlanHasSerializedCallback (C:\workspace\web_code\ModeDB-Ecosystem\packages\shared\src\wire-query-plan.ts:642:7)
+    executeQueryOperation (C:\workspace\web_code\ModeDB-Ecosystem\packages\core\src\network\operation-executor.ts:132:7)
+    executeDatabaseOperation (C:\workspace\web_code\ModeDB-Ecosystem\packages\core\src\network\operation-executor.ts:170:12)
+    WireRequestDispatcher.executeBody (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\request-dispatcher.ts:312:28)
+    async TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-dynamic-authorization.test.ts:73:5)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1630.3369

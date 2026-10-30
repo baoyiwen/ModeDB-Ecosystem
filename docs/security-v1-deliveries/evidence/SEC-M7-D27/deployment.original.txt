@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: deployment report requires actual browser and all native, preview, offline and UI checks
+ok 1 - deployment report requires actual browser and all native, preview, offline and UI checks
+  ---
+  duration_ms: 1.062
+  type: 'test'
+  ...
+# Subtest: deployment report rejects missing/duplicate records, process failure, skips and count drift
+ok 2 - deployment report rejects missing/duplicate records, process failure, skips and count drift
+  ---
+  duration_ms: 1.4252
+  type: 'test'
+  ...
+# Subtest: deployment report rejects every missing native/browser acceptance gate
+ok 3 - deployment report rejects every missing native/browser acceptance gate
+  ---
+  duration_ms: 2.4289
+  type: 'test'
+  ...
+# Subtest: deployment report rejects inflated physical trust/hardware claims and incomplete visuals
+ok 4 - deployment report rejects inflated physical trust/hardware claims and incomplete visuals
+  ---
+  duration_ms: 0.7
+  type: 'test'
+  ...
+# Subtest: local plan has loopback, no registration/authentication/TLS and no inherited fields
+ok 5 - local plan has loopback, no registration/authentication/TLS and no inherited fields
+  ---
+  duration_ms: 2.1649
+  type: 'test'
+  ...
+# Subtest: LAN preview binds exact instance, DNS/RP/port, TLS pin, narrow sources and finite disabled window
+ok 6 - LAN preview binds exact instance, DNS/RP/port, TLS pin, narrow sources and finite disabled window
+  ---
+  duration_ms: 6.1972
+  type: 'test'
+  ...
+# Subtest: malformed/expired/future dates, wrong instance/bootstrap, extra plan fields fail closed
+ok 7 - malformed/expired/future dates, wrong instance/bootstrap, extra plan fields fail closed
+  ---
+  duration_ms: 0.2891
+  type: 'test'
+  ...
+# Subtest: HTTP, IP, localhost, RP suffix, paths, credentials, noncanonical DNS and port mismatch are rejected
+ok 8 - HTTP, IP, localhost, RP suffix, paths, credentials, noncanonical DNS and port mismatch are rejected
+  ---
+  duration_ms: 0.2349
+  type: 'test'
+  ...
+# Subtest: private key contents, multiple certificates, wrong SAN/pin and certificate expiry are rejected
+ok 9 - private key contents, multiple certificates, wrong SAN/pin and certificate expiry are rejected
+  ---
+  duration_ms: 1.175
+  type: 'test'
+  ...
+# Subtest: CIDR defaults reject /0, duplicates, malformed, too many and all unknown authority fields
+ok 10 - CIDR defaults reject /0, duplicates, malformed, too many and all unknown authority fields
+  ---
+  duration_ms: 0.3923
+  type: 'test'
+  ...
+# Subtest: certificate/key paths are explicit strings and preview never opens them
+ok 11 - certificate/key paths are explicit strings and preview never opens them
+  ---
+  duration_ms: 0.8191
+  type: 'test'
+  ...
+# Subtest: initialization is exclusive and does not replace existing files, directories or builds
+ok 12 - initialization is exclusive and does not replace existing files, directories or builds
+  ---
+  duration_ms: 59.4404
+  type: 'test'
+  ...
+# Subtest: freshness permits local management only and forbids application tokens or registration migration
+ok 13 - freshness permits local management only and forbids application tokens or registration migration
+  ---
+  duration_ms: 111.7682
+  type: 'test'
+  ...
+# Subtest: tampered bootstrap, output/claim existence and existing deployments cannot use the wizard
+ok 14 - tampered bootstrap, output/claim existence and existing deployments cannot use the wizard
+  ---
+  duration_ms: 254.0237
+  type: 'test'
+  ...
+# Subtest: bootstrap binds the build path; altered marker cannot substitute another public bundle
+ok 15 - bootstrap binds the build path; altered marker cannot substitute another public bundle
+  ---
+  duration_ms: 76.395
+  type: 'test'
+  ...
+# Subtest: finalize rejects replaced certificate data before claiming the commit
+ok 16 - finalize rejects replaced certificate data before claiming the commit
+  ---
+  duration_ms: 119.0321
+  type: 'test'
+  ...
+# Subtest: offline finalize keeps the identity, applies persistent policy, writes once and leaves bootstrap intact
+ok 17 - offline finalize keeps the identity, applies persistent policy, writes once and leaves bootstrap intact
+  ---
+  duration_ms: 200.6129
+  type: 'test'
+  ...
+# Subtest: digest and certificate mismatch prevent a commit; linked or hard-linked inputs are rejected
+ok 18 - digest and certificate mismatch prevent a commit; linked or hard-linked inputs are rejected
+  ---
+  duration_ms: 101.5823
+  type: 'test'
+  ...
+# Subtest: audit-capacity failure withholds preview without changing bootstrap or writing a plan
+ok 19 - audit-capacity failure withholds preview without changing bootstrap or writing a plan
+  ---
+  duration_ms: 67.78
+  type: 'test'
+  ...
+# Subtest: partial commit preserves claim and denies automatic retries while bootstrap stays loopback
+ok 20 - partial commit preserves claim and denies automatic retries while bootstrap stays loopback
+  ---
+  duration_ms: 160.3643
+  type: 'test'
+  ...
+# Subtest: CLI rejects missing consent, unknown/duplicate flags and config discovery before touching files
+ok 21 - CLI rejects missing consent, unknown/duplicate flags and config discovery before touching files
+  ---
+  duration_ms: 0.4372
+  type: 'test'
+  ...
+# Subtest: public data and legacy management boundaries reject deployment commands, including forged actor
+ok 22 - public data and legacy management boundaries reject deployment commands, including forged actor
+  ---
+  duration_ms: 289.6821
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2876.2806

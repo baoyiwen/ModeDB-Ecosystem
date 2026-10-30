@@ -1,0 +1,30 @@
+{
+  "format": "modeldb.full-verification.v1",
+  "revision": "SEC-M7-D32",
+  "task": "DR-P4.4",
+  "date": "2026-10-28",
+  "timezone": "Asia/Shanghai",
+  "sourceSha256": "64dd1ddab6bebfe732e348d9eed37d8c6aaa7cd4571492e35779319c4aeb51f8",
+  "candidateSha256": "0d994165d843131cab9ab5b7931852c7511ffc0d6e0f9756182b63e4a8dff6cc",
+  "tasks": {
+    "registration": "21/23",
+    "registrationP4": "4/6",
+    "registrationWorkPackages": "3/4"
+  },
+  "unitFiles": 106,
+  "unitPass": 1008,
+  "nativePass": 22,
+  "totalPass": 1030,
+  "engineFlows": 6,
+  "historicalEvidenceVerified": 1543,
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "realTwoDeviceTested": false,
+    "systemTrustInstalled": false,
+    "performanceTested": false,
+    "productionMigrationPerformed": false,
+    "frontendChanged": false
+  }
+}

@@ -3,6 +3,9 @@ import { takeBrowserPairingLink } from '@mode-db/sdk';
 const PREFIX = 'data-studio:';
 let activeToken = '';
 let pairingLaunch = takeBrowserPairingLink();
+let browserSessionMode: boolean | undefined;
+// A validated launcher link takes precedence over an earlier service-token preference.
+if (pairingLaunch) persistBrowserSessionMode(true);
 export function getPairingLaunch(): typeof pairingLaunch {
   return pairingLaunch;
 }
@@ -10,9 +13,10 @@ export function clearPairingLaunch(): void {
   pairingLaunch = undefined;
 }
 export function isBrowserSessionMode(): boolean {
-  return safeGet('authMode') !== 'token';
+  return browserSessionMode ?? safeGet('authMode') !== 'token';
 }
 export function persistBrowserSessionMode(browser: boolean): void {
+  browserSessionMode = browser;
   safeSet('authMode', browser ? 'browser' : 'token');
 }
 

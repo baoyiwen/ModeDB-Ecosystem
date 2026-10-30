@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
@@ -41,10 +41,25 @@ import { SecurityProtection } from './security/security-protection.js';
 import { SecurityMaintenance } from './security/security-maintenance.js';
 import { LocalVaultKeyProvider } from './security/local-vault-key-provider.js';
 import type { SecurityControl } from './security/security-control.js';
+import { DeploymentWizard } from './security/deployment-files.js';
 import { startLocalSecurityChannel } from './security/local-management-channel.js';
 import { installRegistryEntrypoints } from './security/registry-entrypoints.js';
 import { SecurityNetworkPolicy } from './security/network-policy.js';
+import { AuthenticationService } from './security/authentication-service.js';
+import { installAuthenticationRoutes } from './security/authentication-routes.js';
+import { RegistrationService } from './security/registration-service.js';
+import { installRegistrationRoutes } from './security/registration-routes.js';
 import { installSecurityNetworkBoundary } from './security/network-boundary.js';
+import {
+  validateBrowserHostingConfig,
+  loadHostedAssets,
+  installHostedAssets,
+  installHostedBoundary,
+  hostedAssetPaths,
+  hostedDataOrigin,
+} from './security/browser-hosting.js';
+import { startHostedManagement } from './security/management-listener.js';
+import { SecurityError } from './security/security-errors.js';
 import { startAutoBackupScheduler } from './auto-backup-scheduler.js';
 import { WriteSerializationGate } from './write-serialization-gate.js';
 import { WireRequestDispatcher, decodeExecuteBody } from './request-dispatcher.js';
@@ -911,6 +926,31 @@ async function initializeDualTrackFastify(
   // The config directory owns server resources; workspace is only the parent
   // of logical databases and can point to a separate directory or disk.
   const sessionRoot = dirname(cfg.configFilePath);
+  validateBrowserHostingConfig(cfg.securityHosting);
+  if (
+    cfg.securityHosting?.enabled &&
+    (cfg.securityMode !== 'registry' ||
+      (cfg.securityNetwork?.transport?.mode &&
+        cfg.securityNetwork.transport.mode !== 'loopback' &&
+        !cfg.publicBaseUrl))
+  ) {
+    throw new SecurityError('SECURITY_INVALID_CONFIG');
+  }
+  const hostedAssets = cfg.securityHosting?.enabled
+    ? loadHostedAssets(resolve(sessionRoot, cfg.securityHosting.designerDirectory!), [
+        dataRoot,
+        join(sessionRoot, 'security'),
+        join(sessionRoot, 'certs'),
+        cfg.serverLogDirectory ?? join(sessionRoot, 'logs'),
+        join(sessionRoot, 'cache'),
+      ])
+    : undefined;
+  if (hostedAssets) {
+    hostedDataOrigin(cfg, cfg.port);
+  }
+  let management: Awaited<ReturnType<typeof startHostedManagement>> | undefined;
+  let managementOrigin: string | undefined;
+  let dataOrigin: string | undefined;
   const network =
     cfg.securityMode === 'registry'
       ? new SecurityNetworkPolicy(cfg.securityNetwork, {
@@ -925,22 +965,42 @@ async function initializeDualTrackFastify(
   let keyProvider = localVaultKeys;
   let registry: SecurityRegistry | undefined;
   let securityControl: SecurityControl | undefined;
+  let registration: RegistrationService | undefined;
+  let authentication: AuthenticationService | undefined;
   let localChannel: Awaited<ReturnType<typeof startLocalSecurityChannel>> | undefined;
   if (cfg.securityMode === 'registry') {
     registry = SecurityRegistry.open(join(sessionRoot, 'security'), {
       auditLimit: cfg.securityAudit.maxEvents,
       auditRetentionDays: cfg.securityAudit.retentionDays,
     });
-    network!.setPairedOriginVerifier((origin) => registry!.allowsBrowserOrigin(origin));
+    network!.setPairedOriginVerifier(
+      (origin) => origin === dataOrigin || registry!.allowsBrowserOrigin(origin),
+    );
     cleanup.push(() => registry!.close());
     const protection = new SecurityProtection(registry, network!);
     cleanup.push(() => protection.close());
+    registration = new RegistrationService(registry, cfg.securityRegistration, {
+      publicBaseUrl: cfg.publicBaseUrl,
+      mode: network!.mode,
+      certificate: https?.cert,
+    });
+    cleanup.push(() => registration!.close());
+    authentication = new AuthenticationService(
+      registry,
+      cfg.securityAuthentication,
+      registration.descriptor,
+    );
+    cleanup.push(() => authentication!.close());
     const maintenance =
       localVaultKeys instanceof LocalVaultKeyProvider
         ? new SecurityMaintenance(registry, localVaultKeys, join(sessionRoot, 'security'), dataRoot)
         : undefined;
     maintenance?.resumeRotation();
-    securityControl = { protection, maintenance };
+    securityControl = {
+      protection,
+      maintenance,
+      ...(hostedAssets ? { deployment: new DeploymentWizard(registry, cfg.configFilePath) } : {}),
+    };
     keyProvider = {
       resolveKey(atlas, existing) {
         const material = localVaultKeys.resolveKey(atlas, existing);
@@ -954,6 +1014,7 @@ async function initializeDualTrackFastify(
         registry,
         () => [cfg.designerWorkspace, ...scanWorkspaceDatabases(dataRoot).map((db) => db.name)],
         securityControl,
+        hostedAssets ? () => managementOrigin : undefined,
       );
       cleanup.push(() => localChannel!.close());
     } catch (error) {
@@ -1038,10 +1099,23 @@ async function initializeDualTrackFastify(
     bodyLimit: registry ? 8 * 1024 * 1024 : 128 * 1024 * 1024,
     ...(https ? { https } : {}),
   });
+  if (hostedAssets) {
+    installHostedBoundary(app, {
+      role: 'data',
+      origin: () => hostedDataOrigin(cfg, getServerListeningPort(app)),
+      assets: hostedAssetPaths(hostedAssets, '/designer/'),
+      protection: securityControl?.protection,
+    });
+  }
   if (network) {
     installSecurityNetworkBoundary(app, network, securityControl?.protection);
   }
   app.addHook('onClose', async () => {
+    managementOrigin = undefined;
+    await management?.app.close();
+    authentication?.close();
+    registration?.close();
+    securityControl?.protection.close();
     try {
       await authoring.close();
     } finally {
@@ -1138,8 +1212,18 @@ async function initializeDualTrackFastify(
     };
   }
   if (registry) {
-    installRegistryEntrypoints({
+    const publicAssetPaths = hostedAssets
+      ? installHostedAssets(app, hostedAssets, '/designer/')
+      : undefined;
+    await installRegistrationRoutes(app, registration!, network!, securityControl?.protection);
+    await installAuthenticationRoutes(
       app,
+      authentication!,
+      network!,
+      registry,
+      securityControl?.protection,
+    );
+    const entrypoints: Omit<Parameters<typeof installRegistryEntrypoints>[0], 'app'> = {
       registry,
       network,
       securityControl,
@@ -1230,7 +1314,20 @@ async function initializeDualTrackFastify(
           return { ok: true, restored, safetyBackup };
         },
       },
+    };
+    installRegistryEntrypoints({
+      ...entrypoints,
+      app,
+      ...(hostedAssets ? { listenerRole: 'data' as const, publicAssetPaths } : {}),
     });
+    if (hostedAssets) {
+      management = await startHostedManagement({
+        assets: hostedAssets,
+        port: cfg.securityHosting!.managementPort ?? 0,
+        entrypoints,
+      });
+      cleanup.push(() => management!.app.close());
+    }
   }
 
   app.get('/api/v1/management/databases', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -1846,6 +1943,10 @@ async function initializeDualTrackFastify(
 
   try {
     await app.listen({ port: cfg.port, host: cfg.host });
+    if (hostedAssets) {
+      dataOrigin = hostedDataOrigin(cfg, getServerListeningPort(app));
+      managementOrigin = management!.origin;
+    }
   } catch (error) {
     await localChannel?.close();
     registry?.close();

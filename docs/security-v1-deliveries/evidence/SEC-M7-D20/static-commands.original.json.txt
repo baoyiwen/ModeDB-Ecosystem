@@ -1,0 +1,104 @@
+[
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "scripts/security-registration-storage-check.mjs"
+    ],
+    "exitCode": 0,
+    "log": "types.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/eslint/bin/eslint.js",
+      "packages/core/src/network/operation-executor.ts",
+      "packages/server/src/security/security-registry.ts",
+      "packages/server/src/security/authorization-service.ts",
+      "packages/server/src/security/registration-ledger.ts",
+      "packages/server/src/security/registry-entrypoints.ts",
+      "packages/server/src/request-dispatcher.ts",
+      "packages/server/src/published-interface-runtime.ts",
+      "packages/server/src/published-operation-interface-runtime.ts",
+      "packages/server/src/published-binding-surface-runtime.ts",
+      "scripts/security-registration-storage-check.mjs",
+      "scripts/security-release-evidence.mjs"
+    ],
+    "exitCode": 0,
+    "log": "lint.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/prettier/bin/prettier.cjs",
+      "--check",
+      "packages/core/src/network/operation-executor.ts",
+      "packages/server/src/security/security-registry.ts",
+      "packages/server/src/security/authorization-service.ts",
+      "packages/server/src/security/registration-ledger.ts",
+      "packages/server/src/security/registry-entrypoints.ts",
+      "packages/server/src/request-dispatcher.ts",
+      "packages/server/src/published-interface-runtime.ts",
+      "packages/server/src/published-operation-interface-runtime.ts",
+      "packages/server/src/published-binding-surface-runtime.ts",
+      "scripts/security-registration-storage-check.mjs",
+      "scripts/security-release-evidence.mjs",
+      "docs/security-v1/device-registration-protocol-contract.md",
+      "docs/security-v1/device-registration-runtime-guide.md",
+      "docs/security-v1/overview.md",
+      "docs/security-v1/user-guide.md",
+      "docs/security-v1-identity-contract.md",
+      "docs/security-v1-authorization-contract.md",
+      "docs/security-browser-sessions.md",
+      "docs/security-v1-plan.md",
+      "docs/security-v1/AGENTS.md",
+      "docs/security-v1-milestones.md",
+      "docs/security-v1-deliveries/SEC-M7.md",
+      "test/README.md",
+      "package.json"
+    ],
+    "exitCode": 0,
+    "log": "format.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "scripts/assert-no-security-material.mjs"
+    ],
+    "exitCode": 0,
+    "log": "material-guard.original.txt"
+  },
+  {
+    "command": [
+      "git",
+      "diff",
+      "--check",
+      "--",
+      "packages/core/src/network/operation-executor.ts",
+      "packages/server/src/security/security-registry.ts",
+      "packages/server/src/security/authorization-service.ts",
+      "packages/server/src/security/registration-ledger.ts",
+      "packages/server/src/security/registry-entrypoints.ts",
+      "packages/server/src/request-dispatcher.ts",
+      "packages/server/src/published-interface-runtime.ts",
+      "packages/server/src/published-operation-interface-runtime.ts",
+      "packages/server/src/published-binding-surface-runtime.ts",
+      "scripts/security-registration-storage-check.mjs",
+      "scripts/security-release-evidence.mjs",
+      "docs/security-v1/device-registration-protocol-contract.md",
+      "docs/security-v1/device-registration-runtime-guide.md",
+      "docs/security-v1/overview.md",
+      "docs/security-v1/user-guide.md",
+      "docs/security-v1-identity-contract.md",
+      "docs/security-v1-authorization-contract.md",
+      "docs/security-browser-sessions.md",
+      "docs/security-v1-plan.md",
+      "docs/security-v1/AGENTS.md",
+      "docs/security-v1-milestones.md",
+      "docs/security-v1-deliveries/SEC-M7.md",
+      "test/README.md",
+      "package.json"
+    ],
+    "exitCode": 0,
+    "log": "diff-check.original.txt"
+  }
+]

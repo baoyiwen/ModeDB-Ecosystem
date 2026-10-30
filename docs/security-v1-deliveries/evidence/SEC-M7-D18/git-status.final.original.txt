@@ -1,0 +1,113 @@
+ M apps/data-studio/AGENTS.md
+ M apps/data-studio/src/config/connection-prefs.ts
+ M apps/model-designer/AGENTS.md
+ M apps/model-designer/src/components/ConnectionFlow.tsx
+ M apps/model-designer/src/components/DesignerToolbar.tsx
+ M apps/model-designer/src/components/EditorChrome.tsx
+ M apps/model-designer/src/components/PivotTab.tsx
+ M apps/model-designer/src/components/QueryDesignerPanel.tsx
+ M apps/model-designer/src/components/SecurityCenterWorkspace.tsx
+ M apps/model-designer/src/config/connection-prefs.ts
+ M apps/model-designer/src/i18n/locales/en/ui.json
+ M apps/model-designer/src/i18n/locales/ja/ui.json
+ M apps/model-designer/src/i18n/locales/zh/ui.json
+ M apps/model-designer/src/pivot/index.ts
+ M apps/model-designer/src/styles/designer-shell.css
+ M apps/model-designer/vite.config.ts
+ M apps/web/src/session/connection-credentials.ts
+ M docs/modeldb-config-guide.md
+ M docs/security-browser-sessions.md
+ M docs/security-v1-deliveries/SEC-M5.md
+ M docs/security-v1-deliveries/SEC-M7.md
+ M docs/security-v1-identity-contract.md
+ M docs/security-v1-milestones.md
+ M docs/security-v1-plan.md
+ M docs/security-v1/AGENTS.md
+ M docs/security-v1/overview.md
+ M docs/security-v1/release-guide.md
+ M docs/security-v1/user-guide.md
+ M eslint.config.js
+ M modeldb.config.registry.local.json
+ M package.json
+ M packages/data-ui/scripts/copy-css.mjs
+ M packages/sdk/src/index.ts
+ M packages/server/package.json
+ M packages/server/src/cli-security.ts
+ M packages/server/src/config-loader.ts
+ M packages/server/src/dual-track-app.ts
+ M packages/server/src/security/local-management-channel.ts
+ M packages/server/src/security/network-boundary.ts
+ M packages/server/src/security/registry-entrypoints.ts
+ M packages/server/src/security/security-registry.ts
+ M packages/server/src/security/windows-secret-protector.ts
+ M packages/shared/src/index.ts
+ M packages/shared/src/security-contracts.ts
+ M pnpm-lock.yaml
+ M scripts/security-release-candidate.mjs
+ M scripts/security-release-evidence.mjs
+ M scripts/security-release-regression.mjs
+D  security/instance-owner.lock
+D  security/instance.key
+D  security/registry.mds
+D  security/registry.ready
+ M test/README.md
+ M test/integration/security-browser-apps.test.ts
+ M test/unit/pivot-presentation.test.ts
+?? apps/AGENTS.md
+?? apps/model-designer/src/components/LanguageSelector.tsx
+?? certs/
+?? docs/security-v1-deliveries/evidence/SEC-M7-D04/
+?? docs/security-v1-deliveries/evidence/SEC-M7-D05/
+?? docs/security-v1-deliveries/evidence/SEC-M7-D09/
+?? docs/security-v1-deliveries/evidence/SEC-M7-D10/
+?? docs/security-v1-deliveries/evidence/SEC-M7-D11/
+?? docs/security-v1-deliveries/evidence/SEC-M7-D12/
+?? docs/security-v1-deliveries/evidence/SEC-M7-D13/
+?? docs/security-v1-deliveries/evidence/SEC-M7-D14/
+?? docs/security-v1-deliveries/evidence/SEC-M7-D15/
+?? docs/security-v1-deliveries/evidence/SEC-M7-D16/
+?? docs/security-v1-deliveries/evidence/SEC-M7-D17/
+?? docs/security-v1-deliveries/evidence/SEC-M7-D18/
+?? docs/security-v1/device-registration-deployment-contract.md
+?? docs/security-v1/device-registration-proposal.md
+?? docs/security-v1/device-registration-protocol-contract.md
+?? docs/security-v1/device-registration-runtime-guide.md
+?? docs/security-v1/examples/
+?? docs/security-v1/windows-lan-config.md
+?? docs/security-v1/windows-lan-walkthrough.md
+?? modeldb.windows-lan.example.json
+?? packages/server/src/cli-security-registration.ts
+?? packages/server/src/security/registration-approval.ts
+?? packages/server/src/security/registration-ledger.ts
+?? packages/server/src/security/registration-routes.ts
+?? packages/server/src/security/registration-service.ts
+?? packages/shared/src/device-registration-contracts.ts
+?? scripts/assert-no-security-material.mjs
+?? scripts/security-designer-sandbox.mjs
+?? scripts/security-designer-sandbox.ps1
+?? scripts/security-registration-consumer-check.mjs
+?? scripts/security-registration-contract.mjs
+?? scripts/security-registration-dependencies/
+?? scripts/security-registration-integration-check.mjs
+?? scripts/security-registration-library-check.mjs
+?? scripts/security-registration-storage-check.mjs
+?? scripts/security-release-apps.mjs
+?? test/fixtures/security-registration-approval-child.ts
+?? test/fixtures/security-registration-browser.ts
+?? test/fixtures/security-registration-integration.ts
+?? test/fixtures/security-registration-legacy/
+?? test/fixtures/security-registration-tls/
+?? test/integration/security-registration-browser.test.ts
+?? test/integration/security-registration-flow.test.ts
+?? test/unit/browser-pairing-launch.test.ts
+?? test/unit/security-designer-sandbox.test.mjs
+?? test/unit/security-device-registration-contract.test.ts
+?? test/unit/security-git-guard.test.mjs
+?? test/unit/security-registration-approval.test.ts
+?? test/unit/security-registration-contract.test.mjs
+?? test/unit/security-registration-integration-report.test.mjs
+?? test/unit/security-registration-runtime.test.ts
+?? test/unit/security-registration-storage.test.ts
+?? test/unit/security-release-apps.test.mjs
+?? test/unit/security-release-evidence.test.mjs
+?? test/unit/security-session-parent.test.ts

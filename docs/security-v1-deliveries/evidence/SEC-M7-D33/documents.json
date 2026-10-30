@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "documentFiles": 11,
+  "localLinksAndAnchors": 433,
+  "failures": [],
+  "registrationTaskRows": 23,
+  "completedRegistrationTasks": 22,
+  "nextTask": "DR-P4.6",
+  "cliExamplesKnown": true,
+  "boundedSecretScan": true
+}

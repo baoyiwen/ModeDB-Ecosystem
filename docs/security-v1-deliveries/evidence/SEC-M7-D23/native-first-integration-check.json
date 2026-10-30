@@ -1,0 +1,32 @@
+{
+  "format": "modeldb.hosting-integration-check.v1",
+  "task": "DR-P3.1",
+  "ok": false,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-Oyqlf7",
+  "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-Oyqlf7\\designer-build",
+  "screenshots": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-Oyqlf7\\screenshots",
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-Oyqlf7\\integration.tap",
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-hosting-browser.test.ts"
+  ],
+  "exitCode": null,
+  "errorCode": "HOSTING_TIMEOUT",
+  "build": {
+    "configFile": false,
+    "envFile": false,
+    "existingDistUnchanged": true
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "productionRegistrationUiTested": false
+  }
+}

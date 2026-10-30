@@ -1,0 +1,31 @@
+{
+  "format": "modeldb.recipient-delivery-development-notes.v1",
+  "task": "DR-P4.2",
+  "environment": {
+    "sandboxNode": "v24.22.1",
+    "nativeNode": "v24.15.0",
+    "nativeExecutable": "C:\\nvm4w\\nodejs\\node.exe",
+    "initialSandboxNativeLookup": "PowerShell could not resolve the native executable inside the restricted environment; the authorized isolated run used the normal Windows environment."
+  },
+  "preFinal": {
+    "candidateSha256": "6c5b67547eaadb8a30cb4468b695c003cc4c906695610b24a53fd0547edc8f14",
+    "nativePassed": true,
+    "report": "native-pre-lint/integration-check.json",
+    "supersededBecause": "Restricted lint found one duplicate import, two imports used only as types, and missing braces in the new check/evidence scripts. These were corrected without changing security assertions; the final source is frozen and accepted again."
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "frontendChanged": false,
+    "systemTrustInstalled": false,
+    "realTwoDeviceTested": false
+  },
+  "finalCandidateSha256": "b005197a0abf1fd0582419b80fe63abe5e1b1a930e5dd98daddd427702df1e74",
+  "finalNativePassed": true,
+  "evidenceReaderCorrection": {
+    "initialResult": "EVIDENCE_DEVELOPMENT_PATH_REQUIRED",
+    "reason": "The frozen development source includes root tsconfig.json, which was absent from the explicit development allowlist.",
+    "change": "Allow only the exact root tsconfig.json compilation file; the existing positive test includes it. Runtime configurations and traversal remain rejected.",
+    "initialOutput": "evidence-initial.original.txt"
+  }
+}

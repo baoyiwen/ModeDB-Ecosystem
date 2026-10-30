@@ -1,0 +1,18 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: The input did not match the regular expression /进行中（D34/. Input:
+
+'| DR-P3.6 | 新候选浏览器验收与操作/排障文档                                      | DR-P3.1—DR-P3.5           | 三前端连接、虚拟认证器、恶意页面/CSRF/rebinding/代理伪造覆盖；真实 Hello 留到 DR-P4.6 | 完成（D28） |'
+
+    at file:///C:/workspace/web_code/ModeDB-Ecosystem/docs/security-v1-deliveries/evidence/SEC-M7-D34/document-check.mjs:23:8 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '| DR-P3.6 | 新候选浏览器验收与操作/排障文档                                      | DR-P3.1—DR-P3.5           | 三前端连接、虚拟认证器、恶意页面/CSRF/rebinding/代理伪造覆盖；真实 Hello 留到 DR-P4.6 | 完成（D28） |',
+  expected: /进行中（D34/,
+  operator: 'match',
+  diff: 'simple'
+}
+
+Node.js v24.22.1

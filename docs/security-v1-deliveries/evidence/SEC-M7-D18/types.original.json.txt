@@ -1,0 +1,14 @@
+[
+  {
+    "command": "node scripts/security-registration-storage-check.mjs",
+    "exitCode": 0,
+    "stdout": "{\n  \"format\": \"modeldb.registration-storage-types.v1\",\n  \"ok\": true,\n  \"node\": \"v24.22.1\",\n  \"root\": \"C:\\\\Users\\\\51153\\\\AppData\\\\Local\\\\Temp\\\\ModeDB-Registration-Storage-Types-mhZvnY\",\n  \"checks\": {\n    \"freshSharedDeclarations\": true,\n    \"entireServerTypecheck\": true,\n    \"strictStorageTestTypecheck\": true,\n    \"strictSessionParentTypecheck\": true,\n    \"strictRegistrationRuntimeTypecheck\": true,\n    \"strictRegistrationApprovalTypecheck\": true,\n    \"strictRegistrationIntegrationTypecheck\": true,\n    \"existingDistUnchanged\": true\n  }\n}\n",
+    "stderr": ""
+  },
+  {
+    "command": "node scripts/security-registration-consumer-check.mjs",
+    "exitCode": 0,
+    "stdout": "{\n  \"ok\": true,\n  \"format\": \"modeldb.registration-consumer-check.v1\",\n  \"node\": \"v24.22.1\",\n  \"root\": \"C:\\\\Users\\\\51153\\\\AppData\\\\Local\\\\Temp\\\\ModeDB-Registration-Consumers-k3aZuW\",\n  \"checks\": {\n    \"freshSharedDeclarations\": true,\n    \"strictSdkConsumer\": true,\n    \"domTypesWithoutNode\": true,\n    \"sharedBrowserBundle\": true,\n    \"sdkBrowserBundle\": true,\n    \"serverLibraryExcluded\": true\n  },\n  \"bundles\": [\n    {\n      \"entry\": \"packages/shared/src/index.ts\",\n      \"bytes\": 82579,\n      \"sha256\": \"17261afe09010d9a0fb2a807fa1a4433d9de25a955fda59fc2b81428f7c2ec74\"\n    },\n    {\n      \"entry\": \"packages/sdk/src/index.ts\",\n      \"bytes\": 142077,\n      \"sha256\": \"e53f60cf5ce92f6f2405721834561dea301fff5ae16c3a14563885d2b15cb125\"\n    }\n  ]\n}\n",
+    "stderr": ""
+  }
+]

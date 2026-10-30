@@ -1,0 +1,31 @@
+{
+  "command": [
+    "git",
+    "diff",
+    "--check",
+    "--",
+    "packages/server/src/security/registration-maintenance.ts",
+    "packages/server/src/security/security-registry.ts",
+    "packages/server/src/cli-security-registration.ts",
+    "packages/server/src/cli-security.ts",
+    "scripts/security-release-evidence.mjs",
+    "scripts/security-registration-storage-check.mjs",
+    "docs/security-v1/device-registration-protocol-contract.md",
+    "docs/security-v1/device-registration-runtime-guide.md",
+    "docs/security-v1/overview.md",
+    "docs/security-v1/user-guide.md",
+    "docs/security-v1-identity-contract.md",
+    "docs/security-v1-authorization-contract.md",
+    "docs/security-browser-sessions.md",
+    "docs/security-v1-plan.md",
+    "docs/security-v1/AGENTS.md",
+    "docs/security-v1-milestones.md",
+    "docs/security-v1-deliveries/SEC-M7.md",
+    "test/fixtures/security-registration-identity.ts",
+    "test/unit/security-registration-maintenance.test.ts",
+    "test/unit/security-release-evidence.test.mjs",
+    "test/README.md",
+    "package.json"
+  ],
+  "exitCode": 0
+}

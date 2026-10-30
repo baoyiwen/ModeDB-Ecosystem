@@ -1,0 +1,2670 @@
+TAP version 13
+# Subtest: collects selected business models, parent dependencies, original IDs and bidirectional edges without unrelated entries
+ok 1 - collects selected business models, parent dependencies, original IDs and bidirectional edges without unrelated entries
+  ---
+  duration_ms: 127.9857
+  type: 'test'
+  ...
+# Subtest: interoperates with independent WebCrypto JWS verification and JWE decryption, with no source DEK in content
+ok 2 - interoperates with independent WebCrypto JWS verification and JWE decryption, with no source DEK in content
+  ---
+  duration_ms: 14.8838
+  type: 'test'
+  ...
+# Subtest: requires explicit publisher trust, the exact recipient and fixed algorithms before exposing content
+ok 3 - requires explicit publisher trust, the exact recipient and fixed algorithms before exposing content
+  ---
+  duration_ms: 7.078
+  type: 'test'
+  ...
+# Subtest: rejects authenticated hostile publisher content, inconsistent digests/statistics and signed invalid GCM
+ok 4 - rejects authenticated hostile publisher content, inconsistent digests/statistics and signed invalid GCM
+  ---
+  duration_ms: 23.3854
+  type: 'test'
+  ...
+# Subtest: rejects unsafe names, duplicate identities, unselected fields, dangling/asymmetric/duplicate edges and unknown extensions
+ok 5 - rejects unsafe names, duplicate identities, unselected fields, dangling/asymmetric/duplicate edges and unknown extensions
+  ---
+  duration_ms: 1.2389
+  type: 'test'
+  ...
+# Subtest: keeps signing keys separate from recipient keys and rejects hostile KDF parameters
+ok 6 - keeps signing keys separate from recipient keys and rejects hostile KDF parameters
+  ---
+  duration_ms: 222.1078
+  type: 'test'
+  ...
+# Subtest: previews without target writes, requires confirmation and imports original IDs/i18n/relations under destination protection
+ok 7 - previews without target writes, requires confirmation and imports original IDs/i18n/relations under destination protection
+  ---
+  duration_ms: 172.311
+  type: 'test'
+  ...
+# Subtest: preserves a different interrupted candidate and rejects oversized or aliased disk inputs
+ok 8 - preserves a different interrupted candidate and rejects oversized or aliased disk inputs
+  ---
+  duration_ms: 121.8081
+  type: 'test'
+  ...
+# Subtest: resumes a matching asset import after process termination at staged
+ok 9 - resumes a matching asset import after process termination at staged
+  ---
+  duration_ms: 1150.3679
+  type: 'test'
+  ...
+# Subtest: resumes a matching asset import after process termination at journaled
+ok 10 - resumes a matching asset import after process termination at journaled
+  ---
+  duration_ms: 941.4737
+  type: 'test'
+  ...
+# Subtest: resumes a matching asset import after process termination at replaced
+ok 11 - resumes a matching asset import after process termination at replaced
+  ---
+  duration_ms: 877.9992
+  type: 'test'
+  ...
+# Subtest: runs Windows offline CLI export/preview/import after removing the synthetic source and refuses live-instance access
+ok 12 - runs Windows offline CLI export/preview/import after removing the synthetic source and refuses live-instance access
+  ---
+  duration_ms: 72226.685
+  type: 'test'
+  ...
+# Subtest: V1 migration to V4 is explicit, CAS, atomic, preserves old credentials and is idempotent
+ok 13 - V1 migration to V4 is explicit, CAS, atomic, preserves old credentials and is idempotent
+  ---
+  duration_ms: 254.5708
+  type: 'test'
+  ...
+# Subtest: V2 migration to V4 is explicit, CAS, atomic, preserves old credentials and is idempotent
+ok 14 - V2 migration to V4 is explicit, CAS, atomic, preserves old credentials and is idempotent
+  ---
+  duration_ms: 102.48
+  type: 'test'
+  ...
+# Subtest: V3 migration to V4 is explicit, CAS, atomic, preserves old credentials and is idempotent
+ok 15 - V3 migration to V4 is explicit, CAS, atomic, preserves old credentials and is idempotent
+  ---
+  duration_ms: 94.1143
+  type: 'test'
+  ...
+# Subtest: V4 migration recovery at staged
+ok 16 - V4 migration recovery at staged
+  ---
+  duration_ms: 63.2206
+  type: 'test'
+  ...
+# Subtest: V4 migration recovery at journaled
+ok 17 - V4 migration recovery at journaled
+  ---
+  duration_ms: 64.5127
+  type: 'test'
+  ...
+# Subtest: V4 migration recovery at replaced
+ok 18 - V4 migration recovery at replaced
+  ---
+  duration_ms: 64.5377
+  type: 'test'
+  ...
+# Subtest: reject malformed authentication persistence: missing-store
+ok 19 - reject malformed authentication persistence: missing-store
+  ---
+  duration_ms: 50.1203
+  type: 'test'
+  ...
+# Subtest: reject malformed authentication persistence: unknown-field
+ok 20 - reject malformed authentication persistence: unknown-field
+  ---
+  duration_ms: 51.1605
+  type: 'test'
+  ...
+# Subtest: reject malformed authentication persistence: future-version
+ok 21 - reject malformed authentication persistence: future-version
+  ---
+  duration_ms: 49.4839
+  type: 'test'
+  ...
+# Subtest: reject malformed authentication persistence: downgrade-with-store
+ok 22 - reject malformed authentication persistence: downgrade-with-store
+  ---
+  duration_ms: 49.9143
+  type: 'test'
+  ...
+# Subtest: login commit failure never exposes a session; restart does not retry the claimed proof
+ok 23 - login commit failure never exposes a session; restart does not retry the claimed proof
+  ---
+  duration_ms: 272.3913
+  type: 'test'
+  ...
+# Subtest: absolute eight-hour expiry survives repeated sliding refreshes
+ok 24 - absolute eight-hour expiry survives repeated sliding refreshes
+  ---
+  duration_ms: 252.2026
+  type: 'test'
+  ...
+# Subtest: verified login, counter and audit recover atomically after staged
+ok 25 - verified login, counter and audit recover atomically after staged
+  ---
+  duration_ms: 137.4338
+  type: 'test'
+  ...
+# Subtest: verified login, counter and audit recover atomically after journaled
+ok 26 - verified login, counter and audit recover atomically after journaled
+  ---
+  duration_ms: 132.3686
+  type: 'test'
+  ...
+# Subtest: verified login, counter and audit recover atomically after replaced
+ok 27 - verified login, counter and audit recover atomically after replaced
+  ---
+  duration_ms: 135.152
+  type: 'test'
+  ...
+# Subtest: 1000 retained login challenges fail closed; expired records reclaim capacity and local list still works
+ok 28 - 1000 retained login challenges fail closed; expired records reclaim capacity and local list still works
+  ---
+  duration_ms: 200.5216
+  type: 'test'
+  ...
+# Subtest: real -7 signature issues only a public-key child, with recovery, rotation, CSRF and logout
+ok 29 - real -7 signature issues only a public-key child, with recovery, rotation, CSRF and logout
+  ---
+  duration_ms: 355.5897
+  type: 'test'
+  ...
+# Subtest: real -257 signature issues only a public-key child, with recovery, rotation, CSRF and logout
+ok 30 - real -257 signature issues only a public-key child, with recovery, rotation, CSRF and logout
+  ---
+  duration_ms: 227.8341
+  type: 'test'
+  ...
+# Subtest: reject wrong challenge even with a valid signature
+ok 31 - reject wrong challenge even with a valid signature
+  ---
+  duration_ms: 117.6123
+  type: 'test'
+  ...
+# Subtest: reject wrong origin even with a valid signature
+ok 32 - reject wrong origin even with a valid signature
+  ---
+  duration_ms: 113.8534
+  type: 'test'
+  ...
+# Subtest: reject wrong type even with a valid signature
+ok 33 - reject wrong type even with a valid signature
+  ---
+  duration_ms: 116.54
+  type: 'test'
+  ...
+# Subtest: reject iframe even with a valid signature
+ok 34 - reject iframe even with a valid signature
+  ---
+  duration_ms: 122.3141
+  type: 'test'
+  ...
+# Subtest: reject topOrigin even with a valid signature
+ok 35 - reject topOrigin even with a valid signature
+  ---
+  duration_ms: 125.9701
+  type: 'test'
+  ...
+# Subtest: reject missing presence/UV or changed device type: 0
+ok 36 - reject missing presence/UV or changed device type: 0
+  ---
+  duration_ms: 118.3842
+  type: 'test'
+  ...
+# Subtest: reject missing presence/UV or changed device type: 1
+ok 37 - reject missing presence/UV or changed device type: 1
+  ---
+  duration_ms: 121.3769
+  type: 'test'
+  ...
+# Subtest: reject missing presence/UV or changed device type: 4
+ok 38 - reject missing presence/UV or changed device type: 4
+  ---
+  duration_ms: 117.225
+  type: 'test'
+  ...
+# Subtest: reject missing presence/UV or changed device type: 13
+ok 39 - reject missing presence/UV or changed device type: 13
+  ---
+  duration_ms: 121.8002
+  type: 'test'
+  ...
+# Subtest: reject missing-cookie
+ok 40 - reject missing-cookie
+  ---
+  duration_ms: 102.8387
+  type: 'test'
+  ...
+# Subtest: reject wrong-cookie
+ok 41 - reject wrong-cookie
+  ---
+  duration_ms: 98.2954
+  type: 'test'
+  ...
+# Subtest: reject wrong-handle
+ok 42 - reject wrong-handle
+  ---
+  duration_ms: 113.0572
+  type: 'test'
+  ...
+# Subtest: reject missing-handle
+ok 43 - reject missing-handle
+  ---
+  duration_ms: 117.299
+  type: 'test'
+  ...
+# Subtest: reject wrong-hint
+ok 44 - reject wrong-hint
+  ---
+  duration_ms: 121.122
+  type: 'test'
+  ...
+# Subtest: reject unknown-key
+ok 45 - reject unknown-key
+  ---
+  duration_ms: 112.7597
+  type: 'test'
+  ...
+# Subtest: reject bad-signature
+ok 46 - reject bad-signature
+  ---
+  duration_ms: 115.9708
+  type: 'test'
+  ...
+# Subtest: reject wrong-rp
+ok 47 - reject wrong-rp
+  ---
+  duration_ms: 117.2204
+  type: 'test'
+  ...
+# Subtest: non-discoverable hint permits absent userHandle but still requires the exact signature
+ok 48 - non-discoverable hint permits absent userHandle but still requires the exact signature
+  ---
+  duration_ms: 114.0431
+  type: 'test'
+  ...
+# Subtest: single-use claim rejects competing/replayed proofs and duplicate single-device counters
+ok 49 - single-use claim rejects competing/replayed proofs and duplicate single-device counters
+  ---
+  duration_ms: 198.8161
+  type: 'test'
+  ...
+# Subtest: multi-device counter rollback alone does not reject a valid synchronized passkey
+ok 50 - multi-device counter rollback alone does not reject a valid synchronized passkey
+  ---
+  duration_ms: 164.6469
+  type: 'test'
+  ...
+# Subtest: lifecycle expiry
+ok 51 - lifecycle expiry
+  ---
+  duration_ms: 99.3434
+  type: 'test'
+  ...
+# Subtest: lifecycle restart
+ok 52 - lifecycle restart
+  ---
+  duration_ms: 124.2906
+  type: 'test'
+  ...
+# Subtest: lifecycle reset
+ok 53 - lifecycle reset
+  ---
+  duration_ms: 110.2152
+  type: 'test'
+  ...
+# Subtest: lifecycle disabled-key
+ok 54 - lifecycle disabled-key
+  ---
+  duration_ms: 123.3348
+  type: 'test'
+  ...
+# Subtest: lifecycle disabled-user
+ok 55 - lifecycle disabled-user
+  ---
+  duration_ms: 121.516
+  type: 'test'
+  ...
+# Subtest: lifecycle registration-closed
+ok 56 - lifecycle registration-closed
+  ---
+  duration_ms: 134.1786
+  type: 'test'
+  ...
+# Subtest: lifecycle descriptor-expired
+ok 57 - lifecycle descriptor-expired
+  ---
+  duration_ms: 132.118
+  type: 'test'
+  ...
+# Subtest: authentication config is explicit; disabled service does not authorize or migrate legacy storage
+ok 58 - authentication config is explicit; disabled service does not authorize or migrate legacy storage
+  ---
+  duration_ms: 92.6181
+  type: 'test'
+  ...
+# Subtest: HTTP cookie lifecycle, precise admission and CSRF use the existing session routes
+ok 59 - HTTP cookie lifecycle, precise admission and CSRF use the existing session routes
+  ---
+  duration_ms: 193.3056
+  type: 'test'
+  ...
+# Subtest: strict public contracts reject secrets, noncanonical binary, unknown fields and excessive bodies
+ok 60 - strict public contracts reject secrets, noncanonical binary, unknown fields and excessive bodies
+  ---
+  duration_ms: 103.9788
+  type: 'test'
+  ...
+# Subtest: rechecks authority after asynchronous verification: expiry
+ok 61 - rechecks authority after asynchronous verification: expiry
+  ---
+  duration_ms: 119.8878
+  type: 'test'
+  ...
+# Subtest: rechecks authority after asynchronous verification: reset
+ok 62 - rechecks authority after asynchronous verification: reset
+  ---
+  duration_ms: 124.9004
+  type: 'test'
+  ...
+# Subtest: rechecks authority after asynchronous verification: disable-key
+ok 63 - rechecks authority after asynchronous verification: disable-key
+  ---
+  duration_ms: 124.7892
+  type: 'test'
+  ...
+# Subtest: rechecks authority after asynchronous verification: close
+ok 64 - rechecks authority after asynchronous verification: close
+  ---
+  duration_ms: 115.1329
+  type: 'test'
+  ...
+# Subtest: rechecks authority after asynchronous verification: source
+ok 65 - rechecks authority after asynchronous verification: source
+  ---
+  duration_ms: 115.3585
+  type: 'test'
+  ...
+# Subtest: proof queue is bounded at four active and 32 waiting; local maintenance remains available
+ok 66 - proof queue is bounded at four active and 32 waiting; local maintenance remains available
+  ---
+  duration_ms: 1432.279
+  type: 'test'
+  ...
+# Subtest: rate limits use attributed source and instance budgets and reset only in a new window
+ok 67 - rate limits use attributed source and instance budgets and reset only in a new window
+  ---
+  duration_ms: 95.5343
+  type: 'test'
+  ...
+# [ModeDB] START Connection: open websocket trace=b7b3829d
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:50501/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=b7b3829d 5.37ms
+#   结果: { ms: 5.37, url: 'ws://127.0.0.1:50501/api/v1/stream' }
+# Subtest: source expiry affects existing WS messages and queued writes before any new mutation
+ok 68 - source expiry affects existing WS messages and queued writes before any new mutation
+  ---
+  duration_ms: 316.6915
+  type: 'test'
+  ...
+# Subtest: browser pairing binds Origin, session CSRF, actual expiry and safe logout
+ok 69 - browser pairing binds Origin, session CSRF, actual expiry and safe logout
+  ---
+  duration_ms: 188.5151
+  type: 'test'
+  ...
+# Subtest: pins canonical releases, projects only published fields and denies cross-database/raw/sys/instance access
+ok 70 - pins canonical releases, projects only published fields and denies cross-database/raw/sys/instance access
+  ---
+  duration_ms: 257.2984
+  type: 'test'
+  ...
+# [ModeDB] START Connection: open websocket trace=209755c5
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:50506/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=209755c5 1.96ms
+#   结果: { ms: 1.96, url: 'ws://127.0.0.1:50506/api/v1/stream' }
+# Subtest: generated Postman/HTTP and native curl match SDK calls and report expiry, revocation and protocol failures
+ok 71 - generated Postman/HTTP and native curl match SDK calls and report expiry, revocation and protocol failures
+  ---
+  duration_ms: 369.2301
+  type: 'test'
+  ...
+# [ModeDB] START Connection: open websocket trace=7b301ba5
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:50512/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=7b301ba5 1.51ms
+#   结果: { ms: 1.51, url: 'ws://127.0.0.1:50512/api/v1/stream' }
+# Subtest: SDK short and stream authenticate before exposure, preserve revived rows and revoke existing sessions
+ok 72 - SDK short and stream authenticate before exposure, preserve revived rows and revoke existing sessions
+  ---
+  duration_ms: 171.2773
+  type: 'test'
+  ...
+# [ModeDB] START Management API: GET /api/v1/management/databases trace=979ff9e7
+#   说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+#   请求摘要: { url: 'http://127.0.0.1:50516/api/v1/management/databases' }
+# [ModeDB] OK Management API: GET /api/v1/management/databases trace=979ff9e7 1.48ms
+#   结果: {
+#     ms: 1.48,
+#     status: 200,
+#     path: '/api/v1/management/databases',
+#     databases: 1
+#   }
+# [ModeDB] START Management API: GET /api/v1/management/databases/business/catalog trace=598bc451
+#   说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+#   请求摘要: {
+#     url: 'http://127.0.0.1:50516/api/v1/management/databases/business/catalog'
+#   }
+# [ModeDB] OK Management API: GET /api/v1/management/databases/business/catalog trace=598bc451 0.88ms
+#   结果: {
+#     ms: 0.88,
+#     status: 200,
+#     path: '/api/v1/management/databases/business/catalog',
+#     database: 'business',
+#     models: 1,
+#     relations: 0,
+#     hasDatabaseDisplayName: false,
+#     modelDisplayNames: 0,
+#     fieldLabels: 1
+#   }
+# [ModeDB] START Connection: open websocket trace=12f761af
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:50516/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=12f761af 0.86ms
+#   结果: { ms: 0.86, url: 'ws://127.0.0.1:50516/api/v1/stream' }
+# Subtest: browser SDK uses cookies for management, restored HTTP RPC and CSRF-protected WS with revocation
+ok 73 - browser SDK uses cookies for management, restored HTTP RPC and CSRF-protected WS with revocation
+  ---
+  duration_ms: 206.2951
+  type: 'test'
+  ...
+# [ModeDB] START Connection: open websocket trace=01631527
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:50528/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=01631527 1.67ms
+#   结果: { ms: 1.67, url: 'ws://127.0.0.1:50528/api/v1/stream' }
+# [ModeDB] START Connection: open websocket trace=c8866d90
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:50532/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=c8866d90 1.47ms
+#   结果: { ms: 1.47, url: 'ws://127.0.0.1:50532/api/v1/stream' }
+# Subtest: SDK clients retry a failed handshake and share a successful concurrent ModelDB connection
+ok 74 - SDK clients retry a failed handshake and share a successful concurrent ModelDB connection
+  ---
+  duration_ms: 501.2537
+  type: 'test'
+  ...
+# Subtest: rechecks queued writes and requires explicit schema/import capabilities before any mutation
+ok 75 - rechecks queued writes and requires explicit schema/import capabilities before any mutation
+  ---
+  duration_ms: 144.8658
+  type: 'test'
+  ...
+# Subtest: checks publisher business permissions before changing any release row
+ok 76 - checks publisher business permissions before changing any release row
+  ---
+  duration_ms: 146.2832
+  type: 'test'
+  ...
+# Subtest: rechecks each published batch item after revocation and refuses unsupported atomic batches before writes
+ok 77 - rechecks each published batch item after revocation and refuses unsupported atomic batches before writes
+  ---
+  duration_ms: 185.416
+  type: 'test'
+  ...
+# Subtest: a binding grant delegates neither child query nor child operation without separately pinned grants
+ok 78 - a binding grant delegates neither child query nor child operation without separately pinned grants
+  ---
+  duration_ms: 231.282
+  type: 'test'
+  ...
+# Subtest: backup creation/list/download have distinct scoped checks and ordinary readers cannot create backups
+ok 79 - backup creation/list/download have distinct scoped checks and ordinary readers cannot create backups
+  ---
+  duration_ms: 236.0571
+  type: 'test'
+  ...
+# Subtest: an authorized restore disconnects existing database streams and preserves the access credential
+ok 80 - an authorized restore disconnects existing database streams and preserves the access credential
+  ---
+  duration_ms: 157.4112
+  type: 'test'
+  ...
+# Subtest: audit failure before execution denies writes and outcome failure reports uncertainty after a committed write
+ok 81 - audit failure before execution denies writes and outcome failure reports uncertainty after a committed write
+  ---
+  duration_ms: 120.88
+  type: 'test'
+  ...
+# Subtest: raw relation changes and indirect deletes require whole-database write scope
+ok 82 - raw relation changes and indirect deletes require whole-database write scope
+  ---
+  duration_ms: 331.7083
+  type: 'test'
+  ...
+# Subtest: encrypts the entire package and restores data without replacing unrelated files or access state
+ok 83 - encrypts the entire package and restores data without replacing unrelated files or access state
+  ---
+  duration_ms: 229.109
+  type: 'test'
+  ...
+# Subtest: protects migration private keys and rejects wrong phrases, recipient identities and hostile KDF parameters
+ok 84 - protects migration private keys and rejects wrong phrases, recipient identities and hostile KDF parameters
+  ---
+  duration_ms: 124.4916
+  type: 'test'
+  ...
+# Subtest: resumes a first restore into a new database after a hard exit at staged
+ok 85 - resumes a first restore into a new database after a hard exit at staged
+  ---
+  duration_ms: 868.3064
+  type: 'test'
+  ...
+# Subtest: resumes a first restore into a new database after a hard exit at journaled
+ok 86 - resumes a first restore into a new database after a hard exit at journaled
+  ---
+  duration_ms: 815.1071
+  type: 'test'
+  ...
+# Subtest: resumes a first restore into a new database after a hard exit at replaced
+ok 87 - resumes a first restore into a new database after a hard exit at replaced
+  ---
+  duration_ms: 794.2706
+  type: 'test'
+  ...
+# Subtest: preserves an unmatched initial restore stage instead of publishing different backup content
+ok 88 - preserves an unmatched initial restore stage instead of publishing different backup content
+  ---
+  duration_ms: 240.7561
+  type: 'test'
+  ...
+# Subtest: opens a local encrypted backup after independent recovery without the source key store
+ok 89 - opens a local encrypted backup after independent recovery without the source key store
+  ---
+  duration_ms: 466.5133
+  type: 'test'
+  ...
+# Subtest: rejects oversized disk inputs before reading or changing a source Vault
+ok 90 - rejects oversized disk inputs before reading or changing a source Vault
+  ---
+  duration_ms: 98.7014
+  type: 'test'
+  ...
+# Subtest: automatic backups wait for the write gate, flush buffered rows and refuse a failed flush or audit intent
+ok 91 - automatic backups wait for the write gate, flush buffered rows and refuse a failed flush or audit intent
+  ---
+  duration_ms: 247.5042
+  type: 'test'
+  ...
+# Subtest: runs the offline recipient CLI between isolated Windows instances with fresh destination protection
+ok 92 - runs the offline recipient CLI between isolated Windows instances with fresh destination protection
+  ---
+  duration_ms: 47398.732
+  type: 'test'
+  ...
+# Subtest: copies into a new key domain and keeps backups unique on repeated upload
+ok 93 - copies into a new key domain and keeps backups unique on repeated upload
+  ---
+  duration_ms: 192.6043
+  type: 'test'
+  ...
+# Subtest: independent WebCrypto unwraps standard A256KW and authenticates JWE content
+ok 94 - independent WebCrypto unwraps standard A256KW and authenticates JWE content
+  ---
+  duration_ms: 83.6916
+  type: 'test'
+  ...
+# Subtest: full migration needs the exact recipient and re-protects data with destination keys
+ok 95 - full migration needs the exact recipient and re-protects data with destination keys
+  ---
+  duration_ms: 394.8961
+  type: 'test'
+  ...
+# Subtest: rejects tampered metadata, recipient bindings, payloads and legacy packages before any target change
+ok 96 - rejects tampered metadata, recipient bindings, payloads and legacy packages before any target change
+  ---
+  duration_ms: 105.5631
+  type: 'test'
+  ...
+# Subtest: recovers a restore after a process exits at staged
+ok 97 - recovers a restore after a process exits at staged
+  ---
+  duration_ms: 832.6566
+  type: 'test'
+  ...
+# Subtest: recovers a restore after a process exits at journaled
+ok 98 - recovers a restore after a process exits at journaled
+  ---
+  duration_ms: 836.9418
+  type: 'test'
+  ...
+# Subtest: recovers a restore after a process exits at replaced
+ok 99 - recovers a restore after a process exits at replaced
+  ---
+  duration_ms: 822.9703
+  type: 'test'
+  ...
+# Subtest: rejects linked sources, linked backup stores, Windows ADS and extra package fields
+ok 100 - rejects linked sources, linked backup stores, Windows ADS and extra package fields
+  ---
+  duration_ms: 80.9253
+  type: 'test'
+  ...
+# Subtest: one-time browser pairing mints, rotates and revokes short sessions
+ok 101 - one-time browser pairing mints, rotates and revokes short sessions
+  ---
+  duration_ms: 245.006
+  type: 'test'
+  ...
+# Subtest: security-admin pairing has no database grants and exposes only secret-free metadata
+ok 102 - security-admin pairing has no database grants and exposes only secret-free metadata
+  ---
+  duration_ms: 72.8734
+  type: 'test'
+  ...
+# Subtest: collects pinned Binding Surface dependencies, model closure and display metadata without logs, samples or source trust
+ok 103 - collects pinned Binding Surface dependencies, model closure and display metadata without logs, samples or source trust
+  ---
+  duration_ms: 14.9192
+  type: 'test'
+  ...
+# Subtest: v2 is explicitly separated from frozen v1 and authenticates the metadata as well as the business graph
+ok 104 - v2 is explicitly separated from frozen v1 and authenticates the metadata as well as the business graph
+  ---
+  duration_ms: 12.3763
+  type: 'test'
+  ...
+# Subtest: rejects correctly signed malicious v2 metadata before any target creation
+ok 105 - rejects correctly signed malicious v2 metadata before any target creation
+  ---
+  duration_ms: 26.6745
+  type: 'test'
+  ...
+# Subtest: maps Designer references by context and keeps literal values, engine names and pinned versions
+ok 106 - maps Designer references by context and keeps literal values, engine names and pinned versions
+  ---
+  duration_ms: 5.2371
+  type: 'test'
+  ...
+# Subtest: hydrates mapped display names, positions and endpoint-scoped relations through the existing Designer reader
+ok 107 - hydrates mapped display names, positions and endpoint-scoped relations through the existing Designer reader
+  ---
+  duration_ms: 2.2365
+  type: 'test'
+  ...
+# Subtest: previews without new target keys, rejects stale confirmation, publishes both stores and leaves interfaces disabled
+ok 108 - previews without new target keys, rejects stale confirmation, publishes both stores and leaves interfaces disabled
+  ---
+  duration_ms: 243.3735
+  type: 'test'
+  ...
+# Subtest: preserves unrelated Designer data and binds confirmation to its current encrypted revision
+ok 109 - preserves unrelated Designer data and binds confirmation to its current encrypted revision
+  ---
+  duration_ms: 332.2694
+  type: 'test'
+  ...
+# Subtest: retains changed candidates, live locks and existing target metadata rather than clearing them to resume
+ok 110 - retains changed candidates, live locks and existing target metadata rather than clearing them to resume
+  ---
+  duration_ms: 395.3821
+  type: 'test'
+  ...
+# Subtest: blocks ordinary startup and resumes both stores after hard exit at task.staged
+ok 111 - blocks ordinary startup and resumes both stores after hard exit at task.staged
+  ---
+  duration_ms: 1329.7594
+  type: 'test'
+  ...
+# Subtest: blocks ordinary startup and resumes both stores after hard exit at task.journaled
+ok 112 - blocks ordinary startup and resumes both stores after hard exit at task.journaled
+  ---
+  duration_ms: 1307.7555
+  type: 'test'
+  ...
+# Subtest: blocks ordinary startup and resumes both stores after hard exit at task.replaced
+ok 113 - blocks ordinary startup and resumes both stores after hard exit at task.replaced
+  ---
+  duration_ms: 1289.3842
+  type: 'test'
+  ...
+# Subtest: blocks ordinary startup and resumes both stores after hard exit at prepared
+ok 114 - blocks ordinary startup and resumes both stores after hard exit at prepared
+  ---
+  duration_ms: 1261.7994
+  type: 'test'
+  ...
+# Subtest: blocks ordinary startup and resumes both stores after hard exit at business.staged
+ok 115 - blocks ordinary startup and resumes both stores after hard exit at business.staged
+  ---
+  duration_ms: 1289.2987
+  type: 'test'
+  ...
+# Subtest: blocks ordinary startup and resumes both stores after hard exit at business.journaled
+ok 116 - blocks ordinary startup and resumes both stores after hard exit at business.journaled
+  ---
+  duration_ms: 1261.7791
+  type: 'test'
+  ...
+# Subtest: blocks ordinary startup and resumes both stores after hard exit at business.replaced
+ok 117 - blocks ordinary startup and resumes both stores after hard exit at business.replaced
+  ---
+  duration_ms: 1272.3372
+  type: 'test'
+  ...
+# Subtest: blocks ordinary startup and resumes both stores after hard exit at business.published
+ok 118 - blocks ordinary startup and resumes both stores after hard exit at business.published
+  ---
+  duration_ms: 1270.8507
+  type: 'test'
+  ...
+# Subtest: blocks ordinary startup and resumes both stores after hard exit at designer.staged
+ok 119 - blocks ordinary startup and resumes both stores after hard exit at designer.staged
+  ---
+  duration_ms: 1302.3468
+  type: 'test'
+  ...
+# Subtest: blocks ordinary startup and resumes both stores after hard exit at designer.journaled
+ok 120 - blocks ordinary startup and resumes both stores after hard exit at designer.journaled
+  ---
+  duration_ms: 1318.1302
+  type: 'test'
+  ...
+# Subtest: blocks ordinary startup and resumes both stores after hard exit at designer.replaced
+ok 121 - blocks ordinary startup and resumes both stores after hard exit at designer.replaced
+  ---
+  duration_ms: 1437.6868
+  type: 'test'
+  ...
+# Subtest: blocks ordinary startup and resumes both stores after hard exit at designer.published
+ok 122 - blocks ordinary startup and resumes both stores after hard exit at designer.published
+  ---
+  duration_ms: 1334.8579
+  type: 'test'
+  ...
+# Subtest: uses protected Windows offline CLI export/preview/import for Designer assets after deleting the synthetic source
+ok 123 - uses protected Windows offline CLI export/preview/import for Designer assets after deleting the synthetic source
+  ---
+  duration_ms: 38993.14
+  type: 'test'
+  ...
+# Subtest: public-key HTTP/RPC uses live own grants and rejects raw cross-database, relations, import and management escalation
+ok 124 - public-key HTTP/RPC uses live own grants and rejects raw cross-database, relations, import and management escalation
+  ---
+  duration_ms: 488.6728
+  type: 'test'
+  ...
+# Subtest: restriction is local-only, CAS checked, cannot add scopes/change a digest and ordinary storage cannot mutate grants
+ok 125 - restriction is local-only, CAS checked, cannot add scopes/change a digest and ordinary storage cannot mutate grants
+  ---
+  duration_ms: 196.7556
+  type: 'test'
+  ...
+# Subtest: credential subscriptions isolate a key while user invalidation fans out to every key for that user
+ok 126 - credential subscriptions isolate a key while user invalidation fans out to every key for that user
+  ---
+  duration_ms: 233.7682
+  type: 'test'
+  ...
+# Subtest: durable disabled invalidates HTTP, new login, refresh and remains denied after reopen
+ok 127 - durable disabled invalidates HTTP, new login, refresh and remains denied after reopen
+  ---
+  duration_ms: 232.1639
+  type: 'test'
+  ...
+# Subtest: durable revoked invalidates HTTP, new login, refresh and remains denied after reopen
+ok 128 - durable revoked invalidates HTTP, new login, refresh and remains denied after reopen
+  ---
+  duration_ms: 226.0601
+  type: 'test'
+  ...
+# Subtest: durable user invalidates HTTP, new login, refresh and remains denied after reopen
+ok 129 - durable user invalidates HTTP, new login, refresh and remains denied after reopen
+  ---
+  duration_ms: 235.1931
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on restrict without receiving another message
+ok 130 - idle public-key WS closes on restrict without receiving another message
+  ---
+  duration_ms: 210.3983
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on disabled without receiving another message
+ok 131 - idle public-key WS closes on disabled without receiving another message
+  ---
+  duration_ms: 196.716
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on revoked without receiving another message
+ok 132 - idle public-key WS closes on revoked without receiving another message
+  ---
+  duration_ms: 202.5789
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on user without receiving another message
+ok 133 - idle public-key WS closes on user without receiving another message
+  ---
+  duration_ms: 243.0185
+  type: 'test'
+  ...
+# Subtest: idle public-key WS expires on the server deadline without a client message
+ok 134 - idle public-key WS expires on the server deadline without a client message
+  ---
+  duration_ms: 264.7905
+  type: 'test'
+  ...
+# Subtest: registry failure closes streams and denies the restriction; reopening preserves the last durable grant set
+ok 135 - registry failure closes streams and denies the restriction; reopening preserves the last durable grant set
+  ---
+  duration_ms: 198.4939
+  type: 'test'
+  ...
+# Subtest: queued raw write rechecks before opening an engine
+ok 136 - queued raw write rechecks before opening an engine
+  ---
+  duration_ms: 207.6856
+  type: 'test'
+  ...
+# Subtest: queued operation write rechecks before opening an engine
+ok 137 - queued operation write rechecks before opening an engine
+  ---
+  duration_ms: 185.891
+  type: 'test'
+  ...
+# Subtest: queued binding write rechecks before opening an engine
+ok 138 - queued binding write rechecks before opening an engine
+  ---
+  duration_ms: 182.5354
+  type: 'test'
+  ...
+# Subtest: engine-await and asynchronous authorization microtask cannot preserve a removed write capability
+ok 139 - engine-await and asynchronous authorization microtask cannot preserve a removed write capability
+  ---
+  duration_ms: 384.69
+  type: 'test'
+  ...
+# Subtest: published query rechecks exact release and parent after child engine waits
+ok 140 - published query rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 210.0813
+  type: 'test'
+  ...
+# Subtest: published operation rechecks exact release and parent after child engine waits
+ok 141 - published operation rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 223.282
+  type: 'test'
+  ...
+# Subtest: published binding-read rechecks exact release and parent after child engine waits
+ok 142 - published binding-read rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 268.5785
+  type: 'test'
+  ...
+# Subtest: published binding-write rechecks exact release and parent after child engine waits
+ok 143 - published binding-write rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 213.733
+  type: 'test'
+  ...
+# Subtest: publication batch rechecks every earlier business scope after all metadata awaits
+ok 144 - publication batch rechecks every earlier business scope after all metadata awaits
+  ---
+  duration_ms: 186.0548
+  type: 'test'
+  ...
+# Subtest: published batch preserves first commit and rejects later items after operation scope removal
+ok 145 - published batch preserves first commit and rejects later items after operation scope removal
+  ---
+  duration_ms: 223.3817
+  type: 'test'
+  ...
+# Subtest: published batch preserves first commit and rejects later items after parent surface scope removal
+ok 146 - published batch preserves first commit and rejects later items after parent surface scope removal
+  ---
+  duration_ms: 228.7857
+  type: 'test'
+  ...
+# Subtest: already committed single write remains successful after in-flight revocation with a durable success audit
+ok 147 - already committed single write remains successful after in-flight revocation with a durable success audit
+  ---
+  duration_ms: 205.6286
+  type: 'test'
+  ...
+# Subtest: permission reduction persists across reopen and signing counter updates do not invalidate streams
+ok 148 - permission reduction persists across reopen and signing counter updates do not invalidate streams
+  ---
+  duration_ms: 226.1956
+  type: 'test'
+  ...
+# Subtest: re-enabling disabled requires a new login and never revives an existing session
+ok 149 - re-enabling disabled requires a new login and never revives an existing session
+  ---
+  duration_ms: 216.2024
+  type: 'test'
+  ...
+# Subtest: re-enabling user requires a new login and never revives an existing session
+ok 150 - re-enabling user requires a new login and never revives an existing session
+  ---
+  duration_ms: 227.8788
+  type: 'test'
+  ...
+# Subtest: a registered key change leaves a sibling API stream and its independent session usable
+ok 151 - a registered key change leaves a sibling API stream and its independent session usable
+  ---
+  duration_ms: 232.1287
+  type: 'test'
+  ...
+# Subtest: queued WS mutation is rejected after revocation and its socket closes before another operation
+ok 152 - queued WS mutation is rejected after revocation and its socket closes before another operation
+  ---
+  duration_ms: 200.0609
+  type: 'test'
+  ...
+# Subtest: raw query withholds results revoked during asynchronous execution
+ok 153 - raw query withholds results revoked during asynchronous execution
+  ---
+  duration_ms: 203.5974
+  type: 'test'
+  ...
+# Subtest: published query withholds results revoked during asynchronous execution
+ok 154 - published query withholds results revoked during asynchronous execution
+  ---
+  duration_ms: 234.0935
+  type: 'test'
+  ...
+# Subtest: binding read checks both pins after its asynchronous call log, while completed mutation keeps refreshFailed
+ok 155 - binding read checks both pins after its asynchronous call log, while completed mutation keeps refreshFailed
+  ---
+  duration_ms: 446.5467
+  type: 'test'
+  ...
+# Subtest: public-key callable HTTP route pins its release and cannot inherit raw or child grants
+ok 156 - public-key callable HTTP route pins its release and cannot inherit raw or child grants
+  ---
+  duration_ms: 241.7579
+  type: 'test'
+  ...
+# Subtest: public-key relation and bulk writes require live whole-database write/import scopes
+ok 157 - public-key relation and bulk writes require live whole-database write/import scopes
+  ---
+  duration_ms: 280.9444
+  type: 'test'
+  ...
+# Subtest: audit failures reject before execution and report uncertainty after a committed public-key write
+ok 158 - audit failures reject before execution and report uncertainty after a committed public-key write
+  ---
+  duration_ms: 195.6925
+  type: 'test'
+  ...
+# Subtest: restriction staged failure closes the writer and recovers one atomic grant/audit outcome
+ok 159 - restriction staged failure closes the writer and recovers one atomic grant/audit outcome
+  ---
+  duration_ms: 208.0991
+  type: 'test'
+  ...
+# Subtest: restriction journaled failure closes the writer and recovers one atomic grant/audit outcome
+ok 160 - restriction journaled failure closes the writer and recovers one atomic grant/audit outcome
+  ---
+  duration_ms: 201.1504
+  type: 'test'
+  ...
+# Subtest: restriction replaced failure closes the writer and recovers one atomic grant/audit outcome
+ok 161 - restriction replaced failure closes the writer and recovers one atomic grant/audit outcome
+  ---
+  duration_ms: 204.4391
+  type: 'test'
+  ...
+# Subtest: raw batchUpdate rechecks each independent item and reports committed partial counts
+ok 162 - raw batchUpdate rechecks each independent item and reports committed partial counts
+  ---
+  duration_ms: 218.233
+  type: 'test'
+  ...
+# Subtest: raw batchDelete rechecks each independent item and reports committed partial counts
+ok 163 - raw batchDelete rechecks each independent item and reports committed partial counts
+  ---
+  duration_ms: 217.2272
+  type: 'test'
+  ...
+# Subtest: relation pair rechecks after asynchronous index preparation and before first mutation
+ok 164 - relation pair rechecks after asynchronous index preparation and before first mutation
+  ---
+  duration_ms: 213.4786
+  type: 'test'
+  ...
+# Subtest: relation import lookup rechecks after asynchronous index preparation and before first mutation
+ok 165 - relation import lookup rechecks after asynchronous index preparation and before first mutation
+  ---
+  duration_ms: 224.9153
+  type: 'test'
+  ...
+# Subtest: hosting report requires both native Windows and actual localized Chrome evidence
+ok 166 - hosting report requires both native Windows and actual localized Chrome evidence
+  ---
+  duration_ms: 1.059
+  type: 'test'
+  ...
+# Subtest: hosting report rejects process failure, missing/duplicate summaries, skipped and count drift
+ok 167 - hosting report rejects process failure, missing/duplicate summaries, skipped and count drift
+  ---
+  duration_ms: 1.1058
+  type: 'test'
+  ...
+# Subtest: hosting report rejects missing native/browser records and every incomplete check
+ok 168 - hosting report rejects missing native/browser records and every incomplete check
+  ---
+  duration_ms: 1.2966
+  type: 'test'
+  ...
+# Subtest: hosting report rejects inflated hardware/trust claims, wrong browser and incomplete screenshots
+ok 169 - hosting report rejects inflated hardware/trust claims, wrong browser and incomplete screenshots
+  ---
+  duration_ms: 0.5988
+  type: 'test'
+  ...
+# Subtest: hosting remains explicit and validates every field without address or file discovery
+ok 170 - hosting remains explicit and validates every field without address or file discovery
+  ---
+  duration_ms: 11.2911
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses modeldb.config.json without serving it
+ok 171 - build snapshot refuses modeldb.config.json without serving it
+  ---
+  duration_ms: 2.1096
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses .env without serving it
+ok 172 - build snapshot refuses .env without serving it
+  ---
+  duration_ms: 1.4621
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses server.key without serving it
+ok 173 - build snapshot refuses server.key without serving it
+  ---
+  duration_ms: 1.3954
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses bundle.js.map without serving it
+ok 174 - build snapshot refuses bundle.js.map without serving it
+  ---
+  duration_ms: 1.3122
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses source.ts without serving it
+ok 175 - build snapshot refuses source.ts without serving it
+  ---
+  duration_ms: 5.8466
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses arbitrary.html without serving it
+ok 176 - build snapshot refuses arbitrary.html without serving it
+  ---
+  duration_ms: 2.0312
+  type: 'test'
+  ...
+# Subtest: build snapshot rejects protected overlap, directory junctions, hardlinks and oversized files
+ok 177 - build snapshot rejects protected overlap, directory junctions, hardlinks and oversized files
+  ---
+  duration_ms: 11.3821
+  type: 'test'
+  ...
+# Subtest: public build serves only exact GET/HEAD snapshot paths with same-origin security headers
+ok 178 - public build serves only exact GET/HEAD snapshot paths with same-origin security headers
+  ---
+  duration_ms: 243.6658
+  type: 'test'
+  ...
+# Subtest: data listener refuses encoded traversal before static or API handlers
+ok 179 - data listener refuses encoded traversal before static or API handlers
+  ---
+  duration_ms: 86.7574
+  type: 'test'
+  ...
+# Subtest: data listener refuses double encoding before static or API handlers
+ok 180 - data listener refuses double encoding before static or API handlers
+  ---
+  duration_ms: 85.0324
+  type: 'test'
+  ...
+# Subtest: data listener refuses encoded slash before static or API handlers
+ok 181 - data listener refuses encoded slash before static or API handlers
+  ---
+  duration_ms: 83.4786
+  type: 'test'
+  ...
+# Subtest: data listener refuses raw traversal before static or API handlers
+ok 182 - data listener refuses raw traversal before static or API handlers
+  ---
+  duration_ms: 80.8743
+  type: 'test'
+  ...
+# Subtest: data listener refuses backslash before static or API handlers
+ok 183 - data listener refuses backslash before static or API handlers
+  ---
+  duration_ms: 76.1889
+  type: 'test'
+  ...
+# Subtest: data listener refuses rebinding before static or API handlers
+ok 184 - data listener refuses rebinding before static or API handlers
+  ---
+  duration_ms: 80.4492
+  type: 'test'
+  ...
+# Subtest: data listener refuses wrong port before static or API handlers
+ok 185 - data listener refuses wrong port before static or API handlers
+  ---
+  duration_ms: 84.2728
+  type: 'test'
+  ...
+# Subtest: data listener refuses null origin before static or API handlers
+ok 186 - data listener refuses null origin before static or API handlers
+  ---
+  duration_ms: 87.1254
+  type: 'test'
+  ...
+# Subtest: data listener refuses cross-origin before static or API handlers
+ok 187 - data listener refuses cross-origin before static or API handlers
+  ---
+  duration_ms: 78.1989
+  type: 'test'
+  ...
+# Subtest: data listener refuses same-site ports before static or API handlers
+ok 188 - data listener refuses same-site ports before static or API handlers
+  ---
+  duration_ms: 79.9321
+  type: 'test'
+  ...
+# Subtest: management listener rejects forwarded even on its real loopback socket
+ok 189 - management listener rejects forwarded even on its real loopback socket
+  ---
+  duration_ms: 78.3168
+  type: 'test'
+  ...
+# Subtest: management listener rejects x-forwarded-for even on its real loopback socket
+ok 190 - management listener rejects x-forwarded-for even on its real loopback socket
+  ---
+  duration_ms: 80.1606
+  type: 'test'
+  ...
+# Subtest: management listener rejects x-forwarded-host even on its real loopback socket
+ok 191 - management listener rejects x-forwarded-host even on its real loopback socket
+  ---
+  duration_ms: 79.2729
+  type: 'test'
+  ...
+# Subtest: management listener rejects x-forwarded-proto even on its real loopback socket
+ok 192 - management listener rejects x-forwarded-proto even on its real loopback socket
+  ---
+  duration_ms: 84.7411
+  type: 'test'
+  ...
+# Subtest: management listener rejects x-real-ip even on its real loopback socket
+ok 193 - management listener rejects x-real-ip even on its real loopback socket
+  ---
+  duration_ms: 80.8687
+  type: 'test'
+  ...
+# Subtest: management listener rejects via even on its real loopback socket
+ok 194 - management listener rejects via even on its real loopback socket
+  ---
+  duration_ms: 81.1144
+  type: 'test'
+  ...
+# Subtest: management APIs and page cannot be reached through data listener, even from loopback
+ok 195 - management APIs and page cannot be reached through data listener, even from loopback
+  ---
+  duration_ms: 86.3133
+  type: 'test'
+  ...
+# Subtest: OS launch is exact, one-use, management-only and never consumed by a wrong session role
+ok 196 - OS launch is exact, one-use, management-only and never consumed by a wrong session role
+  ---
+  duration_ms: 143.8536
+  type: 'test'
+  ...
+# Subtest: hosted management idle 15 minutes and absolute 60 minutes survive refresh and restart
+ok 197 - hosted management idle 15 minutes and absolute 60 minutes survive refresh and restart
+  ---
+  duration_ms: 159.2526
+  type: 'test'
+  ...
+# Subtest: data pairings cannot create a management session and conflict binding never falls back
+ok 198 - data pairings cannot create a management session and conflict binding never falls back
+  ---
+  duration_ms: 90.869
+  type: 'test'
+  ...
+# Subtest: old eight-hour management identities are refused by the hosted management listener
+ok 199 - old eight-hour management identities are refused by the hosted management listener
+  ---
+  duration_ms: 87.4245
+  type: 'test'
+  ...
+# Subtest: failed hosted rejection audit cannot report an ordinary denial or return static bytes
+ok 200 - failed hosted rejection audit cannot report an ordinary denial or return static bytes
+  ---
+  duration_ms: 73.2384
+  type: 'test'
+  ...
+# Subtest: management websocket upgrade cannot bypass its data-route allowlist
+ok 201 - management websocket upgrade cannot bypass its data-route allowlist
+  ---
+  duration_ms: 76.8759
+  type: 'test'
+  ...
+# Subtest: identity admin report accepts formal UI/native checks and accurate browser limits
+ok 202 - identity admin report accepts formal UI/native checks and accurate browser limits
+  ---
+  duration_ms: 1.0856
+  type: 'test'
+  ...
+# Subtest: identity admin report rejects incomplete, skipped or ambiguous TAP summaries
+ok 203 - identity admin report rejects incomplete, skipped or ambiguous TAP summaries
+  ---
+  duration_ms: 1.1964
+  type: 'test'
+  ...
+# Subtest: identity admin report requires every formal UI check and one browser record
+ok 204 - identity admin report requires every formal UI check and one browser record
+  ---
+  duration_ms: 1.1133
+  type: 'test'
+  ...
+# Subtest: identity admin report rejects hardware/trust inflation and missing layouts
+ok 205 - identity admin report rejects hardware/trust inflation and missing layouts
+  ---
+  duration_ms: 0.3763
+  type: 'test'
+  ...
+# Subtest: dedicated admin command checks listener, Cookie, Origin, CSRF, proxy headers and extra fields
+ok 206 - dedicated admin command checks listener, Cookie, Origin, CSRF, proxy headers and extra fields
+  ---
+  duration_ms: 312.2856
+  type: 'test'
+  ...
+# Subtest: ordinary paired data identity and forged actor context cannot acquire registration administration
+ok 207 - ordinary paired data identity and forged actor context cannot acquire registration administration
+  ---
+  duration_ms: 114.3749
+  type: 'test'
+  ...
+# Subtest: bounded metadata pages, explicit confirmation and CAS approval preserve exact grants and HTTP audit actor
+ok 208 - bounded metadata pages, explicit confirmation and CAS approval preserve exact grants and HTTP audit actor
+  ---
+  duration_ms: 221.3245
+  type: 'test'
+  ...
+# Subtest: HTTP user/key enable-disable, irreversible revoke, reductions and atomic replacement reuse CLI validation
+ok 209 - HTTP user/key enable-disable, irreversible revoke, reductions and atomic replacement reuse CLI validation
+  ---
+  duration_ms: 261.381
+  type: 'test'
+  ...
+# Subtest: session maintenance is paginated, CAS protected, namespace strict and can revoke the current management session
+ok 210 - session maintenance is paginated, CAS protected, namespace strict and can revoke the current management session
+  ---
+  duration_ms: 220.6114
+  type: 'test'
+  ...
+# Subtest: registration.list rejects unbounded or malformed pages
+ok 211 - registration.list rejects unbounded or malformed pages
+  ---
+  duration_ms: 154.9709
+  type: 'test'
+  ...
+# Subtest: registration.users.list rejects unbounded or malformed pages
+ok 212 - registration.users.list rejects unbounded or malformed pages
+  ---
+  duration_ms: 158.048
+  type: 'test'
+  ...
+# Subtest: registration.credentials.list rejects unbounded or malformed pages
+ok 213 - registration.credentials.list rejects unbounded or malformed pages
+  ---
+  duration_ms: 149.3778
+  type: 'test'
+  ...
+# Subtest: registration.sessions.list rejects unbounded or malformed pages
+ok 214 - registration.sessions.list rejects unbounded or malformed pages
+  ---
+  duration_ms: 158.5235
+  type: 'test'
+  ...
+# Subtest: audit-capacity failure prevents an admin mutation and preserves pending state
+ok 215 - audit-capacity failure prevents an admin mutation and preserves pending state
+  ---
+  duration_ms: 114.6116
+  type: 'test'
+  ...
+# Subtest: rejects unprotected remote binds, fake public TLS, bad proxy/origin/CIDR configuration
+ok 216 - rejects unprotected remote binds, fake public TLS, bad proxy/origin/CIDR configuration
+  ---
+  duration_ms: 7.6445
+  type: 'test'
+  ...
+# Subtest: normalizes IPv4/IPv6, enforces deny precedence, empty allow-lists, separate planes and expiry
+ok 217 - normalizes IPv4/IPv6, enforces deny precedence, empty allow-lists, separate planes and expiry
+  ---
+  duration_ms: 1.2873
+  type: 'test'
+  ...
+# Subtest: ignores forged forwarded headers on direct sockets and stops at the first untrusted proxy hop
+ok 218 - ignores forged forwarded headers on direct sockets and stops at the first untrusted proxy hop
+  ---
+  duration_ms: 0.7978
+  type: 'test'
+  ...
+# Subtest: rejects disallowed Origins before parsing bodies or executing handlers; CORS permits exact origins only
+ok 219 - rejects disallowed Origins before parsing bodies or executing handlers; CORS permits exact origins only
+  ---
+  duration_ms: 132.376
+  type: 'test'
+  ...
+# Subtest: SDK endpoint handling preserves HTTPS/IPv6 and rejects remote plaintext before sending credentials
+ok 220 - SDK endpoint handling preserves HTTPS/IPv6 and rejects remote plaintext before sending credentials
+  ---
+  duration_ms: 0.9229
+  type: 'test'
+  ...
+# Subtest: real HTTPS/WSS SDK round trips require trusted certificates and reject mismatched certificate names
+ok 221 - real HTTPS/WSS SDK round trips require trusted certificates and reject mismatched certificate names
+  ---
+  duration_ms: 588.5875
+  type: 'test'
+  ...
+# Subtest: SDK refuses redirects instead of following a secure request toward a different transport
+ok 222 - SDK refuses redirects instead of following a secure request toward a different transport
+  ---
+  duration_ms: 19.0056
+  type: 'test'
+  ...
+# Subtest: separates planes, gives deny precedence and preserves an enabled empty allow list
+ok 223 - separates planes, gives deny precedence and preserves an enabled empty allow list
+  ---
+  duration_ms: 102.4173
+  type: 'test'
+  ...
+# Subtest: binds preview to config, revision, actor and expiry, with strict input validation
+ok 224 - binds preview to config, revision, actor and expiry, with strict input validation
+  ---
+  duration_ms: 49.0466
+  type: 'test'
+  ...
+# Subtest: rolls back unconfirmed lockout after timeout/restart/clock reversal, and supports OS-local repair
+ok 225 - rolls back unconfirmed lockout after timeout/restart/clock reversal, and supports OS-local repair
+  ---
+  duration_ms: 124.4363
+  type: 'test'
+  ...
+# Subtest: expires rules durably and rechecks established connections immediately after policy changes
+ok 226 - expires rules durably and rechecks established connections immediately after policy changes
+  ---
+  duration_ms: 83.4863
+  type: 'test'
+  ...
+# Subtest: limits sources and authenticated principals independently and resets bounded windows
+ok 227 - limits sources and authenticated principals independently and resets bounded windows
+  ---
+  duration_ms: 63.9933
+  type: 'test'
+  ...
+# Subtest: observes failures by default; opt-in bans persist without extending expiry and exemptions do not bypass manual denies
+ok 228 - observes failures by default; opt-in bans persist without extending expiry and exemptions do not bypass manual denies
+  ---
+  duration_ms: 156.1194
+  type: 'test'
+  ...
+# Subtest: requires recent pairing for key rotation even after session refresh
+ok 229 - requires recent pairing for key rotation even after session refresh
+  ---
+  duration_ms: 0.21
+  type: 'test'
+  ...
+# Subtest: attributes rejected proxy headers to the socket, persists anonymous events, and fails closed on audit failure
+ok 230 - attributes rejected proxy headers to the socket, persists anonymous events, and fails closed on audit failure
+  ---
+  duration_ms: 196.6144
+  type: 'test'
+  ...
+# Subtest: records management authentication thresholds on the management plane
+ok 231 - records management authentication thresholds on the management plane
+  ---
+  duration_ms: 81.7595
+  type: 'test'
+  ...
+# Subtest: fails closed when policy/audit durability fails and preserves the last effective policy
+ok 232 - fails closed when policy/audit durability fails and preserves the last effective policy
+  ---
+  duration_ms: 63.9491
+  type: 'test'
+  ...
+# Subtest: resumes master rotation after promoted, keeps old DEKs and Vault bytes readable
+ok 233 - resumes master rotation after promoted, keeps old DEKs and Vault bytes readable
+  ---
+  duration_ms: 191.8406
+  type: 'test'
+  ...
+# Subtest: resumes master rotation after rewrapped, keeps old DEKs and Vault bytes readable
+ok 234 - resumes master rotation after rewrapped, keeps old DEKs and Vault bytes readable
+  ---
+  duration_ms: 187.6339
+  type: 'test'
+  ...
+# Subtest: rejects rotation when the durable master cannot be replaced, leaving DEKs usable
+ok 235 - rejects rotation when the durable master cannot be replaced, leaving DEKs usable
+  ---
+  duration_ms: 70.2031
+  type: 'test'
+  ...
+# Subtest: requires exact reset confirmation, exclusive ownership and a verified backup; rejects junctions and overlapping targets
+ok 236 - requires exact reset confirmation, exclusive ownership and a verified backup; rejects junctions and overlapping targets
+  ---
+  duration_ms: 95.5184
+  type: 'test'
+  ...
+# Subtest: creates a decryptable encrypted reset backup and removes only the selected synthetic instance
+ok 237 - creates a decryptable encrypted reset backup and removes only the selected synthetic instance
+  ---
+  duration_ms: 98.6431
+  type: 'test'
+  ...
+# Subtest: blocks restart after interrupted reset and retains the verified external archive
+ok 238 - blocks restart after interrupted reset and retains the verified external archive
+  ---
+  duration_ms: 90.1576
+  type: 'test'
+  ...
+# Subtest: delivery report requires actual native completion and exact package/identity boundaries
+ok 239 - delivery report requires actual native completion and exact package/identity boundaries
+  ---
+  duration_ms: 1.3143
+  type: 'test'
+  ...
+# Subtest: delivery report refuses missing, ambiguous, skipped and failed raw results
+ok 240 - delivery report refuses missing, ambiguous, skipped and failed raw results
+  ---
+  duration_ms: 1.2362
+  type: 'test'
+  ...
+# Subtest: delivery report does not claim missing checks, new package formats or real two-device work
+ok 241 - delivery report does not claim missing checks, new package formats or real two-device work
+  ---
+  duration_ms: 0.9343
+  type: 'test'
+  ...
+# Subtest: delivery requires exact verified owner, instance, version, fingerprint, confirmation and CAS
+ok 242 - delivery requires exact verified owner, instance, version, fingerprint, confirmation and CAS
+  ---
+  duration_ms: 439.3235
+  type: 'test'
+  ...
+# Subtest: new delivery rejects registration.user.disable while preserving recipient history
+ok 243 - new delivery rejects registration.user.disable while preserving recipient history
+  ---
+  duration_ms: 307.2524
+  type: 'test'
+  ...
+# Subtest: new delivery rejects registration.credential.disable while preserving recipient history
+ok 244 - new delivery rejects registration.credential.disable while preserving recipient history
+  ---
+  duration_ms: 219.8716
+  type: 'test'
+  ...
+# Subtest: new delivery rejects registration.credential.revoke while preserving recipient history
+ok 245 - new delivery rejects registration.credential.revoke while preserving recipient history
+  ---
+  duration_ms: 403.4217
+  type: 'test'
+  ...
+# Subtest: retired and replaced recipients cannot receive new packages; historical private keys stay independent
+ok 246 - retired and replaced recipients cannot receive new packages; historical private keys stay independent
+  ---
+  duration_ms: 282.5882
+  type: 'test'
+  ...
+# Subtest: sealed delivery audit binds recipient and ciphertext hash, with no keys, proof or body
+ok 247 - sealed delivery audit binds recipient and ciphertext hash, with no keys, proof or body
+  ---
+  duration_ms: 390.0077
+  type: 'test'
+  ...
+# Subtest: retire permanently blocks new delivery without deleting recipient history
+ok 248 - retire permanently blocks new delivery without deleting recipient history
+  ---
+  duration_ms: 231.0211
+  type: 'test'
+  ...
+# Subtest: access-reset permanently blocks new delivery without deleting recipient history
+ok 249 - access-reset permanently blocks new delivery without deleting recipient history
+  ---
+  duration_ms: 356.9484
+  type: 'test'
+  ...
+# Subtest: sealed audit at staged never falsely reports success and recovers exact metadata
+ok 250 - sealed audit at staged never falsely reports success and recovers exact metadata
+  ---
+  duration_ms: 240.899
+  type: 'test'
+  ...
+# Subtest: sealed audit at journaled never falsely reports success and recovers exact metadata
+ok 251 - sealed audit at journaled never falsely reports success and recovers exact metadata
+  ---
+  duration_ms: 398.8893
+  type: 'test'
+  ...
+# Subtest: sealed audit at replaced never falsely reports success and recovers exact metadata
+ok 252 - sealed audit at replaced never falsely reports success and recovers exact metadata
+  ---
+  duration_ms: 215.1614
+  type: 'test'
+  ...
+# Subtest: audit capacity refuses sealing before external publication
+ok 253 - audit capacity refuses sealing before external publication
+  ---
+  duration_ms: 466.6055
+  type: 'test'
+  ...
+# Subtest: CLI selection forbids incomplete, mixed or forged selectors and raw PEM fallback in V5
+ok 254 - CLI selection forbids incomplete, mixed or forged selectors and raw PEM fallback in V5
+  ---
+  duration_ms: 368.0941
+  type: 'test'
+  ...
+# Subtest: private key/import options cannot be smuggled into export or recipient selectors into import
+ok 255 - private key/import options cannot be smuggled into export or recipient selectors into import
+  ---
+  duration_ms: 0.8095
+  type: 'test'
+  ...
+# Subtest: explicit V4 to V5 initialization preserves access and ordinary reopen does not migrate
+ok 256 - explicit V4 to V5 initialization preserves access and ordinary reopen does not migrate
+  ---
+  duration_ms: 322.4687
+  type: 'test'
+  ...
+# Subtest: real OAEP proof associates a version; replacement and retirement retain historical keys
+ok 257 - real OAEP proof associates a version; replacement and retirement retain historical keys
+  ---
+  duration_ms: 262.1897
+  type: 'test'
+  ...
+# Subtest: wrong proof is consumed atomically; replay and unknown holder cannot take over
+ok 258 - wrong proof is consumed atomically; replay and unknown holder cannot take over
+  ---
+  duration_ms: 221.4337
+  type: 'test'
+  ...
+# Subtest: challenge labels bind every field and TTL; tampering and stale versions are rejected
+ok 259 - challenge labels bind every field and TTL; tampering and stale versions are rejected
+  ---
+  duration_ms: 218.8904
+  type: 'test'
+  ...
+# Subtest: login disable, revoke and user enable do not delete history or revive an in-flight challenge
+ok 260 - login disable, revoke and user enable do not delete history or revive an in-flight challenge
+  ---
+  duration_ms: 282.1888
+  type: 'test'
+  ...
+# Subtest: reboot keeps TTL and proof state without extending or replaying an association
+ok 261 - reboot keeps TTL and proof state without extending or replaying an association
+  ---
+  duration_ms: 174.8269
+  type: 'test'
+  ...
+# Subtest: strict parser, key strength, pagination, namespaces and CAS reject malformed input
+ok 262 - strict parser, key strength, pagination, namespaces and CAS reject malformed input
+  ---
+  duration_ms: 311.1509
+  type: 'test'
+  ...
+# Subtest: audit and protected-write failures never report success or replace historical keys
+ok 263 - audit and protected-write failures never report success or replace historical keys
+  ---
+  duration_ms: 185.4995
+  type: 'test'
+  ...
+# Subtest: atomic association failure at staged recovers with matching audit and history
+ok 264 - atomic association failure at staged recovers with matching audit and history
+  ---
+  duration_ms: 151.0083
+  type: 'test'
+  ...
+# Subtest: atomic association failure at journaled recovers with matching audit and history
+ok 265 - atomic association failure at journaled recovers with matching audit and history
+  ---
+  duration_ms: 150.8354
+  type: 'test'
+  ...
+# Subtest: atomic association failure at replaced recovers with matching audit and history
+ok 266 - atomic association failure at replaced recovers with matching audit and history
+  ---
+  duration_ms: 153.9751
+  type: 'test'
+  ...
+# Subtest: corrupt/unknown recipient storage fails closed and preserves original bytes
+ok 267 - corrupt/unknown recipient storage fails closed and preserves original bytes
+  ---
+  duration_ms: 177.0587
+  type: 'test'
+  ...
+# Subtest: dedicated HTTP management validates Cookie, CSRF, Origin and data listener denial
+ok 268 - dedicated HTTP management validates Cookie, CSRF, Origin and data listener denial
+  ---
+  duration_ms: 173.726
+  type: 'test'
+  ...
+# Subtest: authentication RSA public keys cannot also be registered as encryption recipients
+ok 269 - authentication RSA public keys cannot also be registered as encryption recipients
+  ---
+  duration_ms: 143.5052
+  type: 'test'
+  ...
+# Subtest: challenge capacity is bounded and elapsed challenges are collected without deleting versions
+ok 270 - challenge capacity is bounded and elapsed challenges are collected without deleting versions
+  ---
+  duration_ms: 150.2439
+  type: 'test'
+  ...
+# Subtest: wrong instance, unknown proof and malformed proof cannot silently approve or consume a valid challenge
+ok 271 - wrong instance, unknown proof and malformed proof cannot silently approve or consume a valid challenge
+  ---
+  duration_ms: 166.2127
+  type: 'test'
+  ...
+# Subtest: pending and historical encryption keys cannot later become login keys or replacement credentials
+ok 272 - pending and historical encryption keys cannot later become login keys or replacement credentials
+  ---
+  duration_ms: 195.9311
+  type: 'test'
+  ...
+# Subtest: recipient report requires exact native counts, checks and scope
+ok 273 - recipient report requires exact native counts, checks and scope
+  ---
+  duration_ms: 0.9716
+  type: 'test'
+  ...
+# Subtest: recipient report rejects failures, skips and missing or duplicate diagnostics
+ok 274 - recipient report rejects failures, skips and missing or duplicate diagnostics
+  ---
+  duration_ms: 1.3015
+  type: 'test'
+  ...
+# Subtest: recipient report rejects untested scope and incomplete browser evidence
+ok 275 - recipient report rejects untested scope and incomplete browser evidence
+  ---
+  duration_ms: 0.6097
+  type: 'test'
+  ...
+# Subtest: approval requires a verified local actor context; JSON role and SID cannot establish it
+ok 276 - approval requires a verified local actor context; JSON role and SID cannot establish it
+  ---
+  duration_ms: 64.0152
+  type: 'test'
+  ...
+# Subtest: the parent broker check rejects foreign or malformed SIDs and accepts owner/SYSTEM only
+ok 277 - the parent broker check rejects foreign or malformed SIDs and accepts owner/SYSTEM only
+  ---
+  duration_ms: 0.2182
+  type: 'test'
+  ...
+# Subtest: local lists are bounded metadata with stable fingerprints; V1 lists do not migrate
+ok 278 - local lists are bounded metadata with stable fingerprints; V1 lists do not migrate
+  ---
+  duration_ms: 211.6805
+  type: 'test'
+  ...
+# Subtest: approval atomically creates an operator, user, scoped public-key credential and audit, but no token or session
+ok 279 - approval atomically creates an operator, user, scoped public-key credential and audit, but no token or session
+  ---
+  duration_ms: 75.7063
+  type: 'test'
+  ...
+# Subtest: existing enabled operators reuse a user while application principals and disabled users are rejected
+ok 280 - existing enabled operators reuse a user while application principals and disabled users are rejected
+  ---
+  duration_ms: 144.8027
+  type: 'test'
+  ...
+# Subtest: approved public polling returns only status, never the approved principal, grants or a business session
+ok 281 - approved public polling returns only status, never the approved principal, grants or a business session
+  ---
+  duration_ms: 81.4086
+  type: 'test'
+  ...
+# Subtest: older V2 credentials without a grants field load with empty scopes and inherit no Bearer privileges
+ok 282 - older V2 credentials without a grants field load with empty scopes and inherit no Bearer privileges
+  ---
+  duration_ms: 98.242
+  type: 'test'
+  ...
+# Subtest: unverified, expired and future-dated applications cannot be approved
+ok 283 - unverified, expired and future-dated applications cannot be approved
+  ---
+  duration_ms: 101.8539
+  type: 'test'
+  ...
+# Subtest: rejection is terminal and also consumes an unfinished application challenge
+ok 284 - rejection is terminal and also consumes an unfinished application challenge
+  ---
+  duration_ms: 79.6186
+  type: 'test'
+  ...
+# Subtest: stale revisions and terminal decisions reject without creating duplicate principals or credentials
+ok 285 - stale revisions and terminal decisions reject without creating duplicate principals or credentials
+  ---
+  duration_ms: 94.9023
+  type: 'test'
+  ...
+# Subtest: wrong instance, missing confirmation, identity injection and ambiguous operator selection fail with audited denials
+ok 286 - wrong instance, missing confirmation, identity injection and ambiguous operator selection fail with audited denials
+  ---
+  duration_ms: 108.7721
+  type: 'test'
+  ...
+# Subtest: approval grants require exact databases, known actions and pinned callable releases; explicit empty scopes remain denied by default
+ok 287 - approval grants require exact databases, known actions and pinned callable releases; explicit empty scopes remain denied by default
+  ---
+  duration_ms: 253.4223
+  type: 'test'
+  ...
+# Subtest: stored registration scopes cannot be replaced and reset revokes the approved identity without changing key files
+ok 288 - stored registration scopes cannot be replaced and reset revokes the approved identity without changing key files
+  ---
+  duration_ms: 71.8631
+  type: 'test'
+  ...
+# Subtest: approval respects per-operator capacity without creating partial user or credential rows
+ok 289 - approval respects per-operator capacity without creating partial user or credential rows
+  ---
+  duration_ms: 648.0498
+  type: 'test'
+  ...
+# Subtest: CLI rejects missing explicit config, duplicate or unrelated options and oversized grants before loading any configuration
+ok 290 - CLI rejects missing explicit config, duplicate or unrelated options and oversized grants before loading any configuration
+  ---
+  duration_ms: 1.2163
+  type: 'test'
+  ...
+# Subtest: protection write failure never reports approved and persists no partial operator association
+ok 291 - protection write failure never reports approved and persists no partial operator association
+  ---
+  duration_ms: 71.3613
+  type: 'test'
+  ...
+# Subtest: audit capacity refuses the whole approval transaction
+ok 292 - audit capacity refuses the whole approval transaction
+  ---
+  duration_ms: 167.9498
+  type: 'test'
+  ...
+# Subtest: approval recovers a consistent identity and audit after staged failure
+ok 293 - approval recovers a consistent identity and audit after staged failure
+  ---
+  duration_ms: 75.3097
+  type: 'test'
+  ...
+# Subtest: approval recovers a consistent identity and audit after journaled failure
+ok 294 - approval recovers a consistent identity and audit after journaled failure
+  ---
+  duration_ms: 76.0055
+  type: 'test'
+  ...
+# Subtest: approval recovers a consistent identity and audit after replaced failure
+ok 295 - approval recovers a consistent identity and audit after replaced failure
+  ---
+  duration_ms: 75.033
+  type: 'test'
+  ...
+# Subtest: required Windows DPAPI and actual local CLI list/approve/reject preserve OS attribution and issue no access secrets
+ok 296 - required Windows DPAPI and actual local CLI list/approve/reject preserve OS attribution and issue no access secrets
+  ---
+  duration_ms: 18137.0129
+  type: 'test'
+  ...
+# Subtest: key replacement recognizes equivalent ES256/RSA material across COSE encodings and rejects invalid keys
+ok 297 - key replacement recognizes equivalent ES256/RSA material across COSE encodings and rejects invalid keys
+  ---
+  duration_ms: 75.1391
+  type: 'test'
+  ...
+# Subtest: maintenance schemas reject identity injection, mixed namespaces, wrong types and unbounded pages
+ok 298 - maintenance schemas reject identity injection, mixed namespaces, wrong types and unbounded pages
+  ---
+  duration_ms: 0.807
+  type: 'test'
+  ...
+# Subtest: only the verified OS context can maintain identities; public login cannot obtain maintenance privileges
+ok 299 - only the verified OS context can maintain identities; public login cannot obtain maintenance privileges
+  ---
+  duration_ms: 279.6773
+  type: 'test'
+  ...
+# Subtest: local credential and user lists project only bounded review metadata and leave V1 un-migrated
+ok 300 - local credential and user lists project only bounded review metadata and leave V1 un-migrated
+  ---
+  duration_ms: 251.6557
+  type: 'test'
+  ...
+# Subtest: credential disable invalidates only its own key and sessions and persists a minimal OS audit
+ok 301 - credential disable invalidates only its own key and sessions and persists a minimal OS audit
+  ---
+  duration_ms: 223.4451
+  type: 'test'
+  ...
+# Subtest: credential revoke invalidates only its own key and sessions and persists a minimal OS audit
+ok 302 - credential revoke invalidates only its own key and sessions and persists a minimal OS audit
+  ---
+  duration_ms: 220.4888
+  type: 'test'
+  ...
+# Subtest: enabling requires disabled state and a live user, preserves reduced grants and never revives old sessions
+ok 303 - enabling requires disabled state and a live user, preserves reduced grants and never revives old sessions
+  ---
+  duration_ms: 213.6355
+  type: 'test'
+  ...
+# Subtest: user disable covers every registered key while API identity stays independent; enabling requires fresh login
+ok 304 - user disable covers every registered key while API identity stays independent; enabling requires fresh login
+  ---
+  duration_ms: 253.522
+  type: 'test'
+  ...
+# Subtest: terminal states, wrong namespaces, missing confirmation and stale CAS fail with audited denials
+ok 305 - terminal states, wrong namespaces, missing confirmation and stale CAS fail with audited denials
+  ---
+  duration_ms: 217.3921
+  type: 'test'
+  ...
+# Subtest: formal reduction accepts subsets only and cannot widen a resource or mutate an exact release digest
+ok 306 - formal reduction accepts subsets only and cannot widen a resource or mutate an exact release digest
+  ---
+  duration_ms: 154.4333
+  type: 'test'
+  ...
+# Subtest: atomic replacement of active key preserves its user, revokes old sessions and requires a new valid proof
+ok 307 - atomic replacement of active key preserves its user, revokes old sessions and requires a new valid proof
+  ---
+  duration_ms: 213.1879
+  type: 'test'
+  ...
+# Subtest: atomic replacement of disabled key preserves its user, revokes old sessions and requires a new valid proof
+ok 308 - atomic replacement of disabled key preserves its user, revokes old sessions and requires a new valid proof
+  ---
+  duration_ms: 260.2167
+  type: 'test'
+  ...
+# Subtest: replacement never inherits old grants; explicit empty grants remain zero scope
+ok 309 - replacement never inherits old grants; explicit empty grants remain zero scope
+  ---
+  duration_ms: 180.823
+  type: 'test'
+  ...
+# Subtest: replacement rejects unverified candidate and leaves old credential and target application intact
+ok 310 - replacement rejects unverified candidate and leaves old credential and target application intact
+  ---
+  duration_ms: 125.5153
+  type: 'test'
+  ...
+# Subtest: replacement rejects expired candidate and leaves old credential and target application intact
+ok 311 - replacement rejects expired candidate and leaves old credential and target application intact
+  ---
+  duration_ms: 143.8723
+  type: 'test'
+  ...
+# Subtest: replacement rejects approved candidate and leaves old credential and target application intact
+ok 312 - replacement rejects approved candidate and leaves old credential and target application intact
+  ---
+  duration_ms: 129.0298
+  type: 'test'
+  ...
+# Subtest: replacement rejects user-disabled candidate and leaves old credential and target application intact
+ok 313 - replacement rejects user-disabled candidate and leaves old credential and target application intact
+  ---
+  duration_ms: 153.9588
+  type: 'test'
+  ...
+# Subtest: replacement rejects same-key candidate and leaves old credential and target application intact
+ok 314 - replacement rejects same-key candidate and leaves old credential and target application intact
+  ---
+  duration_ms: 146.1722
+  type: 'test'
+  ...
+# Subtest: replacement rejects same-key-reencoded candidate and leaves old credential and target application intact
+ok 315 - replacement rejects same-key-reencoded candidate and leaves old credential and target application intact
+  ---
+  duration_ms: 152.8012
+  type: 'test'
+  ...
+# Subtest: lost credentials are revoked first; a fresh application needs explicit owner association and approval before login
+ok 316 - lost credentials are revoked first; a fresh application needs explicit owner association and approval before login
+  ---
+  duration_ms: 218.9662
+  type: 'test'
+  ...
+# Subtest: per-user tombstone capacity also applies to replacement; it cannot partially revoke the old key
+ok 317 - per-user tombstone capacity also applies to replacement; it cannot partially revoke the old key
+  ---
+  duration_ms: 1283.5715
+  type: 'test'
+  ...
+# Subtest: explicit CLI rejects missing configs, duplicate flags, unrelated namespaces and invalid grant files before loading a config
+ok 318 - explicit CLI rejects missing configs, duplicate flags, unrelated namespaces and invalid grant files before loading a config
+  ---
+  duration_ms: 1.5322
+  type: 'test'
+  ...
+# Subtest: audit capacity rejects an entire maintenance transaction without changing state or key files
+ok 319 - audit capacity rejects an entire maintenance transaction without changing state or key files
+  ---
+  duration_ms: 123.1419
+  type: 'test'
+  ...
+# Subtest: credential.disable staged interruption recovers one complete identity/session/audit transaction
+ok 320 - credential.disable staged interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 135.1341
+  type: 'test'
+  ...
+# Subtest: credential.disable journaled interruption recovers one complete identity/session/audit transaction
+ok 321 - credential.disable journaled interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 134.6817
+  type: 'test'
+  ...
+# Subtest: credential.disable replaced interruption recovers one complete identity/session/audit transaction
+ok 322 - credential.disable replaced interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 139.1451
+  type: 'test'
+  ...
+# Subtest: user.disable staged interruption recovers one complete identity/session/audit transaction
+ok 323 - user.disable staged interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 133.5713
+  type: 'test'
+  ...
+# Subtest: user.disable journaled interruption recovers one complete identity/session/audit transaction
+ok 324 - user.disable journaled interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 135.1504
+  type: 'test'
+  ...
+# Subtest: user.disable replaced interruption recovers one complete identity/session/audit transaction
+ok 325 - user.disable replaced interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 134.6516
+  type: 'test'
+  ...
+# Subtest: credential.replace staged interruption recovers one complete identity/session/audit transaction
+ok 326 - credential.replace staged interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 210.5673
+  type: 'test'
+  ...
+# Subtest: credential.replace journaled interruption recovers one complete identity/session/audit transaction
+ok 327 - credential.replace journaled interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 206.1561
+  type: 'test'
+  ...
+# Subtest: credential.replace replaced interruption recovers one complete identity/session/audit transaction
+ok 328 - credential.replace replaced interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 218.3525
+  type: 'test'
+  ...
+# Subtest: required native Windows DPAPI and actual CLI maintain, replace and recover a software-signed identity
+ok 329 - required native Windows DPAPI and actual CLI maintain, replace and recover a software-signed identity
+  ---
+  duration_ms: 51209.2097
+  type: 'test'
+  ...
+# Subtest: omitted/disabled configuration leaves V1 unchanged; enabled requires exact binding, valid window and explicit migration
+ok 330 - omitted/disabled configuration leaves V1 unchanged; enabled requires exact binding, valid window and explicit migration
+  ---
+  duration_ms: 147.2764
+  type: 'test'
+  ...
+# Subtest: begin persists independent secret/challenge digests and no session or grant; public schemas and projection remain valid
+ok 331 - begin persists independent secret/challenge digests and no session or grant; public schemas and projection remain valid
+  ---
+  duration_ms: 64.1947
+  type: 'test'
+  ...
+# Subtest: expired configured windows start disabled without migrating V1 and preserve proof-verified applications for private polling
+ok 332 - expired configured windows start disabled without migrating V1 and preserve proof-verified applications for private polling
+  ---
+  duration_ms: 98.1447
+  type: 'test'
+  ...
+# Subtest: direct TLS registration rejects a missing certificate, wrong certificate host and wrong owner pin before migration
+ok 333 - direct TLS registration rejects a missing certificate, wrong certificate host and wrong owner pin before migration
+  ---
+  duration_ms: 41.5296
+  type: 'test'
+  ...
+# Subtest: the actual pinned WebAuthn library validates a synthetic none attestation; only a pending candidate is persisted
+ok 334 - the actual pinned WebAuthn library validates a synthetic none attestation; only a pending candidate is persisted
+  ---
+  duration_ms: 85.7983
+  type: 'test'
+  ...
+# Subtest: proof origin substitution is rejected by the library/admission and consumes the challenge
+ok 335 - proof origin substitution is rejected by the library/admission and consumes the challenge
+  ---
+  duration_ms: 70.4389
+  type: 'test'
+  ...
+# Subtest: proof rp substitution is rejected by the library/admission and consumes the challenge
+ok 336 - proof rp substitution is rejected by the library/admission and consumes the challenge
+  ---
+  duration_ms: 73.8971
+  type: 'test'
+  ...
+# Subtest: proof uv substitution is rejected by the library/admission and consumes the challenge
+ok 337 - proof uv substitution is rejected by the library/admission and consumes the challenge
+  ---
+  duration_ms: 72.5865
+  type: 'test'
+  ...
+# Subtest: proof up substitution is rejected by the library/admission and consumes the challenge
+ok 338 - proof up substitution is rejected by the library/admission and consumes the challenge
+  ---
+  duration_ms: 73.6986
+  type: 'test'
+  ...
+# Subtest: proof challenge substitution is rejected by the library/admission and consumes the challenge
+ok 339 - proof challenge substitution is rejected by the library/admission and consumes the challenge
+  ---
+  duration_ms: 69.9186
+  type: 'test'
+  ...
+# Subtest: proof fmt substitution is rejected by the library/admission and consumes the challenge
+ok 340 - proof fmt substitution is rejected by the library/admission and consumes the challenge
+  ---
+  duration_ms: 70.2982
+  type: 'test'
+  ...
+# Subtest: parallel complete requests verify at most once and a restart never resurrects a claimed challenge
+ok 341 - parallel complete requests verify at most once and a restart never resurrects a claimed challenge
+  ---
+  duration_ms: 116.2742
+  type: 'test'
+  ...
+# Subtest: status secret/instance/ID mismatches return the same NOT_FOUND; poll interval is per valid application
+ok 342 - status secret/instance/ID mismatches return the same NOT_FOUND; poll interval is per valid application
+  ---
+  duration_ms: 59.8591
+  type: 'test'
+  ...
+# Subtest: elapsed challenge/application storage is reclaimed and expired windows refuse new admission without deleting registered data
+ok 343 - elapsed challenge/application storage is reclaimed and expired windows refuse new admission without deleting registered data
+  ---
+  duration_ms: 71.2208
+  type: 'test'
+  ...
+# Subtest: reset/window/source changes during asynchronous proof verification fail closed without a candidate
+ok 344 - reset/window/source changes during asynchronous proof verification fail closed without a candidate
+  ---
+  duration_ms: 317.2683
+  type: 'test'
+  ...
+# Subtest: duplicate raw credential IDs cannot become two pending candidates
+ok 345 - duplicate raw credential IDs cannot become two pending candidates
+  ---
+  duration_ms: 96.1716
+  type: 'test'
+  ...
+# Subtest: source and global budgets are bounded, shared descriptor budget is enforced and successful reads are sampled
+ok 346 - source and global budgets are bounded, shared descriptor budget is enforced and successful reads are sampled
+  ---
+  duration_ms: 55.5849
+  type: 'test'
+  ...
+# Subtest: bounded proof queue refuses overflow and leaves a local registry operation available
+ok 347 - bounded proof queue refuses overflow and leaves a local registry operation available
+  ---
+  duration_ms: 1247.9334
+  type: 'test'
+  ...
+# Subtest: storage/protection failure never returns begin success or invents an empty registry
+ok 348 - storage/protection failure never returns begin success or invents an empty registry
+  ---
+  duration_ms: 58.5704
+  type: 'test'
+  ...
+# Subtest: final candidate persistence failure preserves a consumed challenge; restart rejects the abandoned attempt
+ok 349 - final candidate persistence failure preserves a consumed challenge; restart rejects the abandoned attempt
+  ---
+  duration_ms: 90.9014
+  type: 'test'
+  ...
+# Subtest: HTTP routes enforce same-origin/Host/Fetch Metadata before parsing, omit CORS/cookies, bound bodies and never authenticate a registration
+ok 350 - HTTP routes enforce same-origin/Host/Fetch Metadata before parsing, omit CORS/cookies, bound bodies and never authenticate a registration
+  ---
+  duration_ms: 280.5098
+  type: 'test'
+  ...
+# [modeldb-server] storage fingerprint (sha256): ef799c76570f098141248e25d82827d310d54da075f57d2dfb06f9f6812e6a75
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:56587
+#   ➜ Local:   http://localhost:56587/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:56587/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:56587/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-8x1YSN\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url http://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-8x1YSN\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-8x1YSN\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-8x1YSN\\modeldb.config.json"
+# [modeldb-server] storage fingerprint (sha256): ef799c76570f098141248e25d82827d310d54da075f57d2dfb06f9f6812e6a75
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:55697
+#   ➜ Local:   https://localhost:55697/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test
+#     HTTP RPC:  https://modeldb-a.example.test/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-8x1YSN\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-8x1YSN\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-8x1YSN\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-8x1YSN\\modeldb.config.json"
+# Subtest: native Windows DPAPI Server exposes disabled-by-default discovery, then isolated HTTPS registration without CORS or business access
+ok 351 - native Windows DPAPI Server exposes disabled-by-default discovery, then isolated HTTPS registration without CORS or business access
+  ---
+  duration_ms: 20992.0942
+  type: 'test'
+  ...
+# Subtest: new/opened V1 instances stay unmigrated and disabled until an explicit CAS migration
+ok 352 - new/opened V1 instances stay unmigrated and disabled until an explicit CAS migration
+  ---
+  duration_ms: 78.5273
+  type: 'test'
+  ...
+# Subtest: migration preserves instance, grants, revocations, sessions, pairings, key bytes and old audit prefix
+ok 353 - migration preserves instance, grants, revocations, sessions, pairings, key bytes and old audit prefix
+  ---
+  duration_ms: 134.3045
+  type: 'test'
+  ...
+# Subtest: persists linked applications/public keys/users, clones snapshots and hides storage from public snapshots/audit
+ok 354 - persists linked applications/public keys/users, clones snapshots and hides storage from public snapshots/audit
+  ---
+  duration_ms: 79.0852
+  type: 'test'
+  ...
+# Subtest: rejects untrusted fields, unknown mode, foreign binding, duplicate IDs, missing links and unsupported storage versions
+ok 355 - rejects untrusted fields, unknown mode, foreign binding, duplicate IDs, missing links and unsupported storage versions
+  ---
+  duration_ms: 71.2634
+  type: 'test'
+  ...
+# Subtest: CAS, monotone counters, immutable links and terminal credential states reject stale/rollback writes
+ok 356 - CAS, monotone counters, immutable links and terminal credential states reject stale/rollback writes
+  ---
+  duration_ms: 112.8125
+  type: 'test'
+  ...
+# Subtest: expired challenges can be reclaimed but issued or consumed challenges cannot be resurrected
+ok 357 - expired challenges can be reclaimed but issued or consumed challenges cannot be resurrected
+  ---
+  duration_ms: 77.8319
+  type: 'test'
+  ...
+# Subtest: access reset atomically revokes public-key records and rejects pending applications/challenges
+ok 358 - access reset atomically revokes public-key records and rejects pending applications/challenges
+  ---
+  duration_ms: 103.1395
+  type: 'test'
+  ...
+# Subtest: the frozen V1 reader refuses an upgraded store and leaves all protected materials unchanged
+ok 359 - the frozen V1 reader refuses an upgraded store and leaves all protected materials unchanged
+  ---
+  duration_ms: 202.7001
+  type: 'test'
+  ...
+# Subtest: migration recovers without identity/audit loss after interruption at staged
+ok 360 - migration recovers without identity/audit loss after interruption at staged
+  ---
+  duration_ms: 66.1281
+  type: 'test'
+  ...
+# Subtest: migration recovers without identity/audit loss after interruption at journaled
+ok 361 - migration recovers without identity/audit loss after interruption at journaled
+  ---
+  duration_ms: 84.7651
+  type: 'test'
+  ...
+# Subtest: migration recovers without identity/audit loss after interruption at replaced
+ok 362 - migration recovers without identity/audit loss after interruption at replaced
+  ---
+  duration_ms: 79.244
+  type: 'test'
+  ...
+# Subtest: write/protection or audit-capacity failures preserve old state and never report migration success
+ok 363 - write/protection or audit-capacity failures preserve old state and never report migration success
+  ---
+  duration_ms: 60.0029
+  type: 'test'
+  ...
+# Subtest: unknown/corrupt formats and orphan registration fields fail closed without replacing the store
+ok 364 - unknown/corrupt formats and orphan registration fields fail closed without replacing the store
+  ---
+  duration_ms: 162.4742
+  type: 'test'
+  ...
+# Subtest: bounded pending records reject overflow without allocating or writing new protected state
+ok 365 - bounded pending records reject overflow without allocating or writing new protected state
+  ---
+  duration_ms: 65.5322
+  type: 'test'
+  ...
+# Subtest: storage schema rejects cyclic input, malformed origins and application principals with stable errors
+ok 366 - storage schema rejects cyclic input, malformed origins and application principals with stable errors
+  ---
+  duration_ms: 57.0727
+  type: 'test'
+  ...
+# Subtest: pending proof storage requires a consumed unexpired challenge and no future timestamps
+ok 367 - pending proof storage requires a consumed unexpired challenge and no future timestamps
+  ---
+  duration_ms: 58.1251
+  type: 'test'
+  ...
+# Subtest: per-user credential storage and challenge collections enforce their exact capacity bounds
+ok 368 - per-user credential storage and challenge collections enforce their exact capacity bounds
+  ---
+  duration_ms: 68.6049
+  type: 'test'
+  ...
+# Subtest: registration record and audit recover as one commit at staged
+ok 369 - registration record and audit recover as one commit at staged
+  ---
+  duration_ms: 71.513
+  type: 'test'
+  ...
+# Subtest: registration record and audit recover as one commit at journaled
+ok 370 - registration record and audit recover as one commit at journaled
+  ---
+  duration_ms: 75.8347
+  type: 'test'
+  ...
+# Subtest: registration record and audit recover as one commit at replaced
+ok 371 - registration record and audit recover as one commit at replaced
+  ---
+  duration_ms: 81.9042
+  type: 'test'
+  ...
+# Subtest: corrupt migration intent stays available for diagnosis and does not fall back to an empty registry
+ok 372 - corrupt migration intent stays available for diagnosis and does not fall back to an empty registry
+  ---
+  duration_ms: 64.9405
+  type: 'test'
+  ...
+# Subtest: a real child exit after the migration intent is durable recovers through the dead-owner lease
+ok 373 - a real child exit after the migration intent is durable recovers through the dead-owner lease
+  ---
+  duration_ms: 9672.1415
+  type: 'test'
+  ...
+# Subtest: Windows DPAPI protects an isolated migrated registry and preserves its instance key
+ok 374 - Windows DPAPI protects an isolated migrated registry and preserves its instance key
+  ---
+  duration_ms: 5597.1073
+  type: 'test'
+  ...
+# [modeldb-server] storage fingerprint (sha256): 3690c8fb082b3f801a26d4a1e02e43aff051640752ec833601fb2a0719924144
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:61144
+#   ➜ Local:   https://localhost:61144/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#     HTTP RPC:  https://127.0.0.1:61144/api/v1/rpc
+#     WebSocket: wss://127.0.0.1:61144/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-tls-DIYD4g\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-tls-DIYD4g\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-tls-DIYD4g\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-tls-DIYD4g\\modeldb.config.json"
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [security-protection] TLS/WS policy preview, apply, confirm and rollback passed
+# [security-protection] OS pipe repaired management lockout
+# [security-protection] HTTP rate limit and temporary ban/unban passed
+# Subtest: real registry/DPAPI HTTPS server authorizes management and data through the native TLS listener
+ok 375 - real registry/DPAPI HTTPS server authorizes management and data through the native TLS listener
+  ---
+  duration_ms: 49592.2783
+  type: 'test'
+  ...
+# [modeldb-server] storage fingerprint (sha256): b9182b3d2e31c04689467629772addc151444c66202c1345e8ffadd4407366a0
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:55382
+#   ➜ Local:   http://localhost:55382/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:55382/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:55382/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-http-uysRRT\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url http://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-http-uysRRT\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-http-uysRRT\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-http-uysRRT\\modeldb.config.json"
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# Subtest: real registry/DPAPI server gates scoped database management and reopens restored Vaults
+ok 376 - real registry/DPAPI server gates scoped database management and reopens restored Vaults
+  ---
+  duration_ms: 48419.1823
+  type: 'test'
+  ...
+# Subtest: keeps audit exports outside the registry even when a directory junction is used
+ok 377 - keeps audit exports outside the registry even when a directory junction is used
+  ---
+  duration_ms: 5.1328
+  type: 'test'
+  ...
+# Subtest: prunes expired audit events and reports capacity health; JSONL excludes its own export event
+ok 378 - prunes expired audit events and reports capacity health; JSONL excludes its own export event
+  ---
+  duration_ms: 883.1083
+  type: 'test'
+  ...
+# Subtest: returns bounded newest-first audit pages with source attribution and aggregates
+ok 379 - returns bounded newest-first audit pages with source attribution and aggregates
+  ---
+  duration_ms: 6118.1364
+  type: 'test'
+  ...
+# Subtest: persists scoped credentials, rotation grace, expiry, revoked sessions and audited reset without changing data keys
+ok 380 - persists scoped credentials, rotation grace, expiry, revoked sessions and audited reset without changing data keys
+  ---
+  duration_ms: 14001.6618
+  type: 'test'
+  ...
+# Subtest: fails closed on audit capacity and damaged or missing security material
+ok 381 - fails closed on audit capacity and damaged or missing security material
+  ---
+  duration_ms: 11902.2502
+  type: 'test'
+  ...
+# Subtest: critical audit persistence failure refuses mutations and retains the last committed ledger
+ok 382 - critical audit persistence failure refuses mutations and retains the last committed ledger
+  ---
+  duration_ms: 4800.694
+  type: 'test'
+  ...
+# Subtest: recovers the same initialized identity and audit commit after a separate process exits
+ok 383 - recovers the same initialized identity and audit commit after a separate process exits
+  ---
+  duration_ms: 9515.8279
+  type: 'test'
+  ...
+# Subtest: concurrent processes cannot own or independently initialize the same security registry
+ok 384 - concurrent processes cannot own or independently initialize the same security registry
+  ---
+  duration_ms: 6416.6841
+  type: 'test'
+  ...
+# [modeldb-server] storage fingerprint (sha256): 8e7931b4b11f75324820946be71f9b24587fa1d7ff45ed0602f16c58d2eae52e
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:65254
+#   ➜ Local:   http://localhost:65254/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:65254/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:65254/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-security-server-TDQ86w\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url http://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-security-server-TDQ86w\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-security-server-TDQ86w\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-security-server-TDQ86w\\modeldb.config.json"
+# Subtest: registry-mode servers reject unauthenticated management and legacy WebSocket upgrades
+ok 385 - registry-mode servers reject unauthenticated management and legacy WebSocket upgrades
+  ---
+  duration_ms: 19717.6737
+  type: 'test'
+  ...
+# Subtest: uses a Windows-authenticated local pipe and CLI one-time protected delivery
+ok 386 - uses a Windows-authenticated local pipe and CLI one-time protected delivery
+  ---
+  duration_ms: 43730.1037
+  type: 'test'
+  ...
+# Subtest: V1 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+ok 387 - V1 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+  ---
+  duration_ms: 146.8263
+  type: 'test'
+  ...
+# Subtest: V2 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+ok 388 - V2 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+  ---
+  duration_ms: 133.2954
+  type: 'test'
+  ...
+# Subtest: V3 API issuance, invitation, rotation and revocation preserve the API namespace
+ok 389 - V3 API issuance, invitation, rotation and revocation preserve the API namespace
+  ---
+  duration_ms: 109.9298
+  type: 'test'
+  ...
+# Subtest: local management remains empty-scope and cannot be rotated or paired into a reusable API identity
+ok 390 - local management remains empty-scope and cannot be rotated or paired into a reusable API identity
+  ---
+  duration_ms: 99.1415
+  type: 'test'
+  ...
+# Subtest: registered parent resolves only its own live grants and never mints or inherits API credentials
+ok 391 - registered parent resolves only its own live grants and never mints or inherits API credentials
+  ---
+  duration_ms: 106.5577
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after disabled-key
+ok 392 - registered parent fails closed after disabled-key
+  ---
+  duration_ms: 79.2231
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after revoked-key
+ok 393 - registered parent fails closed after revoked-key
+  ---
+  duration_ms: 78.7538
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after disabled-user
+ok 394 - registered parent fails closed after disabled-user
+  ---
+  duration_ms: 79.0317
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after disabled-principal
+ok 395 - registered parent fails closed after disabled-principal
+  ---
+  duration_ms: 78.9603
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after expired
+ok 396 - registered parent fails closed after expired
+  ---
+  duration_ms: 77.2812
+  type: 'test'
+  ...
+# Subtest: registered parent fails closed after reset
+ok 397 - registered parent fails closed after reset
+  ---
+  duration_ms: 85.1204
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: missing parent
+ok 398 - rejects malformed persisted parent: missing parent
+  ---
+  duration_ms: 72.7715
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: null parent
+ok 399 - rejects malformed persisted parent: null parent
+  ---
+  duration_ms: 72.6153
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: unknown kind
+ok 400 - rejects malformed persisted parent: unknown kind
+  ---
+  duration_ms: 73.2603
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: foreign credential
+ok 401 - rejects malformed persisted parent: foreign credential
+  ---
+  duration_ms: 69.1098
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: foreign user
+ok 402 - rejects malformed persisted parent: foreign user
+  ---
+  duration_ms: 74.9554
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: foreign principal
+ok 403 - rejects malformed persisted parent: foreign principal
+  ---
+  duration_ms: 74.3803
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: API namespace confusion
+ok 404 - rejects malformed persisted parent: API namespace confusion
+  ---
+  duration_ms: 74.1296
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: management namespace confusion
+ok 405 - rejects malformed persisted parent: management namespace confusion
+  ---
+  duration_ms: 75.2858
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with admin flag
+ok 406 - rejects malformed persisted parent: public key with admin flag
+  ---
+  duration_ms: 74.2197
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with wrong Origin
+ok 407 - rejects malformed persisted parent: public key with wrong Origin
+  ---
+  duration_ms: 72.7615
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with no absolute expiry
+ok 408 - rejects malformed persisted parent: public key with no absolute expiry
+  ---
+  duration_ms: 79.0298
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with long lifetime
+ok 409 - rejects malformed persisted parent: public key with long lifetime
+  ---
+  duration_ms: 73.6875
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key with long absolute expiry
+ok 410 - rejects malformed persisted parent: public key with long absolute expiry
+  ---
+  duration_ms: 73.2808
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: secret on parent
+ok 411 - rejects malformed persisted parent: secret on parent
+  ---
+  duration_ms: 71.5678
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: secret on session
+ok 412 - rejects malformed persisted parent: secret on session
+  ---
+  duration_ms: 75.699
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: overlapping credential namespace
+ok 413 - rejects malformed persisted parent: overlapping credential namespace
+  ---
+  duration_ms: 75.0263
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: public key pairing
+ok 414 - rejects malformed persisted parent: public key pairing
+  ---
+  duration_ms: 76.9083
+  type: 'test'
+  ...
+# Subtest: rejects malformed persisted parent: downgraded root with new parent
+ok 415 - rejects malformed persisted parent: downgraded root with new parent
+  ---
+  duration_ms: 74.3123
+  type: 'test'
+  ...
+# Subtest: session migration and audit recover atomically at staged
+ok 416 - session migration and audit recover atomically at staged
+  ---
+  duration_ms: 84.0631
+  type: 'test'
+  ...
+# Subtest: session migration and audit recover atomically at journaled
+ok 417 - session migration and audit recover atomically at journaled
+  ---
+  duration_ms: 91.3588
+  type: 'test'
+  ...
+# Subtest: session migration and audit recover atomically at replaced
+ok 418 - session migration and audit recover atomically at replaced
+  ---
+  duration_ms: 98.1018
+  type: 'test'
+  ...
+# Subtest: protection and audit failures never report a successful migration
+ok 419 - protection and audit failures never report a successful migration
+  ---
+  duration_ms: 47.5779
+  type: 'test'
+  ...
+# Subtest: V3 registration runtime still opens/closes its window, admits pending requests and expires them
+ok 420 - V3 registration runtime still opens/closes its window, admits pending requests and expires them
+  ---
+  duration_ms: 104.251
+  type: 'test'
+  ...
+# Subtest: native Windows protection preserves API and management sessions through V3 migration and reset
+ok 421 - native Windows protection preserves API and management sessions through V3 migration and reset
+  ---
+  duration_ms: 13996.7948
+  type: 'test'
+  ...
+1..421
+# tests 421
+# suites 0
+# pass 421
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 594209.046

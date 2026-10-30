@@ -1,0 +1,370 @@
+TAP version 13
+# Subtest: complete independent observations are accepted and nearest-rank p95 retains slow samples
+ok 1 - complete independent observations are accepted and nearest-rank p95 retains slow samples
+  ---
+  duration_ms: 5.8514
+  type: 'test'
+  ...
+# Subtest: missing or duplicated samples and changed summaries fail even when the report says ok
+ok 2 - missing or duplicated samples and changed summaries fail even when the report says ok
+  ---
+  duration_ms: 9.569
+  type: 'test'
+  ...
+# Subtest: NaN, infinity, negative, missing metrics and hidden payload fields fail
+ok 3 - NaN, infinity, negative, missing metrics and hidden payload fields fail
+  ---
+  duration_ms: 4.4566
+  type: 'test'
+  ...
+# Subtest: failed operations cannot be removed or relabelled as expected errors
+ok 4 - failed operations cannot be removed or relabelled as expected errors
+  ---
+  duration_ms: 1.5896
+  type: 'test'
+  ...
+# Subtest: slow samples, resource peaks, queue delay and repair starvation fail registered limits
+ok 5 - slow samples, resource peaks, queue delay and repair starvation fail registered limits
+  ---
+  duration_ms: 16.9018
+  type: 'test'
+  ...
+# Subtest: late registration, candidate, source, runtime and method drift fail
+ok 6 - late registration, candidate, source, runtime and method drift fail
+  ---
+  duration_ms: 13.9228
+  type: 'test'
+  ...
+# Subtest: ABBA, native flood, capacity, queue overflow and local mutation evidence are mandatory
+ok 7 - ABBA, native flood, capacity, queue overflow and local mutation evidence are mandatory
+  ---
+  duration_ms: 19.6322
+  type: 'test'
+  ...
+# Subtest: hardware, production, complete process resource or frontend claims cannot be inferred
+ok 8 - hardware, production, complete process resource or frontend claims cannot be inferred
+  ---
+  duration_ms: 13.0833
+  type: 'test'
+  ...
+# Subtest: exploration uses a separate small sample contract and cannot qualify as confirmation
+ok 9 - exploration uses a separate small sample contract and cannot qualify as confirmation
+  ---
+  duration_ms: 3.35
+  type: 'test'
+  ...
+# Subtest: public measurement evidence binds exploration, registration, raw blocks, source and candidate bytes
+ok 10 - public measurement evidence binds exploration, registration, raw blocks, source and candidate bytes
+  ---
+  duration_ms: 12.8334
+  type: 'test'
+  ...
+# Subtest: missing archived log or raw block cannot pass
+ok 11 - missing archived log or raw block cannot pass
+  ---
+  duration_ms: 17.5565
+  type: 'test'
+  ...
+# Subtest: altered candidate bytes and source inventories are rejected
+ok 12 - altered candidate bytes and source inventories are rejected
+  ---
+  duration_ms: 12.5889
+  type: 'test'
+  ...
+# Subtest: raising a registered gate after confirmation is rejected even with a recomputed report digest
+ok 13 - raising a registered gate after confirmation is rejected even with a recomputed report digest
+  ---
+  duration_ms: 5.6242
+  type: 'test'
+  ...
+# Subtest: raw blocks cannot discard a slow sample while keeping summary totals
+ok 14 - raw blocks cannot discard a slow sample while keeping summary totals
+  ---
+  duration_ms: 33.8168
+  type: 'test'
+  ...
+# Subtest: rejection waits for durable audit, yields for local maintenance and preserves every aggregation count
+ok 15 - rejection waits for durable audit, yields for local maintenance and preserves every aggregation count
+  ---
+  duration_ms: 348.6941
+  type: 'test'
+  ...
+# Subtest: one instance has a bounded queue and overflow rejects without claiming persistence
+ok 16 - one instance has a bounded queue and overflow rejects without claiming persistence
+  ---
+  duration_ms: 542.127
+  type: 'test'
+  ...
+# Subtest: protection failure closes the registry; explicit reopen preserves failure and permits new audited work
+ok 17 - protection failure closes the registry; explicit reopen preserves failure and permits new audited work
+  ---
+  duration_ms: 76.2849
+  type: 'test'
+  ...
+# Subtest: closing the registry rejects queued writes instead of returning unaudited success
+ok 18 - closing the registry rejects queued writes instead of returning unaudited success
+  ---
+  duration_ms: 54.3146
+  type: 'test'
+  ...
+# Subtest: selects the current receipt and allows only development CRLF/LF differences
+ok 19 - selects the current receipt and allows only development CRLF/LF differences
+  ---
+  duration_ms: 50.3072
+  type: 'test'
+  ...
+# Subtest: rejects changed source text
+ok 20 - rejects changed source text
+  ---
+  duration_ms: 21.1759
+  type: 'test'
+  ...
+# Subtest: rejects changed historical screenshot bytes
+ok 21 - rejects changed historical screenshot bytes
+  ---
+  duration_ms: 22.7935
+  type: 'test'
+  ...
+# Subtest: rejects modified verification artifacts
+ok 22 - rejects modified verification artifacts
+  ---
+  duration_ms: 22.5017
+  type: 'test'
+  ...
+# Subtest: does not accept skipped tests even with matching artifact hashes
+ok 23 - does not accept skipped tests even with matching artifact hashes
+  ---
+  duration_ms: 28.6503
+  type: 'test'
+  ...
+# Subtest: rejects runtime and traversal paths before opening them
+ok 24 - rejects runtime and traversal paths before opening them
+  ---
+  duration_ms: 92.9864
+  type: 'test'
+  ...
+# Subtest: rejects linked source ancestors
+ok 25 - rejects linked source ancestors
+  ---
+  duration_ms: 18.8353
+  type: 'test'
+  ...
+# Subtest: fails closed for incomplete newest evidence and duplicate source paths
+ok 26 - fails closed for incomplete newest evidence and duplicate source paths
+  ---
+  duration_ms: 19.9597
+  type: 'test'
+  ...
+# Subtest: verifies a registration-contract receipt separately from historical runtime acceptance
+ok 27 - verifies a registration-contract receipt separately from historical runtime acceptance
+  ---
+  duration_ms: 33.0685
+  type: 'test'
+  ...
+# Subtest: rejects incomplete registration evidence without falling back to a passed D11 receipt
+ok 28 - rejects incomplete registration evidence without falling back to a passed D11 receipt
+  ---
+  duration_ms: 105.8019
+  type: 'test'
+  ...
+# Subtest: validates protocol evidence and the separately locked offline dependency graph
+ok 29 - validates protocol evidence and the separately locked offline dependency graph
+  ---
+  duration_ms: 34.9773
+  type: 'test'
+  ...
+# Subtest: fails closed for protocol skips, unavailable offline install and unverified browser boundary
+ok 30 - fails closed for protocol skips, unavailable offline install and unverified browser boundary
+  ---
+  duration_ms: 145.9321
+  type: 'test'
+  ...
+# Subtest: verifies storage acceptance without turning it into runtime registration acceptance
+ok 31 - verifies storage acceptance without turning it into runtime registration acceptance
+  ---
+  duration_ms: 46.7689
+  type: 'test'
+  ...
+# Subtest: does not fall back to D13 for skipped storage, failed legacy compatibility or missing DPAPI/hard-exit evidence
+ok 32 - does not fall back to D13 for skipped storage, failed legacy compatibility or missing DPAPI/hard-exit evidence
+  ---
+  duration_ms: 228.94
+  type: 'test'
+  ...
+# Subtest: accepts registration API evidence without claiming approval or public-key login
+ok 33 - accepts registration API evidence without claiming approval or public-key login
+  ---
+  duration_ms: 66.6044
+  type: 'test'
+  ...
+# Subtest: refuses skipped runtime, missing native HTTPS or dependency drift without falling back to storage evidence
+ok 34 - refuses skipped runtime, missing native HTTPS or dependency drift without falling back to storage evidence
+  ---
+  duration_ms: 285.9533
+  type: 'test'
+  ...
+# Subtest: accepts OS-local approval evidence without claiming public-key login or full registration integration
+ok 35 - accepts OS-local approval evidence without claiming public-key login or full registration integration
+  ---
+  duration_ms: 53.461
+  type: 'test'
+  ...
+# Subtest: refuses approval skips, failed OS identity, scopes, atomic audit or native CLI without falling back to D15
+ok 36 - refuses approval skips, failed OS identity, scopes, atomic audit or native CLI without falling back to D15
+  ---
+  duration_ms: 312.3656
+  type: 'test'
+  ...
+# Subtest: accepts full registration integration evidence separately from hardware and public-key login acceptance
+ok 37 - accepts full registration integration evidence separately from hardware and public-key login acceptance
+  ---
+  duration_ms: 57.5919
+  type: 'test'
+  ...
+# Subtest: rejects missing virtual/native, skipped flow, hard-exit, capacity or session evidence without falling back to D16
+ok 38 - rejects missing virtual/native, skipped flow, hard-exit, capacity or session evidence without falling back to D16
+  ---
+  duration_ms: 301.8871
+  type: 'test'
+  ...
+# Subtest: accepts explicit session-parent migration evidence without claiming a public-key login
+ok 39 - accepts explicit session-parent migration evidence without claiming a public-key login
+  ---
+  duration_ms: 42.2924
+  type: 'test'
+  ...
+# Subtest: rejects incomplete or misbound session-parent evidence without falling back to D17
+ok 40 - rejects incomplete or misbound session-parent evidence without falling back to D17
+  ---
+  duration_ms: 338.6422
+  type: 'test'
+  ...
+# Subtest: accepts native public-key login evidence with separate UI, hardware and production boundaries
+ok 41 - accepts native public-key login evidence with separate UI, hardware and production boundaries
+  ---
+  duration_ms: 48.5468
+  type: 'test'
+  ...
+# Subtest: rejects incomplete authentication evidence without falling back to D18
+ok 42 - rejects incomplete authentication evidence without falling back to D18
+  ---
+  duration_ms: 449.0393
+  type: 'test'
+  ...
+# Subtest: accepts dynamic authorization evidence with live boundaries and preserves D19 as history
+ok 43 - accepts dynamic authorization evidence with live boundaries and preserves D19 as history
+  ---
+  duration_ms: 51.0194
+  type: 'test'
+  ...
+# Subtest: refuses incomplete dynamic authorization evidence without falling back to D19
+ok 44 - refuses incomplete dynamic authorization evidence without falling back to D19
+  ---
+  duration_ms: 558.7863
+  type: 'test'
+  ...
+# Subtest: accepts local identity maintenance evidence and retains D20 without implying a management UI
+ok 45 - accepts local identity maintenance evidence and retains D20 without implying a management UI
+  ---
+  duration_ms: 56.2538
+  type: 'test'
+  ...
+# Subtest: refuses incomplete maintenance, native CLI, replacement, metadata and fault evidence without falling back to D20
+ok 46 - refuses incomplete maintenance, native CLI, replacement, metadata and fault evidence without falling back to D20
+  ---
+  duration_ms: 583.3949
+  type: 'test'
+  ...
+# Subtest: accepts DR-P2 completion only with separate process-exit, native browser and maintenance evidence
+ok 47 - accepts DR-P2 completion only with separate process-exit, native browser and maintenance evidence
+  ---
+  duration_ms: 59.9583
+  type: 'test'
+  ...
+# Subtest: rejects incomplete or inflated resilience evidence without falling back to D21
+ok 48 - rejects incomplete or inflated resilience evidence without falling back to D21
+  ---
+  duration_ms: 729.7422
+  type: 'test'
+  ...
+# Subtest: accepts hosted listeners only with native lifecycle, exact origin and localized browser evidence
+ok 49 - accepts hosted listeners only with native lifecycle, exact origin and localized browser evidence
+  ---
+  duration_ms: 73.4157
+  type: 'test'
+  ...
+# Subtest: rejects missing, skipped, stale, inflated or incomplete hosting evidence without fallback to D22
+ok 50 - rejects missing, skipped, stale, inflated or incomplete hosting evidence without fallback to D22
+  ---
+  duration_ms: 1090.4613
+  type: 'test'
+  ...
+# Subtest: requires the newest formal identity UI receipt while preserving D23 history
+ok 51 - requires the newest formal identity UI receipt while preserving D23 history
+  ---
+  duration_ms: 105.9217
+  type: 'test'
+  ...
+# Subtest: rejects incomplete identity UI evidence, hardware claims, count drift and missing screenshots without fallback
+ok 52 - rejects incomplete identity UI evidence, hardware claims, count drift and missing screenshots without fallback
+  ---
+  duration_ms: 1094.544
+  type: 'test'
+  ...
+# Subtest: requires D25 local approval and maintenance UI evidence while preserving D24
+ok 53 - requires D25 local approval and maintenance UI evidence while preserving D24
+  ---
+  duration_ms: 147.7156
+  type: 'test'
+  ...
+# Subtest: rejects missing admin UI, conflict, paging, confirmation, native scope or count evidence without fallback
+ok 54 - rejects missing admin UI, conflict, paging, confirmation, native scope or count evidence without fallback
+  ---
+  duration_ms: 1877.8078
+  type: 'test'
+  ...
+# Subtest: requires D26 first-deployment evidence while preserving D25 history
+ok 55 - requires D26 first-deployment evidence while preserving D25 history
+  ---
+  duration_ms: 199.2338
+  type: 'test'
+  ...
+# Subtest: rejects missing preview, offline, policy, localization or scope checks without falling back
+ok 56 - rejects missing preview, offline, policy, localization or scope checks without falling back
+  ---
+  duration_ms: 2622.5594
+  type: 'test'
+  ...
+# Subtest: requires D27 public client and three-application compatibility evidence while preserving D26
+ok 57 - requires D27 public client and three-application compatibility evidence while preserving D26
+  ---
+  duration_ms: 283.2321
+  type: 'test'
+  ...
+# Subtest: rejects missing consumer, locale, application mode, lifecycle or accurate counts without fallback
+ok 58 - rejects missing consumer, locale, application mode, lifecycle or accurate counts without fallback
+  ---
+  duration_ms: 3011.3943
+  type: 'test'
+  ...
+# Subtest: requires D28 one-candidate browser, hostile page and three-client save evidence while preserving D27
+ok 59 - requires D28 one-candidate browser, hostile page and three-client save evidence while preserving D27
+  ---
+  duration_ms: 392.2016
+  type: 'test'
+  ...
+# Subtest: rejects missing candidate evidence, changed source binding, skipped checks and false production claims without fallback
+ok 60 - rejects missing candidate evidence, changed source binding, skipped checks and false production claims without fallback
+  ---
+  duration_ms: 4801.2631
+  type: 'test'
+  ...
+1..60
+# tests 60
+# suites 0
+# pass 60
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 20859.571

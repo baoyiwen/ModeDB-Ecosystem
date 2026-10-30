@@ -1,0 +1,58 @@
+{
+  "format": "modeldb.recipient-verification.v1",
+  "revision": "SEC-M7-D29",
+  "task": "DR-P4.1",
+  "date": "2026-10-28",
+  "timezone": "America/New_York",
+  "node": "v24.15.0",
+  "browserNode": "v24.15.0",
+  "platform": "win32",
+  "candidateSha256": "c61946b3f966550240a006348d73fd8c52b04c4113c5b5d3e397c422ae00f4ce",
+  "tasks": {
+    "v1Milestones": "7/7",
+    "v1": "20/20",
+    "registration": "18/23",
+    "registrationP1": "6/6",
+    "registrationP2": "5/5",
+    "registrationP3": "6/6",
+    "registrationP4": "1/6",
+    "registrationWorkPackages": "3/4"
+  },
+  "unit": {
+    "pass": 353,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "receiptUnit": {
+    "pass": 46,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "nativePass": 1,
+  "totalTargetedPass": 400,
+  "checks": {
+    "protocolAndRecovery": true,
+    "atomicProofAndHistory": true,
+    "strictTypes": true,
+    "browserBoundary": true,
+    "localizedUi": true,
+    "documents": true,
+    "materialGuard": true
+  },
+  "historicalEvidenceVerified": 1372,
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "realTwoDeviceTested": false,
+    "hardwareAuthenticatorTested": false,
+    "packageDeliveryTested": false,
+    "fullReleaseInstallTested": false,
+    "performanceTested": false,
+    "physicalDiskFullTested": false,
+    "productionMigrationPerformed": false
+  }
+}

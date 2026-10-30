@@ -2,6 +2,8 @@
 
 本文面向后续继续修改 `apps/model-designer` 的开发者与 AI agent。
 
+每次新页面开发或旧页面改造前，必须先读 [前端页面开发约定](../AGENTS.md)。页面美观与 i18n 均为必需要求，覆盖既有主题/组件一致性、状态/窄屏/长文案及 `zh/en/ja`；后续接续会话同样执行。
+
 ## 1. 模块边界
 
 - `apps/model-designer` 是浏览器侧图形建模工具，不是通用业务后台。
@@ -138,3 +140,5 @@
 - 操作手册：`docs/operation-manual.md`
 - 开发手册：`docs/developer-handbook.md`
 - AI 上下文：`../../.agents/model-designer/`
+
+接收方密钥页面：`src/components/RecipientKeysPanel.tsx` 与同目录 `recipient-keys.css`。仅受 OS 配对的专用本机管理监听器可用，复用 SDK，不上传/显示私钥、口令或证明正文，不写入 URL/Web Storage。提交需预览绑定与独立确认，CAS 冲突清草稿并要求重载；新键保留历史，用户停用不删历史材料。同步 zh/en/ja、宽窄屏和实际浏览器验证，协议与操作见安全专项密钥契约及运行手册第 18 节。

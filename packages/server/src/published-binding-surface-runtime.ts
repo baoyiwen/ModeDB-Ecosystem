@@ -43,7 +43,10 @@ export async function executePublishedBindingSurface(input: {
   const startedAt = new Date();
   const startedMs = performance.now();
   try {
-    const result = await executePublishedBindingSurfaceCore(input);
+    let readCheck: (() => void) | undefined;
+    const result = await executePublishedBindingSurfaceCore(input, (check) => {
+      readCheck = check;
+    });
     await writeBindingSurfaceAudit(input, {
       startedAt,
       durationMs: performance.now() - startedMs,
@@ -52,6 +55,7 @@ export async function executePublishedBindingSurface(input: {
       rowCount: result.query?.rows.length ?? 0,
       errorCode: result.refreshError?.code,
     });
+    readCheck?.();
     return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -65,15 +69,26 @@ export async function executePublishedBindingSurface(input: {
   }
 }
 
-async function executePublishedBindingSurfaceCore(input: {
-  authorization?: AuthorizationService;
-  atlas: string;
-  designerWorkspace: string;
-  body: ExecuteBindingSurfaceBody;
-  getEngine: (atlas: string) => Promise<AuthoringEngine>;
-}): Promise<WireBindingSurfaceResult> {
+async function executePublishedBindingSurfaceCore(
+  input: {
+    authorization?: AuthorizationService;
+    atlas: string;
+    designerWorkspace: string;
+    body: ExecuteBindingSurfaceBody;
+    getEngine: (atlas: string) => Promise<AuthoringEngine>;
+  },
+  onReadAuthorized: (check: () => void) => void,
+): Promise<WireBindingSurfaceResult> {
+  input.authorization?.preflight(input.atlas, input.body);
   const release = await resolveBindingSurfaceRelease(input);
   input.authorization?.release(input.atlas, 'callable.binding', input.body.surfaceId, release);
+  const parent = input.authorization;
+  input = {
+    ...input,
+    authorization: parent?.scoped(() =>
+      parent.release(input.atlas, 'callable.binding', input.body.surfaceId, release),
+    ),
+  };
   const policyRelease = {
     version: release.version,
     callableName: release.contract.surfaceId,
@@ -88,7 +103,13 @@ async function executePublishedBindingSurfaceCore(input: {
   const action = input.body.action;
 
   if (action.kind === 'read') {
-    const query = await executeSurfaceQuery(input, release.contract, surfaceValues, action);
+    const query = await executeSurfaceQuery(
+      input,
+      release.contract,
+      surfaceValues,
+      action,
+      onReadAuthorized,
+    );
     return {
       kind: 'bindingSurface',
       surfaceId: release.contract.surfaceId,
@@ -258,6 +279,7 @@ async function executeSurfaceQuery(
   contract: PublishedBindingSurfaceContract,
   surfaceValues: ReadonlyMap<string, unknown>,
   action: WireBindingSurfaceAction,
+  onAuthorized?: (check: () => void) => void,
 ): Promise<WireQueryInterfaceResult> {
   const parameters = bindInterfaceParameters(
     contract.query.parameterBindings,
@@ -282,6 +304,7 @@ async function executeSurfaceQuery(
     },
     getEngine: input.getEngine,
     includeRecordRefs: true,
+    onAuthorized,
   });
 }
 

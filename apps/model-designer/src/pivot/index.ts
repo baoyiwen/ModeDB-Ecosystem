@@ -6,6 +6,19 @@ export {
   toStoredDateTime,
 } from './date-time.js';
 export { executeInterfacePivot, executeModelPivot } from './execute.js';
+export {
+  DEFAULT_PIVOT_VIEW,
+  DEFAULT_PIVOT_LANGUAGE,
+  buildInterfacePivotSchema,
+  buildModelPivotSchema,
+  buildPivotModelFieldPolicy,
+  buildPivotTable,
+  formatPivotValue,
+  isPivotI18nValue,
+  resolvePivotLabel,
+  resolvePivotPathLabel,
+} from './presentation.js';
+export type { PivotLanguageMode, PivotTableSchema } from './presentation.js';
 export type {
   PivotDocument,
   PivotNode,

@@ -1,0 +1,15 @@
+{
+  "command": [
+    "node",
+    "node_modules/eslint/bin/eslint.js",
+    "packages/shared/src/security-contracts.ts",
+    "packages/shared/src/index.ts",
+    "packages/server/src/security/security-registry.ts",
+    "packages/server/src/security/registration-service.ts",
+    "scripts/security-registration-storage-check.mjs",
+    "scripts/security-release-evidence.mjs"
+  ],
+  "exitCode": 0,
+  "stdout": "",
+  "stderr": ""
+}

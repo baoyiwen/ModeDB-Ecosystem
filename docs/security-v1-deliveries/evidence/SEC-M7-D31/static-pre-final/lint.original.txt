@@ -1,0 +1,18 @@
+
+C:\workspace\web_code\ModeDB-Ecosystem\scripts\obfuscate-dist.mjs
+   73:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   79:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+   98:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+  103:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+C:\workspace\web_code\ModeDB-Ecosystem\scripts\security-install-evidence.mjs
+   60:5   error  Expected { after 'for-of'  curly
+   66:39  error  Expected { after 'for-of'  curly
+   97:5   error  Expected { after 'for-of'  curly
+  121:62  error  Expected { after 'for-of'  curly
+  145:5   error  Expected { after 'for-of'  curly
+  154:5   error  Expected { after 'for-of'  curly
+
+✖ 10 problems (6 errors, 4 warnings)
+  6 errors and 0 warnings potentially fixable with the `--fix` option.
+

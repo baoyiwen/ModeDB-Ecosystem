@@ -1,0 +1,856 @@
+{
+  "format": "modeldb.security-full-check.v1",
+  "task": "DR-P4.4",
+  "ok": true,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Full-Check-eJ4zqR",
+  "sourceSha256": "e54c9c92b994407c8fe9bf9e4f2e3c8960ffdbb002f39621491a49d7fd9294aa",
+  "regression": {
+    "format": "modeldb.security-regression.v1",
+    "ok": true,
+    "timestampUtc": "2026-10-28T09:28:36.863Z",
+    "node": "v24.15.0",
+    "platform": "win32",
+    "unitFiles": [
+      "backup-management-http.test.ts",
+      "backup-management.test.ts",
+      "binding-surface-compiler.test.ts",
+      "binding-surface-publication.test.ts",
+      "browser-connection-credentials.test.ts",
+      "browser-pairing-launch.test.ts",
+      "core-query-filter.test.ts",
+      "data-kit-apply-outcome.test.ts",
+      "data-kit-bind-only-import.test.ts",
+      "data-kit-binding-surface-session.test.ts",
+      "data-kit-binding.test.ts",
+      "data-kit-coerce-import.test.ts",
+      "data-kit-insert-many-failures.test.ts",
+      "data-kit-phase2.test.ts",
+      "data-kit-phase3.test.ts",
+      "data-kit-query-adapter.test.ts",
+      "data-kit-relation-bind.test.ts",
+      "data-transfer-http.test.ts",
+      "data-transfer.test.ts",
+      "data-ui-binding-surface.test.tsx",
+      "designer-mode-manager.test.ts",
+      "field-defs.test.ts",
+      "interface-call-docs.test.ts",
+      "interface-release-management.test.ts",
+      "interface-transfer.test.ts",
+      "model-map.test.ts",
+      "operation-interface-compiler.test.ts",
+      "pivot-display.test.ts",
+      "pivot-interface-http.test.ts",
+      "pivot-interface-input.test.ts",
+      "pivot-presentation.test.ts",
+      "pivot-result-model.test.ts",
+      "pivot-sources.test.ts",
+      "published-binding-surface-runtime.test.ts",
+      "published-interface-runtime.test.ts",
+      "published-operation-interface-runtime.test.ts",
+      "query-cursor-pagination.test.ts",
+      "query-distinct-aggregation.test.ts",
+      "query-execution-compiler.test.ts",
+      "query-having.test.ts",
+      "query-interface-audit-summary.test.ts",
+      "query-interface-errors.test.ts",
+      "query-interface-publication.test.ts",
+      "query-ordering.test.ts",
+      "query-related-aggregation.test.ts",
+      "query-relation-quantifier.test.ts",
+      "relation-pair-geometry.test.ts",
+      "sdk-revive-tree.test.ts",
+      "security-asset.test.ts",
+      "security-authentication-report.test.mjs",
+      "security-authentication-resilience-report.test.mjs",
+      "security-authentication-resilience.test.ts",
+      "security-authentication-storage.test.ts",
+      "security-authentication.test.ts",
+      "security-authorization.test.ts",
+      "security-backup.test.ts",
+      "security-browser-candidate-report.test.mjs",
+      "security-browser-session.test.ts",
+      "security-deployment-wizard-report.test.mjs",
+      "security-deployment-wizard.test.ts",
+      "security-designer-asset.test.ts",
+      "security-designer-identity-report.test.mjs",
+      "security-designer-identity.test.ts",
+      "security-designer-references.test.ts",
+      "security-designer-sandbox.test.mjs",
+      "security-device-registration-contract.test.ts",
+      "security-dynamic-authorization.test.ts",
+      "security-fault-acceptance.test.ts",
+      "security-full-contract.test.mjs",
+      "security-full-evidence.test.mjs",
+      "security-git-guard.test.mjs",
+      "security-hosting-report.test.mjs",
+      "security-hosting.test.ts",
+      "security-identity-admin-report.test.mjs",
+      "security-identity-admin.test.ts",
+      "security-install-contract.test.mjs",
+      "security-install-evidence.test.mjs",
+      "security-network.test.ts",
+      "security-protection.test.ts",
+      "security-public-clients-report.test.mjs",
+      "security-recipient-delivery-evidence.test.mjs",
+      "security-recipient-delivery-report.test.mjs",
+      "security-recipient-delivery.test.ts",
+      "security-recipient-evidence.test.mjs",
+      "security-recipient-keys.test.ts",
+      "security-recipient-report.test.mjs",
+      "security-recovery-drill.test.ts",
+      "security-recovery.test.ts",
+      "security-registered-recovery.test.ts",
+      "security-registration-approval.test.ts",
+      "security-registration-contract.test.mjs",
+      "security-registration-integration-report.test.mjs",
+      "security-registration-maintenance.test.ts",
+      "security-registration-runtime.test.ts",
+      "security-registration-storage.test.ts",
+      "security-registry-http.test.ts",
+      "security-registry.test.ts",
+      "security-regression-contract.test.mjs",
+      "security-release-apps.test.mjs",
+      "security-release-evidence.test.mjs",
+      "security-reset-recovery.test.ts",
+      "security-session-parent.test.ts",
+      "security-vault-v2.test.ts",
+      "security-windows-keys.test.ts",
+      "server-config-path.test.ts",
+      "server-directory-layout.test.ts"
+    ],
+    "unit": {
+      "tests": 1008,
+      "pass": 1008,
+      "fail": 0,
+      "cancelled": 0,
+      "skip": 0,
+      "todo": 0
+    },
+    "integrationScripts": [
+      "e2e-engine-workflow",
+      "relate-conserved-forest",
+      "children-tree-query",
+      "group-lateral-attach",
+      "multi-branch-network",
+      "protocol-operations"
+    ],
+    "results": [
+      {
+        "name": "unit",
+        "exitCode": 0,
+        "timedOut": false,
+        "durationMs": 333760.5041,
+        "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-petDWw\\unit.log"
+      },
+      {
+        "name": "e2e-engine-workflow",
+        "exitCode": 0,
+        "timedOut": false,
+        "durationMs": 6667.9473,
+        "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-petDWw\\e2e-engine-workflow.log"
+      },
+      {
+        "name": "relate-conserved-forest",
+        "exitCode": 0,
+        "timedOut": false,
+        "durationMs": 5828.700299999968,
+        "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-petDWw\\relate-conserved-forest.log"
+      },
+      {
+        "name": "children-tree-query",
+        "exitCode": 0,
+        "timedOut": false,
+        "durationMs": 4385.283100000001,
+        "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-petDWw\\children-tree-query.log"
+      },
+      {
+        "name": "group-lateral-attach",
+        "exitCode": 0,
+        "timedOut": false,
+        "durationMs": 4520.642700000026,
+        "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-petDWw\\group-lateral-attach.log"
+      },
+      {
+        "name": "multi-branch-network",
+        "exitCode": 0,
+        "timedOut": false,
+        "durationMs": 5303.100600000005,
+        "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-petDWw\\multi-branch-network.log"
+      },
+      {
+        "name": "protocol-operations",
+        "exitCode": 0,
+        "timedOut": false,
+        "durationMs": 5244.580200000026,
+        "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-petDWw\\protocol-operations.log"
+      }
+    ],
+    "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-petDWw",
+    "report": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Regression-petDWw\\regression.json"
+  },
+  "browser": {
+    "format": "modeldb.browser-candidate-check.v1",
+    "task": "DR-P3.6",
+    "ok": true,
+    "platform": "win32",
+    "node": "v24.15.0",
+    "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Browser-Candidate-PQ12M9",
+    "candidateSha256": "0d994165d843131cab9ab5b7931852c7511ffc0d6e0f9756182b63e4a8dff6cc",
+    "groups": [
+      {
+        "name": "hosting",
+        "log": "hosting.tap",
+        "exitCode": 0,
+        "timedOut": false,
+        "durationMs": 58668,
+        "candidateSha256": "0d994165d843131cab9ab5b7931852c7511ffc0d6e0f9756182b63e4a8dff6cc",
+        "ok": true,
+        "unit": {
+          "pass": 2,
+          "fail": 0,
+          "skip": 0,
+          "cancelled": 0,
+          "todo": 0
+        },
+        "native": {
+          "format": "modeldb.hosting-native.v1",
+          "ok": true,
+          "checks": {
+            "nativeDpapi": true,
+            "osAuthenticatedPipe": true,
+            "exactLiveAddress": true,
+            "dataManagementSeparated": true,
+            "anonymousAdminDenied": true,
+            "legacyLaunchBlocked": true,
+            "cookieRestartRecovery": true,
+            "closeReleasesBothPorts": true,
+            "bindFailuresReleaseRegistryAndPipe": true,
+            "invalidBuildRejected": true
+          },
+          "liveMaterialRead": false
+        },
+        "browser": {
+          "format": "modeldb.hosting-browser.v1",
+          "ok": true,
+          "browser": "Chrome/156.0.8078.48",
+          "hardwareAuthenticatorTested": false,
+          "systemTrustInstalled": false,
+          "checks": {
+            "freshDesignerBuild": true,
+            "cspRunsApplication": true,
+            "sameOriginData": true,
+            "osLaunchFragmentRemoved": true,
+            "httpOnlyStrict": true,
+            "csrfRequired": true,
+            "managementOnly": true,
+            "reloadRecovery": true,
+            "refreshAndLogout": true,
+            "localizedZhEnJa": true,
+            "wideAndNarrow": true,
+            "accessibleLanguageControl": true
+          },
+          "screenshots": 12,
+          "liveMaterialRead": false
+        }
+      },
+      {
+        "name": "identity",
+        "log": "identity.tap",
+        "exitCode": 0,
+        "timedOut": false,
+        "durationMs": 74753,
+        "candidateSha256": "0d994165d843131cab9ab5b7931852c7511ffc0d6e0f9756182b63e4a8dff6cc",
+        "ok": true,
+        "unit": {
+          "pass": 1,
+          "fail": 0,
+          "cancelled": 0,
+          "skip": 0,
+          "todo": 0
+        },
+        "browser": {
+          "format": "modeldb.designer-identity-browser.v1",
+          "ok": true,
+          "browser": "Chrome/156.0.8078.48",
+          "screenshots": 24,
+          "hardwareAuthenticatorTested": false,
+          "systemTrustInstalled": false,
+          "liveMaterialRead": false,
+          "checks": {
+            "syntheticSaveReadback": true,
+            "freshDesignerBuild": true,
+            "formalRegistration": true,
+            "pendingNoAuthority": true,
+            "rejectedState": true,
+            "localOsApproval": true,
+            "approvalRequiresLogin": true,
+            "actualWebAuthnLogin": true,
+            "syntheticDataScope": true,
+            "managementDenied": true,
+            "httpOnlySecureStrict": true,
+            "reloadRestoresSession": true,
+            "continuationNotPersisted": true,
+            "logout": true,
+            "expiredWindowLogin": true,
+            "revocationDenied": true,
+            "cancelledExplained": true,
+            "localizedZhEnJa": true,
+            "wideAndNarrow": true,
+            "labelsAndFocus": true
+          }
+        }
+      },
+      {
+        "name": "admin",
+        "log": "admin.tap",
+        "exitCode": 0,
+        "timedOut": false,
+        "durationMs": 85993,
+        "candidateSha256": "0d994165d843131cab9ab5b7931852c7511ffc0d6e0f9756182b63e4a8dff6cc",
+        "ok": true,
+        "unit": {
+          "pass": 1,
+          "fail": 0,
+          "cancelled": 0,
+          "skip": 0,
+          "todo": 0
+        },
+        "browser": {
+          "format": "modeldb.identity-admin-browser.v1",
+          "ok": true,
+          "browser": "Chrome/156.0.8078.48",
+          "screenshots": 24,
+          "hardwareAuthenticatorTested": false,
+          "systemTrustInstalled": false,
+          "liveMaterialRead": false,
+          "checks": {
+            "freshDesignerBuild": true,
+            "nativeDpapi": true,
+            "osPairedManagement": true,
+            "uiApproval": true,
+            "uiRejection": true,
+            "exactGrants": true,
+            "approvalRequiresLogin": true,
+            "actualWebAuthnLogin": true,
+            "dataListenerDenied": true,
+            "uiUserMaintenance": true,
+            "uiCredentialMaintenance": true,
+            "uiRestriction": true,
+            "uiReplacement": true,
+            "uiSessionRevoke": true,
+            "explicitConfirmation": true,
+            "conflictRequiresReload": true,
+            "noAutomaticRetry": true,
+            "pagination": true,
+            "localizedZhEnJa": true,
+            "wideAndNarrow": true,
+            "labelsAndFocus": true
+          }
+        }
+      },
+      {
+        "name": "deployment",
+        "log": "deployment.tap",
+        "exitCode": 0,
+        "timedOut": false,
+        "durationMs": 48451,
+        "candidateSha256": "0d994165d843131cab9ab5b7931852c7511ffc0d6e0f9756182b63e4a8dff6cc",
+        "ok": true,
+        "unit": {
+          "pass": 1,
+          "fail": 0,
+          "cancelled": 0,
+          "skip": 0,
+          "todo": 0
+        },
+        "browser": {
+          "format": "modeldb.deployment-wizard-browser.v1",
+          "ok": true,
+          "browser": "Chrome/156.0.8078.48",
+          "screenshots": 24,
+          "hardwareAuthenticatorTested": false,
+          "systemTrustInstalled": false,
+          "liveMaterialRead": false,
+          "checks": {
+            "freshDesignerBuild": true,
+            "nativeDpapi": true,
+            "osPairedManagement": true,
+            "loopbackBootstrap": true,
+            "registrationDisabledByDefault": true,
+            "publicPemOnly": true,
+            "wrongRpRejected": true,
+            "wrongPinRejected": true,
+            "previewDoesNotWrite": true,
+            "explicitConfirmation": true,
+            "descriptorImportBinding": true,
+            "descriptorDownload": true,
+            "offlineLeaseRequired": true,
+            "cliFinalize": true,
+            "identityPreserved": true,
+            "persistentPolicyApplied": true,
+            "oneShotCommit": true,
+            "existingInstanceGuide": true,
+            "auditMetadataOnly": true,
+            "syntheticTlsStartup": true,
+            "dataListenerDenied": true,
+            "localizedZhEnJa": true,
+            "wideAndNarrow": true,
+            "labelsAndFocus": true,
+            "formContrast": true,
+            "expiredExportBlocked": true
+          }
+        }
+      },
+      {
+        "name": "public",
+        "log": "public.tap",
+        "exitCode": 0,
+        "timedOut": false,
+        "durationMs": 360178,
+        "candidateSha256": "0d994165d843131cab9ab5b7931852c7511ffc0d6e0f9756182b63e4a8dff6cc",
+        "ok": true,
+        "unit": {
+          "pass": 3,
+          "fail": 0,
+          "cancelled": 0,
+          "skip": 0,
+          "todo": 0
+        },
+        "browsers": [
+          {
+            "format": "modeldb.public-identity-browser.v1",
+            "app": "data-studio",
+            "ok": true,
+            "browser": "Chrome/156.0.8078.48",
+            "screenshots": 24,
+            "hardwareAuthenticatorTested": false,
+            "systemTrustInstalled": false,
+            "liveMaterialRead": false,
+            "checks": {
+              "syntheticSaveReadback": true,
+              "freshApplicationBuild": true,
+              "publicClient": true,
+              "libraryConnection": true,
+              "formalRegistration": true,
+              "pendingNoAuthority": true,
+              "rejectedState": true,
+              "localOsApproval": true,
+              "approvalRequiresLogin": true,
+              "actualWebAuthnLogin": true,
+              "syntheticDataScope": true,
+              "managementDenied": true,
+              "httpOnlySecureStrict": true,
+              "reloadRestoresSession": true,
+              "continuationNotPersisted": true,
+              "logout": true,
+              "expiredWindowLogin": true,
+              "revocationDenied": true,
+              "cancelledExplained": true,
+              "supportedLocales": true,
+              "wideAndNarrow": true,
+              "labelsAndFocus": true
+            }
+          },
+          {
+            "format": "modeldb.public-identity-browser.v1",
+            "app": "web",
+            "ok": true,
+            "browser": "Chrome/156.0.8078.48",
+            "screenshots": 16,
+            "hardwareAuthenticatorTested": false,
+            "systemTrustInstalled": false,
+            "liveMaterialRead": false,
+            "checks": {
+              "syntheticSaveReadback": true,
+              "freshApplicationBuild": true,
+              "publicClient": true,
+              "libraryConnection": true,
+              "formalRegistration": true,
+              "pendingNoAuthority": true,
+              "rejectedState": true,
+              "localOsApproval": true,
+              "approvalRequiresLogin": true,
+              "actualWebAuthnLogin": true,
+              "syntheticDataScope": true,
+              "managementDenied": true,
+              "httpOnlySecureStrict": true,
+              "reloadRestoresSession": true,
+              "continuationNotPersisted": true,
+              "logout": true,
+              "expiredWindowLogin": true,
+              "revocationDenied": true,
+              "cancelledExplained": true,
+              "supportedLocales": true,
+              "wideAndNarrow": true,
+              "labelsAndFocus": true
+            }
+          }
+        ],
+        "legacyThreeApplications": true,
+        "applicationCredentialMode": true
+      },
+      {
+        "name": "hostile",
+        "log": "hostile.tap",
+        "exitCode": 0,
+        "timedOut": false,
+        "durationMs": 34616,
+        "candidateSha256": "0d994165d843131cab9ab5b7931852c7511ffc0d6e0f9756182b63e4a8dff6cc",
+        "ok": true,
+        "unit": {
+          "pass": 1,
+          "fail": 0,
+          "skip": 0,
+          "cancelled": 0,
+          "todo": 0
+        },
+        "browser": {
+          "format": "modeldb.hostile-browser.v1",
+          "ok": true,
+          "browser": "Chrome/156.0.8078.48",
+          "hardwareAuthenticatorTested": false,
+          "systemTrustInstalled": false,
+          "liveMaterialRead": false,
+          "checks": {
+            "authenticatedPositiveControl": true,
+            "sameOriginCsrfRequired": true,
+            "sameSiteMaliciousFetchDenied": true,
+            "preflightDenied": true,
+            "maliciousFormDenied": true,
+            "frameDenied": true,
+            "sandboxNullOriginDenied": true,
+            "webAuthnWrongRpDenied": true,
+            "rebindingHostDenied": true,
+            "localhostAliasDenied": true,
+            "proxySpoofDenied": true,
+            "dataManagementSeparated": true,
+            "sessionSurvivesAttack": true,
+            "oneTimePairingSurvivesAttack": true,
+            "noPermissiveCors": true,
+            "rejectionsAudited": true
+          }
+        }
+      }
+    ],
+    "totalNativePass": 9,
+    "build": {
+      "applications": [
+        "model-designer",
+        "data-studio",
+        "web"
+      ],
+      "configFile": false,
+      "envFile": false,
+      "existingDistUnchanged": true,
+      "singleCandidate": true,
+      "sourceUnchanged": true,
+      "buildUnchanged": true
+    },
+    "scope": {
+      "temporarySyntheticOnly": true,
+      "liveMaterialRead": false,
+      "hardwareAuthenticatorTested": false,
+      "systemTrustInstalled": false,
+      "lanTested": false,
+      "fullReleaseInstallTested": false
+    },
+    "report": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Browser-Candidate-PQ12M9\\candidate-check.json"
+  },
+  "resilience": {
+    "format": "modeldb.authentication-resilience-matrix.v1",
+    "ok": true,
+    "hardExitCases": 30,
+    "signedRaceCases": 10,
+    "auditFaultCases": 4,
+    "checks": {
+      "hardProcessExits": true,
+      "atomicSessionAudit": true,
+      "unknownOutcomeInspectable": true,
+      "noRevivalAfterRestart": true,
+      "disableEnableProofBarrier": true,
+      "latestReduction": true,
+      "maintenanceCas": true,
+      "legacyApiPairingManagement": true,
+      "noSecretsInLogs": true
+    },
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false
+  },
+  "native": [
+    {
+      "name": "registration",
+      "exitCode": 0,
+      "timedOut": false,
+      "unit": {
+        "pass": 9,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "browser": {
+        "format": "modeldb.registration-virtual-authenticator.v1",
+        "ok": true,
+        "browser": "Chrome/156.0.8078.48",
+        "checks": {
+          "actualBrowserWebAuthn": true,
+          "nativeHttpsDpapiCli": true,
+          "approval": true,
+          "proofRejected": true,
+          "singleUseCompetition": true,
+          "revisionConflict": true,
+          "outstandingChallengeCapacity1000": true,
+          "localRepairAtCapacity": true,
+          "restartWithRegistrationDisabled": true,
+          "noBusinessSession": true,
+          "instanceKeyUnchanged": true
+        },
+        "capacityPreparation": "Synthetic unverified issued records fill all but one challenge slot; real browser exercises boundary, not 1000 authenticators",
+        "hardwareAuthenticatorTested": false,
+        "systemTrustInstalled": false
+      }
+    },
+    {
+      "name": "authentication",
+      "exitCode": 0,
+      "timedOut": false,
+      "unit": {
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "browser": {
+        "format": "modeldb.authentication-browser.v1",
+        "ok": true,
+        "browser": "Chrome/156.0.8078.48",
+        "checks": {
+          "actualBrowserWebAuthnGet": true,
+          "freshSdkBundle": true,
+          "nativeTlsDpapiApproval": true,
+          "pendingDenied": true,
+          "httpOnlySecureStrict": true,
+          "dataScope": true,
+          "adminDenied": true,
+          "reloadRecovery": true,
+          "csrfRotation": true,
+          "logout": true,
+          "restartRecovery": true,
+          "disabledNewLogin": true,
+          "expiredRegistrationIndependent": true,
+          "noApiCredential": true,
+          "instanceKeyUnchanged": true
+        },
+        "hardwareAuthenticatorTested": false,
+        "systemTrustInstalled": false
+      }
+    },
+    {
+      "name": "recipients",
+      "exitCode": 0,
+      "timedOut": false,
+      "unit": {
+        "pass": 1,
+        "fail": 0,
+        "skip": 0,
+        "cancelled": 0,
+        "todo": 0
+      },
+      "browser": {
+        "format": "modeldb.recipient-browser.v1",
+        "ok": true,
+        "browser": "Chrome/156.0.8078.48",
+        "screenshots": 18,
+        "hardwareAuthenticatorTested": false,
+        "systemTrustInstalled": false,
+        "liveMaterialRead": false,
+        "checks": {
+          "freshDesignerBuild": true,
+          "nativeDpapi": true,
+          "osPairedManagement": true,
+          "explicitMigration": true,
+          "uiPublicImport": true,
+          "uiChallengeDownload": true,
+          "offlineInspect": true,
+          "offlineProof": true,
+          "wrongBindingRejected": true,
+          "noOverwrite": true,
+          "explicitConfirmation": true,
+          "uiAssociation": true,
+          "uiReplacement": true,
+          "uiRetirement": true,
+          "conflictRequiresReload": true,
+          "noWebStorageSecrets": true,
+          "restartHistory": true,
+          "localizedZhEnJa": true,
+          "wideAndNarrow": true,
+          "labelsAndFocus": true
+        }
+      }
+    },
+    {
+      "name": "asset",
+      "exitCode": 0,
+      "timedOut": false,
+      "unit": {
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skip": 0,
+        "todo": 0
+      }
+    },
+    {
+      "name": "delivery",
+      "exitCode": 0,
+      "timedOut": false,
+      "unit": {
+        "pass": 1,
+        "fail": 0,
+        "cancelled": 0,
+        "skip": 0,
+        "todo": 0
+      },
+      "native": {
+        "format": "modeldb.recipient-delivery-native.v1",
+        "ok": true,
+        "formats": [
+          "modeldb.backup.v2",
+          "modeldb.asset.v1",
+          "modeldb.asset.v2"
+        ],
+        "nativeDpapi": true,
+        "sourceRemoved": true,
+        "wrongRecipientRejected": true,
+        "staleRevisionRejected": true,
+        "wrongPrivateKeyRejected": true,
+        "tamperRejected": true,
+        "wrongTargetRejected": true,
+        "repeatPublicationRejected": true,
+        "freshDestinationKeys": true,
+        "emptyAccessLedger": true,
+        "realTwoDeviceTested": false,
+        "liveMaterialRead": false
+      }
+    }
+  ],
+  "commands": [
+    {
+      "name": "registration",
+      "args": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-registration-flow.test.ts",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-registration-browser.test.ts"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Full-Check-eJ4zqR\\registration.original.txt"
+    },
+    {
+      "name": "authentication",
+      "args": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-authentication-browser.test.ts"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Full-Check-eJ4zqR\\authentication.original.txt"
+    },
+    {
+      "name": "recipients",
+      "args": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-recipient-keys-browser.test.ts"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Full-Check-eJ4zqR\\recipients.original.txt"
+    },
+    {
+      "name": "asset",
+      "args": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-asset-browser.test.ts"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Full-Check-eJ4zqR\\asset.original.txt"
+    },
+    {
+      "name": "delivery",
+      "args": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "--test-concurrency=1",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-recipient-delivery-native.test.ts"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Full-Check-eJ4zqR\\delivery.original.txt"
+    },
+    {
+      "name": "security-registration-storage-check",
+      "args": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\scripts\\security-registration-storage-check.mjs"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Full-Check-eJ4zqR\\security-registration-storage-check.original.txt"
+    },
+    {
+      "name": "security-registration-consumer-check",
+      "args": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\scripts\\security-registration-consumer-check.mjs"
+      ],
+      "exitCode": 0,
+      "timedOut": false,
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Full-Check-eJ4zqR\\security-registration-consumer-check.original.txt"
+    }
+  ],
+  "scannedFiles": 38,
+  "totalPass": 1030,
+  "checks": {
+    "sourceUnchanged": true,
+    "allUnitFiles": true,
+    "sixEngineFlows": true,
+    "authenticationRecovery": true,
+    "registeredRecovery": true,
+    "publicArtifactsScanned": true,
+    "strictTypes": true,
+    "browserBoundary": true
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "realTwoDeviceTested": false,
+    "systemTrustInstalled": false,
+    "performanceTested": false,
+    "productionMigrationPerformed": false,
+    "frontendChanged": false
+  }
+}

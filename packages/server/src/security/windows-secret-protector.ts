@@ -118,7 +118,10 @@ export class WindowsSecretProtector implements SecretProtector {
         encoding: 'utf8',
         windowsHide: true,
         timeout: 20000,
-        maxBuffer: 1024 * 1024,
+        // The registry accepts protected files up to 32 MiB. DPAPI unprotect returns
+        // base64 JSON, so its bounded stdio buffer must also cover that encoding.
+        // A 1 MiB bridge buffer failed closed well below the registration limits.
+        maxBuffer: 48 * 1024 * 1024,
       },
     );
     if (result.status !== 0 || result.error) {

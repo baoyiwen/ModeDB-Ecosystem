@@ -701,7 +701,7 @@ export function EditorChrome(props: {
           type="button"
           className="designer-fab designer-fab--panel"
           data-active={manualPanel === 'security' ? 'true' : 'false'}
-          title={i18n.t('ui', 'fabSecurity')}
+          title={i18n.t('ui', 'securityCenterTitle')}
           onClick={openSecurityCenter}
         >
           <IconShield />

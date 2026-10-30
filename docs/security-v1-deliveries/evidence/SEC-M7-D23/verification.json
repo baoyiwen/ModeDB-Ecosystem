@@ -1,0 +1,134 @@
+{
+  "format": "modeldb.security-hosting-verification.v1",
+  "revision": "SEC-M7-D23",
+  "task": "DR-P3.1",
+  "date": "2026-10-27",
+  "timezone": "America/New_York",
+  "baseCommit": "fd40ade27acdec54c4e5ba4dd8ddc5ac4e061a0f",
+  "node": "v24.22.1",
+  "browserNode": "v24.15.0",
+  "platform": "win32",
+  "tasks": {
+    "v1Milestones": "7/7",
+    "v1": "20/20",
+    "registration": "12/23",
+    "registrationP1": "6/6",
+    "registrationP2": "5/5",
+    "registrationP3": "1/6",
+    "registrationWorkPackages": "2/4"
+  },
+  "hostingUnit": {
+    "pass": 36,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "authenticationUnit": {
+    "pass": 55,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "dynamicUnit": {
+    "pass": 42,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "regressionUnit": {
+    "pass": 169,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "maintenanceUnit": {
+    "pass": 33,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "toolsUnit": {
+    "pass": 39,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "launchCompatibilityUnit": {
+    "pass": 19,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "nativeUnit": {
+    "pass": 2,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "totalTargetedPass": 395,
+  "checks": {
+    "nativeDpapi": true,
+    "osAuthenticatedPipe": true,
+    "exactLiveAddress": true,
+    "dataManagementSeparated": true,
+    "anonymousAdminDenied": true,
+    "legacyLaunchBlocked": true,
+    "cookieRestartRecovery": true,
+    "closeReleasesBothPorts": true,
+    "bindFailuresReleaseRegistryAndPipe": true,
+    "invalidBuildRejected": true,
+    "freshDesignerBuild": true,
+    "cspRunsApplication": true,
+    "sameOriginData": true,
+    "osLaunchFragmentRemoved": true,
+    "httpOnlyStrict": true,
+    "csrfRequired": true,
+    "managementOnly": true,
+    "reloadRecovery": true,
+    "refreshAndLogout": true,
+    "localizedZhEnJa": true,
+    "wideAndNarrow": true,
+    "accessibleLanguageControl": true,
+    "strictHostingTypes": true,
+    "serverTypecheck": true,
+    "designerTypecheck": true,
+    "browserBoundary": true,
+    "scopedFormatting": true,
+    "scopedLint": true,
+    "staticSnapshot": true,
+    "managementLifetimes": true,
+    "materialGuard": true
+  },
+  "documentValidation": {
+    "ok": true,
+    "documentFiles": 14,
+    "localLinksAndAnchors": 376,
+    "failures": [],
+    "registrationTaskRows": 23,
+    "completedRegistrationTasks": 12,
+    "cliExamplesKnown": true
+  },
+  "historicalEvidenceVerified": 301,
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "productionMigrationPerformed": false,
+    "physicalAuthenticatorTested": false,
+    "performanceTested": false,
+    "fullReleaseInstallTested": false,
+    "physicalDiskFullTested": false,
+    "remoteTlsHostedBrowserTested": false,
+    "lanTested": false,
+    "uiChanged": true,
+    "newRegistrationUiImplemented": false,
+    "defaultOsBrowserAutomationTested": false
+  }
+}

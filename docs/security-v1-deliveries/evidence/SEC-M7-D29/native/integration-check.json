@@ -1,0 +1,72 @@
+{
+  "format": "modeldb.recipient-check.v1",
+  "task": "DR-P4.1",
+  "ok": true,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-NkkYe3",
+  "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-NkkYe3\\designer-build",
+  "screenshots": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-NkkYe3\\screenshots",
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-NkkYe3\\native.original.txt",
+  "exitCode": 0,
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-recipient-keys-browser.test.ts"
+  ],
+  "candidateSha256": "c61946b3f966550240a006348d73fd8c52b04c4113c5b5d3e397c422ae00f4ce",
+  "unit": {
+    "pass": 1,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "browser": {
+    "format": "modeldb.recipient-browser.v1",
+    "ok": true,
+    "browser": "Chrome/156.0.8078.48",
+    "screenshots": 18,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "liveMaterialRead": false,
+    "checks": {
+      "freshDesignerBuild": true,
+      "nativeDpapi": true,
+      "osPairedManagement": true,
+      "explicitMigration": true,
+      "uiPublicImport": true,
+      "uiChallengeDownload": true,
+      "offlineInspect": true,
+      "offlineProof": true,
+      "wrongBindingRejected": true,
+      "noOverwrite": true,
+      "explicitConfirmation": true,
+      "uiAssociation": true,
+      "uiReplacement": true,
+      "uiRetirement": true,
+      "conflictRequiresReload": true,
+      "noWebStorageSecrets": true,
+      "restartHistory": true,
+      "localizedZhEnJa": true,
+      "wideAndNarrow": true,
+      "labelsAndFocus": true
+    }
+  },
+  "build": {
+    "ok": true,
+    "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-NkkYe3\\designer-build",
+    "configFile": false,
+    "envFile": false,
+    "existingDistUnchanged": true
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "recipientUiTested": true
+  }
+}

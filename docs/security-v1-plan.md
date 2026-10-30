@@ -1,10 +1,16 @@
 # ModelDB 安全改造 V1 方案
 
-状态：分阶段实施中；SEC-M1—SEC-M5 已交付，实际状态以里程碑台账为准。本文的目标能力不等于已经全部实现，也不授权删除现有库、轮换当前凭证或修改正在运行的服务。
+D34 接续：DR-P4.6 已开始，提供新建临时合成实例、专用 TLS、公钥核对与独立浏览器的可重复双机演练工具。工具准备/回环烟测与实际设备验收分开，新增扩展仍22/23、DR-P4为5/6。B尚未确认Windows Hello，实际认证器/双机与恢复策略实操待完成；步骤和兼容限制见[双机手册](security-v1/windows-device-drill-guide.md)。不修改生产认证方案，不启用真实服务或迁移。
+
+状态：基础 V1 已在 D09—D11 复验恢复完成；DR-P1 注册审批、DR-P2 会话授权和 DR-P3 页面/本机管理/部署体验已完成。D29 完成独立接收方公钥及持有证明，D30 完成 DR-P4.2 按核验接收方离线迁移/资产交付，D31 完成 DR-P4.3 七包/三前端新候选、实际离线安装及合成升级/停用验收；D32 完成 DR-P4.4 全量安全/业务回归及认证故障恢复，1030/1030 和六引擎 82 断言通过、0 skip；D33 完成 DR-P4.5，253/253 定向检查及独立 504 样本/洪泛维护确认通过；新增扩展 22/23、DR-P4 5/6、必需工作包 3/4，下一 DR-P4.6 实际 Windows Hello/两台设备验收、最终手册与脱敏证据。实际状态以唯一台账和最新交付证据为准；历史结果保留，不授权操作真实实例。
 
 适用范围：ModelDB 引擎、Server、SDK、Model Designer、Query / Operation Interface、Binding Surface，以及备份、恢复和资产图谱交付。
 
 开发任务状态、里程碑门槛与每次交付记录统一维护在[开发任务与里程碑台账](security-v1-milestones.md)。本方案用于说明需求和技术设计，不另外维护一套研发进度。
+
+2026-10-25 设计补充：[设备注册与免 Token 连接方案](security-v1/device-registration-proposal.md)建议在保留现有 TLS、授权、审计和数据密钥隔离的基础上，增加 WebAuthn 注册、本机审批、短期会话及独立接收方加密公钥关联；严格 Windows TPM 绑定单独扩展。该建议按独立扩展任务推进，不增加基础 V1 完成计数；实际实现边界见下文及唯一台账。
+
+对应[开发计划](security-v1-milestones.md#11-设备注册扩展开发计划)已在 D08 登记四个必需工作包的 23 项子任务。D12—D17 完成 DR-P1.1—P1.6：可信部署、[公共协议与依赖契约](security-v1/device-registration-protocol-contract.md)、默认关闭的持久台账、显式原子迁移、注册 API 和本机审批 CLI。Server 已接入固定库真实校验、挑战认领、限流与回收；证明通过仅保存待审候选。启用字段与接口顺序见[使用说明](security-v1/device-registration-runtime-guide.md)。本机审批已原子登记主体、公钥和明确授权，不签发会话；Chrome 虚拟认证器、原生 DPAPI/CLI 及三个子进程提交退出点已完成纵向验收，可重复命令与故障报告见接口手册第 6 节。修复大台账触及 Windows 保护桥接 1 MiB 输出上限的问题，保持有界缓冲和既有台账上限。以上 D17 交付不含公钥登录或正式页面。D18 增加三类会话父级、显式 V3 内部 CAS 迁移、命名空间校验和管理空业务授权；不自动迁移、不开放公钥签发或登录。普通 Token/配对兼容，修复离线申请跨期回收的终态提交顺序；详见公共协议第 12 节。
 
 ## 0. 合并后的需求基线
 
@@ -619,3 +625,25 @@ V1 要交付默认安全初始化、独立认证与加密、最小权限调用�
 S7.2 已交付全新七包/三前端候选、实际离线安装及严格类型消费验证、完整功能与 Chrome 回归、Windows 四项性能比较和[安装/切换/回退指南](security-v1/release-guide.md)，最终验收见 [SEC-M7 / D02](security-v1-deliveries/SEC-M7.md#d02s72-全流程回归与发布准备)。性能对比是同一候选的 legacy 与 registry 路径；当前同步审计/OS 保护有明显秒级成本，不构成低延迟/高并发或生产容量承诺。正式发布前需单独确定版本及目标并再次构建验证，物理磁盘耗尽/硬件断电和其他平台仍无实测保证。
 
 研发顺序与下一项任务以里程碑台账的最新交付记录为准。实际切换旧环境前，应形成明确的库清单和新格式验证结果，再执行用户明确授权的重建或迁移操作。
+
+DR-P2.2 / D19 补充：默认关闭的 authentication 显式开关与 V4 原子迁移、公钥真实签名、单次浏览器挑战和 Cookie/CSRF 生命周期已实现；SDK 提供同源 HTTPS 的 loginBrowserSession。Chrome 虚拟认证器及原生 DPAPI/本机批准纵向验证独立于正式页面。动态撤销/队列执行、用户管理/换钥、正式注册页面仍按后续任务实施。详见[登录手册](security-v1/device-registration-runtime-guide.md#8-公钥登录与浏览器会话dr-p22)。
+
+DR-P2.3 / D20 已补齐公钥会话的 HTTP/RPC/WS 动态授权、按凭据通知与用户反向索引、空闲连接到期和排队执行前检查；发布接口及绑定子接口逐项复查。禁用/停用与既有会话撤销同事务提交，重新启用不复活旧会话。D21 已交付 DR-P2.4 正式本机维护 CLI、换钥和登记用户管理；管理页面留待 DR-P3。 详细行为见[动态授权手册](security-v1/device-registration-runtime-guide.md#9-动态授权与连接失效dr-p23)。
+
+D22 补充：停用后立即启用不恢复排队/验签中的旧证明；减权按提交时最新授权。实际进程退出恢复矩阵、审计容量与旧认证兼容性和原生回归分别归档，详见[协议第 16 节](security-v1/device-registration-protocol-contract.md#16-dr-p25-故障与在途证明边界)及[故障手册](security-v1/device-registration-runtime-guide.md#11-故障恢复与撤销竞争验收dr-p25)。不增加配置或版本，不改变数据密钥及真实实例。
+
+## DR-P3.1 同源托管与本机管理
+
+可显式开启 `security.hosting`，同源 Designer/API 与专用 127.0.0.1 管理监听器分离；本机启动器无需手输 Token，管理 Cookie 空闲 15 分钟/绝对 60 分钟且无数据授权。静态内容启动时白名单快照，拒绝源码/秘密/路径穿越与链接，绑定失败不扩大监听范围。默认保持旧独立前端模式；正式注册/Passkey 状态页已在 DR-P3.2 提供，操作见手册第 13 节。配置、隔离命令、错误与验证见[手册](security-v1/device-registration-runtime-guide.md#12-同源页面与专用本机管理入口dr-p31)。
+
+开发验证：`pnpm run test:security:hosting`、`node scripts/security-hosting-integration-check.mjs`；构建：`node scripts/security-hosting-build.mjs --output <new-directory>`。构建禁用本地 Vite 配置/env，原 dist 不覆盖；集成强制原生 Windows/Chrome，使用临时合成实例和随机回环端口，缺证据或 skip 不通过。复用现有三语言界面；Hello、LAN、新双机、生产性能与真实切换仍需后续验收。
+
+DR-P3.2 / D24 已实现同源 Designer 的注册、Passkey 登录和待审/拒绝/到期/恢复指引，SDK 以当前 HTTPS Origin 为唯一目标，描述只解析 JSON，查询秘密仅在内存。登录能力独立公开部署绑定，注册窗口到期不影响已批准身份。原配对/Token 和双库保持；D25 已完成 DR-P3.3 本机审批与身份维护 UI，部署向导及三前端公共客户端仍分别为 DR-P3.4/P3.5。实际操作见[手册第 13 节](security-v1/device-registration-runtime-guide.md#13-designer-注册与-passkey-登录dr-p32)。
+
+DR-P3.3 / D25 复用后端严格审批/维护与 CAS，在专用本机管理页提供申请核验、准确授权、用户与公钥维护、原子换钥和单会话撤销。HTTP 管理主体不冒充 OS SID，冲突关闭草稿且不自动重放。扩展 14/23、DR-P3 3/6、必需工作包仍 2/4；下一 DR-P3.4 部署向导。操作见[手册第 14 节](security-v1/device-registration-runtime-guide.md#14-本机审批与身份维护dr-p33)。
+
+DR-P3.4 / D26 的首次部署按[部署契约](security-v1/device-registration-deployment-contract.md#dr-p34首次部署向导边界)执行：明确新目录初始化、默认回环/注册关闭、本机管理预览公开证书与准确 DNS/RP/网络范围、十分钟绑定实例计划，再由停机 CLI 单次更新持久规则并写新配置。不覆盖已有配置、证书或密钥，不自动重启，不通过 HTTP 打开任意文件或安装信任；已有实例人工合并。跨文件提交先写一次性标记，结果不明保留现场并禁止盲目重试。操作及故障恢复见[手册第 15 节](security-v1/device-registration-runtime-guide.md#15-首次部署向导dr-p34)。
+
+DR-P3.5 使用 SDK 公共工厂和无服务端依赖的 data-ui 展示适配器，统一三前端身份流程、取消/销毁与错误分类，保留底层 API、配对/应用凭据和 Designer 双库。接口见[公共客户端](security-v1/device-registration-protocol-contract.md#19-dr-p35-公共浏览器客户端与展示适配)，操作见[运行手册](security-v1/device-registration-runtime-guide.md#16-公共客户端与三个前端dr-p35)。不新增 Studio/Web 托管路径或改变信任/来源策略。
+
+DR-P4.1 实现独立接收方公钥的本机核验与版本维护。沿用 RSA-OAEP-256 和受口令保护的 modeldb.migration-key.v1，专用挑战及离线证明与 WebAuthn 分离，显式 V4→V5、原子审计、历史保留和丢失恢复按[密钥契约](security-v1/recipient-key-contract.md)执行。DR-P4.2 已按准确接收方/用户/版本/指纹及 CAS 接入原迁移/资产封装；V5 强制核验接收方，V1—V4 保留 PEM 兼容，私钥仍在接收端离线使用。它不改变旧包/Vault，不提供自动迁移；步骤与失败处理见运行手册第 19 节。实际验收和任务计数以唯一台账/SEC-M7最新交付为准。

@@ -1,0 +1,176 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): 46c277e1003939ab6345b64c6cd1e3467c79b3147623b0baec83fbb9d03a7f34
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:56799
+#   ➜ Local:   http://localhost:56799/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:56799/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:56799/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-browser-apps-MkCzEn\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url http://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-browser-apps-MkCzEn\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-browser-apps-MkCzEn\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-browser-apps-MkCzEn\\modeldb.config.json"
+# [security-browser] connection: zh/en/ja, wide/narrow layout, label/focus and blocked preference writes passed
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [security-browser] forbidden: zh/en/ja, wide/narrow layout, label/focus and blocked preference writes passed
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [security-browser] Query interface: complete POST URL, Bearer example and Postman download passed
+# [security-browser] security: zh/en/ja, wide/narrow layout, label/focus and blocked preference writes passed
+# [security-browser] administrator: independent entry and business isolation passed
+# [security-browser] administrator: aggregate audit counts, row details and narrow layout passed
+# [security-browser] administrator: rule preview/apply/confirm passed
+# Subtest: three production browser apps pair through the Windows pipe, restore after reload and revoke on logout
+not ok 1 - three production browser apps pair through the Windows pipe, restore after reload and revoke on logout
+  ---
+  duration_ms: 203954.516
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-browser-apps.test.ts:28:327'
+  failureType: 'testCodeFailure'
+  error: |-
+    Browser evaluation failed
+    + actual - expected
+    
+    + {
+    +   columnNumber: 107,
+    +   exception: {
+    +     className: 'TypeError',
+    +     description: "TypeError: Cannot read properties of undefined (reading 'click')\n" +
+    +       '    at <anonymous>:1:108',
+    +     objectId: '-8986403662328690234.10.2',
+    +     subtype: 'error',
+    +     type: 'object'
+    +   },
+    +   exceptionId: 1,
+    +   lineNumber: 0,
+    +   scriptId: '86',
+    +   stackTrace: {
+    +     callFrames: [
+    +       {
+    +         columnNumber: 107,
+    +         functionName: '',
+    +         lineNumber: 0,
+    +         scriptId: '86',
+    +         url: ''
+    +       }
+    +     ]
+    +   },
+    +   text: 'Uncaught'
+    + }
+    - undefined
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  actual:
+    exceptionId: 1
+    text: 'Uncaught'
+    lineNumber: 0
+    columnNumber: 107
+    scriptId: '86'
+    stackTrace:
+      callFrames:
+        0:
+          functionName: ''
+          scriptId: '86'
+          url: ''
+          lineNumber: 0
+          columnNumber: 107
+    exception:
+      type: 'object'
+      subtype: 'error'
+      className: 'TypeError'
+      description: |-
+        TypeError: Cannot read properties of undefined (reading 'click')
+            at <anonymous>:1:108
+      objectId: '-8986403662328690234.10.2'
+  operator: 'strictEqual'
+  stack: |-
+    BrowserPage.evaluate (C:\workspace\web_code\ModeDB-Ecosystem\test\integration\security-browser-apps.test.ts:91:12)
+    async TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\integration\security-browser-apps.test.ts:389:9)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# [modeldb-server] storage fingerprint (sha256): e2eb7698ee204957e430acb19f7bdea0347467ca6ff30b1c8b795e815455bdbf
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:56778
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:56778
+#     HTTP RPC:  https://modeldb-a.example.test:56778/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:56778/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-XBpTMu\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:56778/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-XBpTMu\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-XBpTMu\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-XBpTMu\\modeldb.config.json"
+# [modeldb-server][catalog] synthetic_business: metadataSource=synthetic_business displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# Subtest: data-studio public identity registration, approval, Passkey and library connection
+not ok 2 - data-studio public identity registration, approval, Passkey and library connection
+  ---
+  duration_ms: 79173.9149
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-public-clients-browser.test.ts:1:1060'
+  failureType: 'testCodeFailure'
+  error: 'REGISTRATION_BROWSER_READINESS_TIMEOUT'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    waitFor (C:\workspace\web_code\ModeDB-Ecosystem\test\fixtures\security-registration-browser.ts:14:9)
+    async TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\integration\security-public-clients-browser.test.ts:99:7)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# [modeldb-server] storage fingerprint (sha256): c79ba173477a99f5c27d54e769172a0a745f62bd5524b3cd4d688cf0341c86c9
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:60449
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:60449
+#     HTTP RPC:  https://modeldb-a.example.test:60449/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:60449/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-MeQd5v\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:60449/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-MeQd5v\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-MeQd5v\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-MeQd5v\\modeldb.config.json"
+# [modeldb-server][catalog] synthetic_business: metadataSource=synthetic_business displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server] storage fingerprint (sha256): c79ba173477a99f5c27d54e769172a0a745f62bd5524b3cd4d688cf0341c86c9
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:60449
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:60449
+#     HTTP RPC:  https://modeldb-a.example.test:60449/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:60449/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-MeQd5v\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:60449/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-MeQd5v\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-MeQd5v\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-MeQd5v\\modeldb.config.json"
+# Subtest: web public identity registration, approval, Passkey and library connection
+ok 3 - web public identity registration, approval, Passkey and library connection
+  ---
+  duration_ms: 83001.4188
+  type: 'test'
+  ...
+# {"format":"modeldb.public-identity-browser.v1","app":"web","ok":true,"browser":"Chrome/156.0.8078.48","screenshots":16,"hardwareAuthenticatorTested":false,"systemTrustInstalled":false,"liveMaterialRead":false,"checks":{"freshApplicationBuild":true,"publicClient":true,"libraryConnection":true,"formalRegistration":true,"pendingNoAuthority":true,"rejectedState":true,"localOsApproval":true,"approvalRequiresLogin":true,"actualWebAuthnLogin":true,"syntheticDataScope":true,"managementDenied":true,"httpOnlySecureStrict":true,"reloadRestoresSession":true,"continuationNotPersisted":true,"logout":true,"expiredWindowLogin":true,"revocationDenied":true,"cancelledExplained":true,"supportedLocales":true,"wideAndNarrow":true,"labelsAndFocus":true}}
+1..3
+# tests 3
+# suites 0
+# pass 1
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 210019.3493

@@ -1,0 +1,259 @@
+{
+  "format": "modeldb.security-s72-revalidation.v1",
+  "revision": "SEC-M7-D11",
+  "recordedAtUtc": "2026-10-26T05:21:18.728Z",
+  "task": "S7.2",
+  "workspace": {
+    "head": "fd40ade27acdec54c4e5ba4dd8ddc5ac4e061a0f",
+    "uncommitted": true,
+    "existingChangesAndStagedRuntimeRemovalsPreserved": true
+  },
+  "tasks": {
+    "closed": ["S7.2", "M7-A1", "M7-A2", "M7-A5", "SEC-M7"],
+    "v1Milestones": "7/7",
+    "v1Tasks": "20/20",
+    "next": "DR-P1.1",
+    "registration": "0/23"
+  },
+  "candidateSha256": "8126c508efca41fc0217e52d763bb9cd2e9c65dfce8ec33d2cc6304d8fd2f995",
+  "checks": {
+    "unitRegression": true,
+    "engineIntegrations": true,
+    "browserAcceptance": true,
+    "typechecks": true,
+    "isolatedCandidate": true,
+    "installedLifecycle": true,
+    "performanceWithinBaseline": true,
+    "documentsAndI18n": true
+  },
+  "runtime": {
+    "platform": "win32",
+    "node": "v24.15.0",
+    "typescript": "5.9.3",
+    "pnpm": "10.33.0",
+    "chrome": "156.0.8078.48",
+    "unitBuildBrowserPerformanceNode": "v24.15.0",
+    "supplementaryEvidenceToolTestNode": "v24.22.1"
+  },
+  "commands": {
+    "candidate": "node scripts/security-release-candidate.mjs",
+    "regression": "node scripts/security-release-regression.mjs",
+    "browser": "MODELDB_TEST_APP_ROOT=<fresh candidate apps>; node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap --test-concurrency=1 test/integration/security-browser-apps.test.ts test/integration/security-asset-browser.test.ts",
+    "performance": "node node_modules/tsx/dist/cli.mjs scripts/security-release-verify.ts <fresh candidate>/release-candidate.json",
+    "typecheck": "node node_modules/typescript/bin/tsc --noEmit -p <root or app tsconfig.json>",
+    "evidence": "node scripts/security-release-evidence.mjs"
+  },
+  "candidate": {
+    "temporaryDirectoryName": "ModeDB-Release-droqFl",
+    "packages": 7,
+    "packageFiles": 589,
+    "packageJsFiles": 202,
+    "apps": 3,
+    "appFiles": 18,
+    "sourceFiles": 443,
+    "offlineDependencies": 74,
+    "strictConsumerTypes": true,
+    "binAndCliHelp": true,
+    "offlineInstall": true,
+    "frontendBuild": {
+      "configFile": false,
+      "envFile": false,
+      "source": "allowlisted temporary copy",
+      "workspaceDependencies": "fresh staged package outputs"
+    },
+    "securityI18nKeysPerLocale": 167,
+    "warnings": ["Designer chunks larger than 500 kB"]
+  },
+  "unit": {
+    "files": 70,
+    "tests": 471,
+    "pass": 471,
+    "fail": 0,
+    "cancelled": 0,
+    "skip": 0,
+    "todo": 0,
+    "tapDurationMs": 302090.1399
+  },
+  "engines": [
+    {
+      "name": "e2e-engine-workflow",
+      "exitCode": 0,
+      "durationMs": 6872.957500000019
+    },
+    {
+      "name": "relate-conserved-forest",
+      "exitCode": 0,
+      "durationMs": 5699.148600000015
+    },
+    {
+      "name": "children-tree-query",
+      "exitCode": 0,
+      "durationMs": 6209.45199999999
+    },
+    {
+      "name": "group-lateral-attach",
+      "exitCode": 0,
+      "durationMs": 6225.698600000003
+    },
+    {
+      "name": "multi-branch-network",
+      "exitCode": 0,
+      "durationMs": 6205.072500000009
+    },
+    {
+      "name": "protocol-operations",
+      "exitCode": 0,
+      "durationMs": 8149.002000000037
+    }
+  ],
+  "browser": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "testDurationsMs": [190907.6375, 187537.7711],
+    "totalDurationMs": 385084.3184,
+    "scope": [
+      "Three fresh frontend apps: saved Token mode overridden by pairing, workspace, reload, HttpOnly and logout",
+      "Designer en/zh/ja in connection, forbidden and standalone-admin entries at 1280/390 widths, persisted and blocked storage, valid CSRF management denial, no implicit admin business access, full-height editor security page and return",
+      "Admin rule preview/apply/confirm/rollback and isolated master rotation",
+      "Imported asset review, republish, exact target release grants, cross-database/raw/system refusal, revocation and reload"
+    ],
+    "visuallyReviewedScreenshots": [
+      "screenshots/connection-zh-1280.png",
+      "screenshots/security-ja-390.png",
+      "screenshots/forbidden-zh-1280.png"
+    ],
+    "transientNotice": "Synthetic Reconnected toast overlaps the denied-page header; full-height and permission assertions passed."
+  },
+  "installedLifecycle": {
+    "checks": {
+      "installedPackageHashes": true,
+      "frontendAndDocumentHashes": true,
+      "exclusiveInstalledStartup": true,
+      "crossDatabaseDenied": true,
+      "oneTimePairingHttpOnly": true,
+      "localNetworkRepair": true,
+      "backupRestore": true,
+      "masterRotation": true,
+      "credentialAndSessionRevoked": true,
+      "performanceWithinBaseline": true
+    },
+    "allPassed": true
+  },
+  "performance": {
+    "ranAloneAfterOtherAcceptanceProcesses": true,
+    "preRegisteredLimits": true,
+    "checks": {
+      "startup": {
+        "p95LimitMs": 10000,
+        "passed": true
+      },
+      "query1000": {
+        "p95LimitMs": 4000,
+        "passed": true
+      },
+      "durableWrite": {
+        "p95LimitMs": 4000,
+        "passed": true
+      },
+      "excelExport1010": {
+        "p95LimitMs": 5000,
+        "passed": true
+      }
+    },
+    "comparison": "same current release: legacy bearer vs registry authorization and durable audit; not historical binary or production benchmark",
+    "productionSlaOrCapacityAcceptance": false
+  },
+  "static": {
+    "typecheckProjects": [
+      "tsconfig.json",
+      "apps/model-designer/tsconfig.json",
+      "apps/data-studio/tsconfig.json",
+      "apps/web/tsconfig.json"
+    ],
+    "typecheckExitCode": 0,
+    "sourceBoundaryChecks": [
+      "assert-no-security-material",
+      "assert-no-build-artifacts-in-src",
+      "assert-sdk-client-only"
+    ],
+    "sourceBoundaryExitCode": 0,
+    "scopedEslint": [
+      "scripts/security-release-candidate.mjs",
+      "scripts/security-release-apps.mjs",
+      "scripts/security-release-evidence.mjs",
+      "scripts/security-release-regression.mjs",
+      "packages/data-ui/scripts/copy-css.mjs"
+    ],
+    "scopedEslintExitCode": 0,
+    "relatedDevelopmentFormatFiles": 432,
+    "relatedDevelopmentFormatExitCode": 0,
+    "fullRepositoryCheckOrLintRun": false,
+    "finalTargetedFormattingExitCode": 0,
+    "finalTargetedWhitespaceExitCode": 0
+  },
+  "finalSupplementaryTests": {
+    "file": "test/unit/security-release-evidence.test.mjs",
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 337.1371,
+    "note": "After full regression: final changes only to evidence/original-byte validation, summary parser and documents; production candidate bytes unchanged."
+  },
+  "failuresAndRepairs": [
+    {
+      "kind": "candidate",
+      "initialTemporaryDirectoryName": "ModeDB-Release-RlR076",
+      "result": "After package compile/install, frontend bundling found missing query-result-view.css; added query-result-view.css and import-failure-panel.css to data-ui copy list, then new candidate passed."
+    },
+    {
+      "kind": "summary-parser",
+      "result": "Regression and browser wrapper originally expected # skip; TAP emits # skipped. Functional child exit codes were zero; wrappers exited 1. Corrected counts were read from unchanged raw TAP; original bad summaries and their SHA-256 are retained.",
+      "rawLogHashes": {
+        "unit": "b6a2fde6911b1a97a3289d3c6ba64e6bcf7563a779eab466d55ef1f3aca0c948",
+        "browser": "be3ad1a94aaec6542f10731caf8f699e90f2befe2e0c28168f39e988b49f4230"
+      },
+      "fullFunctionalRerunForSummaryOnlyFix": false
+    },
+    {
+      "kind": "format-exploration",
+      "result": "Including all legacy CSS found five existing format mismatches outside the standard format extension scope; files preserved. Standard related development files and modified Designer CSS passed.",
+      "paths": [
+        "apps/data-studio/src/index.css",
+        "apps/data-studio/src/styles/studio-shell.css",
+        "apps/model-designer/src/index.css",
+        "apps/web/src/index.css",
+        "packages/data-ui/src/components/app-shell.css"
+      ]
+    }
+  ],
+  "boundaries": {
+    "syntheticOnly": true,
+    "newTemporaryDirectories": true,
+    "randomLoopbackPorts": true,
+    "isolatedChromeProfiles": true,
+    "realServicesAccessed": false,
+    "realConfigCertificatesSecurityMaterialsVaultOrBusinessDataAccessed": false,
+    "realAclChanged": false,
+    "thirdPartyInstallScriptsDisabled": true,
+    "publishedDeployedOrCommitted": false
+  },
+  "limitations": [
+    "Windows-only acceptance; no real LAN or existing business Vault verification.",
+    "Two-Windows recovery uses existing SEC-M6/D09-D11 evidence; no new two-device or WebAuthn registration acceptance.",
+    "Registry synchronous audit/OS protection retain material latency cost; not low latency, high concurrency or production SLA acceptance.",
+    "No physical disk exhaustion or hardware power loss acceptance.",
+    "D09 first browser process-level exit remains unexplained; no recurrence in this run.",
+    "Full repository check/lint not run; related checks are explicitly listed.",
+    "New device registration, public-key login, local approvals and TPM still unimplemented (0/23)."
+  ],
+  "documentValidation": {
+    "ok": true,
+    "documentFiles": 14,
+    "localLinksAndAnchors": 195,
+    "failures": [],
+    "v1Milestones": "7/7",
+    "v1Tasks": "20/20",
+    "deviceRegistration": "0/23"
+  }
+}

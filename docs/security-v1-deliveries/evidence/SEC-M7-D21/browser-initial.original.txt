@@ -1,0 +1,46 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): b520217133960c0e510310695a7d8c9c45ec7b5164fdeb8525eb8d930fc38928
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:58678
+#   ➜ Local:   https://localhost:58678/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:58678
+#     HTTP RPC:  https://modeldb-a.example.test:58678/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:58678/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-B2RedR\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-B2RedR\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-B2RedR\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Native-B2RedR\\modeldb.config.json"
+# Subtest: required Chrome WebAuthn get, fresh SDK, native TLS/DPAPI approval and cookie recovery/refresh/logout
+not ok 1 - required Chrome WebAuthn get, fresh SDK, native TLS/DPAPI approval and cookie recovery/refresh/logout
+  ---
+  duration_ms: 17999.1925
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-authentication-browser.test.ts:1:1046'
+  failureType: 'testCodeFailure'
+  error: 'REGISTRATION_CDP_CLOSED:Runtime.enable'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    WebSocket.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\fixtures\security-registration-browser.ts:34:87)
+    callListener (C:\workspace\web_code\ModeDB-Ecosystem\node_modules\.pnpm\ws@8.20.0\node_modules\ws\lib\event-target.js:290:14)
+    WebSocket.onClose (C:\workspace\web_code\ModeDB-Ecosystem\node_modules\.pnpm\ws@8.20.0\node_modules\ws\lib\event-target.js:220:9)
+    WebSocket.emit (node:events:514:28)
+    WebSocket.emitClose (C:\workspace\web_code\ModeDB-Ecosystem\node_modules\.pnpm\ws@8.20.0\node_modules\ws\lib\websocket.js:273:10)
+    Receiver.receiverOnFinish (C:\workspace\web_code\ModeDB-Ecosystem\node_modules\.pnpm\ws@8.20.0\node_modules\ws\lib\websocket.js:1214:20)
+    Receiver.emit (node:events:514:28)
+    finish (node:internal/streams/writable:957:10)
+    node:internal/streams/writable:938:13
+    process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 19533.8853

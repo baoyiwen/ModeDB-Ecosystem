@@ -1,0 +1,14 @@
+{
+  "name": "delivery",
+  "args": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "--test-concurrency=1",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-recipient-delivery-native.test.ts"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Full-Check-eJ4zqR\\delivery.original.txt"
+}

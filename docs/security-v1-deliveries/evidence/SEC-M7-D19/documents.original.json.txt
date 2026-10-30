@@ -1,0 +1,6 @@
+{
+  "script": "docs/security-v1-deliveries/evidence/SEC-M7-D19/documents-check.original.mjs.txt",
+  "exitCode": 0,
+  "stdout": "{\n  \"ok\": true,\n  \"documentFiles\": 16,\n  \"localLinksAndAnchors\": 318,\n  \"failures\": [],\n  \"registrationTaskRows\": 23,\n  \"completedRegistrationTasks\": 8\n}\n",
+  "stderr": ""
+}

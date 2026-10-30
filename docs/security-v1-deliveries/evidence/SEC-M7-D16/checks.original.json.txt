@@ -1,0 +1,99 @@
+{
+  "format": "modeldb.security-registration-approval-checks.v1",
+  "registration": {
+    "cmd": "node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap test/unit/security-registration-contract.test.mjs test/unit/security-device-registration-contract.test.ts test/unit/security-registration-storage.test.ts test/unit/security-registration-runtime.test.ts test/unit/security-registration-approval.test.ts",
+    "exitCode": 0,
+    "stdout": "registration.original.txt",
+    "capture": "Complete original TAP copied byte-for-byte from the temporary verification directory."
+  },
+  "registry": {
+    "cmd": "node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap test/unit/security-registry.test.ts",
+    "exitCode": 0,
+    "stdout": "registry.original.txt",
+    "capture": "Complete original TAP copied byte-for-byte from the temporary verification directory."
+  },
+  "checks": [
+    {
+      "name": "lint",
+      "cmd": "node node_modules/eslint/bin/eslint.js packages/server/src/security/registration-approval.ts packages/server/src/security/registration-ledger.ts packages/server/src/security/security-registry.ts packages/server/src/security/local-management-channel.ts packages/server/src/cli-security-registration.ts packages/server/src/cli-security.ts scripts/security-registration-storage-check.mjs scripts/security-release-evidence.mjs",
+      "chunk_id": "a3d54c",
+      "wall_time_seconds": 7.5604352,
+      "exit_code": 0,
+      "original_token_count": 0,
+      "output": ""
+    },
+    {
+      "name": "types",
+      "cmd": "node scripts/security-registration-storage-check.mjs",
+      "chunk_id": "2aa31e",
+      "wall_time_seconds": 4.7758242,
+      "exit_code": 0,
+      "original_token_count": 112,
+      "output": "{\n  \"format\": \"modeldb.registration-storage-types.v1\",\n  \"ok\": true,\n  \"node\": \"v24.22.1\",\n  \"root\": \"C:\\\\Users\\\\51153\\\\AppData\\\\Local\\\\Temp\\\\ModeDB-Registration-Storage-Types-2DsF98\",\n  \"checks\": {\n    \"freshSharedDeclarations\": true,\n    \"entireServerTypecheck\": true,\n    \"strictStorageTestTypecheck\": true,\n    \"strictRegistrationRuntimeTypecheck\": true,\n    \"strictRegistrationApprovalTypecheck\": true,\n    \"existingDistUnchanged\": true\n  }\n}\n"
+    },
+    {
+      "name": "network",
+      "cmd": "node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap test/unit/security-network.test.ts test/unit/security-browser-session.test.ts",
+      "chunk_id": "7576d8",
+      "wall_time_seconds": 1.2190353,
+      "exit_code": 0,
+      "original_token_count": 591,
+      "output": "TAP version 13\n# Subtest: one-time browser pairing mints, rotates and revokes short sessions\nok 1 - one-time browser pairing mints, rotates and revokes short sessions\n  ---\n  duration_ms: 238.4616\n  type: 'test'\n  ...\n# Subtest: security-admin pairing has no database grants and exposes only secret-free metadata\nok 2 - security-admin pairing has no database grants and exposes only secret-free metadata\n  ---\n  duration_ms: 71.3805\n  type: 'test'\n  ...\n# Subtest: rejects unprotected remote binds, fake public TLS, bad proxy/origin/CIDR configuration\nok 3 - rejects unprotected remote binds, fake public TLS, bad proxy/origin/CIDR configuration\n  ---\n  duration_ms: 5.3046\n  type: 'test'\n  ...\n# Subtest: normalizes IPv4/IPv6, enforces deny precedence, empty allow-lists, separate planes and expiry\nok 4 - normalizes IPv4/IPv6, enforces deny precedence, empty allow-lists, separate planes and expiry\n  ---\n  duration_ms: 1.3678\n  type: 'test'\n  ...\n# Subtest: ignores forged forwarded headers on direct sockets and stops at the first untrusted proxy hop\nok 5 - ignores forged forwarded headers on direct sockets and stops at the first untrusted proxy hop\n  ---\n  duration_ms: 1.1448\n  type: 'test'\n  ...\n# Subtest: rejects disallowed Origins before parsing bodies or executing handlers; CORS permits exact origins only\nok 6 - rejects disallowed Origins before parsing bodies or executing handlers; CORS permits exact origins only\n  ---\n  duration_ms: 136.4043\n  type: 'test'\n  ...\n# Subtest: SDK endpoint handling preserves HTTPS/IPv6 and rejects remote plaintext before sending credentials\nok 7 - SDK endpoint handling preserves HTTPS/IPv6 and rejects remote plaintext before sending credentials\n  ---\n  duration_ms: 0.8085\n  type: 'test'\n  ...\n# Subtest: real HTTPS/WSS SDK round trips require trusted certificates and reject mismatched certificate names\nok 8 - real HTTPS/WSS SDK round trips require trusted certificates and reject mismatched certificate names\n  ---\n  duration_ms: 320.2668\n  type: 'test'\n  ...\n# Subtest: SDK refuses redirects instead of following a secure request toward a different transport\nok 9 - SDK refuses redirects instead of following a secure request toward a different transport\n  ---\n  duration_ms: 18.9225\n  type: 'test'\n  ...\n1..9\n# tests 9\n# suites 0\n# pass 9\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 899.1929\n"
+    },
+    {
+      "name": "evidence-tool",
+      "cmd": "node --test --test-reporter=tap test/unit/security-release-evidence.test.mjs",
+      "chunk_id": "7036bf",
+      "wall_time_seconds": 1.8858144000000001,
+      "exit_code": 0,
+      "original_token_count": 1013,
+      "output": "TAP version 13\n# Subtest: selects the current receipt and allows only development CRLF/LF differences\nok 1 - selects the current receipt and allows only development CRLF/LF differences\n  ---\n  duration_ms: 52.4449\n  type: 'test'\n  ...\n# Subtest: rejects changed source text\nok 2 - rejects changed source text\n  ---\n  duration_ms: 21.6555\n  type: 'test'\n  ...\n# Subtest: rejects changed historical screenshot bytes\nok 3 - rejects changed historical screenshot bytes\n  ---\n  duration_ms: 27.0429\n  type: 'test'\n  ...\n# Subtest: rejects modified verification artifacts\nok 4 - rejects modified verification artifacts\n  ---\n  duration_ms: 27.838\n  type: 'test'\n  ...\n# Subtest: does not accept skipped tests even with matching artifact hashes\nok 5 - does not accept skipped tests even with matching artifact hashes\n  ---\n  duration_ms: 34.1568\n  type: 'test'\n  ...\n# Subtest: rejects runtime and traversal paths before opening them\nok 6 - rejects runtime and traversal paths before opening them\n  ---\n  duration_ms: 62.382\n  type: 'test'\n  ...\n# Subtest: rejects linked source ancestors\nok 7 - rejects linked source ancestors\n  ---\n  duration_ms: 19.8525\n  type: 'test'\n  ...\n# Subtest: fails closed for incomplete newest evidence and duplicate source paths\nok 8 - fails closed for incomplete newest evidence and duplicate source paths\n  ---\n  duration_ms: 23.7868\n  type: 'test'\n  ...\n# Subtest: verifies a registration-contract receipt separately from historical runtime acceptance\nok 9 - verifies a registration-contract receipt separately from historical runtime acceptance\n  ---\n  duration_ms: 36.1596\n  type: 'test'\n  ...\n# Subtest: rejects incomplete registration evidence without falling back to a passed D11 receipt\nok 10 - rejects incomplete registration evidence without falling back to a passed D11 receipt\n  ---\n  duration_ms: 114.4699\n  type: 'test'\n  ...\n# Subtest: validates protocol evidence and the separately locked offline dependency graph\nok 11 - validates protocol evidence and the separately locked offline dependency graph\n  ---\n  duration_ms: 40.8298\n  type: 'test'\n  ...\n# Subtest: fails closed for protocol skips, unavailable offline install and unverified browser boundary\nok 12 - fails closed for protocol skips, unavailable offline install and unverified browser boundary\n  ---\n  duration_ms: 168.8391\n  type: 'test'\n  ...\n# Subtest: verifies storage acceptance without turning it into runtime registration acceptance\nok 13 - verifies storage acceptance without turning it into runtime registration acceptance\n  ---\n  duration_ms: 48.2257\n  type: 'test'\n  ...\n# Subtest: does not fall back to D13 for skipped storage, failed legacy compatibility or missing DPAPI/hard-exit evidence\nok 14 - does not fall back to D13 for skipped storage, failed legacy compatibility or missing DPAPI/hard-exit evidence\n  ---\n  duration_ms: 195.5506\n  type: 'test'\n  ...\n# Subtest: accepts registration API evidence without claiming approval or public-key login\nok 15 - accepts registration API evidence without claiming approval or public-key login\n  ---\n  duration_ms: 68.9627\n  type: 'test'\n  ...\n# Subtest: refuses skipped runtime, missing native HTTPS or dependency drift without falling back to storage evidence\nok 16 - refuses skipped runtime, missing native HTTPS or dependency drift without falling back to storage evidence\n  ---\n  duration_ms: 256.9665\n  type: 'test'\n  ...\n# Subtest: accepts OS-local approval evidence without claiming public-key login or full registration integration\nok 17 - accepts OS-local approval evidence without claiming public-key login or full registration integration\n  ---\n  duration_ms: 55.023\n  type: 'test'\n  ...\n# Subtest: refuses approval skips, failed OS identity, scopes, atomic audit or native CLI without falling back to D15\nok 18 - refuses approval skips, failed OS identity, scopes, atomic audit or native CLI without falling back to D15\n  ---\n  duration_ms: 301.1244\n  type: 'test'\n  ...\n1..18\n# tests 18\n# suites 0\n# pass 18\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 1635.1078\n"
+    },
+    {
+      "name": "consumer",
+      "cmd": "node scripts/security-registration-consumer-check.mjs",
+      "chunk_id": "505173",
+      "wall_time_seconds": 2.9432606,
+      "exit_code": 0,
+      "original_token_count": 187,
+      "output": "{\n  \"ok\": true,\n  \"format\": \"modeldb.registration-consumer-check.v1\",\n  \"node\": \"v24.22.1\",\n  \"root\": \"C:\\\\Users\\\\51153\\\\AppData\\\\Local\\\\Temp\\\\ModeDB-Registration-Consumers-sdNHbg\",\n  \"checks\": {\n    \"freshSharedDeclarations\": true,\n    \"strictSdkConsumer\": true,\n    \"domTypesWithoutNode\": true,\n    \"sharedBrowserBundle\": true,\n    \"sdkBrowserBundle\": true,\n    \"serverLibraryExcluded\": true\n  },\n  \"bundles\": [\n    {\n      \"entry\": \"packages/shared/src/index.ts\",\n      \"bytes\": 82579,\n      \"sha256\": \"17261afe09010d9a0fb2a807fa1a4433d9de25a955fda59fc2b81428f7c2ec74\"\n    },\n    {\n      \"entry\": \"packages/sdk/src/index.ts\",\n      \"bytes\": 142077,\n      \"sha256\": \"e53f60cf5ce92f6f2405721834561dea301fff5ae16c3a14563885d2b15cb125\"\n    }\n  ]\n}\n"
+    },
+    {
+      "name": "documents",
+      "cmd": "@'\nconst assert = require('node:assert/strict');\nconst { readFileSync, existsSync } = require('node:fs');\nconst { dirname, resolve } = require('node:path');\nconst docs = ['docs/security-v1/AGENTS.md','docs/security-v1-milestones.md','docs/security-v1-plan.md','docs/security-v1/device-registration-proposal.md','docs/security-v1/device-registration-deployment-contract.md','docs/security-v1/device-registration-protocol-contract.md','docs/security-v1/device-registration-runtime-guide.md','docs/security-v1/overview.md','docs/security-v1/user-guide.md','docs/security-v1-deliveries/SEC-M7.md','docs/security-v1-identity-contract.md','test/README.md','test/fixtures/security-registration-legacy/README.md'];\nconst slug=s=>s.replace(/\\[([^\\]]+)\\]\\([^)]*\\)/g,'$1').replace(/<[^>]*>/g,'').replace(/[`*_]/g,'').toLowerCase().replace(/[^\\p{L}\\p{N}_ -]/gu,'').replace(/ /g,'-');\nlet count=0; const failures=[];\nfor (const file of docs) {\n const content=readFileSync(file,'utf8');\n for (const match of content.matchAll(/\\[[^\\]\\n]*\\]\\(([^)\\n]+)\\)/g)) {\n  const href=match[1].replace(/^<|>$/g,'');\n  if (/^[a-z][a-z0-9+.-]*:/i.test(href)) continue;\n  const [rel,anchor]=href.split('#');\n  const target=resolve(dirname(file),decodeURIComponent(rel||'./'+file.split('/').at(-1)));\n  count++;\n  if (!existsSync(target)) {failures.push(file+' missing '+href);continue;}\n  if (anchor && target.endsWith('.md')) {\n   const seen=new Map(), anchors=new Set();\n   for (const heading of readFileSync(target,'utf8').matchAll(/^#{1,6}\\s+(.+)$/gm)) {\n    const base=slug(heading[1]), n=seen.get(base)||0;seen.set(base,n+1);anchors.add(base+(n?'-'+n:''));\n   }\n   if (!anchors.has(decodeURIComponent(anchor))) failures.push(file+' anchor '+href);\n  }\n }\n}\nconst ledger=readFileSync('docs/security-v1-milestones.md','utf8');\nconst rows=[...ledger.matchAll(/^\\| (DR-P[1-4]\\.\\d+)\\s+\\|(.+)$/gm)];\nassert.equal(rows.length,23);assert.equal(new Set(rows.map(r=>r[1])).size,23);\nassert.equal(rows.filter(r=>r[2].includes('完成（D')).length,5);\nconsole.log(JSON.stringify({ok:failures.length===0,documentFiles:docs.length,localLinksAndAnchors:count,failures,registrationTaskRows:rows.length,completedRegistrationTasks:5},null,2));\nassert.equal(failures.length,0);\n'@ | node",
+      "chunk_id": "327d1c",
+      "wall_time_seconds": 0.0000239,
+      "exit_code": 0,
+      "original_token_count": 39,
+      "output": "{\n  \"ok\": true,\n  \"documentFiles\": 13,\n  \"localLinksAndAnchors\": 250,\n  \"failures\": [],\n  \"registrationTaskRows\": 23,\n  \"completedRegistrationTasks\": 5\n}\n"
+    },
+    {
+      "name": "format",
+      "cmd": "node node_modules/prettier/bin/prettier.cjs --check docs/security-v1-deliveries/SEC-M7.md docs/security-v1-identity-contract.md docs/security-v1-milestones.md docs/security-v1-plan.md docs/security-v1/AGENTS.md docs/security-v1/device-registration-deployment-contract.md docs/security-v1/device-registration-proposal.md docs/security-v1/device-registration-protocol-contract.md docs/security-v1/device-registration-runtime-guide.md docs/security-v1/examples/device-registration.deployment.v1.json docs/security-v1/overview.md docs/security-v1/user-guide.md package.json packages/sdk/src/index.ts packages/server/package.json packages/server/src/config-loader.ts packages/server/src/dual-track-app.ts packages/server/src/security/network-boundary.ts packages/server/src/security/registration-ledger.ts packages/server/src/security/registration-routes.ts packages/server/src/security/registration-service.ts packages/server/src/security/registry-entrypoints.ts packages/server/src/security/security-registry.ts packages/shared/src/device-registration-contracts.ts packages/shared/src/index.ts scripts/security-registration-consumer-check.mjs scripts/security-registration-contract.mjs scripts/security-registration-library-check.mjs scripts/security-registration-storage-check.mjs scripts/security-release-evidence.mjs packages/server/src/cli-security.ts packages/server/src/cli-security-registration.ts packages/server/src/security/local-management-channel.ts packages/server/src/security/registration-approval.ts",
+      "chunk_id": "fe2c96",
+      "wall_time_seconds": 1.1336691,
+      "exit_code": 0,
+      "original_token_count": 17,
+      "output": "Checking formatting...\nAll matched files use Prettier code style!\n"
+    },
+    {
+      "name": "guard",
+      "cmd": "node scripts/assert-no-security-material.mjs",
+      "chunk_id": "edd24b",
+      "wall_time_seconds": 0.2454543,
+      "exit_code": 0,
+      "original_token_count": 15,
+      "output": "{\"ok\":true,\"trackedRuntimeEntries\":0,\"materialRead\":false}\n"
+    },
+    {
+      "name": "diff",
+      "cmd": "git diff --check -- docs/security-v1-deliveries/SEC-M7.md docs/security-v1-identity-contract.md docs/security-v1-milestones.md docs/security-v1-plan.md docs/security-v1/AGENTS.md docs/security-v1/device-registration-deployment-contract.md docs/security-v1/device-registration-proposal.md docs/security-v1/device-registration-protocol-contract.md docs/security-v1/device-registration-runtime-guide.md docs/security-v1/examples/device-registration.deployment.v1.json docs/security-v1/overview.md docs/security-v1/user-guide.md package.json packages/sdk/src/index.ts packages/server/package.json packages/server/src/config-loader.ts packages/server/src/dual-track-app.ts packages/server/src/security/network-boundary.ts packages/server/src/security/registration-ledger.ts packages/server/src/security/registration-routes.ts packages/server/src/security/registration-service.ts packages/server/src/security/registry-entrypoints.ts packages/server/src/security/security-registry.ts packages/shared/src/device-registration-contracts.ts packages/shared/src/index.ts pnpm-lock.yaml scripts/security-registration-consumer-check.mjs scripts/security-registration-contract.mjs scripts/security-registration-dependencies/LICENSE.simplewebauthn.md scripts/security-registration-dependencies/package.json scripts/security-registration-dependencies/pnpm-lock.yaml scripts/security-registration-library-check.mjs scripts/security-registration-storage-check.mjs scripts/security-release-evidence.mjs test/README.md test/fixtures/security-registration-legacy/README.md test/fixtures/security-registration-legacy/security-registry-v1.original.ts.txt test/fixtures/security-registration-tls/README.md test/fixtures/security-registration-tls/modeldb-a.crt test/fixtures/security-registration-tls/modeldb-a.key test/unit/security-device-registration-contract.test.ts test/unit/security-registration-contract.test.mjs test/unit/security-registration-runtime.test.ts test/unit/security-registration-storage.test.ts test/unit/security-release-evidence.test.mjs packages/server/src/cli-security.ts packages/server/src/cli-security-registration.ts packages/server/src/security/local-management-channel.ts packages/server/src/security/registration-approval.ts test/unit/security-registration-approval.test.ts",
+      "chunk_id": "6bd5a1",
+      "wall_time_seconds": 0.2976111,
+      "exit_code": 0,
+      "original_token_count": 296,
+      "output": "warning: in the working copy of 'docs/security-v1-deliveries/SEC-M7.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-identity-contract.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-milestones.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1-plan.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/AGENTS.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/overview.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'docs/security-v1/user-guide.md', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'package.json', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'pnpm-lock.yaml', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'test/README.md', LF will be replaced by CRLF the next time Git touches it\n"
+    }
+  ],
+  "earlyFailureLogsArchived": false
+}

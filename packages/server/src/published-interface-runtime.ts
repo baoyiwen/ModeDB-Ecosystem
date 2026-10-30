@@ -50,11 +50,19 @@ export async function executePublishedQueryInterface(input: {
   body: ExecuteInterfaceBody;
   getEngine: (atlas: string) => Promise<AuthoringEngine>;
   includeRecordRefs?: boolean;
+  onAuthorized?: (check: () => void) => void;
 }): Promise<InterfaceWireResult> {
   const startedAt = new Date();
   const startedMs = performance.now();
   try {
-    const result = await executePublishedQueryInterfaceCore(input);
+    let finalCheck: (() => void) | undefined;
+    const result = await executePublishedQueryInterfaceCore({
+      ...input,
+      onAuthorized: (check) => {
+        finalCheck = check;
+        input.onAuthorized?.(check);
+      },
+    });
     await writeInterfaceAudit(input, {
       startedAt,
       durationMs: performance.now() - startedMs,
@@ -62,6 +70,7 @@ export async function executePublishedQueryInterface(input: {
       resolvedVersion: result.version,
       rowCount: result.rows.length,
     });
+    finalCheck?.();
     return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -82,7 +91,9 @@ async function executePublishedQueryInterfaceCore(input: {
   body: ExecuteInterfaceBody;
   getEngine: (atlas: string) => Promise<AuthoringEngine>;
   includeRecordRefs?: boolean;
+  onAuthorized?: (check: () => void) => void;
 }): Promise<InterfaceWireResult> {
+  input.authorization?.preflight(input.atlas, input.body);
   const callableName = input.body.callableName.trim();
   if (!callableName) {
     throw new Error('INTERFACE_CALLABLE_NAME_REQUIRED');
@@ -112,6 +123,9 @@ async function executePublishedQueryInterfaceCore(input: {
     throw new Error(`INTERFACE_RELEASE_AMBIGUOUS:${callableName}`);
   }
   const release = matches[0]!;
+  input.onAuthorized?.(() =>
+    input.authorization?.release(input.atlas, 'callable.query', callableName, release),
+  );
   input.authorization?.release(input.atlas, 'callable.query', callableName, release);
   const policyRelease = {
     version: release.version,
@@ -131,6 +145,7 @@ async function executePublishedQueryInterfaceCore(input: {
     { runtime: target.createRuntime(), atlas: input.atlas },
     { op: 'executeQuery', snapshot },
   );
+  input.authorization?.release(input.atlas, 'callable.query', callableName, release);
   return adaptInterfaceResult(
     callableName,
     release.version,

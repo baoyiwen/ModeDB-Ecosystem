@@ -1,0 +1,141 @@
+{
+  "format": "modeldb.security-browser-candidate-verification.v1",
+  "revision": "SEC-M7-D28",
+  "task": "DR-P3.6",
+  "date": "2026-10-28",
+  "timezone": "America/New_York",
+  "baseCommit": "fd40ade27acdec54c4e5ba4dd8ddc5ac4e061a0f",
+  "node": "v24.22.1",
+  "browserNode": "v24.15.0",
+  "platform": "win32",
+  "candidateSha256": "a39423ce9d819166dde529bdd1ca3862d648f29bac8a6d3461637811ca2b3e4e",
+  "tasks": {
+    "v1Milestones": "7/7",
+    "v1": "20/20",
+    "registration": "17/23",
+    "registrationP1": "6/6",
+    "registrationP2": "5/5",
+    "registrationP3": "6/6",
+    "registrationWorkPackages": "3/4"
+  },
+  "hostingUnit": {
+    "pass": 36,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "identityUnit": {
+    "pass": 31,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "identityAdminUnit": {
+    "pass": 14,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "authenticationUnit": {
+    "pass": 55,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "dynamicUnit": {
+    "pass": 42,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "regressionUnit": {
+    "pass": 169,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "maintenanceUnit": {
+    "pass": 33,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "toolsUnit": {
+    "pass": 49,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "deploymentUnit": {
+    "pass": 22,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "launchCompatibilityUnit": {
+    "pass": 19,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "publicReportUnit": {
+    "pass": 4,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "candidateReportUnit": {
+    "pass": 7,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "nativePass": 9,
+  "totalTargetedPass": 490,
+  "checks": {
+    "singleCandidate": true,
+    "threeClientSaveReadback": true,
+    "hostileBrowser": true,
+    "strictTypes": true,
+    "browserBoundary": true,
+    "scopedStatic": true,
+    "materialGuard": true
+  },
+  "documentValidation": {
+    "ok": true,
+    "documentFiles": 14,
+    "localLinksAndAnchors": 418,
+    "failures": [],
+    "registrationTaskRows": 23,
+    "completedRegistrationTasks": 17,
+    "cliExamplesKnown": true
+  },
+  "historicalEvidenceVerified": 945,
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "productionMigrationPerformed": false,
+    "physicalAuthenticatorTested": false,
+    "performanceTested": false,
+    "fullReleaseInstallTested": false,
+    "physicalDiskFullTested": false,
+    "tlsHostedBrowserTested": true,
+    "remoteTlsHostedBrowserTested": false,
+    "lanTested": false,
+    "fullBusinessSaveTested": false,
+    "uiChanged": false,
+    "browserSessionSyntheticSaveTested": true
+  }
+}

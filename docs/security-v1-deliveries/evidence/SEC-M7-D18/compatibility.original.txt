@@ -1,0 +1,257 @@
+TAP version 13
+# [ModeDB] START Connection: open websocket trace=e94067ba
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:51457/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=e94067ba 6.03ms
+#   结果: { ms: 6.03, url: 'ws://127.0.0.1:51457/api/v1/stream' }
+# Subtest: source expiry affects existing WS messages and queued writes before any new mutation
+ok 1 - source expiry affects existing WS messages and queued writes before any new mutation
+  ---
+  duration_ms: 459.935
+  type: 'test'
+  ...
+# Subtest: browser pairing binds Origin, session CSRF, actual expiry and safe logout
+ok 2 - browser pairing binds Origin, session CSRF, actual expiry and safe logout
+  ---
+  duration_ms: 293.3653
+  type: 'test'
+  ...
+# Subtest: pins canonical releases, projects only published fields and denies cross-database/raw/sys/instance access
+ok 3 - pins canonical releases, projects only published fields and denies cross-database/raw/sys/instance access
+  ---
+  duration_ms: 453.0485
+  type: 'test'
+  ...
+# [ModeDB] START Connection: open websocket trace=7c16ba88
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:51467/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=7c16ba88 2.57ms
+#   结果: { ms: 2.57, url: 'ws://127.0.0.1:51467/api/v1/stream' }
+# Subtest: generated Postman/HTTP and native curl match SDK calls and report expiry, revocation and protocol failures
+ok 4 - generated Postman/HTTP and native curl match SDK calls and report expiry, revocation and protocol failures
+  ---
+  duration_ms: 586.9347
+  type: 'test'
+  ...
+# [ModeDB] START Connection: open websocket trace=db283915
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:51472/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=db283915 4.02ms
+#   结果: { ms: 4.02, url: 'ws://127.0.0.1:51472/api/v1/stream' }
+# Subtest: SDK short and stream authenticate before exposure, preserve revived rows and revoke existing sessions
+ok 5 - SDK short and stream authenticate before exposure, preserve revived rows and revoke existing sessions
+  ---
+  duration_ms: 315.9824
+  type: 'test'
+  ...
+# [ModeDB] START Management API: GET /api/v1/management/databases trace=e960edce
+#   说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+#   请求摘要: { url: 'http://127.0.0.1:51476/api/v1/management/databases' }
+# [ModeDB] OK Management API: GET /api/v1/management/databases trace=e960edce 2.07ms
+#   结果: {
+#     ms: 2.07,
+#     status: 200,
+#     path: '/api/v1/management/databases',
+#     databases: 1
+#   }
+# [ModeDB] START Management API: GET /api/v1/management/databases/business/catalog trace=68d32cdf
+#   说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+#   请求摘要: {
+#     url: 'http://127.0.0.1:51476/api/v1/management/databases/business/catalog'
+#   }
+# [ModeDB] OK Management API: GET /api/v1/management/databases/business/catalog trace=68d32cdf 1.2ms
+#   结果: {
+#     ms: 1.2,
+#     status: 200,
+#     path: '/api/v1/management/databases/business/catalog',
+#     database: 'business',
+#     models: 1,
+#     relations: 0,
+#     hasDatabaseDisplayName: false,
+#     modelDisplayNames: 0,
+#     fieldLabels: 1
+#   }
+# [ModeDB] START Connection: open websocket trace=f2997f2c
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:51476/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=f2997f2c 1.92ms
+#   结果: { ms: 1.92, url: 'ws://127.0.0.1:51476/api/v1/stream' }
+# Subtest: browser SDK uses cookies for management, restored HTTP RPC and CSRF-protected WS with revocation
+ok 6 - browser SDK uses cookies for management, restored HTTP RPC and CSRF-protected WS with revocation
+  ---
+  duration_ms: 378.9486
+  type: 'test'
+  ...
+# [ModeDB] START Connection: open websocket trace=f5e9021e
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:51490/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=f5e9021e 3.55ms
+#   结果: { ms: 3.55, url: 'ws://127.0.0.1:51490/api/v1/stream' }
+# [ModeDB] START Connection: open websocket trace=b2c0fc9c
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:51494/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=b2c0fc9c 2.58ms
+#   结果: { ms: 2.58, url: 'ws://127.0.0.1:51494/api/v1/stream' }
+# Subtest: SDK clients retry a failed handshake and share a successful concurrent ModelDB connection
+ok 7 - SDK clients retry a failed handshake and share a successful concurrent ModelDB connection
+  ---
+  duration_ms: 981.4917
+  type: 'test'
+  ...
+# Subtest: rechecks queued writes and requires explicit schema/import capabilities before any mutation
+ok 8 - rechecks queued writes and requires explicit schema/import capabilities before any mutation
+  ---
+  duration_ms: 277.1432
+  type: 'test'
+  ...
+# Subtest: checks publisher business permissions before changing any release row
+ok 9 - checks publisher business permissions before changing any release row
+  ---
+  duration_ms: 266.3042
+  type: 'test'
+  ...
+# Subtest: rechecks each published batch item after revocation and refuses unsupported atomic batches before writes
+ok 10 - rechecks each published batch item after revocation and refuses unsupported atomic batches before writes
+  ---
+  duration_ms: 301.2408
+  type: 'test'
+  ...
+# Subtest: a binding grant delegates neither child query nor child operation without separately pinned grants
+ok 11 - a binding grant delegates neither child query nor child operation without separately pinned grants
+  ---
+  duration_ms: 381.2928
+  type: 'test'
+  ...
+# Subtest: backup creation/list/download have distinct scoped checks and ordinary readers cannot create backups
+ok 12 - backup creation/list/download have distinct scoped checks and ordinary readers cannot create backups
+  ---
+  duration_ms: 771.9804
+  type: 'test'
+  ...
+# Subtest: an authorized restore disconnects existing database streams and preserves the access credential
+ok 13 - an authorized restore disconnects existing database streams and preserves the access credential
+  ---
+  duration_ms: 279.4829
+  type: 'test'
+  ...
+# Subtest: audit failure before execution denies writes and outcome failure reports uncertainty after a committed write
+ok 14 - audit failure before execution denies writes and outcome failure reports uncertainty after a committed write
+  ---
+  duration_ms: 202.046
+  type: 'test'
+  ...
+# Subtest: raw relation changes and indirect deletes require whole-database write scope
+ok 15 - raw relation changes and indirect deletes require whole-database write scope
+  ---
+  duration_ms: 481.5058
+  type: 'test'
+  ...
+# Subtest: one-time browser pairing mints, rotates and revokes short sessions
+ok 16 - one-time browser pairing mints, rotates and revokes short sessions
+  ---
+  duration_ms: 387.482
+  type: 'test'
+  ...
+# Subtest: security-admin pairing has no database grants and exposes only secret-free metadata
+ok 17 - security-admin pairing has no database grants and exposes only secret-free metadata
+  ---
+  duration_ms: 125.2875
+  type: 'test'
+  ...
+# Subtest: rejects unprotected remote binds, fake public TLS, bad proxy/origin/CIDR configuration
+ok 18 - rejects unprotected remote binds, fake public TLS, bad proxy/origin/CIDR configuration
+  ---
+  duration_ms: 7.0048
+  type: 'test'
+  ...
+# Subtest: normalizes IPv4/IPv6, enforces deny precedence, empty allow-lists, separate planes and expiry
+ok 19 - normalizes IPv4/IPv6, enforces deny precedence, empty allow-lists, separate planes and expiry
+  ---
+  duration_ms: 1.9018
+  type: 'test'
+  ...
+# Subtest: ignores forged forwarded headers on direct sockets and stops at the first untrusted proxy hop
+ok 20 - ignores forged forwarded headers on direct sockets and stops at the first untrusted proxy hop
+  ---
+  duration_ms: 0.962
+  type: 'test'
+  ...
+# Subtest: rejects disallowed Origins before parsing bodies or executing handlers; CORS permits exact origins only
+ok 21 - rejects disallowed Origins before parsing bodies or executing handlers; CORS permits exact origins only
+  ---
+  duration_ms: 255.1258
+  type: 'test'
+  ...
+# Subtest: SDK endpoint handling preserves HTTPS/IPv6 and rejects remote plaintext before sending credentials
+ok 22 - SDK endpoint handling preserves HTTPS/IPv6 and rejects remote plaintext before sending credentials
+  ---
+  duration_ms: 1.6088
+  type: 'test'
+  ...
+# Subtest: real HTTPS/WSS SDK round trips require trusted certificates and reject mismatched certificate names
+ok 23 - real HTTPS/WSS SDK round trips require trusted certificates and reject mismatched certificate names
+  ---
+  duration_ms: 445.926
+  type: 'test'
+  ...
+# Subtest: SDK refuses redirects instead of following a secure request toward a different transport
+ok 24 - SDK refuses redirects instead of following a secure request toward a different transport
+  ---
+  duration_ms: 19.959
+  type: 'test'
+  ...
+# [modeldb-server] storage fingerprint (sha256): 0e02b9bb6b4992b262ffdeae0ed4c6c0544b500a1883d5b1715ccd433e9f91d2
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:53340
+#   ➜ Local:   https://localhost:53340/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#     HTTP RPC:  https://127.0.0.1:53340/api/v1/rpc
+#     WebSocket: wss://127.0.0.1:53340/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-tls-9EmmWC\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-tls-9EmmWC\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-tls-9EmmWC\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-tls-9EmmWC\\modeldb.config.json"
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [security-protection] TLS/WS policy preview, apply, confirm and rollback passed
+# [security-protection] OS pipe repaired management lockout
+# [security-protection] HTTP rate limit and temporary ban/unban passed
+# Subtest: real registry/DPAPI HTTPS server authorizes management and data through the native TLS listener
+ok 25 - real registry/DPAPI HTTPS server authorizes management and data through the native TLS listener
+  ---
+  duration_ms: 79443.0713
+  type: 'test'
+  ...
+# [modeldb-server] storage fingerprint (sha256): 5f9f2ebbf0cba92d30998050fa9cfaac67fb644511705ee98d322a8415777847
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:50553
+#   ➜ Local:   http://localhost:50553/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:50553/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:50553/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-http-DXwoqf\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url http://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-http-DXwoqf\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-http-DXwoqf\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-http-DXwoqf\\modeldb.config.json"
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# Subtest: real registry/DPAPI server gates scoped database management and reopens restored Vaults
+ok 26 - real registry/DPAPI server gates scoped database management and reopens restored Vaults
+  ---
+  duration_ms: 63238.9801
+  type: 'test'
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 26
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 144480.3305

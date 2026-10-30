@@ -1,0 +1,67 @@
+{
+  "format": "modeldb.security-performance.v1",
+  "phase": "explore",
+  "ok": false,
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Performance-kuLq52",
+  "startedAt": "2026-10-28T10:18:35.910Z",
+  "finishedAt": "2026-10-28T10:18:55.634Z",
+  "platform": "win32",
+  "nodeVersion": "v24.15.0",
+  "method": {
+    "format": "modeldb.security-performance-method.v1",
+    "order": [
+      "A",
+      "B",
+      "B",
+      "A"
+    ],
+    "baseline": "registry API credential",
+    "candidate": "registry software WebAuthn and browser session",
+    "rows": 1000,
+    "batchRows": 10,
+    "concurrency": 1,
+    "warmupQueriesPerBlock": 2,
+    "counts": {
+      "registrationStart": 30,
+      "registrationProof": 30,
+      "login": 60,
+      "refresh": 30,
+      "query1000": 60,
+      "batchSave": 12,
+      "static": 30,
+      "revoke": 30,
+      "revocationProbe": 30
+    },
+    "baselineCounts": {
+      "credentialIssue": 30,
+      "query1000": 60,
+      "batchSave": 12,
+      "static": 30,
+      "revoke": 30,
+      "revocationProbe": 30
+    },
+    "floodRequests": 48,
+    "floodConcurrency": 48,
+    "pendingCapacity": 1000,
+    "tls": "new verified loopback TLS connection per request; no TLS session reuse",
+    "resources": "server Node process CPU and peak RSS; DPAPI child wall time included, child CPU/RSS unmeasured",
+    "userVerification": "software only; PIN/biometric/touch time excluded and unmeasured",
+    "audit": "normal durable registry audit; no audit or OS protection bypass"
+  },
+  "sourceSha256": "a4d5d541bcdac35ac1447b3839db2148f7369b04948d1ca2256d15750e8cd422",
+  "candidateSha256": "f4ac0c00af6737fad960fcb5d12d3a418b7edae56154d568b2fdbb7e32f5bec3",
+  "sourceUnchanged": true,
+  "blocks": [],
+  "samples": [],
+  "summary": {},
+  "errorCode": "PERFORMANCE_CHECK_FAILED",
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "realTwoDeviceTested": false,
+    "productionCapacityClaimed": false,
+    "childProcessResourcesMeasured": false,
+    "frontendChanged": false
+  }
+}

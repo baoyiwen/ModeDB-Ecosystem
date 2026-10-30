@@ -1,0 +1,54 @@
+{
+  "format": "modeldb.recipient-delivery-check.v1",
+  "task": "DR-P4.2",
+  "ok": true,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Delivery-Check-SAiz7f",
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Delivery-Check-SAiz7f\\native.original.txt",
+  "exitCode": 0,
+  "timedOut": false,
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-recipient-delivery-native.test.ts"
+  ],
+  "candidateSha256": "6c5b67547eaadb8a30cb4468b695c003cc4c906695610b24a53fd0547edc8f14",
+  "unit": {
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skip": 0,
+    "todo": 0
+  },
+  "native": {
+    "format": "modeldb.recipient-delivery-native.v1",
+    "ok": true,
+    "formats": [
+      "modeldb.backup.v2",
+      "modeldb.asset.v1",
+      "modeldb.asset.v2"
+    ],
+    "nativeDpapi": true,
+    "sourceRemoved": true,
+    "wrongRecipientRejected": true,
+    "staleRevisionRejected": true,
+    "wrongPrivateKeyRejected": true,
+    "tamperRejected": true,
+    "wrongTargetRejected": true,
+    "repeatPublicationRejected": true,
+    "freshDestinationKeys": true,
+    "emptyAccessLedger": true,
+    "realTwoDeviceTested": false,
+    "liveMaterialRead": false
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "realTwoDeviceTested": false,
+    "frontendChanged": false,
+    "packageFormatsChanged": false
+  }
+}

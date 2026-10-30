@@ -1,0 +1,31 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): 5876e4011310663b4468c8967aae51f904a616cc3269b9900cc3b992e9d3830d
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:53170
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:53170/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:53170/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hostile-Browser-v1GsNc\\modeldb.config.json"
+#     Designer:    http://127.0.0.1:53170/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hostile-Browser-v1GsNc\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hostile-Browser-v1GsNc\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hostile-Browser-v1GsNc\\modeldb.config.json"
+# Subtest: native browser hostile page, same-site CSRF, null Origin, rebinding and proxy spoof cannot reach management
+ok 1 - native browser hostile page, same-site CSRF, null Origin, rebinding and proxy spoof cannot reach management
+  ---
+  duration_ms: 27970.8598
+  type: 'test'
+  ...
+# {"format":"modeldb.hostile-browser.v1","ok":true,"browser":"Chrome/156.0.8078.48","hardwareAuthenticatorTested":false,"systemTrustInstalled":false,"liveMaterialRead":false,"checks":{"authenticatedPositiveControl":true,"sameOriginCsrfRequired":true,"sameSiteMaliciousFetchDenied":true,"preflightDenied":true,"maliciousFormDenied":true,"frameDenied":true,"sandboxNullOriginDenied":true,"webAuthnWrongRpDenied":true,"rebindingHostDenied":true,"localhostAliasDenied":true,"proxySpoofDenied":true,"dataManagementSeparated":true,"sessionSurvivesAttack":true,"oneTimePairingSurvivesAttack":true,"noPermissiveCors":true,"rejectionsAudited":true}}
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 33970.4968

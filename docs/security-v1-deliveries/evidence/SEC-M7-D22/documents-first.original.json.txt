@@ -1,0 +1,15 @@
+{
+  "ok": false,
+  "documentFiles": 12,
+  "localLinksAndAnchors": 339,
+  "failures": [
+    {
+      "path": "docs/security-v1-deliveries/SEC-M7.md",
+      "link": "evidence/SEC-M7-D22/checks.original.json.txt",
+      "reason": "missing"
+    }
+  ],
+  "registrationTaskRows": 23,
+  "completedRegistrationTasks": 11,
+  "cliExamplesKnown": true
+}

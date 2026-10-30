@@ -1,0 +1,99 @@
+vite v6.4.3 building for production...
+transforming...
+✓ 277 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-1pufvS/designer-build/index.html                                          0.91 kB │ gzip:   0.55 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-1pufvS/designer-build/assets/index-Cf4SXfAb.css                         180.24 kB │ gzip:  29.31 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-1pufvS/designer-build/assets/browser-DfMR9EGW.js                          0.62 kB │ gzip:   0.43 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-1pufvS/designer-build/assets/export-model-map-CH5UsWEP.js                 3.66 kB │ gzip:   1.67 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-1pufvS/designer-build/assets/workbook-D8blH98z.js                        12.03 kB │ gzip:   4.54 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-1pufvS/designer-build/assets/OperationDesignerPanel-BLFJxlAt.js          24.57 kB │ gzip:   6.51 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-1pufvS/designer-build/assets/BindingSurfaceDesignerPanel-Dzz40m64.js     49.01 kB │ gzip:  13.08 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-1pufvS/designer-build/assets/exceljs.min-DxIZSSCE.js                    939.80 kB │ gzip: 271.12 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-1pufvS/designer-build/assets/index-CZGm6v_c.js                        1,065.08 kB │ gzip: 307.58 kB
+✓ built in 3.62s
+{
+  "format": "modeldb.hosting-integration-check.v1",
+  "task": "DR-P3.1",
+  "ok": true,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-1pufvS",
+  "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-1pufvS\\designer-build",
+  "screenshots": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-1pufvS\\screenshots",
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-1pufvS\\integration.tap",
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-hosting-browser.test.ts"
+  ],
+  "exitCode": 0,
+  "unit": {
+    "pass": 2,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "native": {
+    "format": "modeldb.hosting-native.v1",
+    "ok": true,
+    "checks": {
+      "nativeDpapi": true,
+      "osAuthenticatedPipe": true,
+      "exactLiveAddress": true,
+      "dataManagementSeparated": true,
+      "anonymousAdminDenied": true,
+      "legacyLaunchBlocked": true,
+      "cookieRestartRecovery": true,
+      "closeReleasesBothPorts": true,
+      "bindFailuresReleaseRegistryAndPipe": true,
+      "invalidBuildRejected": true
+    },
+    "liveMaterialRead": false
+  },
+  "browser": {
+    "format": "modeldb.hosting-browser.v1",
+    "ok": true,
+    "browser": "Chrome/156.0.8078.48",
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "checks": {
+      "freshDesignerBuild": true,
+      "cspRunsApplication": true,
+      "sameOriginData": true,
+      "osLaunchFragmentRemoved": true,
+      "httpOnlyStrict": true,
+      "csrfRequired": true,
+      "managementOnly": true,
+      "reloadRecovery": true,
+      "refreshAndLogout": true,
+      "localizedZhEnJa": true,
+      "wideAndNarrow": true,
+      "accessibleLanguageControl": true
+    },
+    "screenshots": 12,
+    "liveMaterialRead": false
+  },
+  "build": {
+    "configFile": false,
+    "envFile": false,
+    "existingDistUnchanged": true
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "productionRegistrationUiTested": false
+  },
+  "report": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-1pufvS\\integration-check.json"
+}
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.

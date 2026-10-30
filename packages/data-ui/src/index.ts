@@ -70,3 +70,8 @@ export {
   type AppNotificationLabels,
   type AppNotificationLevel,
 } from './components/app-notifications.js';
+export { BrowserIdentityPanel } from './components/browser-identity-panel.js';
+export type {
+  BrowserIdentityPanelProps,
+  IdentityPanelClient,
+} from './components/browser-identity-panel.js';

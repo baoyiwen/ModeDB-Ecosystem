@@ -1,0 +1,37 @@
+
+C:\workspace\web_code\ModeDB-Ecosystem\scripts\security-browser-candidate-check.mjs
+   35:31  error  Expected { after 'if' condition  curly
+  130:5   error  Expected { after 'for-of'        curly
+  132:5   error  Expected { after 'for-of'        curly
+  153:48  error  Expected { after 'for-of'        curly
+  160:5   error  Expected { after 'for-of'        curly
+  168:5   error  Expected { after 'for-of'        curly
+  211:7   error  Expected { after 'for-of'        curly
+  281:32  error  Expected { after 'if' condition  curly
+  283:9   error  Expected { after 'if' condition  curly
+  284:11  error  Expected { after 'for-of'        curly
+  332:18  error  Expected { after 'if' condition  curly
+  345:21  error  Expected { after 'if' condition  curly
+
+C:\workspace\web_code\ModeDB-Ecosystem\scripts\security-browser-candidate-evidence.mjs
+   37:5   error  Expected { after 'for-of'        curly
+   76:5   error  Expected { after 'for-of'        curly
+   82:7   error  Expected { after 'for-of'        curly
+   83:30  error  Expected { after 'if' condition  curly
+   85:7   error  Expected { after 'if' condition  curly
+   86:9   error  Expected { after 'for-of'        curly
+   96:7   error  Expected { after 'for-of'        curly
+   97:9   error  Expected { after 'for-of'        curly
+   98:11  error  Expected { after 'for-of'        curly
+  101:5   error  Expected { after 'for-of'        curly
+  102:7   error  Expected { after 'for-of'        curly
+  103:9   error  Expected { after 'for-of'        curly
+  104:11  error  Expected { after 'for-of'        curly
+  145:5   error  Expected { after 'for-of'        curly
+  154:5   error  Expected { after 'for-of'        curly
+  164:5   error  Expected { after 'for-of'        curly
+  184:5   error  Expected { after 'for-of'        curly
+
+✖ 29 problems (29 errors, 0 warnings)
+  29 errors and 0 warnings potentially fixable with the `--fix` option.
+

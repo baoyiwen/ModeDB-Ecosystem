@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: hostile browser parser requires real Chrome and every defense
+ok 1 - hostile browser parser requires real Chrome and every defense
+  ---
+  duration_ms: 2.7076
+  type: 'test'
+  ...
+# Subtest: hostile parser rejects missing or duplicated records and summary drift
+ok 2 - hostile parser rejects missing or duplicated records and summary drift
+  ---
+  duration_ms: 0.6525
+  type: 'test'
+  ...
+# Subtest: hostile parser rejects invented hardware, trust or live environment evidence
+ok 3 - hostile parser rejects invented hardware, trust or live environment evidence
+  ---
+  duration_ms: 0.331
+  type: 'test'
+  ...
+# Subtest: candidate requires all six groups on one build and exact successful units
+ok 4 - candidate requires all six groups on one build and exact successful units
+  ---
+  duration_ms: 1.89
+  type: 'test'
+  ...
+# Subtest: candidate rejects stale build, source drift and expanded scope
+ok 5 - candidate rejects stale build, source drift and expanded scope
+  ---
+  duration_ms: 1.1016
+  type: 'test'
+  ...
+# Subtest: candidate snapshot is stable and detects mutation, removal and additions
+ok 6 - candidate snapshot is stable and detects mutation, removal and additions
+  ---
+  duration_ms: 6.9657
+  type: 'test'
+  ...
+# Subtest: candidate snapshot rejects a directory junction
+ok 7 - candidate snapshot rejects a directory junction
+  ---
+  duration_ms: 1.8615
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 245.7372

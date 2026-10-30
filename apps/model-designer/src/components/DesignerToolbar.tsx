@@ -18,7 +18,7 @@ import {
 import { formatInteractionState } from '../utils/interaction-state-i18n.js';
 import { interactionStateForToolMode } from '../utils/tool-mode-state.js';
 import { formatLibraryLabel } from '../sync/library-registry.js';
-import { isQueryDesignerMode } from '../managers/mode-manager.js';
+import { isQueryDesignerMode, type DesignerToolMode } from '../managers/mode-manager.js';
 import {
   IconCheckSquare,
   IconDocument,

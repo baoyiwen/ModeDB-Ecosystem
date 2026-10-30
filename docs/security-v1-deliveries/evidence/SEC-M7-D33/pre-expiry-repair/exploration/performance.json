@@ -1,0 +1,2410 @@
+{
+  "format": "modeldb.security-performance.v1",
+  "phase": "explore",
+  "ok": true,
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Performance-jnDfwo",
+  "startedAt": "2026-10-28T10:52:41.541Z",
+  "finishedAt": "2026-10-28T10:57:30.852Z",
+  "platform": "win32",
+  "nodeVersion": "v24.15.0",
+  "method": {
+    "format": "modeldb.security-performance-method.v1",
+    "order": [
+      "A",
+      "B",
+      "B",
+      "A"
+    ],
+    "baseline": "registry API credential",
+    "candidate": "registry software WebAuthn and browser session",
+    "rows": 1000,
+    "batchRows": 10,
+    "concurrency": 1,
+    "warmupQueriesPerBlock": 2,
+    "counts": {
+      "registrationStart": 30,
+      "registrationProof": 30,
+      "login": 60,
+      "refresh": 30,
+      "query1000": 60,
+      "batchSave": 12,
+      "static": 30,
+      "revoke": 30,
+      "revocationProbe": 30
+    },
+    "baselineCounts": {
+      "credentialIssue": 30,
+      "query1000": 60,
+      "batchSave": 12,
+      "static": 30,
+      "revoke": 30,
+      "revocationProbe": 30
+    },
+    "floodRequests": 48,
+    "floodConcurrency": 48,
+    "pendingCapacity": 1000,
+    "publicRejectionAuditQueue": 64,
+    "tls": "new verified loopback TLS connection per request; no TLS session reuse",
+    "resources": "server Node process CPU and peak RSS; DPAPI child wall time included, child CPU/RSS unmeasured",
+    "userVerification": "software only; PIN/biometric/touch time excluded and unmeasured",
+    "audit": "normal durable registry audit; no audit or OS protection bypass"
+  },
+  "sourceSha256": "25938c8c844f4c39a9e613a7f03c7f8b64ee088942676b374f4cace260d74a8e",
+  "candidateSha256": "f4ac0c00af6737fad960fcb5d12d3a418b7edae56154d568b2fdbb7e32f5bec3",
+  "sourceUnchanged": true,
+  "candidateUnchanged": true,
+  "blocks": [
+    {
+      "block": 0,
+      "group": "A",
+      "completed": true
+    },
+    {
+      "block": 1,
+      "group": "B",
+      "completed": true
+    },
+    {
+      "block": 2,
+      "group": "B",
+      "completed": true
+    },
+    {
+      "block": 3,
+      "group": "A",
+      "completed": true
+    }
+  ],
+  "samples": [
+    {
+      "id": "0-credentialIssue-7",
+      "group": "A",
+      "block": 0,
+      "scenario": "credentialIssue",
+      "ok": true,
+      "serverMs": 745.8032000000021,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 736.4697000000015,
+      "verificationMs": 0,
+      "nodeCpuMs": 16,
+      "nodeRssMiB": 137.5546875,
+      "clientMs": 749.9775999999983
+    },
+    {
+      "id": "0-query1000-8",
+      "group": "A",
+      "block": 0,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1543.0226999999977,
+      "queueMs": 0,
+      "protectionMs": 1487.9449000000059,
+      "verificationMs": 0,
+      "nodeCpuMs": 16,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.1206999999994878,
+      "clientMs": 1546.5609000000004
+    },
+    {
+      "id": "0-query1000-9",
+      "group": "A",
+      "block": 0,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1597.2095999999983,
+      "queueMs": 0,
+      "protectionMs": 1483.808000000001,
+      "verificationMs": 0,
+      "nodeCpuMs": 15,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.1744999999973516,
+      "clientMs": 1601.170299999998
+    },
+    {
+      "id": "0-batchSave-10",
+      "group": "A",
+      "block": 0,
+      "scenario": "batchSave",
+      "ok": true,
+      "serverMs": 1546.7992000000013,
+      "queueMs": 0,
+      "protectionMs": 1475.4118000000017,
+      "verificationMs": 0,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.2093999999997322,
+      "clientMs": 1549.6860000000015
+    },
+    {
+      "id": "0-static-11",
+      "group": "A",
+      "block": 0,
+      "scenario": "static",
+      "ok": true,
+      "serverMs": 0.3761000000013155,
+      "queueMs": 0,
+      "protectionMs": 0,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.1172000000005937,
+      "clientMs": 3.0833999999995285
+    },
+    {
+      "id": "0-revoke-12",
+      "group": "A",
+      "block": 0,
+      "scenario": "revoke",
+      "ok": true,
+      "serverMs": 751.6103000000003,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 732.7602000000043,
+      "verificationMs": 0,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 137.5546875,
+      "clientMs": 754.6231000000007
+    },
+    {
+      "id": "0-revocationProbe-13",
+      "group": "A",
+      "block": 0,
+      "scenario": "revocationProbe",
+      "ok": true,
+      "serverMs": 737.6965999999993,
+      "queueMs": 0,
+      "protectionMs": 722.8574000000008,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.1112999999968451,
+      "clientMs": 740.6548000000003
+    },
+    {
+      "id": "0-credentialIssue-14",
+      "group": "A",
+      "block": 0,
+      "scenario": "credentialIssue",
+      "ok": true,
+      "serverMs": 795.425299999999,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 727.9678999999996,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 137.5546875,
+      "clientMs": 801.0508999999984
+    },
+    {
+      "id": "0-query1000-15",
+      "group": "A",
+      "block": 0,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1473.6954000000005,
+      "queueMs": 0,
+      "protectionMs": 1448.3640000000014,
+      "verificationMs": 0,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.2943999999988591,
+      "clientMs": 1477.8015999999989
+    },
+    {
+      "id": "0-query1000-16",
+      "group": "A",
+      "block": 0,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1571.3099000000002,
+      "queueMs": 0,
+      "protectionMs": 1474.6506000000008,
+      "verificationMs": 0,
+      "nodeCpuMs": 46,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.3027000000001863,
+      "clientMs": 1574.7340000000004
+    },
+    {
+      "id": "0-batchSave-17",
+      "group": "A",
+      "block": 0,
+      "scenario": "batchSave",
+      "ok": true,
+      "serverMs": 1668.2863000000034,
+      "queueMs": 0,
+      "protectionMs": 1473.1080000000002,
+      "verificationMs": 0,
+      "nodeCpuMs": 63,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.1974999999983993,
+      "clientMs": 1671.7537999999986
+    },
+    {
+      "id": "0-static-18",
+      "group": "A",
+      "block": 0,
+      "scenario": "static",
+      "ok": true,
+      "serverMs": 0.6527999999998428,
+      "queueMs": 0,
+      "protectionMs": 0,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.3781999999991967,
+      "clientMs": 4.08640000000014
+    },
+    {
+      "id": "0-revoke-19",
+      "group": "A",
+      "block": 0,
+      "scenario": "revoke",
+      "ok": true,
+      "serverMs": 736.236399999998,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 725.419799999996,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 137.5546875,
+      "clientMs": 739.2790999999961
+    },
+    {
+      "id": "0-revocationProbe-20",
+      "group": "A",
+      "block": 0,
+      "scenario": "revocationProbe",
+      "ok": true,
+      "serverMs": 770.6065000000017,
+      "queueMs": 0,
+      "protectionMs": 737.0681999999979,
+      "verificationMs": 0,
+      "nodeCpuMs": 15,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.1802999999999884,
+      "clientMs": 773.3994999999995
+    },
+    {
+      "id": "0-credentialIssue-21",
+      "group": "A",
+      "block": 0,
+      "scenario": "credentialIssue",
+      "ok": true,
+      "serverMs": 830.586000000003,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 734.7090999999928,
+      "verificationMs": 0,
+      "nodeCpuMs": 16,
+      "nodeRssMiB": 137.5546875,
+      "clientMs": 836.2445999999982
+    },
+    {
+      "id": "0-query1000-22",
+      "group": "A",
+      "block": 0,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1600.3834999999963,
+      "queueMs": 0,
+      "protectionMs": 1480.237999999983,
+      "verificationMs": 0,
+      "nodeCpuMs": 32,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.5028000000020256,
+      "clientMs": 1604.8845000000001
+    },
+    {
+      "id": "0-query1000-23",
+      "group": "A",
+      "block": 0,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1523.1788000000015,
+      "queueMs": 0,
+      "protectionMs": 1481.335899999991,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.2937999999994645,
+      "clientMs": 1526.5935000000027
+    },
+    {
+      "id": "0-batchSave-24",
+      "group": "A",
+      "block": 0,
+      "scenario": "batchSave",
+      "ok": true,
+      "serverMs": 1510.0169999999998,
+      "queueMs": 0,
+      "protectionMs": 1474.469999999994,
+      "verificationMs": 0,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.1191000000035274,
+      "clientMs": 1512.6117000000013
+    },
+    {
+      "id": "0-static-25",
+      "group": "A",
+      "block": 0,
+      "scenario": "static",
+      "ok": true,
+      "serverMs": 0.33660000000236323,
+      "queueMs": 0,
+      "protectionMs": 0,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.1719999999986612,
+      "clientMs": 2.9742999999944004
+    },
+    {
+      "id": "0-revoke-26",
+      "group": "A",
+      "block": 0,
+      "scenario": "revoke",
+      "ok": true,
+      "serverMs": 748.4742000000042,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 738.85609999999,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 137.5546875,
+      "clientMs": 751.7151999999987
+    },
+    {
+      "id": "0-revocationProbe-27",
+      "group": "A",
+      "block": 0,
+      "scenario": "revocationProbe",
+      "ok": true,
+      "serverMs": 771.8935999999958,
+      "queueMs": 0,
+      "protectionMs": 724.7650999999969,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 137.5546875,
+      "tlsMs": 1.8246999999973923,
+      "clientMs": 775.6995000000024
+    },
+    {
+      "id": "1-registrationStart-7",
+      "group": "B",
+      "block": 1,
+      "scenario": "registrationStart",
+      "ok": true,
+      "serverMs": 906.387200000001,
+      "queueMs": 0,
+      "protectionMs": 768.7292000000016,
+      "verificationMs": 0,
+      "nodeCpuMs": 15,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.1665000000029977,
+      "clientMs": 909.4094000000005
+    },
+    {
+      "id": "1-registrationProof-8",
+      "group": "B",
+      "block": 1,
+      "scenario": "registrationProof",
+      "ok": true,
+      "serverMs": 1503.3572999999997,
+      "queueMs": 0.07400000000052387,
+      "protectionMs": 1470.5157,
+      "verificationMs": 2.1035999999985506,
+      "nodeCpuMs": 32,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.2273999999997613,
+      "clientMs": 1506.376400000001
+    },
+    {
+      "id": "1-login-12",
+      "group": "B",
+      "block": 1,
+      "scenario": "login",
+      "ok": true,
+      "serverMs": 2238.0921000000017,
+      "queueMs": 0.08280000000013388,
+      "protectionMs": 2190.514399999989,
+      "verificationMs": 3.0084999999999127,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 2.622299999999086,
+      "clientMs": 2244.2901999999995
+    },
+    {
+      "id": "1-login-14",
+      "group": "B",
+      "block": 1,
+      "scenario": "login",
+      "ok": true,
+      "serverMs": 2265.6594000000005,
+      "queueMs": 0.029399999999441206,
+      "protectionMs": 2196.8729999999996,
+      "verificationMs": 0.8757999999979802,
+      "nodeCpuMs": 94,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 2.3403999999973166,
+      "clientMs": 2271.8189999999995
+    },
+    {
+      "id": "1-refresh-15",
+      "group": "B",
+      "block": 1,
+      "scenario": "refresh",
+      "ok": true,
+      "serverMs": 790.1970000000001,
+      "queueMs": 0,
+      "protectionMs": 755.6922999999988,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.2099999999991269,
+      "clientMs": 792.9900000000016
+    },
+    {
+      "id": "1-query1000-16",
+      "group": "B",
+      "block": 1,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1526.3787999999986,
+      "queueMs": 0,
+      "protectionMs": 1497.9876999999979,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.214399999997113,
+      "clientMs": 1529.4452999999994
+    },
+    {
+      "id": "1-query1000-17",
+      "group": "B",
+      "block": 1,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1502.186600000001,
+      "queueMs": 0,
+      "protectionMs": 1456.3045999999995,
+      "verificationMs": 0,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.2452999999986787,
+      "clientMs": 1506.0177000000003
+    },
+    {
+      "id": "1-batchSave-18",
+      "group": "B",
+      "block": 1,
+      "scenario": "batchSave",
+      "ok": true,
+      "serverMs": 1512.2275000000009,
+      "queueMs": 0,
+      "protectionMs": 1473.6784000000007,
+      "verificationMs": 0,
+      "nodeCpuMs": 63,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.1189999999987776,
+      "clientMs": 1514.8885999999984
+    },
+    {
+      "id": "1-static-19",
+      "group": "B",
+      "block": 1,
+      "scenario": "static",
+      "ok": true,
+      "serverMs": 0.41049999999813735,
+      "queueMs": 0,
+      "protectionMs": 0,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.2180000000007567,
+      "clientMs": 3.249500000005355
+    },
+    {
+      "id": "1-revoke-21",
+      "group": "B",
+      "block": 1,
+      "scenario": "revoke",
+      "ok": true,
+      "serverMs": 767.378300000004,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 736.9743000000017,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 142.04296875,
+      "clientMs": 770.7707000000009
+    },
+    {
+      "id": "1-revocationProbe-22",
+      "group": "B",
+      "block": 1,
+      "scenario": "revocationProbe",
+      "ok": true,
+      "serverMs": 764.3490999999995,
+      "queueMs": 0,
+      "protectionMs": 753.8815000000031,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.1271000000051572,
+      "clientMs": 767.0124000000069
+    },
+    {
+      "id": "1-registrationStart-23",
+      "group": "B",
+      "block": 1,
+      "scenario": "registrationStart",
+      "ok": true,
+      "serverMs": 749.6972999999998,
+      "queueMs": 0,
+      "protectionMs": 737.2311999999947,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.2034999999959837,
+      "clientMs": 752.572500000002
+    },
+    {
+      "id": "1-registrationProof-24",
+      "group": "B",
+      "block": 1,
+      "scenario": "registrationProof",
+      "ok": true,
+      "serverMs": 1533.217300000004,
+      "queueMs": 0.014100000000325963,
+      "protectionMs": 1492.4640000000072,
+      "verificationMs": 0.5434000000022934,
+      "nodeCpuMs": 15,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.0881999999983236,
+      "clientMs": 1535.732600000003
+    },
+    {
+      "id": "1-login-28",
+      "group": "B",
+      "block": 1,
+      "scenario": "login",
+      "ok": true,
+      "serverMs": 2356.4637999999977,
+      "queueMs": 0.023400000005494803,
+      "protectionMs": 2223.7135999999955,
+      "verificationMs": 1.3510000000023865,
+      "nodeCpuMs": 32,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 2.5434000000022934,
+      "clientMs": 2362.1489
+    },
+    {
+      "id": "1-login-30",
+      "group": "B",
+      "block": 1,
+      "scenario": "login",
+      "ok": true,
+      "serverMs": 2270.3752000000095,
+      "queueMs": 0.01870000000053551,
+      "protectionMs": 2208.236499999999,
+      "verificationMs": 0.900099999998929,
+      "nodeCpuMs": 78,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 2.8540000000066357,
+      "clientMs": 2276.407299999999
+    },
+    {
+      "id": "1-refresh-31",
+      "group": "B",
+      "block": 1,
+      "scenario": "refresh",
+      "ok": true,
+      "serverMs": 783.2006000000038,
+      "queueMs": 0,
+      "protectionMs": 738.6425999999992,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.1607000000003609,
+      "clientMs": 785.8142999999982
+    },
+    {
+      "id": "1-query1000-32",
+      "group": "B",
+      "block": 1,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1483.553899999999,
+      "queueMs": 0,
+      "protectionMs": 1457.0987000000023,
+      "verificationMs": 0,
+      "nodeCpuMs": 78,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.1478000000061002,
+      "clientMs": 1486.7755000000034
+    },
+    {
+      "id": "1-query1000-33",
+      "group": "B",
+      "block": 1,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1492.062199999993,
+      "queueMs": 0,
+      "protectionMs": 1466.6963000000032,
+      "verificationMs": 0,
+      "nodeCpuMs": 125,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.1099000000031083,
+      "clientMs": 1495.485900000007
+    },
+    {
+      "id": "1-batchSave-34",
+      "group": "B",
+      "block": 1,
+      "scenario": "batchSave",
+      "ok": true,
+      "serverMs": 1543.3982000000033,
+      "queueMs": 0,
+      "protectionMs": 1513.8517000000065,
+      "verificationMs": 0,
+      "nodeCpuMs": 78,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.135099999999511,
+      "clientMs": 1546.5416999999943
+    },
+    {
+      "id": "1-static-35",
+      "group": "B",
+      "block": 1,
+      "scenario": "static",
+      "ok": true,
+      "serverMs": 0.2981999999974505,
+      "queueMs": 0,
+      "protectionMs": 0,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.0962999999974272,
+      "clientMs": 2.846900000004098
+    },
+    {
+      "id": "1-revoke-37",
+      "group": "B",
+      "block": 1,
+      "scenario": "revoke",
+      "ok": true,
+      "serverMs": 753.6560000000027,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 736.8465999999971,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 142.04296875,
+      "clientMs": 757.7476999999999
+    },
+    {
+      "id": "1-revocationProbe-38",
+      "group": "B",
+      "block": 1,
+      "scenario": "revocationProbe",
+      "ok": true,
+      "serverMs": 756.2561999999962,
+      "queueMs": 0,
+      "protectionMs": 744.9968999999983,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.2730000000010477,
+      "clientMs": 759.0979000000007
+    },
+    {
+      "id": "1-registrationStart-39",
+      "group": "B",
+      "block": 1,
+      "scenario": "registrationStart",
+      "ok": true,
+      "serverMs": 753.0875999999989,
+      "queueMs": 0,
+      "protectionMs": 737.9219000000012,
+      "verificationMs": 0,
+      "nodeCpuMs": 15,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.1353000000017346,
+      "clientMs": 755.781799999997
+    },
+    {
+      "id": "1-registrationProof-40",
+      "group": "B",
+      "block": 1,
+      "scenario": "registrationProof",
+      "ok": true,
+      "serverMs": 1511.3196000000025,
+      "queueMs": 0.011800000000221189,
+      "protectionMs": 1485.5247999999847,
+      "verificationMs": 0.48779999999533175,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.1330000000016298,
+      "clientMs": 1513.8873000000021
+    },
+    {
+      "id": "1-login-44",
+      "group": "B",
+      "block": 1,
+      "scenario": "login",
+      "ok": true,
+      "serverMs": 2272.3338000000003,
+      "queueMs": 0.020000000004074536,
+      "protectionMs": 2231.8251000000164,
+      "verificationMs": 0.9609000000054948,
+      "nodeCpuMs": 125,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 2.251799999998184,
+      "clientMs": 2277.5806999999986
+    },
+    {
+      "id": "1-login-46",
+      "group": "B",
+      "block": 1,
+      "scenario": "login",
+      "ok": true,
+      "serverMs": 2303.370900000009,
+      "queueMs": 0.15369999999529682,
+      "protectionMs": 2248.405899999998,
+      "verificationMs": 1.1573999999964144,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 2.680399999997462,
+      "clientMs": 2308.9279000000024
+    },
+    {
+      "id": "1-refresh-47",
+      "group": "B",
+      "block": 1,
+      "scenario": "refresh",
+      "ok": true,
+      "serverMs": 760.6874000000025,
+      "queueMs": 0,
+      "protectionMs": 749.6103999999978,
+      "verificationMs": 0,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.0502999999953317,
+      "clientMs": 763.2075999999943
+    },
+    {
+      "id": "1-query1000-48",
+      "group": "B",
+      "block": 1,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1525.0404000000053,
+      "queueMs": 0,
+      "protectionMs": 1495.0030999999944,
+      "verificationMs": 0,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.155399999996007,
+      "clientMs": 1528.2246000000014
+    },
+    {
+      "id": "1-query1000-49",
+      "group": "B",
+      "block": 1,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1570.3506999999954,
+      "queueMs": 0,
+      "protectionMs": 1524.8884000000035,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.6656000000002678,
+      "clientMs": 1574.3984999999957
+    },
+    {
+      "id": "1-batchSave-50",
+      "group": "B",
+      "block": 1,
+      "scenario": "batchSave",
+      "ok": true,
+      "serverMs": 1517.8742999999959,
+      "queueMs": 0,
+      "protectionMs": 1480.2333000000071,
+      "verificationMs": 0,
+      "nodeCpuMs": 16,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.096400000002177,
+      "clientMs": 1520.364499999996
+    },
+    {
+      "id": "1-static-51",
+      "group": "B",
+      "block": 1,
+      "scenario": "static",
+      "ok": true,
+      "serverMs": 0.34959999999409774,
+      "queueMs": 0,
+      "protectionMs": 0,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.1855999999970663,
+      "clientMs": 3.0235000000102445
+    },
+    {
+      "id": "1-revoke-53",
+      "group": "B",
+      "block": 1,
+      "scenario": "revoke",
+      "ok": true,
+      "serverMs": 751.005799999999,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 739.0583999999944,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 142.04296875,
+      "clientMs": 754.4590000000026
+    },
+    {
+      "id": "1-revocationProbe-54",
+      "group": "B",
+      "block": 1,
+      "scenario": "revocationProbe",
+      "ok": true,
+      "serverMs": 762.2379999999976,
+      "queueMs": 0,
+      "protectionMs": 732.5785999999935,
+      "verificationMs": 0,
+      "nodeCpuMs": 15,
+      "nodeRssMiB": 142.04296875,
+      "tlsMs": 1.3171000000002095,
+      "clientMs": 766.0829000000085
+    },
+    {
+      "id": "2-registrationStart-7",
+      "group": "B",
+      "block": 2,
+      "scenario": "registrationStart",
+      "ok": true,
+      "serverMs": 738.0738999999994,
+      "queueMs": 0,
+      "protectionMs": 726.0715999999993,
+      "verificationMs": 0,
+      "nodeCpuMs": 46,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.1090999999978521,
+      "clientMs": 741.0701999999983
+    },
+    {
+      "id": "2-registrationProof-8",
+      "group": "B",
+      "block": 2,
+      "scenario": "registrationProof",
+      "ok": true,
+      "serverMs": 1637.670399999999,
+      "queueMs": 0.06999999999970896,
+      "protectionMs": 1489.3586000000068,
+      "verificationMs": 2.1040000000029977,
+      "nodeCpuMs": 16,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.2073999999993248,
+      "clientMs": 1640.7551000000021
+    },
+    {
+      "id": "2-login-12",
+      "group": "B",
+      "block": 2,
+      "scenario": "login",
+      "ok": true,
+      "serverMs": 2504.4586000000018,
+      "queueMs": 0.08320000000094296,
+      "protectionMs": 2338.4824999999983,
+      "verificationMs": 3.0182999999997264,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 2.424800000000687,
+      "clientMs": 2510.308399999998
+    },
+    {
+      "id": "2-login-14",
+      "group": "B",
+      "block": 2,
+      "scenario": "login",
+      "ok": true,
+      "serverMs": 2590.5121,
+      "queueMs": 0.031000000002677552,
+      "protectionMs": 2248.9932000000044,
+      "verificationMs": 0.8220000000001164,
+      "nodeCpuMs": 79,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 2.319500000001426,
+      "clientMs": 2596.801299999999
+    },
+    {
+      "id": "2-refresh-15",
+      "group": "B",
+      "block": 2,
+      "scenario": "refresh",
+      "ok": true,
+      "serverMs": 771.0529000000024,
+      "queueMs": 0,
+      "protectionMs": 760.3735000000015,
+      "verificationMs": 0,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.136899999997695,
+      "clientMs": 773.8271999999997
+    },
+    {
+      "id": "2-query1000-16",
+      "group": "B",
+      "block": 2,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1697.2956999999988,
+      "queueMs": 0,
+      "protectionMs": 1495.851800000004,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.1309000000001106,
+      "clientMs": 1700.9706000000006
+    },
+    {
+      "id": "2-query1000-17",
+      "group": "B",
+      "block": 2,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1576.2777999999998,
+      "queueMs": 0,
+      "protectionMs": 1514.2164999999986,
+      "verificationMs": 0,
+      "nodeCpuMs": 16,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.2597999999998137,
+      "clientMs": 1580.0622999999978
+    },
+    {
+      "id": "2-batchSave-18",
+      "group": "B",
+      "block": 2,
+      "scenario": "batchSave",
+      "ok": true,
+      "serverMs": 1621.2779999999984,
+      "queueMs": 0,
+      "protectionMs": 1499.6769999999997,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.194999999999709,
+      "clientMs": 1623.9464000000007
+    },
+    {
+      "id": "2-static-19",
+      "group": "B",
+      "block": 2,
+      "scenario": "static",
+      "ok": true,
+      "serverMs": 0.4228999999977532,
+      "queueMs": 0,
+      "protectionMs": 0,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.2361000000018976,
+      "clientMs": 3.3211999999984982
+    },
+    {
+      "id": "2-revoke-21",
+      "group": "B",
+      "block": 2,
+      "scenario": "revoke",
+      "ok": true,
+      "serverMs": 754.6152999999977,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 744.9404000000068,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 138.80078125,
+      "clientMs": 758.5144
+    },
+    {
+      "id": "2-revocationProbe-22",
+      "group": "B",
+      "block": 2,
+      "scenario": "revocationProbe",
+      "ok": true,
+      "serverMs": 759.0076000000045,
+      "queueMs": 0,
+      "protectionMs": 748.4288000000015,
+      "verificationMs": 0,
+      "nodeCpuMs": 30,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.2473000000027241,
+      "clientMs": 762.5049999999974
+    },
+    {
+      "id": "2-registrationStart-23",
+      "group": "B",
+      "block": 2,
+      "scenario": "registrationStart",
+      "ok": true,
+      "serverMs": 747.9455999999991,
+      "queueMs": 0,
+      "protectionMs": 736.8623999999982,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.271099999998114,
+      "clientMs": 750.851999999999
+    },
+    {
+      "id": "2-registrationProof-24",
+      "group": "B",
+      "block": 2,
+      "scenario": "registrationProof",
+      "ok": true,
+      "serverMs": 1511.9766000000018,
+      "queueMs": 0.014699999999720603,
+      "protectionMs": 1490.7449999999953,
+      "verificationMs": 0.5835000000006403,
+      "nodeCpuMs": 78,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.153200000000652,
+      "clientMs": 1514.7248000000036
+    },
+    {
+      "id": "2-login-28",
+      "group": "B",
+      "block": 2,
+      "scenario": "login",
+      "ok": true,
+      "serverMs": 2290.1094999999987,
+      "queueMs": 0.02290000000357395,
+      "protectionMs": 2248.2432999999874,
+      "verificationMs": 1.2324999999982538,
+      "nodeCpuMs": 63,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 2.4210999999995693,
+      "clientMs": 2295.4744999999966
+    },
+    {
+      "id": "2-login-30",
+      "group": "B",
+      "block": 2,
+      "scenario": "login",
+      "ok": true,
+      "serverMs": 2441.995099999993,
+      "queueMs": 0.02629999999771826,
+      "protectionMs": 2260.5088999999934,
+      "verificationMs": 0.842000000004191,
+      "nodeCpuMs": 63,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 2.2030999999988126,
+      "clientMs": 2448.002100000005
+    },
+    {
+      "id": "2-refresh-31",
+      "group": "B",
+      "block": 2,
+      "scenario": "refresh",
+      "ok": true,
+      "serverMs": 785.6974000000046,
+      "queueMs": 0,
+      "protectionMs": 774.1791999999987,
+      "verificationMs": 0,
+      "nodeCpuMs": 46,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.0668000000005122,
+      "clientMs": 788.3535000000047
+    },
+    {
+      "id": "2-query1000-32",
+      "group": "B",
+      "block": 2,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1532.4173999999985,
+      "queueMs": 0,
+      "protectionMs": 1502.8130999999994,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.1260000000038417,
+      "clientMs": 1535.4890999999989
+    },
+    {
+      "id": "2-query1000-33",
+      "group": "B",
+      "block": 2,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1503.0434999999998,
+      "queueMs": 0,
+      "protectionMs": 1478.8111000000063,
+      "verificationMs": 0,
+      "nodeCpuMs": 16,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.4939999999987776,
+      "clientMs": 1506.567799999997
+    },
+    {
+      "id": "2-batchSave-34",
+      "group": "B",
+      "block": 2,
+      "scenario": "batchSave",
+      "ok": true,
+      "serverMs": 1548.521799999995,
+      "queueMs": 0,
+      "protectionMs": 1517.6694999999963,
+      "verificationMs": 0,
+      "nodeCpuMs": 93,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.1124999999956344,
+      "clientMs": 1551.5683999999965
+    },
+    {
+      "id": "2-static-35",
+      "group": "B",
+      "block": 2,
+      "scenario": "static",
+      "ok": true,
+      "serverMs": 0.32220000000233995,
+      "queueMs": 0,
+      "protectionMs": 0,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.2008999999961816,
+      "clientMs": 2.938900000001013
+    },
+    {
+      "id": "2-revoke-37",
+      "group": "B",
+      "block": 2,
+      "scenario": "revoke",
+      "ok": true,
+      "serverMs": 759.6216000000059,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 745.2635999999984,
+      "verificationMs": 0,
+      "nodeCpuMs": 32,
+      "nodeRssMiB": 138.80078125,
+      "clientMs": 762.8071000000054
+    },
+    {
+      "id": "2-revocationProbe-38",
+      "group": "B",
+      "block": 2,
+      "scenario": "revocationProbe",
+      "ok": true,
+      "serverMs": 783.0213999999978,
+      "queueMs": 0,
+      "protectionMs": 755.7314000000042,
+      "verificationMs": 0,
+      "nodeCpuMs": 16,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.1899000000048545,
+      "clientMs": 785.997199999998
+    },
+    {
+      "id": "2-registrationStart-39",
+      "group": "B",
+      "block": 2,
+      "scenario": "registrationStart",
+      "ok": true,
+      "serverMs": 766.8752999999997,
+      "queueMs": 0,
+      "protectionMs": 749.7300000000032,
+      "verificationMs": 0,
+      "nodeCpuMs": 15,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.2139999999999418,
+      "clientMs": 769.7790999999997
+    },
+    {
+      "id": "2-registrationProof-40",
+      "group": "B",
+      "block": 2,
+      "scenario": "registrationProof",
+      "ok": true,
+      "serverMs": 1509.0237999999954,
+      "queueMs": 0.010600000001431908,
+      "protectionMs": 1474.3603999999978,
+      "verificationMs": 0.47969999999622814,
+      "nodeCpuMs": 32,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.2981999999974505,
+      "clientMs": 1512.195599999999
+    },
+    {
+      "id": "2-login-44",
+      "group": "B",
+      "block": 2,
+      "scenario": "login",
+      "ok": true,
+      "serverMs": 2262.9983000000066,
+      "queueMs": 0.022800000006100163,
+      "protectionMs": 2220.962400000004,
+      "verificationMs": 0.819100000000617,
+      "nodeCpuMs": 94,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 2.3236999999935506,
+      "clientMs": 2268.4434000000037
+    },
+    {
+      "id": "2-login-46",
+      "group": "B",
+      "block": 2,
+      "scenario": "login",
+      "ok": true,
+      "serverMs": 2298.090900000003,
+      "queueMs": 0.03570000000036089,
+      "protectionMs": 2257.8984000000128,
+      "verificationMs": 1.1330000000016298,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 2.5266999999948894,
+      "clientMs": 2303.6457999999984
+    },
+    {
+      "id": "2-refresh-47",
+      "group": "B",
+      "block": 2,
+      "scenario": "refresh",
+      "ok": true,
+      "serverMs": 778.0244999999995,
+      "queueMs": 0,
+      "protectionMs": 738.4117999999944,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.1938999999983935,
+      "clientMs": 780.957699999999
+    },
+    {
+      "id": "2-query1000-48",
+      "group": "B",
+      "block": 2,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1532.8693000000058,
+      "queueMs": 0,
+      "protectionMs": 1481.073199999999,
+      "verificationMs": 0,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.0815000000002328,
+      "clientMs": 1536.2560000000012
+    },
+    {
+      "id": "2-query1000-49",
+      "group": "B",
+      "block": 2,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1514.0142999999953,
+      "queueMs": 0,
+      "protectionMs": 1481.8531000000003,
+      "verificationMs": 0,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.1273000000001048,
+      "clientMs": 1517.4905999999974
+    },
+    {
+      "id": "2-batchSave-50",
+      "group": "B",
+      "block": 2,
+      "scenario": "batchSave",
+      "ok": true,
+      "serverMs": 1524.5584000000017,
+      "queueMs": 0,
+      "protectionMs": 1478.1087999999945,
+      "verificationMs": 0,
+      "nodeCpuMs": 15,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.1543999999994412,
+      "clientMs": 1527.5426000000007
+    },
+    {
+      "id": "2-static-51",
+      "group": "B",
+      "block": 2,
+      "scenario": "static",
+      "ok": true,
+      "serverMs": 0.36940000001050066,
+      "queueMs": 0,
+      "protectionMs": 0,
+      "verificationMs": 0,
+      "nodeCpuMs": 16,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.2265999999945052,
+      "clientMs": 3.2369000000035157
+    },
+    {
+      "id": "2-revoke-53",
+      "group": "B",
+      "block": 2,
+      "scenario": "revoke",
+      "ok": true,
+      "serverMs": 763.2199999999866,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 746.3862999999983,
+      "verificationMs": 0,
+      "nodeCpuMs": 15,
+      "nodeRssMiB": 138.80078125,
+      "clientMs": 767.4640000000072
+    },
+    {
+      "id": "2-revocationProbe-54",
+      "group": "B",
+      "block": 2,
+      "scenario": "revocationProbe",
+      "ok": true,
+      "serverMs": 758.7026000000042,
+      "queueMs": 0,
+      "protectionMs": 738.2689999999857,
+      "verificationMs": 0,
+      "nodeCpuMs": 16,
+      "nodeRssMiB": 138.80078125,
+      "tlsMs": 1.2923999999911757,
+      "clientMs": 762.1861999999965
+    },
+    {
+      "id": "3-credentialIssue-7",
+      "group": "A",
+      "block": 3,
+      "scenario": "credentialIssue",
+      "ok": true,
+      "serverMs": 809.125,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 742.2617000000027,
+      "verificationMs": 0,
+      "nodeCpuMs": 16,
+      "nodeRssMiB": 141.23828125,
+      "clientMs": 814.3162999999986
+    },
+    {
+      "id": "3-query1000-8",
+      "group": "A",
+      "block": 3,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1500.8966,
+      "queueMs": 0,
+      "protectionMs": 1479.6771999999983,
+      "verificationMs": 0,
+      "nodeCpuMs": 32,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.7921000000023923,
+      "clientMs": 1505.3863999999994
+    },
+    {
+      "id": "3-query1000-9",
+      "group": "A",
+      "block": 3,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1542.1692999999977,
+      "queueMs": 0,
+      "protectionMs": 1472.8978000000025,
+      "verificationMs": 0,
+      "nodeCpuMs": 46,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.261399999999412,
+      "clientMs": 1546.4372000000003
+    },
+    {
+      "id": "3-batchSave-10",
+      "group": "A",
+      "block": 3,
+      "scenario": "batchSave",
+      "ok": true,
+      "serverMs": 1504.0463999999993,
+      "queueMs": 0,
+      "protectionMs": 1475.0458000000035,
+      "verificationMs": 0,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.0960999999988417,
+      "clientMs": 1506.8616000000002
+    },
+    {
+      "id": "3-static-11",
+      "group": "A",
+      "block": 3,
+      "scenario": "static",
+      "ok": true,
+      "serverMs": 0.38830000000234577,
+      "queueMs": 0,
+      "protectionMs": 0,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.095499999999447,
+      "clientMs": 3.150599999997212
+    },
+    {
+      "id": "3-revoke-12",
+      "group": "A",
+      "block": 3,
+      "scenario": "revoke",
+      "ok": true,
+      "serverMs": 757.6671999999999,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 744.354199999998,
+      "verificationMs": 0,
+      "nodeCpuMs": 15,
+      "nodeRssMiB": 141.23828125,
+      "clientMs": 760.3617000000013
+    },
+    {
+      "id": "3-revocationProbe-13",
+      "group": "A",
+      "block": 3,
+      "scenario": "revocationProbe",
+      "ok": true,
+      "serverMs": 747.060300000001,
+      "queueMs": 0,
+      "protectionMs": 736.7599000000009,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.229299999999057,
+      "clientMs": 750.2494000000006
+    },
+    {
+      "id": "3-credentialIssue-14",
+      "group": "A",
+      "block": 3,
+      "scenario": "credentialIssue",
+      "ok": true,
+      "serverMs": 753.9465000000018,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 739.2067000000025,
+      "verificationMs": 0,
+      "nodeCpuMs": 16,
+      "nodeRssMiB": 141.23828125,
+      "clientMs": 758.3296000000009
+    },
+    {
+      "id": "3-query1000-15",
+      "group": "A",
+      "block": 3,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1491.3156999999992,
+      "queueMs": 0,
+      "protectionMs": 1462.2845000000016,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.2890999999981432,
+      "clientMs": 1495.2239999999983
+    },
+    {
+      "id": "3-query1000-16",
+      "group": "A",
+      "block": 3,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1493.3152999999984,
+      "queueMs": 0,
+      "protectionMs": 1470.293800000003,
+      "verificationMs": 0,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.2682999999997264,
+      "clientMs": 1497.0737999999983
+    },
+    {
+      "id": "3-batchSave-17",
+      "group": "A",
+      "block": 3,
+      "scenario": "batchSave",
+      "ok": true,
+      "serverMs": 1516.0589999999975,
+      "queueMs": 0,
+      "protectionMs": 1480.2389999999978,
+      "verificationMs": 0,
+      "nodeCpuMs": 15,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.0506999999997788,
+      "clientMs": 1519.268
+    },
+    {
+      "id": "3-static-18",
+      "group": "A",
+      "block": 3,
+      "scenario": "static",
+      "ok": true,
+      "serverMs": 0.35710000000108266,
+      "queueMs": 0,
+      "protectionMs": 0,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.1247000000003027,
+      "clientMs": 2.9285000000018044
+    },
+    {
+      "id": "3-revoke-19",
+      "group": "A",
+      "block": 3,
+      "scenario": "revoke",
+      "ok": true,
+      "serverMs": 750.9887999999992,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 737.7548999999963,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 141.23828125,
+      "clientMs": 753.1037000000033
+    },
+    {
+      "id": "3-revocationProbe-20",
+      "group": "A",
+      "block": 3,
+      "scenario": "revocationProbe",
+      "ok": true,
+      "serverMs": 759.9806999999964,
+      "queueMs": 0,
+      "protectionMs": 750.9062999999987,
+      "verificationMs": 0,
+      "nodeCpuMs": 31,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.183500000006461,
+      "clientMs": 762.8574000000008
+    },
+    {
+      "id": "3-credentialIssue-21",
+      "group": "A",
+      "block": 3,
+      "scenario": "credentialIssue",
+      "ok": true,
+      "serverMs": 749.6801999999952,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 740.4102999999959,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 141.23828125,
+      "clientMs": 754.9302000000025
+    },
+    {
+      "id": "3-query1000-22",
+      "group": "A",
+      "block": 3,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1517.587400000004,
+      "queueMs": 0,
+      "protectionMs": 1493.8422999999893,
+      "verificationMs": 0,
+      "nodeCpuMs": 47,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.1626000000032946,
+      "clientMs": 1521.8917000000001
+    },
+    {
+      "id": "3-query1000-23",
+      "group": "A",
+      "block": 3,
+      "scenario": "query1000",
+      "ok": true,
+      "serverMs": 1516.7165999999997,
+      "queueMs": 0,
+      "protectionMs": 1478.8087000000014,
+      "verificationMs": 0,
+      "nodeCpuMs": 62,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.1858999999967637,
+      "clientMs": 1520.0909000000029
+    },
+    {
+      "id": "3-batchSave-24",
+      "group": "A",
+      "block": 3,
+      "scenario": "batchSave",
+      "ok": true,
+      "serverMs": 1545.2442999999985,
+      "queueMs": 0,
+      "protectionMs": 1484.657299999999,
+      "verificationMs": 0,
+      "nodeCpuMs": 16,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.131200000003446,
+      "clientMs": 1547.8620999999985
+    },
+    {
+      "id": "3-static-25",
+      "group": "A",
+      "block": 3,
+      "scenario": "static",
+      "ok": true,
+      "serverMs": 0.34949999999662396,
+      "queueMs": 0,
+      "protectionMs": 0,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.147899999996298,
+      "clientMs": 3.005699999994249
+    },
+    {
+      "id": "3-revoke-26",
+      "group": "A",
+      "block": 3,
+      "scenario": "revoke",
+      "ok": true,
+      "serverMs": 760.7261999999973,
+      "tlsMs": 0,
+      "queueMs": 0,
+      "protectionMs": 735.4903000000122,
+      "verificationMs": 0,
+      "nodeCpuMs": 32,
+      "nodeRssMiB": 141.23828125,
+      "clientMs": 763.4377000000022
+    },
+    {
+      "id": "3-revocationProbe-27",
+      "group": "A",
+      "block": 3,
+      "scenario": "revocationProbe",
+      "ok": true,
+      "serverMs": 758.4738999999972,
+      "queueMs": 0,
+      "protectionMs": 748.3876999999993,
+      "verificationMs": 0,
+      "nodeCpuMs": 0,
+      "nodeRssMiB": 141.23828125,
+      "tlsMs": 1.169499999996333,
+      "clientMs": 762.6426999999967
+    }
+  ],
+  "summary": {
+    "A.credentialIssue": {
+      "count": 6,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 758.3296000000009,
+        "p95": 836.2445999999982,
+        "max": 836.2445999999982
+      },
+      "serverMs": {
+        "p50": 753.9465000000018,
+        "p95": 830.586000000003,
+        "max": 830.586000000003
+      },
+      "tlsMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 736.4697000000015,
+        "p95": 742.2617000000027,
+        "max": 742.2617000000027
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 16,
+        "p95": 16,
+        "max": 16
+      },
+      "nodeRssMiB": {
+        "p50": 137.5546875,
+        "p95": 141.23828125,
+        "max": 141.23828125
+      }
+    },
+    "A.query1000": {
+      "count": 12,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 1521.8917000000001,
+        "p95": 1604.8845000000001,
+        "max": 1604.8845000000001
+      },
+      "serverMs": {
+        "p50": 1517.587400000004,
+        "p95": 1600.3834999999963,
+        "max": 1600.3834999999963
+      },
+      "tlsMs": {
+        "p50": 1.2682999999997264,
+        "p95": 1.7921000000023923,
+        "max": 1.7921000000023923
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 1478.8087000000014,
+        "p95": 1493.8422999999893,
+        "max": 1493.8422999999893
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 32,
+        "p95": 62,
+        "max": 62
+      },
+      "nodeRssMiB": {
+        "p50": 137.5546875,
+        "p95": 141.23828125,
+        "max": 141.23828125
+      }
+    },
+    "A.batchSave": {
+      "count": 6,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 1519.268,
+        "p95": 1671.7537999999986,
+        "max": 1671.7537999999986
+      },
+      "serverMs": {
+        "p50": 1516.0589999999975,
+        "p95": 1668.2863000000034,
+        "max": 1668.2863000000034
+      },
+      "tlsMs": {
+        "p50": 1.1191000000035274,
+        "p95": 1.2093999999997322,
+        "max": 1.2093999999997322
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 1475.0458000000035,
+        "p95": 1484.657299999999,
+        "max": 1484.657299999999
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 47,
+        "p95": 63,
+        "max": 63
+      },
+      "nodeRssMiB": {
+        "p50": 137.5546875,
+        "p95": 141.23828125,
+        "max": 141.23828125
+      }
+    },
+    "A.static": {
+      "count": 6,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 3.005699999994249,
+        "p95": 4.08640000000014,
+        "max": 4.08640000000014
+      },
+      "serverMs": {
+        "p50": 0.35710000000108266,
+        "p95": 0.6527999999998428,
+        "max": 0.6527999999998428
+      },
+      "tlsMs": {
+        "p50": 1.1247000000003027,
+        "p95": 1.3781999999991967,
+        "max": 1.3781999999991967
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeRssMiB": {
+        "p50": 137.5546875,
+        "p95": 141.23828125,
+        "max": 141.23828125
+      }
+    },
+    "A.revoke": {
+      "count": 6,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 753.1037000000033,
+        "p95": 763.4377000000022,
+        "max": 763.4377000000022
+      },
+      "serverMs": {
+        "p50": 750.9887999999992,
+        "p95": 760.7261999999973,
+        "max": 760.7261999999973
+      },
+      "tlsMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 735.4903000000122,
+        "p95": 744.354199999998,
+        "max": 744.354199999998
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 31,
+        "p95": 47,
+        "max": 47
+      },
+      "nodeRssMiB": {
+        "p50": 137.5546875,
+        "p95": 141.23828125,
+        "max": 141.23828125
+      }
+    },
+    "A.revocationProbe": {
+      "count": 6,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 762.6426999999967,
+        "p95": 775.6995000000024,
+        "max": 775.6995000000024
+      },
+      "serverMs": {
+        "p50": 758.4738999999972,
+        "p95": 771.8935999999958,
+        "max": 771.8935999999958
+      },
+      "tlsMs": {
+        "p50": 1.1802999999999884,
+        "p95": 1.8246999999973923,
+        "max": 1.8246999999973923
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 736.7599000000009,
+        "p95": 750.9062999999987,
+        "max": 750.9062999999987
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 0,
+        "p95": 31,
+        "max": 31
+      },
+      "nodeRssMiB": {
+        "p50": 137.5546875,
+        "p95": 141.23828125,
+        "max": 141.23828125
+      }
+    },
+    "B.registrationStart": {
+      "count": 6,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 752.572500000002,
+        "p95": 909.4094000000005,
+        "max": 909.4094000000005
+      },
+      "serverMs": {
+        "p50": 749.6972999999998,
+        "p95": 906.387200000001,
+        "max": 906.387200000001
+      },
+      "tlsMs": {
+        "p50": 1.1665000000029977,
+        "p95": 1.271099999998114,
+        "max": 1.271099999998114
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 737.2311999999947,
+        "p95": 768.7292000000016,
+        "max": 768.7292000000016
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 15,
+        "p95": 46,
+        "max": 46
+      },
+      "nodeRssMiB": {
+        "p50": 138.80078125,
+        "p95": 142.04296875,
+        "max": 142.04296875
+      }
+    },
+    "B.registrationProof": {
+      "count": 6,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 1513.8873000000021,
+        "p95": 1640.7551000000021,
+        "max": 1640.7551000000021
+      },
+      "serverMs": {
+        "p50": 1511.3196000000025,
+        "p95": 1637.670399999999,
+        "max": 1637.670399999999
+      },
+      "tlsMs": {
+        "p50": 1.153200000000652,
+        "p95": 1.2981999999974505,
+        "max": 1.2981999999974505
+      },
+      "queueMs": {
+        "p50": 0.014100000000325963,
+        "p95": 0.07400000000052387,
+        "max": 0.07400000000052387
+      },
+      "protectionMs": {
+        "p50": 1485.5247999999847,
+        "p95": 1492.4640000000072,
+        "max": 1492.4640000000072
+      },
+      "verificationMs": {
+        "p50": 0.5434000000022934,
+        "p95": 2.1040000000029977,
+        "max": 2.1040000000029977
+      },
+      "nodeCpuMs": {
+        "p50": 32,
+        "p95": 78,
+        "max": 78
+      },
+      "nodeRssMiB": {
+        "p50": 138.80078125,
+        "p95": 142.04296875,
+        "max": 142.04296875
+      }
+    },
+    "B.login": {
+      "count": 12,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 2295.4744999999966,
+        "p95": 2596.801299999999,
+        "max": 2596.801299999999
+      },
+      "serverMs": {
+        "p50": 2290.1094999999987,
+        "p95": 2590.5121,
+        "max": 2590.5121
+      },
+      "tlsMs": {
+        "p50": 2.4210999999995693,
+        "p95": 2.8540000000066357,
+        "max": 2.8540000000066357
+      },
+      "queueMs": {
+        "p50": 0.02629999999771826,
+        "p95": 0.15369999999529682,
+        "max": 0.15369999999529682
+      },
+      "protectionMs": {
+        "p50": 2231.8251000000164,
+        "p95": 2338.4824999999983,
+        "max": 2338.4824999999983
+      },
+      "verificationMs": {
+        "p50": 0.9609000000054948,
+        "p95": 3.0182999999997264,
+        "max": 3.0182999999997264
+      },
+      "nodeCpuMs": {
+        "p50": 63,
+        "p95": 125,
+        "max": 125
+      },
+      "nodeRssMiB": {
+        "p50": 138.80078125,
+        "p95": 142.04296875,
+        "max": 142.04296875
+      }
+    },
+    "B.refresh": {
+      "count": 6,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 780.957699999999,
+        "p95": 792.9900000000016,
+        "max": 792.9900000000016
+      },
+      "serverMs": {
+        "p50": 778.0244999999995,
+        "p95": 790.1970000000001,
+        "max": 790.1970000000001
+      },
+      "tlsMs": {
+        "p50": 1.136899999997695,
+        "p95": 1.2099999999991269,
+        "max": 1.2099999999991269
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 749.6103999999978,
+        "p95": 774.1791999999987,
+        "max": 774.1791999999987
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 31,
+        "p95": 47,
+        "max": 47
+      },
+      "nodeRssMiB": {
+        "p50": 138.80078125,
+        "p95": 142.04296875,
+        "max": 142.04296875
+      }
+    },
+    "B.query1000": {
+      "count": 12,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 1528.2246000000014,
+        "p95": 1700.9706000000006,
+        "max": 1700.9706000000006
+      },
+      "serverMs": {
+        "p50": 1525.0404000000053,
+        "p95": 1697.2956999999988,
+        "max": 1697.2956999999988
+      },
+      "tlsMs": {
+        "p50": 1.1478000000061002,
+        "p95": 1.6656000000002678,
+        "max": 1.6656000000002678
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 1481.8531000000003,
+        "p95": 1524.8884000000035,
+        "max": 1524.8884000000035
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 31,
+        "p95": 125,
+        "max": 125
+      },
+      "nodeRssMiB": {
+        "p50": 138.80078125,
+        "p95": 142.04296875,
+        "max": 142.04296875
+      }
+    },
+    "B.batchSave": {
+      "count": 6,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 1527.5426000000007,
+        "p95": 1623.9464000000007,
+        "max": 1623.9464000000007
+      },
+      "serverMs": {
+        "p50": 1524.5584000000017,
+        "p95": 1621.2779999999984,
+        "max": 1621.2779999999984
+      },
+      "tlsMs": {
+        "p50": 1.1189999999987776,
+        "p95": 1.194999999999709,
+        "max": 1.194999999999709
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 1480.2333000000071,
+        "p95": 1517.6694999999963,
+        "max": 1517.6694999999963
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 31,
+        "p95": 93,
+        "max": 93
+      },
+      "nodeRssMiB": {
+        "p50": 138.80078125,
+        "p95": 142.04296875,
+        "max": 142.04296875
+      }
+    },
+    "B.static": {
+      "count": 6,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 3.0235000000102445,
+        "p95": 3.3211999999984982,
+        "max": 3.3211999999984982
+      },
+      "serverMs": {
+        "p50": 0.34959999999409774,
+        "p95": 0.4228999999977532,
+        "max": 0.4228999999977532
+      },
+      "tlsMs": {
+        "p50": 1.2008999999961816,
+        "p95": 1.2361000000018976,
+        "max": 1.2361000000018976
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 0,
+        "p95": 16,
+        "max": 16
+      },
+      "nodeRssMiB": {
+        "p50": 138.80078125,
+        "p95": 142.04296875,
+        "max": 142.04296875
+      }
+    },
+    "B.revoke": {
+      "count": 6,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 758.5144,
+        "p95": 770.7707000000009,
+        "max": 770.7707000000009
+      },
+      "serverMs": {
+        "p50": 754.6152999999977,
+        "p95": 767.378300000004,
+        "max": 767.378300000004
+      },
+      "tlsMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 739.0583999999944,
+        "p95": 746.3862999999983,
+        "max": 746.3862999999983
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 31,
+        "p95": 32,
+        "max": 32
+      },
+      "nodeRssMiB": {
+        "p50": 138.80078125,
+        "p95": 142.04296875,
+        "max": 142.04296875
+      }
+    },
+    "B.revocationProbe": {
+      "count": 6,
+      "failures": 0,
+      "failureRate": 0,
+      "clientMs": {
+        "p50": 762.5049999999974,
+        "p95": 785.997199999998,
+        "max": 785.997199999998
+      },
+      "serverMs": {
+        "p50": 759.0076000000045,
+        "p95": 783.0213999999978,
+        "max": 783.0213999999978
+      },
+      "tlsMs": {
+        "p50": 1.2473000000027241,
+        "p95": 1.3171000000002095,
+        "max": 1.3171000000002095
+      },
+      "queueMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "protectionMs": {
+        "p50": 744.9968999999983,
+        "p95": 755.7314000000042,
+        "max": 755.7314000000042
+      },
+      "verificationMs": {
+        "p50": 0,
+        "p95": 0,
+        "max": 0
+      },
+      "nodeCpuMs": {
+        "p50": 15,
+        "p95": 30,
+        "max": 30
+      },
+      "nodeRssMiB": {
+        "p50": 138.80078125,
+        "p95": 142.04296875,
+        "max": 142.04296875
+      }
+    }
+  },
+  "flood": {
+    "requests": 48,
+    "concurrency": 48,
+    "completed": 48,
+    "completedBeforeRepair": 1,
+    "unexpected": 0,
+    "localMutationSucceeded": true,
+    "networkPolicyRolledBack": true,
+    "localMutationMs": 4011.2738999999983,
+    "pendingCapacity": 1000,
+    "capacityRejected": true,
+    "auditPresent": true,
+    "durationMs": 48566.7169,
+    "maxRequestMs": 46566.582500000004,
+    "nodeRssMiB": 245.375,
+    "proofBounds": {
+      "active": 4,
+      "queued": 32,
+      "overflowRejected": true,
+      "localMutationSucceeded": true,
+      "protector": "synthetic AES-GCM; deterministic queue-only check",
+      "nativePerformance": false
+    }
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "realTwoDeviceTested": false,
+    "productionCapacityClaimed": false,
+    "childProcessResourcesMeasured": false,
+    "frontendChanged": false
+  }
+}

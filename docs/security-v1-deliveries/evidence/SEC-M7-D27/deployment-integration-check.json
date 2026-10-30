@@ -1,0 +1,77 @@
+{
+  "format": "modeldb.deployment-wizard-check.v1",
+  "task": "DR-P3.4",
+  "ok": true,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Deployment-Check-bpL5MN",
+  "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Deployment-Check-bpL5MN\\designer-build",
+  "screenshots": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Deployment-Check-bpL5MN\\screenshots",
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Deployment-Check-bpL5MN\\integration.tap",
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-deployment-wizard-browser.test.ts"
+  ],
+  "exitCode": 0,
+  "unit": {
+    "pass": 1,
+    "fail": 0,
+    "cancelled": 0,
+    "skip": 0,
+    "todo": 0
+  },
+  "browser": {
+    "format": "modeldb.deployment-wizard-browser.v1",
+    "ok": true,
+    "browser": "Chrome/156.0.8078.48",
+    "screenshots": 24,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "liveMaterialRead": false,
+    "checks": {
+      "freshDesignerBuild": true,
+      "nativeDpapi": true,
+      "osPairedManagement": true,
+      "loopbackBootstrap": true,
+      "registrationDisabledByDefault": true,
+      "publicPemOnly": true,
+      "wrongRpRejected": true,
+      "wrongPinRejected": true,
+      "previewDoesNotWrite": true,
+      "explicitConfirmation": true,
+      "descriptorImportBinding": true,
+      "descriptorDownload": true,
+      "offlineLeaseRequired": true,
+      "cliFinalize": true,
+      "identityPreserved": true,
+      "persistentPolicyApplied": true,
+      "oneShotCommit": true,
+      "existingInstanceGuide": true,
+      "auditMetadataOnly": true,
+      "syntheticTlsStartup": true,
+      "dataListenerDenied": true,
+      "localizedZhEnJa": true,
+      "wideAndNarrow": true,
+      "labelsAndFocus": true,
+      "formContrast": true,
+      "expiredExportBlocked": true
+    }
+  },
+  "build": {
+    "ok": true,
+    "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Deployment-Check-bpL5MN\\designer-build",
+    "configFile": false,
+    "envFile": false,
+    "existingDistUnchanged": true
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "deploymentWizardTested": true
+  }
+}

@@ -1,0 +1,43 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): 58c075fe0389b3a8de7bd5acdc568b6686348be8b0d4c7c9e823725c57926115
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:60146
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:60146
+#     HTTP RPC:  https://modeldb-a.example.test:60146/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:60146/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-2zw2ZT\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:60146/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-2zw2ZT\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-2zw2ZT\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-2zw2ZT\\modeldb.config.json"
+# Subtest: formal Designer registration, pending/rejection/approval, Passkey login, recovery and localized layouts
+not ok 1 - formal Designer registration, pending/rejection/approval, Passkey login, recovery and localized layouts
+  ---
+  duration_ms: 15303.9713
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-designer-identity-browser.test.ts:1:1095'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_INVALID_REQUEST'
+  code: 'SECURITY_INVALID_REQUEST'
+  name: 'SecurityError'
+  stack: |-
+    Socket.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\local-management-channel.ts:415:20)
+    Socket.emit (node:events:509:28)
+    addChunk (node:internal/streams/readable:563:12)
+    readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+    Readable.push (node:internal/streams/readable:394:5)
+    Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 21263.8557

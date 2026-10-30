@@ -1,0 +1,135 @@
+
+════════════════════════════════════════════════════════════
+  0. Reset workspace + logical library directory
+════════════════════════════════════════════════════════════
+  ✓ workspace C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\children_tree_workspace ready
+
+════════════════════════════════════════════════════════════
+  1. AuthoringEngine: self-relation model + one-to-one upstream→downstream chain
+════════════════════════════════════════════════════════════
+  ✓ Stage(self children/parent) + 1:1 chain S0→S1→S2→S3
+
+════════════════════════════════════════════════════════════
+  2. Start ModelDB server
+════════════════════════════════════════════════════════════
+[modeldb-server] storage fingerprint (sha256): ad08c2a2b4dc78fb18d5bba90f33d4f125129086cb16b65b7551cd28b3d751e5
+[ModelDB] Engine is running
+  Listen: 127.0.0.1:56976
+  ➜ Local:   http://localhost:56976/ (本机访问)
+  Direct client addresses:
+    HTTP:      http://127.0.0.1:56976 (HTTP API 根地址)
+    Action:    http://127.0.0.1:56976/v2/action (单次操作接口)
+    Bulk:      http://127.0.0.1:56976/v2/bulk (批量操作接口)
+    Health:    http://127.0.0.1:56976/health (健康检查)
+    Status:    http://127.0.0.1:56976/api/v1/management/status (引擎状态)
+    WebSocket: ws://127.0.0.1:56976/ (实时 RPC)
+    Stream:    ws://127.0.0.1:56976/v2/stream (流式 RPC)
+
+  Console commands:
+    Stop:      Ctrl+C
+    Status:    modeldb-server info -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\children_tree_workspace\modeldb.config.json"
+    Databases: modeldb-server ls -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\children_tree_workspace\modeldb.config.json"
+    Create DB: modeldb-server create-db <db-name> -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\children_tree_workspace\modeldb.config.json"
+    Backup:    modeldb-server backup <db-name> --reason manual -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-petDWw\data\children_tree_workspace\modeldb.config.json"
+
+  Note: management URLs require the configured connect token in the request header.
+  Remote access: disabled by the loopback bind. Start with --host 0.0.0.0 for direct LAN access.
+  ✓ listening on 127.0.0.1:56976
+[ModeDB] START Connection: open websocket trace=f360f316
+  说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+  请求摘要: { url: 'ws://127.0.0.1:56976/v2/stream' }
+[modeldb-server] connect 127.0.0.1
+[ModeDB] OK Connection: open websocket trace=f360f316 5.73ms
+  结果: { ms: 5.73, url: 'ws://127.0.0.1:56976/v2/stream' }
+[ModeDB] START WebSocket RPC: handshake trace=60d510eb
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: { database: 'children_tree_query' }
+[ModeDB] OK WebSocket RPC: handshake trace=60d510eb 757.92ms
+  结果: { ms: 757.92, database: 'children_tree_query' }
+
+════════════════════════════════════════════════════════════
+  3. query().children("children") from the chain head → nested tree
+════════════════════════════════════════════════════════════
+[ModeDB] START WebSocket RPC: executeQuery trace=fe9d8b9f
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: 'dd548c06-e540-4f90-8133-c43900273df9',
+    database: 'children_tree_query',
+    op: 'executeQuery',
+    model: 'Stage',
+    page: 0,
+    cursor: undefined,
+    limit: undefined
+  }
+[modeldb-server][rpc] START executeQuery db=children_tree_query id=dd548c06-e540-4f90-8133-c43900273df9 {
+  op: 'executeQuery',
+  model: 'Stage',
+  page: 0,
+  cursor: undefined,
+  limit: undefined
+}
+[modeldb-server][rpc] OK executeQuery db=children_tree_query id=dd548c06-e540-4f90-8133-c43900273df9 750.76ms { kind: 'rows', rows: 1 }
+[ModeDB] OK WebSocket RPC: executeQuery trace=fe9d8b9f 752.36ms
+  结果: { ms: 752.36, kind: 'rows', rows: 1 }
+  ✓ single root (chain head) at top level (got 1)
+  ✓ toTree() nests children under `children`: src-0 → src-1 → src-2 → src-3
+
+════════════════════════════════════════════════════════════
+  4. flatten(): strong upstream→downstream order for 1:1 chain
+════════════════════════════════════════════════════════════
+  ✓ flatten() yields ordered chain: [src-0 → src-1 → src-2 → src-3]
+
+════════════════════════════════════════════════════════════
+  5. children() conservation: query all → only head at top level
+════════════════════════════════════════════════════════════
+[ModeDB] START WebSocket RPC: executeQuery trace=5b0435ff
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: 'c254f983-73bd-4c58-8a24-6e2e447ede10',
+    database: 'children_tree_query',
+    op: 'executeQuery',
+    model: 'Stage',
+    page: 0,
+    cursor: undefined,
+    limit: undefined
+  }
+[modeldb-server][rpc] START executeQuery db=children_tree_query id=c254f983-73bd-4c58-8a24-6e2e447ede10 {
+  op: 'executeQuery',
+  model: 'Stage',
+  page: 0,
+  cursor: undefined,
+  limit: undefined
+}
+[modeldb-server][rpc] OK executeQuery db=children_tree_query id=c254f983-73bd-4c58-8a24-6e2e447ede10 0.48ms { kind: 'rows', rows: 1 }
+[ModeDB] OK WebSocket RPC: executeQuery trace=5b0435ff 1.3ms
+  结果: { ms: 1.3, kind: 'rows', rows: 1 }
+  ✓ entities with a parent demoted from top level: [src-0] (expected src-0)
+  ✓ all 4 stages reachable from the single root (got 4)
+
+════════════════════════════════════════════════════════════
+  6. depth limits expansion
+════════════════════════════════════════════════════════════
+[ModeDB] START WebSocket RPC: executeQuery trace=3114e5cb
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: 'd0ef268d-6f58-48a1-b088-a2bc6b0aadaa',
+    database: 'children_tree_query',
+    op: 'executeQuery',
+    model: 'Stage',
+    page: 0,
+    cursor: undefined,
+    limit: undefined
+  }
+[modeldb-server][rpc] START executeQuery db=children_tree_query id=d0ef268d-6f58-48a1-b088-a2bc6b0aadaa {
+  op: 'executeQuery',
+  model: 'Stage',
+  page: 0,
+  cursor: undefined,
+  limit: undefined
+}
+[modeldb-server][rpc] OK executeQuery db=children_tree_query id=d0ef268d-6f58-48a1-b088-a2bc6b0aadaa 0.34ms { kind: 'rows', rows: 1 }
+[ModeDB] OK WebSocket RPC: executeQuery trace=3114e5cb 0.97ms
+  结果: { ms: 0.97, kind: 'rows', rows: 1 }
+  ✓ depth:1 expands exactly one level (src-0 → src-1, no deeper)
+
+children-tree-query: 9 passed, 0 failed

@@ -1,0 +1,118 @@
+TAP version 13
+# Subtest: model-designer: a valid launcher overrides saved Token mode without persisting its secret
+ok 1 - model-designer: a valid launcher overrides saved Token mode without persisting its secret
+  ---
+  duration_ms: 157.4737
+  type: 'test'
+  ...
+# Subtest: model-designer: launcher and explicit mode selection work with write storage blocked
+ok 2 - model-designer: launcher and explicit mode selection work with write storage blocked
+  ---
+  duration_ms: 5.6048
+  type: 'test'
+  ...
+# Subtest: model-designer: launcher and explicit mode selection work with all storage blocked
+ok 3 - model-designer: launcher and explicit mode selection work with all storage blocked
+  ---
+  duration_ms: 5.4839
+  type: 'test'
+  ...
+# Subtest: model-designer: no launcher leaves the saved Token preference in place
+ok 4 - model-designer: no launcher leaves the saved Token preference in place
+  ---
+  duration_ms: 4.1946
+  type: 'test'
+  ...
+# Subtest: model-designer: malformed code leaves the saved Token preference in place
+ok 5 - model-designer: malformed code leaves the saved Token preference in place
+  ---
+  duration_ms: 4.45
+  type: 'test'
+  ...
+# Subtest: model-designer: remote plaintext endpoint leaves the saved Token preference in place
+ok 6 - model-designer: remote plaintext endpoint leaves the saved Token preference in place
+  ---
+  duration_ms: 4.3297
+  type: 'test'
+  ...
+# Subtest: data-studio: a valid launcher overrides saved Token mode without persisting its secret
+ok 7 - data-studio: a valid launcher overrides saved Token mode without persisting its secret
+  ---
+  duration_ms: 9.1736
+  type: 'test'
+  ...
+# Subtest: data-studio: launcher and explicit mode selection work with write storage blocked
+ok 8 - data-studio: launcher and explicit mode selection work with write storage blocked
+  ---
+  duration_ms: 5.1869
+  type: 'test'
+  ...
+# Subtest: data-studio: launcher and explicit mode selection work with all storage blocked
+ok 9 - data-studio: launcher and explicit mode selection work with all storage blocked
+  ---
+  duration_ms: 4.9772
+  type: 'test'
+  ...
+# Subtest: data-studio: no launcher leaves the saved Token preference in place
+ok 10 - data-studio: no launcher leaves the saved Token preference in place
+  ---
+  duration_ms: 4.4405
+  type: 'test'
+  ...
+# Subtest: data-studio: malformed code leaves the saved Token preference in place
+ok 11 - data-studio: malformed code leaves the saved Token preference in place
+  ---
+  duration_ms: 4.9519
+  type: 'test'
+  ...
+# Subtest: data-studio: remote plaintext endpoint leaves the saved Token preference in place
+ok 12 - data-studio: remote plaintext endpoint leaves the saved Token preference in place
+  ---
+  duration_ms: 5.09
+  type: 'test'
+  ...
+# Subtest: web: a valid launcher overrides saved Token mode without persisting its secret
+ok 13 - web: a valid launcher overrides saved Token mode without persisting its secret
+  ---
+  duration_ms: 15.2193
+  type: 'test'
+  ...
+# Subtest: web: launcher and explicit mode selection work with write storage blocked
+ok 14 - web: launcher and explicit mode selection work with write storage blocked
+  ---
+  duration_ms: 3.8988
+  type: 'test'
+  ...
+# Subtest: web: launcher and explicit mode selection work with all storage blocked
+ok 15 - web: launcher and explicit mode selection work with all storage blocked
+  ---
+  duration_ms: 3.4771
+  type: 'test'
+  ...
+# Subtest: web: no launcher leaves the saved Token preference in place
+ok 16 - web: no launcher leaves the saved Token preference in place
+  ---
+  duration_ms: 4.4151
+  type: 'test'
+  ...
+# Subtest: web: malformed code leaves the saved Token preference in place
+ok 17 - web: malformed code leaves the saved Token preference in place
+  ---
+  duration_ms: 3.702
+  type: 'test'
+  ...
+# Subtest: web: remote plaintext endpoint leaves the saved Token preference in place
+ok 18 - web: remote plaintext endpoint leaves the saved Token preference in place
+  ---
+  duration_ms: 3.5502
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 530.1636

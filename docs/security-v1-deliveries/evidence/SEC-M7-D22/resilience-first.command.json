@@ -1,0 +1,6 @@
+{
+  "command": "node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap test/unit/security-authentication-resilience.test.ts",
+  "nodeVersion": "v24.22.1",
+  "status": 0,
+  "error": null
+}

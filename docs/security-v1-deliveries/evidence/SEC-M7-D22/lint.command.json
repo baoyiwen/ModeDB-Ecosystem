@@ -1,0 +1,11 @@
+{
+  "command": [
+    "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+    "node_modules/eslint/bin/eslint.js",
+    "packages/server/src/security/authentication-service.ts",
+    "scripts/security-authentication-resilience-check.mjs",
+    "scripts/security-registration-storage-check.mjs",
+    "scripts/security-release-evidence.mjs"
+  ],
+  "exitCode": 0
+}

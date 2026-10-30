@@ -1,0 +1,25 @@
+{
+  "format": "modeldb.security-validation-notes.v1",
+  "failures": [
+    {
+      "step": "initial-edit",
+      "result": "Python launcher unavailable; no planned edits occurred; subsequent Node script succeeded."
+    },
+    {
+      "step": "initial-evidence-redirection",
+      "result": "D20 directory was not created by the failed Python invocation; initial two redirections failed before their commands ran."
+    },
+    {
+      "step": "lint",
+      "result": "14 curly errors in authorization-service.ts, registry-entrypoints.ts and security-registry.ts; corrected with scoped ESLint fix; final lint passed.",
+      "evidenceLimit": "Initial lint log was overwritten by final lint output; failure fact retained from observed tool output, not represented as an original-byte artifact."
+    },
+    {
+      "step": "initial-document-check",
+      "result": "The document report linked its own output before the first output file existed; initial failure retained, rerun after output creation."
+    }
+  ],
+  "scope": {
+    "runtimeMaterialRead": false
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "format": "modeldb.security-browser-revalidation.v1",
+  "timestampUtc": "2026-10-26T05:11:32.962Z",
+  "exitCode": 0,
+  "tests": 2,
+  "pass": 2,
+  "fail": 0,
+  "cancelled": 0,
+  "skip": 0,
+  "todo": 0,
+  "duration_ms": 385084.3184,
+  "source": "Fresh candidate apps, Windows Chrome, synthetic temporary instances and isolated profiles",
+  "testDurationsMs": [190907.6375, 187537.7711],
+  "summaryCorrection": {
+    "reason": "Wrapper summary expected # skip instead of TAP # skipped. Both browser test cases and their process exited successfully; counts were reparsed from unchanged original TAP.",
+    "originalReportSha256": "1aaa8c511fddd28dedbff2cf1ce63249e64ed4eb7b5fd77604cdfffa8cf6766f",
+    "logSha256": "be3ad1a94aaec6542f10731caf8f699e90f2befe2e0c28168f39e988b49f4230",
+    "summaryOnly": true
+  }
+}

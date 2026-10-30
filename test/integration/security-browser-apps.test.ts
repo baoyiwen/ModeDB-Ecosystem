@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -94,8 +94,75 @@ class BrowserPage {
   close(): void { this.socket.close(); }
 }
 
+async function checkEntryLanguages(page: BrowserPage, entry: 'connection' | 'security' | 'forbidden'): Promise<void> {
+  const root = entry === 'connection' ? '.designer-connection-flow' : '.security-center-workspace';
+  const title = entry === 'connection' ? '.designer-connection-card h1'
+    : entry === 'forbidden' ? '.security-center-access-state h2' : '.security-center-navigation-title strong';
+  const titleKey = entry === 'connection' ? 'gateTitle'
+    : entry === 'forbidden' ? 'securityCenterAccessRequired' : 'securityCenterTitle';
+  const visualRoot = process.env.MODELDB_TEST_SCREENSHOTS_ROOT;
+  if (visualRoot) mkdirSync(visualRoot, { recursive: true });
+  for (const locale of ['en', 'zh', 'ja']) {
+    const messages = JSON.parse(readFileSync(join(workspace, 'apps/model-designer/src/i18n/locales', locale, 'ui.json'), 'utf8')) as Record<string, string>;
+    for (const width of [1280, 390]) {
+      await page.call('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: false });
+      await page.evaluate(`(() => {
+        const select = document.querySelector(${JSON.stringify(root + ' .designer-language-selector select')});
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,${JSON.stringify(locale)});
+        select.dispatchEvent(new Event('change',{bubbles:true}));
+      })()`);
+      await waitFor(() => page.evaluate<string>(`document.querySelector(${JSON.stringify(title)})?.textContent`), value => value === messages[titleKey]);
+      assert.equal(await page.evaluate<string>(`localStorage.getItem('model-designer:locale')`), locale);
+      assert.equal(await page.evaluate<string>(`document.querySelector(${JSON.stringify(root)}).lang`), locale);
+      assert.equal(await page.evaluate<string>(`document.querySelector(${JSON.stringify(root + ' .designer-language-selector span')}).textContent`), messages.locale);
+      assert.equal(await page.evaluate<boolean>(`(() => {
+        const region=document.querySelector(${JSON.stringify(root)});
+        const select=region.querySelector('.designer-language-selector select');
+        const r=select.getBoundingClientRect();
+        select.focus();
+        return document.documentElement.scrollWidth<=innerWidth && region.scrollWidth<=region.clientWidth+1
+          && r.left>=0 && r.right<=innerWidth+1 && document.activeElement===select
+          && select.labels.length===1 && select.options.length===3;
+      })()`), true, entry + ' localized layout and accessible language control');
+      if (entry === 'forbidden') {
+        const dimensions = await page.evaluate<{ viewport: number; heights: number[]; layout: string[] }>(`({
+          viewport:innerHeight,
+          heights:['.designer-security-center-workspace','.designer-panel-body--security-center','.security-center-workspace'].map(s=>document.querySelector(s).getBoundingClientRect().height),
+          layout:['.designer-security-center-workspace','.designer-panel-body--security-center','.security-center-workspace'].map(s=>{const c=getComputedStyle(document.querySelector(s));return [c.height,c.maxHeight,c.flex,c.display,c.gridTemplateRows].join('/')})
+        })`);
+        assert.ok(dimensions.heights[2]! >= dimensions.viewport - 80, 'security drawer fills the editor height: ' + JSON.stringify(dimensions));
+      }
+      if (visualRoot) {
+        const screenshot = await page.call('Page.captureScreenshot', { format: 'png' }) as { data: string };
+        writeFileSync(join(visualRoot, `${entry}-${locale}-${width}.png`), Buffer.from(screenshot.data, 'base64'));
+      }
+    }
+  }
+  // Verify that switching display language also works when preference writes are blocked.
+  await page.evaluate(`(() => {
+    const original=Storage.prototype.setItem;
+    Storage.prototype.setItem=function(){throw new Error('SYNTHETIC_STORAGE_BLOCKED')};
+    try {
+      const select=document.querySelector(${JSON.stringify(root + ' .designer-language-selector select')});
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,'en');
+      select.dispatchEvent(new Event('change',{bubbles:true}));
+    } finally { Storage.prototype.setItem=original; }
+  })()`);
+  const english = JSON.parse(readFileSync(join(workspace, 'apps/model-designer/src/i18n/locales/en/ui.json'), 'utf8')) as Record<string, string>;
+  await waitFor(() => page.evaluate<string>(`document.querySelector(${JSON.stringify(title)})?.textContent`), value => value === english[titleKey]);
+  assert.equal(await page.evaluate<string>(`localStorage.getItem('model-designer:locale')`), 'ja', 'failed preference write keeps the old stored language');
+  // Persist the default language for the rest of the existing acceptance flow.
+  await page.evaluate(`(() => {
+    const select=document.querySelector(${JSON.stringify(root + ' .designer-language-selector select')});
+    select.dispatchEvent(new Event('change',{bubbles:true}));
+  })()`);
+  assert.equal(await page.evaluate<string>(`localStorage.getItem('model-designer:locale')`), 'en');
+  await page.call('Emulation.clearDeviceMetricsOverride');
+  console.log(`[security-browser] ${entry}: zh/en/ja, wide/narrow layout, label/focus and blocked preference writes passed`);
+}
+
 it('three production browser apps pair through the Windows pipe, restore after reload and revoke on logout', {
-  skip: process.platform !== 'win32' || !existsSync(browserPath), timeout: 300000,
+  skip: process.platform !== 'win32' || !existsSync(browserPath), timeout: 600000,
 }, async () => {
   const root = mkdtempSync(join(tmpdir(), 'modedb-browser-apps-'));
   let engine: Awaited<ReturnType<typeof buildDualTrackFastify>> | undefined;
@@ -130,6 +197,18 @@ it('three production browser apps pair through the Windows pipe, restore after r
       // Create a real business database through the delegated cookie session.
       await page.call('Page.navigate', { url: served.origin });
       await waitFor(() => page!.evaluate<string>('document.readyState'), (v) => v === 'complete');
+      if (app === 'model-designer') {
+        await waitFor(() => page!.evaluate<boolean>(`!!document.querySelector('.designer-language-selector select')`), Boolean);
+        await checkEntryLanguages(page, 'connection');
+        assert.equal(await page.evaluate<boolean>(`!document.querySelector('.security-center-workspace') && !!document.querySelector('.designer-connection-card input[type=password]')`), true, 'language choice does not authenticate');
+        await page.evaluate(`(() => {
+          const select=document.querySelector('.designer-language-selector select');
+          Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,'ja');
+          select.dispatchEvent(new Event('change',{bubbles:true}));
+        })()`);
+        await page.call('Page.reload', { ignoreCache: true });
+        await waitFor(() => page!.evaluate<string>(`document.querySelector('.designer-language-selector select')?.value`), value => value === 'ja');
+      }
       const bootstrap: number = await page.evaluate<number>(`(async () => {
         localStorage.clear();
         const paired = await fetch(${JSON.stringify(api + '/api/v1/security/pair')}, { method:'POST', credentials:'include', headers:{'content-type':'application/json'}, body:JSON.stringify({code:${JSON.stringify(pairing.code)}}) });
@@ -140,6 +219,10 @@ it('three production browser apps pair through the Windows pipe, restore after r
         return created.status;
       })()`);
       assert.equal(bootstrap, 200, app + ' bootstrap');
+      // Reproduce a returning user whose previous connection used a service Token.
+      const authModeKey = app === 'model-designer' ? 'model-designer:authMode'
+        : app === 'data-studio' ? 'data-studio:authMode' : 'modedb.playground.authMode';
+      await page.evaluate(`localStorage.setItem(${JSON.stringify(authModeKey)}, 'token')`);
       // Use a new one-time code so the actual application performs its own exchange.
       const launch = await callLocalSecurity(join(root, 'security'), { action: 'browser.launch', origin: served.origin, databases: ['graph'] }) as { code: string };
       const fragment = new URLSearchParams({ 'modeldb-pair': launch.code, 'modeldb-server': api });
@@ -147,6 +230,7 @@ it('three production browser apps pair through the Windows pipe, restore after r
       await page.call('Page.navigate', { url: `${served.origin}/#${fragment}` });
       const pairedState = await waitFor(() => page!.evaluate<{ clean: boolean; ready: boolean }>(`({ clean: !location.hash.includes('modeldb-pair'), ready: ${app === 'model-designer' ? "!!document.querySelector('.designer-connection-card select') && document.querySelectorAll('.designer-connection-card select').length > 0 && !document.querySelector('.designer-connection-card input[type=password]')" : app === 'data-studio' ? "!!document.querySelector('.studio-connect-card select.studio-input')" : "!!document.querySelector('.sidebar .tree') || !![...document.querySelectorAll('button')].find(b=>/Disconnect|断开连接/.test(b.textContent||''))"} })`), (v) => v.clean && v.ready);
       assert.equal(pairedState.clean, true);
+      assert.equal(await page.evaluate<string>(`localStorage.getItem(${JSON.stringify(authModeKey)})`), 'browser', app + ' launcher overrides saved Token mode');
       if (app !== 'web') {
         const clicked: boolean = await page.evaluate<boolean>(`(() => {
           const select = document.querySelector(${JSON.stringify(app === 'model-designer' ? '.designer-connection-card select' : '.studio-connect-card select.studio-input')});
@@ -168,6 +252,21 @@ it('three production browser apps pair through the Windows pipe, restore after r
       const restored: number = await page.evaluate<number>(`fetch(${JSON.stringify(api + '/api/v1/security/session')},{credentials:'include'}).then(r=>r.status)`);
       assert.equal(restored, 200, app + ' restored session');
       if (app === 'model-designer') {
+        assert.equal(await page.evaluate<boolean>(`(() => {
+          const button=[...document.querySelectorAll('button')].find(b=>b.title==='Security center');
+          if(!button)return false; button.click(); return true;
+        })()`), true, 'ordinary editor opens the security center');
+        await waitFor(() => page!.evaluate<boolean>(`!!document.querySelector('.security-center-access-state h2')`), Boolean);
+        assert.equal(await page.evaluate<string>(`document.querySelector('.security-center-navigation-title span').textContent`), api, 'endpoint is displayed with one port');
+        await checkEntryLanguages(page, 'forbidden');
+        assert.deepEqual(await page.evaluate(`(async () => {
+          const session=await fetch(${JSON.stringify(api + '/api/v1/security/session')},{credentials:'include'}).then(r=>r.json());
+          const response=await fetch(${JSON.stringify(api + '/api/v1/security/admin/overview')},{credentials:'include',headers:{'x-modeldb-csrf':session.csrf}});
+          return {securityAdmin:session.securityAdmin===true,status:response.status};
+        })()`), {securityAdmin:false,status:403}, 'language selection cannot elevate ordinary session');
+        await page.evaluate(`document.querySelector('.designer-security-center-workspace .mode-ui-drawer-close').click()`);
+        await waitFor(() => page!.evaluate<boolean>(`!document.querySelector('.security-center-workspace')`), Boolean);
+        assert.equal(await page.evaluate<boolean>(connected), true, 'return to the same connected editor');
         const query = structuredClone(customerOrdersQueryFixture);
         query.status = 'active';
         const published: QueryInterfaceRelease = {
@@ -222,14 +321,28 @@ it('three production browser apps pair through the Windows pipe, restore after r
       await page.evaluate(`(() => { [...document.querySelectorAll('button')].find(b=>/Disconnect|断开连接/.test((b.textContent||'')+' '+(b.title||''))).click(); })()`);
       await waitFor(() => page!.evaluate<number>(`fetch(${JSON.stringify(api + '/api/v1/security/session')},{credentials:'include'}).then(r=>r.status)`), (v) => v === 401 || v === 403, 30000);
       if (app === 'model-designer') {
+        await page.evaluate(`localStorage.setItem('model-designer:authMode', 'token')`);
         const admin = await callLocalSecurity(join(root, 'security'), { action: 'browser.security.launch', origin: served.origin, databases: [] }) as { code: string };
         const adminFragment = new URLSearchParams({ 'modeldb-pair': admin.code, 'modeldb-server': api });
         // Open the launcher in a fresh document; reloading during exchange can discard the one-time code.
         await page.call('Page.navigate', { url: 'about:blank' });
         await page.call('Page.navigate', { url: `${served.origin}/#${adminFragment}` });
         await waitFor(() => page!.evaluate<boolean>(`!!document.querySelector('.security-center-metrics')`), Boolean);
+        assert.equal(await page.evaluate<string>(`document.querySelector('.security-center-navigation-title span').textContent`), api, 'administrator endpoint is displayed with one port');
+        assert.equal(await page.evaluate<string>(`localStorage.getItem('model-designer:authMode')`), 'browser', 'administrator launcher overrides saved Token mode');
+        await checkEntryLanguages(page, 'security');
+        await page.evaluate(`document.querySelector('.security-center-design-guide summary').click()`);
+        assert.equal(await page.evaluate<boolean>(`document.querySelector('.security-center-design-guide').open && document.querySelector('.security-center-design-guide code').textContent.includes('browser-open -c <config>')`), true, 'design guide provides an explicit scoped launcher template');
         assert.deepEqual(await page.evaluate<{ databases: unknown[] }>(`fetch(${JSON.stringify(api + '/api/v1/management/databases')},{credentials:'include'}).then(r=>r.json())`), { databases: [] }, 'administrator sees no business databases');
         assert.equal(await page.evaluate<number>(`fetch(${JSON.stringify(api + '/api/v1/management/databases/graph/catalog')},{credentials:'include'}).then(r=>r.status)`), 403, 'administrator has no business database grants');
+        await page.call('Emulation.setDeviceMetricsOverride', { width: 390, height: 900, deviceScaleFactor: 1, mobile: false });
+        assert.equal(await page.evaluate<boolean>(`document.documentElement.scrollWidth<=innerWidth && document.querySelector('.security-center-design-guide').scrollWidth<=document.querySelector('.security-center-design-guide').clientWidth+1`), true, 'expanded design guidance fits narrow viewport');
+        if (process.env.MODELDB_TEST_SCREENSHOTS_ROOT) {
+          const screenshot = await page.call('Page.captureScreenshot', { format: 'png' }) as { data: string };
+          writeFileSync(join(process.env.MODELDB_TEST_SCREENSHOTS_ROOT, 'security-guide-en-390.png'), Buffer.from(screenshot.data, 'base64'));
+        }
+        await page.call('Emulation.clearDeviceMetricsOverride');
+        await page.evaluate(`document.querySelector('.security-center-design-guide summary').click()`);
         console.log('[security-browser] administrator: independent entry and business isolation passed');
         for (let i = 0; i < 8; i++) {
           const rejected = await fetch(api + '/api/v1/rpc', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer synthetic-rejected-browser-probe' }, body: '{}' });
@@ -237,7 +350,7 @@ it('three production browser apps pair through the Windows pipe, restore after r
         }
         await page.call('Page.reload', { ignoreCache: true });
         await waitFor(() => page!.evaluate<boolean>(`!!document.querySelector('.security-center-metrics')`), Boolean);
-        await page.evaluate(`document.querySelectorAll('.security-center-navigation nav button')[7].click()`);
+        await page.evaluate(`[...document.querySelectorAll('.security-center-navigation nav button')].find(b=>b.textContent==="Security audit").click()`);
         await waitFor(() => page!.evaluate<boolean>(`!!document.querySelector('.security-center-audit-controls')`), Boolean);
         const counts: number[] = await page.evaluate<number[]>(`[...document.querySelectorAll('.security-center-metric strong')].map(el=>Number(el.textContent))`);
         assert.equal(counts[0], counts[1] + counts[2], 'observed = suppressed + saved audit details');
@@ -246,7 +359,7 @@ it('three production browser apps pair through the Windows pipe, restore after r
         await page.call('Emulation.setDeviceMetricsOverride', { width: 760, height: 900, deviceScaleFactor: 1, mobile: false });
         assert.equal(await page.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth`), true, 'audit metrics fit a narrow viewport');
         console.log('[security-browser] administrator: aggregate audit counts, row details and narrow layout passed');
-        await page.evaluate(`document.querySelectorAll('.security-center-navigation nav button')[5].click()`);
+        await page.evaluate(`[...document.querySelectorAll('.security-center-navigation nav button')].find(b=>b.textContent==="Network policy").click()`);
         await waitFor(() => page!.evaluate<boolean>(`!!document.querySelector('.security-protection-panel > fieldset')`), Boolean);
         const initial = await callLocalSecurity(join(root, 'security'), { action: 'network.status' }) as SecurityProtectionState;
         await page.evaluate(`document.querySelectorAll('.security-protection-rules')[1].querySelector(':scope > button').click()`);
@@ -273,7 +386,7 @@ it('three production browser apps pair through the Windows pipe, restore after r
         assert.deepEqual(reverted.config, initial.config);
         await page.call('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
         assert.equal(await page.evaluate<boolean>(`document.documentElement.scrollWidth <= innerWidth && document.querySelector('.security-center-main').getBoundingClientRect().right <= innerWidth+1`), true, 'network panel fits narrow viewport');
-        await page.evaluate(`document.querySelectorAll('.security-center-navigation nav button')[6].click()`);
+        await page.evaluate(`[...document.querySelectorAll('.security-center-navigation nav button')].find(b=>b.textContent==="Key references").click()`);
         await waitFor(() => page!.evaluate<boolean>(`!!document.querySelector('.security-protection-panel dl')`), Boolean);
         const beforeRotate = await callLocalSecurity(join(root, 'security'), { action: 'maintenance.status' }) as SecurityMaintenanceStatus;
         await page.evaluate(`document.querySelector('.security-protection-panel .security-protection-checkbox input').click()`);
@@ -288,6 +401,24 @@ it('three production browser apps pair through the Windows pipe, restore after r
         await page.call('Emulation.clearDeviceMetricsOverride');
         console.log('[security-browser] administrator: independent entry, reload, rule preview/apply/confirm/rollback, master rotation, narrow layout and logout passed');
       }
+      // Exercise the original application credential controls in a fresh document.
+      const servicePrincipal=await callLocalSecurity(join(root,'security'),{action:'principal.create',name:'Synthetic '+app+' compatibility'}) as {id:string};
+      const serviceCredential=await callLocalSecurity(join(root,'security'),{action:'credential.create',principalId:servicePrincipal.id,name:'Synthetic application credential',grants:['graph','model_designer_workspace'].map(database=>({database,resource:'*',actions:['model.read','model.write','schema.manage','database.manage']}))}) as {token:string};
+      await page.call('Page.navigate',{url:'about:blank'});
+      await page.call('Page.navigate',{url:served.origin});
+      await waitFor(()=>page!.evaluate<boolean>(`!!document.querySelector('input[type=password]')`),Boolean,30000);
+      const connectionRoot=app==='model-designer'?'.designer-connection-card':app==='data-studio'?'.studio-connect-card':'.sidebar';
+      await page.evaluate(`(()=>{const root=document.querySelector(${JSON.stringify(connectionRoot)}),select=[...root.querySelectorAll('select')].find(s=>[...s.options].some(o=>o.value==='token'));Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(select,'token');select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+      await delay(100);
+      await page.evaluate(`(()=>{const root=document.querySelector(${JSON.stringify(connectionRoot)}),input=root.querySelector('input[type=password]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(serviceCredential.token)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+      const connectSelector=app==='model-designer'?'.designer-connection-card .designer-btn-primary':app==='data-studio'?'.studio-connect-card .studio-btn-primary':'.sidebar .actions button';
+      await page.evaluate(`document.querySelector(${JSON.stringify(connectSelector)}).click()`);
+      await waitFor(()=>page!.evaluate<boolean>(app==='model-designer'?`!document.querySelector('.designer-connection-card input[type=password]')`:app==='data-studio'?`!!document.querySelector('select.studio-input option[value=graph]')`:`!!document.querySelector('.sidebar .tree-db')`),Boolean,120000);
+      assert.equal(await page.evaluate<boolean>(`!JSON.stringify({...localStorage,...sessionStorage}).includes(${JSON.stringify(serviceCredential.token)})`),true,app+' application Token remains memory-only');
+      await page.call('Page.reload',{ignoreCache:true});
+      await waitFor(()=>page!.evaluate<boolean>(`!!document.querySelector('input[type=password]')`),Boolean,30000);
+      assert.equal(await page.evaluate<string>(`document.querySelector('input[type=password]').value`),'',app+' Token is not restored from storage');
+      console.log('[security-browser] '+app+': application credential controls, scoped listing and memory-only reload passed');
       assert.deepEqual(page.exceptions, [], app + ' unhandled browser exceptions');
       console.log(`[security-browser] ${app}: pairing, workspace, reload, HttpOnly and logout passed`);
     }

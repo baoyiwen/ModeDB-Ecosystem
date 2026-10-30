@@ -1,0 +1,41 @@
+{
+  "format": "modeldb.security-install-check.v1",
+  "task": "DR-P4.3",
+  "ok": false,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Install-Check-Y0ZLiU",
+  "releaseRoot": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Release-ZxZ7xl",
+  "commands": [
+    {
+      "name": "candidate",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\scripts\\security-release-candidate.mjs"
+      ],
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Install-Check-Y0ZLiU\\candidate.original.txt",
+      "exitCode": 0,
+      "timedOut": false
+    },
+    {
+      "name": "upgrade",
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\scripts\\security-installed-upgrade.mjs",
+        "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Release-ZxZ7xl"
+      ],
+      "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Install-Check-Y0ZLiU\\upgrade.original.txt",
+      "exitCode": 1,
+      "timedOut": false
+    }
+  ],
+  "errorCode": "INSTALL_COMMAND_FAILED: upgrade",
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "realTwoDeviceTested": false,
+    "frontendChanged": false,
+    "performanceTested": false,
+    "fullHistoricalPackageDowngradeTested": false
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "command": [
+    "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+    "scripts/assert-no-security-material.mjs"
+  ],
+  "exitCode": 0
+}

@@ -1,0 +1,35 @@
+{
+  "format": "modeldb.recipient-check.v1",
+  "task": "DR-P4.1",
+  "ok": false,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-swNgOM",
+  "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-swNgOM\\designer-build",
+  "screenshots": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-swNgOM\\screenshots",
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-swNgOM\\native.original.txt",
+  "exitCode": 1,
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-recipient-keys-browser.test.ts"
+  ],
+  "candidateSha256": "234b9f984e94458552d714678ea3b1edfdf8e1393b83ce7d50246509940d3e4a",
+  "errorCode": "RECIPIENT_PROCESS_FAILED",
+  "build": {
+    "ok": true,
+    "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Recipient-Check-swNgOM\\designer-build",
+    "configFile": false,
+    "envFile": false,
+    "existingDistUnchanged": true
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "recipientUiTested": true
+  }
+}

@@ -1,16 +1,30 @@
 # ModelDB 安全 V1 使用手册
 
-更新日期：2026-10-24。适用于当前源码构建的 Windows Server、registry 模式和新格式 Vault。配套[功能简介](overview.md)、[进度台账](../security-v1-milestones.md)、[当前交付证据](../security-v1-deliveries/SEC-M7.md)。后续开发须同步更新本手册。
+D34：[两台Windows实际认证器操作手册](windows-device-drill-guide.md)提供Hello检查、A Prepare/Serve、B Client、准确ID审批/停用、合成保存/刷新/断网以及同进程和独立进程重启拒绝步骤。命令使用现成`.ps1`，无需复制多行here-string；仅回传脱敏报告。实际双机/取消/丢失恢复项目尚待执行，不能把Smoke当作完成。
+
+重复检查注册/登录性能和洪泛期间的本机修复能力，见[独立性能验证手册](performance-guide.md)。入口为 `node scripts/security-performance-check.mjs explore`，再按该手册登记门槛和独立确认；全部使用新临时合成环境，不需要提供真实数据库配置。不要同时运行其他验收或压测。
+
+新版安装与合成升级/停用检查入口为 `node scripts/security-install-check.mjs`，逐行步骤和报告判定见[发布准备指南第 2 节](release-guide.md#2-复验候选)。它每次新建隔离候选和实例，不接受真实配置路径；通过报告不等于真实业务库已升级。
+
+更新日期：2026-10-28。适用于当前源码构建的 Windows Server、registry 模式和新格式 Vault。配套[功能简介](overview.md)、[进度台账](../security-v1-milestones.md)、[当前交付证据](../security-v1-deliveries/SEC-M7.md)。后续开发须同步更新本手册。
 
 本文命令中的 `<...>` 都需要替换。先在专用隔离实例验证；本文不表示现有实例已经升级。源码构建后的 CLI 可用 `node packages/server/dist/cli.js` 替代 `modeldb-server`。请使用匹配本次源码的构建，已全局安装的旧版本可能没有这些命令。
 
-构建与安装从[发布准备指南](release-guide.md)开始：`node scripts/security-release-candidate.mjs` 每次新建临时目录，构建七个包和三个前端，核对清单并离线安装本地候选。复验、性能测量、旧格式处理、真实切换和回退边界也在该指南中；命令不会发布或接管现有服务。
+设备注册、公钥登录和本机审批见[方案](device-registration-proposal.md)、[部署契约](device-registration-deployment-contract.md)、[公共协议](device-registration-protocol-contract.md)及[接口使用说明](device-registration-runtime-guide.md)。DR-P1.1—P1.6 已实现默认关闭的注册服务和受保护本机审批，批准只登记主体、公钥和准确授权，已通过虚拟认证器纵向验收；D19 已完成公钥登录后端及 SDK，操作见[登录手册第 8 节](device-registration-runtime-guide.md#8-公钥登录与浏览器会话dr-p22)，正式同源注册/Passkey、申请状态、本机审批/维护和首次部署向导已接入，原配对/限权应用凭据兼容。综合验收命令、管理员/连接者顺序和排障见[运行手册第 17 节](device-registration-runtime-guide.md#17-浏览器候选验收与操作排障dr-p36)。
 
-Git 同步后可执行 `node scripts/security-release-evidence.mjs`，只读核对开发文件和已归档证据，允许 Windows 换行差异；完整步骤及已跟踪运行材料的处理边界见[发布指南第 6 节](release-guide.md#6-git-同步后的交付证据核对)。它不会连接真实实例，也不替代完整功能复验。
+构建与安装从[发布准备指南](release-guide.md)开始：`node scripts/security-release-candidate.mjs` 每次新建临时目录，构建七个包和三个前端，核对清单并离线安装本地候选。前端使用临时源码和新编译依赖，显式关闭本地 Vite 配置与 `.env` 加载，不读取本地证书。复验、性能测量、旧格式处理、真实切换和回退边界也在该指南中；命令不会发布或接管现有服务。
+
+Git 同步后可执行 `node scripts/security-release-evidence.mjs`，只读核对开发文件和已归档证据，允许 Windows 换行差异；最新快照失败时不会沿用旧成功记录。完整步骤及已跟踪运行材料的处理边界见[发布指南第 6 节](release-guide.md#6-git-同步后的交付证据核对)。它不会连接真实实例，也不替代完整功能复验。
+
+首次在 Model Designer 中试用新安全模式，可在普通 PowerShell 运行 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\security-designer-sandbox.ps1`。脚本构建新候选，启动临时合成实例和页面并自动配对；选择 `security_demo` 即可操作示例模型。保持窗口运行，Ctrl+C 关闭，临时数据保留；它不迁移原业务库。参数与说明见[发布指南第 7 节](release-guide.md#7-一条命令试用-model-designer)。
 
 ## 1. 连接与权限
 
 新安装的 registry 配置包含 `security: { "version": 1 }`。它使用独立凭据台账，不从旧 `connectToken` 自动导入身份。配置示例、监听地址和 TLS 见[配置指南](../modeldb-config-guide.md)。本机 loopback 可用 HTTP；跨机器连接配置可信的 HTTPS/WSS。
+
+两台 Windows 的局域网连接见[配置实例与详细说明](windows-lan-config.md)，包含可复制 JSON、每个字段、证书信任、Designer HTTPS 和业务库/设计器库双授权。只修改 `host` 不足以开放远程连接；已有实例还需检查台账中实际生效的网络规则。
+
+第一次实际操作可按[安全检查实操示例](windows-lan-walkthrough.md)进行：本机打开安全中心、更新有效来源名单、复用或创建双库凭据、为 LAN 页面配对、选择业务库并核对结果。当前源码中的有效启动链接会自动覆盖旧 Token 模式，不需手动切换；无效链接不授予身份。连接页和安全中心可直接切换语言，安全中心提供设计入口指引；旧格式拒绝不等于图谱业务验收通过。
 
 实例所有者可在服务运行时通过本机受保护通道查看状态，并打开安全中心或 Designer：
 
@@ -23,6 +37,34 @@ modeldb-server security browser-open -c <isolated-config> --url <designer-url> -
 安全中心管理凭据、应用、设备/会话、权限、网络和审计。安全管理员身份不隐含读取业务库权限。Designer 的业务库与设计器专属库是两个独立授权对象；不要用业务库代替设计器存储。
 
 应用接入按[标准 HTTP 调用](../security-http-invocation.md)创建主体和限权凭据。浏览器用户按[浏览器连接说明](../security-browser-sessions.md)使用一次性配对码。配对码、浏览器会话和应用 Token 各有用途，不互换；长期凭据不写进前端构建变量或浏览器持久存储。
+
+### 1.1 页面语言与进入模型设计
+
+连接页顶部、安全中心侧栏都提供“语言 / Language / 言語”选择，可直接切换 English、中文、日本語，不必先打开图谱。标题、标签和页面说明即时更新；语言是当前页面 Origin 的本地偏好，同一地址刷新后保留。浏览器禁止写入本地存储时，本次页面仍可切换，刷新后可能恢复原偏好。编辑器内仍可通过齿轮设置切换语言；切换语言不会建立、撤销或提升会话权限。
+
+在独立安全中心展开“进入模型设计 / Open model design / モデル設計を開く”，查看本机启动和局域网邀请步骤及命令模板。请先断开安全管理会话，再用 `browser-open` 建立准确库范围的设计会话，或在连接页用管理员签发的一次性邀请配对。设计器专属库和业务库都需获得相应授权；随后选择业务库并打开图谱。模板中的所有占位符都要替换，使用与目标实例一致的配置，不直接复制占位符执行。
+
+安全管理员不会因为展开指引或切换语言而取得业务库权限。普通设计会话打开安全中心时，服务端仍拒绝管理访问；关闭安全中心可回到当前编辑器，不需要重新建立设计会话。
+
+### 1.2 设备注册的部署准备
+
+DR-P1.4 已提供能力探测、连接描述下载、注册开始/完成和私有申请查询，默认关闭。启用需要稳定 DNS、受信 HTTPS、准确实例/Origin/RP 及最长 24 小时的显式注册窗口；V1 还需明确迁移许可。配置字段、接口顺序、错误与维护见[注册接口使用说明](device-registration-runtime-guide.md)。不要照搬合成示例或手改真实台账。
+
+证明通过只保存待审申请，不创建用户、授权、登录会话或 Cookie。本机审批 CLI 已可用，操作见[接口手册第 5 节](device-registration-runtime-guide.md#5-本机审批-cli)；公钥登录属于 DR-P2，Designer 注册页面属于 DR-P3；当前继续使用既有配对。none 响应不证明硬件或私钥持有，浏览器 Passkey 不等于物理主机绑定。
+
+开发者可在已安装本轮依赖的 Windows 开发目录执行：
+
+```powershell
+node scripts/security-registration-contract.mjs
+node node_modules/tsx/dist/cli.mjs --test test/unit/security-registration-contract.test.mjs test/unit/security-device-registration-contract.test.ts test/unit/security-registration-storage.test.ts test/unit/security-registration-runtime.test.ts test/unit/security-registration-approval.test.ts
+node scripts/security-registration-storage-check.mjs
+node scripts/security-registration-consumer-check.mjs
+node scripts/security-registration-integration-check.mjs
+```
+
+`pnpm run test:security:registration` 同样执行这五个测试文件。审批 21 项、存储 23 项、运行时 22 项与部署/公共协议 29 项均使用临时合成材料，含随机回环 DNS/TLS、真实 Windows DPAPI、持久认领与进程恢复；Windows 必需项不跳过。不安装系统信任或改 DNS，不访问真实配置或业务库。类型脚本核对临时新 shared 声明、整个 Server、存储/运行时/审批及集成测试和 SDK browser 边界，复用 common/core 现有声明，不改原 dist。
+
+固定库相同依赖图已接入 Server 根锁，经隔离离线安装和真实库校验；这不替代新发行包安装、Windows Hello、双机认证、公钥登录、性能压测或生产容量验收。历史旧 reader 拒绝 V2 的测试也不代表完整旧发行包降级验收。独立集成命令执行 9 项注册—待审—审批、恢复/故障测试，含 Chrome 虚拟认证器和真实 Windows DPAPI/CLI；故障报告及安全分享范围见[手册第 6 节](device-registration-runtime-guide.md#6-注册审批全流程验收与故障报告)。
 
 ## 2. 网络与审计维护
 
@@ -227,6 +269,14 @@ modeldb-server security backup-key-create --output <protected-prefix> --passphra
 
 ### 源端导出
 
+V5 源实例先完成独立接收方核验，停机后按[运行手册第 19 节](device-registration-runtime-guide.md#19-按已核验接收方离线交付dr-p42)获取最新修订，使用完整接收方选择导出：
+
+```text
+modeldb-server security backup-export -c <source-isolated-config> --database <source-db> --recipient-id <key-id> --recipient-user <userId> --recipient-version <version> --recipient-fingerprint <verified-sha256> --revision <latest-revision> --output <new-external-package> --instance <source-instance-id> --yes
+```
+
+以下 PEM 命令仅用于 V1—V4 兼容；V5 明确拒绝该回退，不能与接收方选择混用：
+
 ```text
 modeldb-server security backup-export -c <source-isolated-config> --database <source-db> --public-key <receiver-public.pem> --output <new-external-package> --instance <source-instance-id> --yes
 ```
@@ -319,10 +369,12 @@ modeldb-server security asset-signing-key-create --output <protected-publisher-p
 `includeData: false` 只导出结构；选择子模型会自动包含父模型及其全部记录（开启数据时）。关系只包含两个端点都在所选模型闭包内的定义和双向索引；指向未选模型的关系不打包。若选中关系仍引用未选子模型的记录，导出拒绝，应先明确补齐所选范围。当前不支持逐行/字段裁剪，所选模型的全部字段和数据都可能交付，应先审阅选择文件。
 
 ```text
-modeldb-server security asset-export -c <source-config> --instance <source-instance-id> --database <business-db> --selection <selection.json> --asset-id <stable-asset-id> --asset-version 1.0.0 --public-key <receiver.public.pem> --signing-key <publisher.private.json> --passphrase-file <publisher-protected-file> --output <new-external-asset-file> --yes
+modeldb-server security asset-export -c <source-config> --instance <source-instance-id> --database <business-db> --selection <selection.json> --asset-id <stable-asset-id> --asset-version 1.0.0 --recipient-id <key-id> --recipient-user <userId> --recipient-version <version> --recipient-fingerprint <verified-sha256> --revision <latest-revision> --signing-key <publisher.private.json> --passphrase-file <publisher-protected-file> --output <new-external-asset-file> --yes
 ```
 
 输出必须位于源安全目录和数据树外，不能覆盖已有文件。`asset-id` 由发布者维护为永久 ID（1—96 个字母、数字、下划线或连字符）；版本使用三段数字。包不含源库 DEK、源 Vault、registry 或凭据；新 PEK 仅由指定接收方公钥封装。
+
+V5 必须完成第 18 节独立持有证明；停机列表、准确身份/版本/指纹与修订的逐行操作见[运行手册第 19 节](device-registration-runtime-guide.md#19-按已核验接收方离线交付dr-p42)。V1—V4 可把五项接收方选择替换为原 `--public-key <receiver.public.pem>`，两种方式互斥。每次导出前重新列表并核对修订；成功核对 `recipient` 与 `packageSha256`。封装审计不代表外部文件已写入，结果未知时保留现场核查，不自动重发。
 
 接收端先使用独立核对的 SHA-256 发布者指纹预览：
 
@@ -381,3 +433,54 @@ v2 先把目标加密的两份待发布 Vault 和原 Designer 快照写入 `secu
 实例停止后，保留原包、接收方私钥和可信发布者指纹，以相同配置、实例 ID、目标库重新执行 `asset-preview`，取得当前摘要，再执行 `asset-import --preview-digest ... --yes`。只有包、任务、目标原/新文件摘要完全一致的现场可继续；不同包、不同目标、被修改或损坏的文件拒绝且保留。进程仍存活时锁不会被接管。
 
 两库完成后任务移动到 `security/asset-publication.<localAssetInstanceId>.completed.mld`，服务可正常启动。归档保持安全目录的平铺文件约束及 owner/SYSTEM ACL。该文件含目标密钥加密的发布结果及发布前 Designer 快照，须连同目标密钥材料保留；当前不提供人工回滚命令或自动清理。重复导入要求两个文件的密文摘要仍完全一致，Engine 重新持久化也可能改变摘要并导致拒绝。任务文件上限 224 MiB，每个 Vault 上限 48 MiB，Windows 进程退出恢复不代表硬件断电验收。没有成功回执时先重新预览，不能把失败回执当作两库均未写入。
+
+## 8. 公钥会话模型的当前边界
+
+DR-P2.1 已区分 API 凭据、公钥登记和本机管理三类会话父级。现有 Token/配对继续使用；批准后须在显式开启公钥登录的同源 HTTPS 部署完成新签名挑战，才签发短期会话；批准或登记 ID 本身不是凭证。管理身份没有业务权限，也不能通过凭据轮换或普通邀请转换成数据身份。
+
+普通启动不自动升级到 V3，当前不需要修改配置或手工迁移。隔离开发验证及错误处理见[专项手册第 7 节](device-registration-runtime-guide.md#7-会话父级模型与兼容验证)；不读取真实材料。V3 不允许手改版本回退，完整旧发行包降级与真实升级尚未验收。
+
+DR-P2.3 / D20 已补齐公钥会话的 HTTP/RPC/WS 动态授权、按凭据通知与用户反向索引、空闲连接到期和排队执行前检查；发布接口及绑定子接口逐项复查。禁用/停用与既有会话撤销同事务提交，重新启用不复活旧会话。D21 已交付 DR-P2.4 正式本机维护 CLI、换钥和登记用户管理；管理页面留待 DR-P3。 操作和错误处理见[动态授权与连接失效](device-registration-runtime-guide.md#9-动态授权与连接失效dr-p23)，本步不要求修改配置。写入结果未知时先核查审计与数据，不自动重发。
+
+DR-P2.4 / D21：本机 CLI 已支持登记凭据/用户分页、禁用/启用、终态撤销、明确减权及原子换钥。换钥保存显式新授权并撤销旧身份和会话，新公钥仍须签名登录；丢失凭据先撤销，再注册并核验重新审批。同主体 API 身份单独维护，启用不复活旧 Cookie；不改变数据密钥。步骤和错误核查见[本机维护手册](device-registration-runtime-guide.md#10-本机用户与凭据维护dr-p24)。本次无页面/翻译改造。
+
+DR-P2.5 / D22：排队和验签中的证明在凭据/用户一度停用后持续失效，立即重新启用也须新挑战；单纯减权按提交时最新授权生效。登录/认领、刷新/注销、维护及 V2→V4 迁移已补真实进程退出恢复矩阵，旧 Token/配对与本机管理身份保持独立。结果未知先核查列表/审计，有 Cookie 先恢复，无 Cookie 重新登录，不重放旧证明。重跑命令与故障步骤见[手册第 11 节](device-registration-runtime-guide.md#11-故障恢复与撤销竞争验收dr-p25)。本步无页面/翻译改动，正式页面留 DR-P3；合成硬退出、原生回归分别记录，不代表硬件断电、Hello/新双机或生产容量验收。
+
+## DR-P3.1 同源托管与本机管理
+
+可显式开启 `security.hosting`，同源 Designer/API 与专用 127.0.0.1 管理监听器分离；本机启动器无需手输 Token，管理 Cookie 空闲 15 分钟/绝对 60 分钟且无数据授权。静态内容启动时白名单快照，拒绝源码/秘密/路径穿越与链接，绑定失败不扩大监听范围。默认保持旧独立前端模式；正式注册/Passkey 状态页已在 DR-P3.2 提供，操作见手册第 13 节。配置、隔离命令、错误与验证见[手册](device-registration-runtime-guide.md#12-同源页面与专用本机管理入口dr-p31)。
+
+开发验证：`pnpm run test:security:hosting`、`node scripts/security-hosting-integration-check.mjs`；构建：`node scripts/security-hosting-build.mjs --output <new-directory>`。构建禁用本地 Vite 配置/env，原 dist 不覆盖；集成强制原生 Windows/Chrome，使用临时合成实例和随机回环端口，缺证据或 skip 不通过。复用现有三语言界面；Hello、LAN、新双机、生产性能与真实切换仍需后续验收。
+
+## DR-P3.2 Designer 注册与免 Token 登录
+
+同源 HTTPS `/designer/` 已提供 Passkey / Windows Hello 登录入口、注册申请、待审/批准/拒绝/到期反馈、JSON 描述导入下载以及换钥/丢失恢复指引。申请获批后仍需独立登录；原配对和应用 Token 保留。申请查询秘密只保存在内存，刷新后请本机管理员核查原申请。中英日文和宽窄屏已纳入实际页面验证；审批维护 UI 已在 D25 完成。前置部署、逐步操作、权限与排障见[使用说明第 13 节](device-registration-runtime-guide.md#13-designer-注册与-passkey-登录dr-p32)。Passkey 不保证物理设备绑定，实际 Hello/新双机、完整业务保存与生产切换仍需后续验收。
+
+DR-P3.3 / D25 已提供专用本机管理页的“注册身份”：申请详情核对与批准/拒绝、准确授权、注册用户及公钥停启、减权、原子换钥/丢失恢复、永久撤销和单会话撤销。操作需要预览、独立核对确认及台账版本匹配，冲突关闭草稿并要求重新加载。数据监听器不提供这些管理能力。详见[本机审批与身份维护手册](device-registration-runtime-guide.md#14-本机审批与身份维护dr-p33)。
+
+DR-P3.4 / D26 增加“首次部署”：全新实例默认仅本机、注册关闭；本机向导核对 HTTPS DNS/RP、公开证书、SPKI、来源网段和有限注册窗口，预览并下载绑定实例的候选计划及公开描述。明确停机后用 CLI 一次性保存持久网络规则并写新配置，原实例身份及 bootstrap 保留，不自动重启。已有实例提供人工合并指引。支持中英日文和窄屏；页面不上传私钥，也不替代 DNS、证书链信任或密钥匹配。完整 PowerShell、确认、错误处理与重复验证见[首次部署手册](device-registration-runtime-guide.md#15-首次部署向导dr-p34)。
+
+公共身份入口扩展到 Data Studio/Web 的 HTTPS 同源页面：申请后等待本机审批，批准后点击 Passkey 登录并继续选择授权库；“其他连接方式”保留配对码/应用凭据。应用凭据仅驻内存，刷新后重新填写；关闭页面不等于服务器注销。默认服务没有新增 Studio/Web 托管路径。见[操作与排障](device-registration-runtime-guide.md#16-公共客户端与三个前端dr-p35)。
+
+## DR-P4.1 独立接收方加密密钥
+
+专用本机安全中心增加“接收方密钥”：显式初始化 V5 台账，关联已批准用户的独立 RSA 公钥，下载五分钟加密挑战，接收方离线证明私钥持有，管理员核对确认后登记版本。换钥保留旧版本，永久退役只停止新交付资格；禁用登录不删历史解密材料。私钥、口令从不上传；丢失私钥后换新版本不能恢复旧包。
+
+逐步页面、PowerShell 单行脚本、输入输出、权限、限额与排障见[运行手册第 18 节](device-registration-runtime-guide.md#18-接收方加密公钥与离线持有证明dr-p41)。DR-P4.2 的原格式交付及离线导入见[第 19 节](device-registration-runtime-guide.md#19-按已核验接收方离线交付dr-p42)；不自动迁移旧 Vault、不增加数据权限或行级隔离，也不把 Passkey 当作解密密钥。退役/停用不撤回已发包，旧包仍需对应历史私钥。
+
+## DR-P4.4 隔离全量验收
+
+维护者在 Windows 的普通 PowerShell、项目根目录逐行执行。需要现有仓库依赖、可用的 Node 和 Chrome；无需指定真实配置、数据库、口令或证书，也无需启动真实服务。
+
+```powershell
+node .\scripts\security-full-check.mjs
+$LASTEXITCODE
+```
+
+也可运行 `pnpm run test:security:full`。命令运行时间较长：先运行全部单元与六个引擎流程，再生成全新三端产物，顺序运行浏览器/原生集成和限定严格类型检查。不要同时修改源码、测试、工具、依赖锁或包配置；前后源码摘要不一致会拒绝成功。不加载本地 Vite 配置或 `.env`，保留原 dist，不安装依赖或系统信任。
+
+成功须同时满足退出码 `0`、最终 `full-check.json` 的 `ok:true` / `task:"DR-P4.4"`、所有 checks 为 true，以及所有必需组 0 fail/skip/cancelled/todo。总数由本次全部单元通过数加 22 项浏览器/原生测试构成，六引擎另按流程记录；恢复、认证故障专项已经包含在单元总数内，不重复相加。缺 Chrome、Windows 能力、依赖、日志统计或任何必需用例都不能算通过。
+
+终端首先输出 `ModeDB-Full-Check-*` 临时目录，以及 `ModeDB-Regression-*` 路径。主目录保存源码清单、总报告、每项命令与原始日志；六引擎与单元日志在回归目录，三端产物/浏览器日志在总报告的 browser.root。失败保留原目录、报告和日志，依据具体 errorCode / 非零退出组修复后重新运行完整入口，不沿用旧成功、删除锁或手改台账。反馈时仅提供脱敏报告和必要日志，不上传整个临时目录、实例、业务包、私钥或口令。
+
+恢复验收区分两种情形：普通数据备份恢复不改变当前身份停用/撤销和接收方历史；独立恢复包恢复数据密钥时建立空访问台账，须重新注册和授权。旧会话和旧公钥的新证明均不能直接恢复权限。范围仅为合成数据和虚拟认证器；本轮不提供硬件不可导出、真实双机、生产迁移或性能结论。独立性能及实际认证器步骤待 DR-P4.5、DR-P4.6。

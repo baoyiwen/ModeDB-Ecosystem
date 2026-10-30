@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "format": "modeldb.registration-consumer-check.v1",
+  "node": "v24.22.1",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Consumers-QFObNE",
+  "checks": {
+    "freshSharedDeclarations": true,
+    "strictSdkConsumer": true,
+    "domTypesWithoutNode": true,
+    "sharedBrowserBundle": true,
+    "sdkBrowserBundle": true,
+    "serverLibraryExcluded": true
+  },
+  "bundles": [
+    {
+      "entry": "packages/shared/src/index.ts",
+      "bytes": 82579,
+      "sha256": "17261afe09010d9a0fb2a807fa1a4433d9de25a955fda59fc2b81428f7c2ec74"
+    },
+    {
+      "entry": "packages/sdk/src/index.ts",
+      "bytes": 142077,
+      "sha256": "e53f60cf5ce92f6f2405721834561dea301fff5ae16c3a14563885d2b15cb125"
+    }
+  ]
+}

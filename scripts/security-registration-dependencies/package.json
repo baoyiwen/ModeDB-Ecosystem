@@ -1,0 +1,12 @@
+{
+  "name": "modeldb-registration-dependency-contract",
+  "private": true,
+  "type": "module",
+  "description": "Isolated dependency selection fixture; not a server runtime or workspace package.",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@simplewebauthn/server": "14.0.3"
+  }
+}

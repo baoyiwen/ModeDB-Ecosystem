@@ -3,9 +3,12 @@ import type { QueryInterfaceRelease } from '../query-designer/index.js';
 import {
   executeInterfacePivot,
   executeModelPivot,
+  buildModelPivotSchema,
+  buildPivotModelFieldPolicy,
+  formatPivotValue,
+  isPivotI18nValue,
   type PivotDocument,
   type PivotLanguageMode,
-  type PivotTableSchema,
   type PivotNode,
 } from '../pivot/index.js';
 import { resolveModelDisplayName } from '../utils/i18n-resolve.js';
@@ -18,7 +21,7 @@ import type { TransferFilter } from '../data-transfer/filters.js';
 import { ModelQueryFilters } from './ModelQueryFilters.js';
 import { InterfaceQueryInputs } from './InterfaceQueryInputs.js';
 import { preparePivotParameters, type PivotParameterDraft } from '../pivot/interface-input.js';
-import { buildPivotDisplay, readableDate, type PivotDisplayNode } from '../pivot/display.js';
+import { buildPivotDisplay, type PivotDisplayNode } from '../pivot/display.js';
 import { PivotResultTable } from './PivotResultTable.js';
 import { DataTransferPanel, type PivotTransferFeedback } from './DataTransferPanel.js';
 import '../styles/data-transfer.css';
@@ -35,10 +38,6 @@ export interface PivotQueryInterfaceView {
 type PivotSourceKind = 'model' | 'interface';
 type PivotViewMode = 'hierarchy' | 'table' | 'json';
 
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function safeJson(value: unknown): string {
   try {
     const json = JSON.stringify(value, null, 2);
@@ -46,25 +45,6 @@ function safeJson(value: unknown): string {
   } catch {
     return String(value);
   }
-}
-
-function formatValue(value: unknown, locale: string, mode: PivotLanguageMode): string {
-  if (value === null) {
-    return 'null';
-  }
-  if (value === undefined) {
-    return 'undefined';
-  }
-  if (mode === 'current' && isI18nMap(value)) {
-    return resolveI18nForLocale(value, locale, Object.values(value)[0] ?? '');
-  }
-  if (typeof value === 'string') {
-    return mode === 'raw' ? value : (readableDate(value) ?? value);
-  }
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-    return String(value);
-  }
-  return safeJson(value);
 }
 
 type PivotTreeTableRow = {
@@ -129,7 +109,6 @@ function formatTreeNodeValue(
 
 function PivotHierarchyTable(props: {
   document: PivotDocument;
-  schema?: PivotTableSchema;
   locale: string;
   languageMode: PivotLanguageMode;
   fieldLabel: string;
@@ -143,7 +122,6 @@ function PivotHierarchyTable(props: {
 }): ReactElement {
   const {
     document,
-    schema,
     locale,
     languageMode,
     fieldLabel,
@@ -240,7 +218,6 @@ function PivotHierarchyTable(props: {
 function PivotDocumentView(props: {
   display: PivotDisplayNode;
   document: PivotDocument;
-  schema?: PivotTableSchema;
   viewMode: PivotViewMode;
   languageMode: PivotLanguageMode;
   locale: string;
@@ -254,11 +231,9 @@ function PivotDocumentView(props: {
   hierarchyExpandLabel: string;
   hierarchyCollapseLabel: string;
   hierarchyNodeTypeLabel: (kind: PivotNode['kind']) => string;
-  tableLabels: PivotTableLabels;
 }): ReactElement {
   const {
     document,
-    schema,
     viewMode,
     languageMode,
     locale,
@@ -272,10 +247,6 @@ function PivotDocumentView(props: {
     hierarchyCollapseLabel,
     hierarchyNodeTypeLabel,
   } = props;
-  const table = useMemo(
-    () => (schema ? buildPivotTable(document, schema) : undefined),
-    [document, schema],
-  );
   if (viewMode === 'json') {
     return (
       <pre className="pivot-json-view" aria-label={jsonLabel}>
@@ -402,7 +373,7 @@ export function PivotTab(props: {
     (item) => item.id === effectiveInterfaceId,
   );
   const effectiveModelPolicy = effectiveModel
-    ? modelFieldPolicy(effectiveModel, models, relations)
+    ? buildPivotModelFieldPolicy(buildModelPivotSchema(effectiveModel.id, models, relations))
     : undefined;
   const autoRunKey =
     effectiveSourceKind === 'model'
@@ -965,7 +936,6 @@ export function PivotTab(props: {
             key={`${autoRunKey}:${appliedSignature}:${document.page.mode}:${document.page.page ?? 0}:${document.page.limit ?? 0}`}
             display={display}
             document={document}
-            schema={schema}
             viewMode={viewMode}
             languageMode={languageMode}
             locale={i18n.locale}
@@ -979,19 +949,6 @@ export function PivotTab(props: {
             hierarchyExpandLabel={i18n.t('ui', 'pivotExpand')}
             hierarchyCollapseLabel={i18n.t('ui', 'pivotCollapse')}
             hierarchyNodeTypeLabel={(kind) => i18n.t('ui', `pivotNode_${kind}`)}
-            tableLabels={{
-              emptyRows: i18n.t('ui', 'pivotNoRows'),
-              emptyFields: i18n.t('ui', 'pivotNoSelectedFields'),
-              expand: i18n.t('ui', 'pivotExpand'),
-              collapse: i18n.t('ui', 'pivotCollapse'),
-              expandAll: i18n.t('ui', 'pivotExpandAll'),
-              collapseAll: i18n.t('ui', 'pivotCollapseAll'),
-              missing: i18n.t('ui', 'pivotMissingValue'),
-              null: i18n.t('ui', 'pivotNullValue'),
-              yes: i18n.t('ui', 'pivotBooleanYes'),
-              no: i18n.t('ui', 'pivotBooleanNo'),
-              rows: (count) => i18n.t('ui', 'pivotRows', { count: String(count) }),
-            }}
           />
         ) : (
           <div className="pivot-empty">

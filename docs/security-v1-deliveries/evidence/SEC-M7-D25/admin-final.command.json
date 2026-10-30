@@ -1,0 +1,11 @@
+{
+  "exitCode": 0,
+  "command": [
+    "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+    "node_modules/tsx/dist/cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "test/unit/security-identity-admin.test.ts",
+    "test/unit/security-identity-admin-report.test.mjs"
+  ]
+}

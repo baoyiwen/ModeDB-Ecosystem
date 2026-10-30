@@ -1,0 +1,91 @@
+[
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/eslint/bin/eslint.js",
+      "scripts/minify-module.mjs",
+      "scripts/obfuscate-dist.mjs",
+      "scripts/security-release-candidate.mjs",
+      "scripts/security-install-check.mjs",
+      "scripts/security-install-contract.mjs",
+      "scripts/security-installed-upgrade.mjs",
+      "scripts/security-install-evidence.mjs",
+      "scripts/security-release-evidence.mjs"
+    ],
+    "exitCode": 1,
+    "log": "lint.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/prettier/bin/prettier.cjs",
+      "--check",
+      "scripts/minify-module.mjs",
+      "scripts/obfuscate-dist.mjs",
+      "scripts/security-release-candidate.mjs",
+      "scripts/security-install-check.mjs",
+      "scripts/security-install-contract.mjs",
+      "scripts/security-installed-upgrade.mjs",
+      "scripts/security-install-evidence.mjs",
+      "scripts/security-release-evidence.mjs",
+      "docs/security-v1/device-registration-protocol-contract.md",
+      "docs/security-v1/release-guide.md",
+      "docs/security-v1/overview.md",
+      "docs/security-v1/user-guide.md",
+      "docs/security-v1/AGENTS.md",
+      "docs/security-v1-plan.md",
+      "docs/security-v1-milestones.md",
+      "docs/security-v1-deliveries/SEC-M7.md",
+      "test/README.md",
+      "package.json",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D31/static-check.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D31/document-check.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D31/finalize-receipt.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D31/run-check.mjs"
+    ],
+    "exitCode": 0,
+    "log": "format.original.txt"
+  },
+  {
+    "command": [
+      "git",
+      "diff",
+      "--check",
+      "--",
+      "scripts/minify-module.mjs",
+      "scripts/obfuscate-dist.mjs",
+      "scripts/security-release-candidate.mjs",
+      "scripts/security-install-check.mjs",
+      "scripts/security-install-contract.mjs",
+      "scripts/security-installed-upgrade.mjs",
+      "scripts/security-install-evidence.mjs",
+      "scripts/security-release-evidence.mjs",
+      "docs/security-v1/device-registration-protocol-contract.md",
+      "docs/security-v1/release-guide.md",
+      "docs/security-v1/overview.md",
+      "docs/security-v1/user-guide.md",
+      "docs/security-v1/AGENTS.md",
+      "docs/security-v1-plan.md",
+      "docs/security-v1-milestones.md",
+      "docs/security-v1-deliveries/SEC-M7.md",
+      "test/README.md",
+      "package.json",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D31/static-check.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D31/document-check.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D31/finalize-receipt.mjs",
+      "docs/security-v1-deliveries/evidence/SEC-M7-D31/run-check.mjs",
+      "test/unit/security-install-contract.test.mjs",
+      "test/unit/security-install-evidence.test.mjs"
+    ],
+    "exitCode": 0,
+    "log": "diff.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "scripts/assert-no-security-material.mjs"
+    ],
+    "exitCode": 0,
+    "log": "material-guard.original.txt"
+  }
+]

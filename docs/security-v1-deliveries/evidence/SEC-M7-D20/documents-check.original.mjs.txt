@@ -1,0 +1,43 @@
+const assert = require('node:assert/strict');
+const { readFileSync, existsSync } = require('node:fs');
+const { dirname, resolve } = require('node:path');
+const docs = [
+  'docs/security-v1/AGENTS.md', 'docs/security-v1-milestones.md', 'docs/security-v1-plan.md',
+  'docs/security-v1/device-registration-proposal.md', 'docs/security-v1/device-registration-deployment-contract.md',
+  'docs/security-v1/device-registration-protocol-contract.md', 'docs/security-v1/device-registration-runtime-guide.md',
+  'docs/security-v1/overview.md', 'docs/security-v1/user-guide.md', 'docs/security-v1/release-guide.md',
+  'docs/security-v1-deliveries/SEC-M7.md', 'docs/security-v1-identity-contract.md', 'docs/security-v1-authorization-contract.md', 'docs/security-browser-sessions.md',
+  'docs/modeldb-config-guide.md', 'test/README.md', 'test/fixtures/security-registration-legacy/README.md',
+];
+const slug = s => s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/<[^>]*>/g, '')
+  .replace(/[`*_]/g, '').toLowerCase().replace(/[^\p{L}\p{N}_ -]/gu, '').replace(/ /g, '-');
+let count = 0;
+const failures = [];
+for (const file of docs) {
+  for (const match of readFileSync(file, 'utf8').matchAll(/\[[^\]\n]*\]\(([^)\n]+)\)/g)) {
+    const href = match[1].replace(/^<|>$/g, '');
+    if (/^[a-z][a-z0-9+.-]*:/i.test(href)) continue;
+    const [relative, anchor] = href.split('#');
+    const target = resolve(dirname(file), decodeURIComponent(relative || './' + file.split('/').at(-1)));
+    count++;
+    if (!existsSync(target)) { failures.push(file + ' missing ' + href); continue; }
+    if (anchor && target.endsWith('.md')) {
+      const seen = new Map(), anchors = new Set();
+      for (const heading of readFileSync(target, 'utf8').matchAll(/^#{1,6}\s+(.+)$/gm)) {
+        const base = slug(heading[1]), n = seen.get(base) || 0;
+        seen.set(base, n + 1); anchors.add(base + (n ? '-' + n : ''));
+      }
+      if (!anchors.has(decodeURIComponent(anchor))) failures.push(file + ' anchor ' + href);
+    }
+  }
+}
+const ledger = readFileSync('docs/security-v1-milestones.md', 'utf8');
+const rows = [...ledger.matchAll(/^\| (DR-P[1-4]\.\d+)\s+\|(.+)$/gm)];
+assert.equal(rows.length, 23);
+assert.equal(new Set(rows.map(r => r[1])).size, 23);
+assert.equal(rows.filter(r => r[2].includes('完成（D')).length, 9);
+assert.match(rows.find(r => r[1] === 'DR-P2.1')[2], /完成（D18）/);
+assert.match(rows.find(r => r[1] === 'DR-P2.2')[2], /完成（D19）/);
+assert.match(rows.find(r => r[1] === 'DR-P2.3')[2], /完成（D20）/);
+console.log(JSON.stringify({ ok: failures.length === 0, documentFiles: docs.length, localLinksAndAnchors: count, failures, registrationTaskRows: rows.length, completedRegistrationTasks: 9 }, null, 2));
+assert.equal(failures.length, 0);

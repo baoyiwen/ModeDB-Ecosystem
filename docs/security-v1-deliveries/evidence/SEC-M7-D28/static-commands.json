@@ -1,0 +1,75 @@
+[
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/eslint/bin/eslint.js",
+      "scripts/security-browser-candidate-check.mjs",
+      "scripts/security-browser-candidate-evidence.mjs",
+      "scripts/security-release-evidence.mjs",
+      "scripts/security-registration-storage-check.mjs"
+    ],
+    "exitCode": 0,
+    "log": "lint-1793154648626.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "node_modules/prettier/bin/prettier.cjs",
+      "--check",
+      "scripts/security-browser-candidate-check.mjs",
+      "scripts/security-browser-candidate-evidence.mjs",
+      "scripts/security-release-evidence.mjs",
+      "scripts/security-registration-storage-check.mjs",
+      "docs/security-v1/device-registration-protocol-contract.md",
+      "docs/security-v1/device-registration-runtime-guide.md",
+      "docs/security-v1/overview.md",
+      "docs/security-v1/user-guide.md",
+      "docs/security-v1-plan.md",
+      "docs/security-v1/AGENTS.md",
+      "docs/security-v1-milestones.md",
+      "docs/security-v1-deliveries/SEC-M7.md",
+      "test/README.md",
+      "package.json"
+    ],
+    "exitCode": 0,
+    "log": "format-1793154649859.original.txt"
+  },
+  {
+    "command": [
+      "git",
+      "diff",
+      "--check",
+      "--",
+      "scripts/security-browser-candidate-check.mjs",
+      "scripts/security-browser-candidate-evidence.mjs",
+      "scripts/security-release-evidence.mjs",
+      "scripts/security-registration-storage-check.mjs",
+      "docs/security-v1/device-registration-protocol-contract.md",
+      "docs/security-v1/device-registration-runtime-guide.md",
+      "docs/security-v1/overview.md",
+      "docs/security-v1/user-guide.md",
+      "docs/security-v1-plan.md",
+      "docs/security-v1/AGENTS.md",
+      "docs/security-v1-milestones.md",
+      "docs/security-v1-deliveries/SEC-M7.md",
+      "test/README.md",
+      "package.json",
+      "test/integration/security-hostile-browser.test.ts",
+      "test/integration/security-designer-identity-browser.test.ts",
+      "test/integration/security-public-clients-browser.test.ts",
+      "test/fixtures/security-browser-save.ts",
+      "test/unit/security-browser-candidate-report.test.mjs",
+      "test/unit/security-release-evidence.test.mjs"
+    ],
+    "exitCode": 0,
+    "log": "diff-1793154649934.original.txt"
+  },
+  {
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "scripts/assert-no-security-material.mjs"
+    ],
+    "exitCode": 0,
+    "log": "material-guard-1793154650052.original.txt"
+  }
+]

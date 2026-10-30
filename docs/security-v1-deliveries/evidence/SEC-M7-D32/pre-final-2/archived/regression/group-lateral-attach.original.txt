@@ -1,0 +1,113 @@
+
+════════════════════════════════════════════════════════════
+  0. Reset workspace + logical library directory
+════════════════════════════════════════════════════════════
+  ✓ workspace C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\group_lateral_workspace ready
+
+════════════════════════════════════════════════════════════
+  1. AuthoringEngine: Item↔Tag (N:N) + Item→Bin (forward)
+════════════════════════════════════════════════════════════
+  ✓ Item↔Tag (N:N) + Item→Bin seeded
+
+════════════════════════════════════════════════════════════
+  2. Start ModelDB server
+════════════════════════════════════════════════════════════
+[modeldb-server] storage fingerprint (sha256): 96d910887624af0f9a86cc8ca83000004718b130af0c7977f3dc1c25821d281f
+[ModelDB] Engine is running
+  Listen: 127.0.0.1:52455
+  ➜ Local:   http://localhost:52455/ (本机访问)
+  Direct client addresses:
+    HTTP:      http://127.0.0.1:52455 (HTTP API 根地址)
+    Action:    http://127.0.0.1:52455/v2/action (单次操作接口)
+    Bulk:      http://127.0.0.1:52455/v2/bulk (批量操作接口)
+    Health:    http://127.0.0.1:52455/health (健康检查)
+    Status:    http://127.0.0.1:52455/api/v1/management/status (引擎状态)
+    WebSocket: ws://127.0.0.1:52455/ (实时 RPC)
+    Stream:    ws://127.0.0.1:52455/v2/stream (流式 RPC)
+
+  Console commands:
+    Stop:      Ctrl+C
+    Status:    modeldb-server info -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\group_lateral_workspace\modeldb.config.json"
+    Databases: modeldb-server ls -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\group_lateral_workspace\modeldb.config.json"
+    Create DB: modeldb-server create-db <db-name> -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\group_lateral_workspace\modeldb.config.json"
+    Backup:    modeldb-server backup <db-name> --reason manual -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\group_lateral_workspace\modeldb.config.json"
+
+  Note: management URLs require the configured connect token in the request header.
+  Remote access: disabled by the loopback bind. Start with --host 0.0.0.0 for direct LAN access.
+  ✓ listening on 127.0.0.1:52455
+[ModeDB] START Connection: open websocket trace=e2c0492f
+  说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+  请求摘要: { url: 'ws://127.0.0.1:52455/v2/stream' }
+[modeldb-server] connect 127.0.0.1
+[ModeDB] OK Connection: open websocket trace=e2c0492f 5.41ms
+  结果: { ms: 5.41, url: 'ws://127.0.0.1:52455/v2/stream' }
+[ModeDB] START WebSocket RPC: handshake trace=00e1219e
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: { database: 'group_lateral_attach' }
+[ModeDB] OK WebSocket RPC: handshake trace=00e1219e 761.57ms
+  结果: { ms: 761.57, database: 'group_lateral_attach' }
+
+════════════════════════════════════════════════════════════
+  3. group("tags"): subject stays Item, tags attached laterally
+════════════════════════════════════════════════════════════
+[ModeDB] START WebSocket RPC: executeQuery trace=e2966f10
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '656cbaad-e8d1-49e5-8d7a-4608993c0012',
+    database: 'group_lateral_attach',
+    op: 'executeQuery',
+    model: 'Item',
+    page: 0,
+    cursor: undefined,
+    limit: undefined
+  }
+[modeldb-server][rpc] START executeQuery db=group_lateral_attach id=656cbaad-e8d1-49e5-8d7a-4608993c0012 {
+  op: 'executeQuery',
+  model: 'Item',
+  page: 0,
+  cursor: undefined,
+  limit: undefined
+}
+[modeldb-server][rpc] OK executeQuery db=group_lateral_attach id=656cbaad-e8d1-49e5-8d7a-4608993c0012 767.67ms { kind: 'rows', rows: 3 }
+[ModeDB] OK WebSocket RPC: executeQuery trace=e2966f10 769.29ms
+  结果: { ms: 769.29, kind: 'rows', rows: 3 }
+  ✓ top-level rows are the 3 source Items, not Tags (got 3)
+  ✓ N:N attach: item-1 carries both tags [blue, red]
+  ✓ item-2 carries 1 tag (red)
+  ✓ item-3 carries 1 tag (blue)
+
+════════════════════════════════════════════════════════════
+  4. group → relate: group keeps subject, so relate still hops from Item
+════════════════════════════════════════════════════════════
+[ModeDB] START WebSocket RPC: executeQuery trace=a84a9c7c
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '52e2d413-be6e-496d-87cc-bd9d83b6ed8c',
+    database: 'group_lateral_attach',
+    op: 'executeQuery',
+    model: 'Item',
+    page: 0,
+    cursor: undefined,
+    limit: undefined
+  }
+[modeldb-server][rpc] START executeQuery db=group_lateral_attach id=52e2d413-be6e-496d-87cc-bd9d83b6ed8c {
+  op: 'executeQuery',
+  model: 'Item',
+  page: 0,
+  cursor: undefined,
+  limit: undefined
+}
+[modeldb-server][rpc] OK executeQuery db=group_lateral_attach id=52e2d413-be6e-496d-87cc-bd9d83b6ed8c 0.66ms { kind: 'rows', rows: 3 }
+[ModeDB] OK WebSocket RPC: executeQuery trace=a84a9c7c 1.41ms
+  结果: { ms: 1.41, kind: 'rows', rows: 3 }
+  ✓ top-level still the 3 Items after group().relate() (got 3)
+  ✓ item-1 retains lateral tags after the forward relate
+  ✓ relate("bin") hopped from Item (subject preserved by group): [box-1]
+  ✓ item-3 has no bin (forward relate yields empty slot, still an Item row)
+
+════════════════════════════════════════════════════════════
+  5. row conservation: lateral attach does not inflate top-level count
+════════════════════════════════════════════════════════════
+  ✓ top-level count == source Item count (3) in both group-only and group+relate
+
+group-lateral-attach: 12 passed, 0 failed

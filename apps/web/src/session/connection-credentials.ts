@@ -1,6 +1,9 @@
 import { takeBrowserPairingLink } from '@mode-db/sdk';
 let activeToken = '';
 let pairingLaunch = takeBrowserPairingLink();
+let browserSessionMode: boolean | undefined;
+// A validated launcher link takes precedence over an earlier service-token preference.
+if (pairingLaunch) persistBrowserSessionMode(true);
 export function getPairingLaunch(): typeof pairingLaunch {
   return pairingLaunch;
 }
@@ -8,6 +11,7 @@ export function clearPairingLaunch(): void {
   pairingLaunch = undefined;
 }
 export function isBrowserSessionMode(): boolean {
+  if (browserSessionMode !== undefined) return browserSessionMode;
   try {
     return localStorage.getItem('modedb.playground.authMode') !== 'token';
   } catch {
@@ -15,6 +19,7 @@ export function isBrowserSessionMode(): boolean {
   }
 }
 export function persistBrowserSessionMode(browser: boolean): void {
+  browserSessionMode = browser;
   try {
     localStorage.setItem('modedb.playground.authMode', browser ? 'browser' : 'token');
   } catch {

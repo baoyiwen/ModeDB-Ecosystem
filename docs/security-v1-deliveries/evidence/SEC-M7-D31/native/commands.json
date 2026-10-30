@@ -1,0 +1,23 @@
+[
+  {
+    "name": "candidate",
+    "command": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "C:\\workspace\\web_code\\ModeDB-Ecosystem\\scripts\\security-release-candidate.mjs"
+    ],
+    "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Install-Check-APo6TX\\candidate.original.txt",
+    "exitCode": 0,
+    "timedOut": false
+  },
+  {
+    "name": "upgrade",
+    "command": [
+      "C:\\nvm4w\\nodejs\\node.exe",
+      "C:\\workspace\\web_code\\ModeDB-Ecosystem\\scripts\\security-installed-upgrade.mjs",
+      "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Release-zELT8z"
+    ],
+    "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Install-Check-APo6TX\\upgrade.original.txt",
+    "exitCode": 0,
+    "timedOut": false
+  }
+]

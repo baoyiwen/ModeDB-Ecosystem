@@ -1,0 +1,26 @@
+{
+  "type": "result",
+  "result": {
+    "requests": 48,
+    "concurrency": 48,
+    "completed": 48,
+    "completedBeforeRepair": 1,
+    "unexpected": 0,
+    "localMutationSucceeded": true,
+    "localMutationMs": 3797.5239,
+    "pendingCapacity": 1000,
+    "capacityRejected": true,
+    "auditPresent": true,
+    "durationMs": 45045.6192,
+    "maxRequestMs": 45004.595799999996,
+    "nodeRssMiB": 244.10546875,
+    "proofBounds": {
+      "active": 4,
+      "queued": 32,
+      "overflowRejected": true,
+      "localMutationSucceeded": true,
+      "protector": "synthetic AES-GCM; deterministic queue-only check",
+      "nativePerformance": false
+    }
+  }
+}

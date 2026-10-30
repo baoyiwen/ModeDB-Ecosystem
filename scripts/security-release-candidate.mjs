@@ -17,7 +17,8 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { minify } from 'terser';
+import { minifyModule } from './minify-module.mjs';
+import { buildReleaseApplication } from './security-release-apps.mjs';
 
 const repository = realpathSync(fileURLToPath(new URL('../', import.meta.url)));
 const names = ['shared', 'common', 'data-kit', 'data-ui', 'sdk', 'core', 'server'];
@@ -201,7 +202,19 @@ async function main() {
   const manifests = Object.fromEntries(
     names.map((name) => [name, json(safeSource(`packages/${name}/package.json`))]),
   );
-  const sources = [];
+  const sources = [
+    'package.json',
+    'pnpm-lock.yaml',
+    'tsconfig.json',
+    'scripts/security-release-candidate.mjs',
+    'scripts/security-release-apps.mjs',
+    'scripts/minify-module.mjs',
+    'scripts/obfuscate-dist.mjs',
+    'scripts/security-install-check.mjs',
+    'scripts/security-installed-upgrade.mjs',
+    'scripts/security-install-contract.mjs',
+    'test/fixtures/security-registration-legacy/security-registry-v1.original.ts.txt',
+  ].map((path) => ({ path, sha256: sha256(readFileSync(safeSource(path))) }));
   for (const name of names) {
     const target = join(stage, 'packages', name);
     mkdirSync(target, { recursive: true });
@@ -308,31 +321,16 @@ async function main() {
     const emitted = files(join(target, 'dist'));
     if (['sdk', 'data-kit', 'data-ui'].includes(name)) {
       for (const path of emitted) {
-        const current = join(repository, 'packages', name, 'dist', path);
-        assert.ok(
-          existsSync(current) &&
-            sha256(readFileSync(current)) === sha256(readFileSync(join(target, 'dist', path))),
-          `RELEASE_BROWSER_DEPENDENCY_STALE: ${name}/${path}; run the workspace package build first`,
-        );
         browserDependencies.push({
-          path: `packages/${name}/dist/${path}`,
-          sha256: sha256(readFileSync(current)),
+          path: `stage/packages/${name}/dist/${path}`,
+          sha256: sha256(readFileSync(join(target, 'dist', path))),
         });
       }
     }
     if (['shared', 'common', 'core', 'server'].includes(name)) {
-      const nameCache = {};
       for (const path of emitted.filter((path) => path.endsWith('.js'))) {
-        const output = await minify(readFileSync(join(target, 'dist', path), 'utf8'), {
-          module: true,
-          ecma: 2022,
-          compress: { passes: 3, pure_getters: true, unsafe: false },
-          mangle: { module: true, toplevel: true },
-          format: { comments: false, ecma: 2022 },
-          nameCache,
-        });
-        assert.ok(output.code, 'RELEASE_MINIFY_FAILED');
-        writeFileSync(join(target, 'dist', path), output.code);
+        const output = await minifyModule(readFileSync(join(target, 'dist', path), 'utf8'));
+        writeFileSync(join(target, 'dist', path), output);
       }
     }
     // This temporary package contains only allowlisted source and this run's outputs.
@@ -444,6 +442,11 @@ async function main() {
     'recovery-restore',
     'asset-import',
     'backup-import',
+    'registration-list',
+    'registration-user-disable',
+    'recipient-list',
+    '--recipient-fingerprint',
+    'deployment-finalize',
   ]) {
     assert.ok(help.includes(command), 'RELEASE_HELP_MISMATCH');
   }
@@ -489,20 +492,80 @@ async function main() {
     [join(repository, 'node_modules/typescript/bin/tsc'), '-p', join(consumer, 'tsconfig.json')],
     consumer,
   );
+  writeFileSync(
+    join(consumer, 'browser-check.ts'),
+    `import { createBrowserIdentityClient, manageRecipientKey, manageRegisteredIdentity, deploymentWizard } from '@mode-db/sdk';
+import type { RecipientKeyCommand, DeviceAuthenticationBindingV1, DataSecurityEvent } from '@mode-db/shared';
+export const client = createBrowserIdentityClient({host:'https://modeldb-a.example.test',port:443});
+export const list: RecipientKeyCommand = {action:'registration.recipient.list',instanceId:'synthetic'};
+export const recipients = () => manageRecipientKey({host:'https://modeldb-a.example.test',port:443},list);
+export const users = () => manageRegisteredIdentity({host:'https://modeldb-a.example.test',port:443},{action:'registration.users.list',instanceId:'synthetic'});
+export const deployment = () => deploymentWizard({host:'https://modeldb-a.example.test',port:443},{action:'deployment.status'});
+export function binding(value:DeviceAuthenticationBindingV1){ return value.instanceId; }
+export function delivery(event:DataSecurityEvent){ return event.delivery?.packageSha256; }
+`,
+    { flag: 'wx' },
+  );
+  save(join(consumer, 'tsconfig.browser.json'), {
+    compilerOptions: {
+      strict: true,
+      noEmit: true,
+      skipLibCheck: false,
+      module: 'Node16',
+      moduleResolution: 'Node16',
+      target: 'ES2022',
+      lib: ['ES2022', 'DOM'],
+      types: [],
+    },
+    files: ['browser-check.ts'],
+  });
+  run(
+    process.execPath,
+    [
+      join(repository, 'node_modules/typescript/bin/tsc'),
+      '-p',
+      join(consumer, 'tsconfig.browser.json'),
+    ],
+    consumer,
+  );
   const apps = [];
   for (const name of ['model-designer', 'data-studio', 'web']) {
     process.stdout.write(`Building clean application: ${name}\n`);
-    const output = join(root, 'apps', name);
-    run(
-      process.execPath,
-      [
-        join(repository, 'apps', name, 'node_modules/vite/bin/vite.js'),
-        'build',
-        '--outDir',
-        output,
-      ],
-      join(repository, 'apps', name),
+    const prefix = `apps/${name}/`;
+    const appRoot = join(stage, 'apps', name);
+    mkdirSync(appRoot, { recursive: true });
+    for (const path of inventory.filter((path) => path.startsWith(prefix))) {
+      const local = path.slice(prefix.length);
+      if (!['index.html', 'package.json'].includes(local) && !/^(src|public)\//.test(local)) {
+        continue;
+      }
+      const source = safeSource(path);
+      if (!lstatSync(source).isFile()) {
+        continue;
+      }
+      const destination = join(appRoot, local);
+      mkdirSync(dirname(destination), { recursive: true });
+      copyFileSync(source, destination);
+      sources.push({ path, sha256: sha256(readFileSync(source)) });
+    }
+    symlinkSync(
+      realpathSync(join(repository, 'apps', name, 'node_modules')),
+      join(appRoot, 'node_modules'),
+      process.platform === 'win32' ? 'junction' : 'dir',
     );
+    const output = join(root, 'apps', name);
+    await buildReleaseApplication({
+      name,
+      sourceRoot: appRoot,
+      toolingRoot: join(repository, 'apps', name),
+      output,
+      aliases: Object.fromEntries(
+        ['data-kit', 'data-ui', 'sdk', 'shared'].map((dependency) => [
+          '@mode-db/' + dependency,
+          join(stage, 'packages', dependency, 'dist/index.js'),
+        ]),
+      ),
+    });
     apps.push({
       name,
       files: files(output).map((path) => ({
@@ -517,6 +580,11 @@ async function main() {
     'docs/security-v1/user-guide.md',
     'docs/security-v1/release-guide.md',
     'docs/modeldb-config-guide.md',
+    'docs/security-v1/device-registration-runtime-guide.md',
+    'docs/security-v1/recipient-key-contract.md',
+    'docs/security-v1/device-registration-protocol-contract.md',
+    'docs/security-v1/device-registration-deployment-contract.md',
+    'docs/security-v1/device-registration-proposal.md',
   ]) {
     const output = join(root, path);
     mkdirSync(dirname(output), { recursive: true });
@@ -538,7 +606,11 @@ async function main() {
     const bytes = readFileSync(safeSource(path));
     const values = JSON.parse(bytes);
     const keys = Object.keys(values)
-      .filter((key) => /^(security|audit|network|maintenance)/i.test(key))
+      .filter((key) =>
+        /^(security|audit|network|maintenance|languageName_|identity_|registeredIdentity_|recipientKeys_|deployment_)|^locale$/i.test(
+          key,
+        ),
+      )
       .sort();
     assert.ok(
       keys.length > 0 &&
@@ -549,6 +621,13 @@ async function main() {
   });
   for (const locale of i18n) {
     assert.deepEqual(locale.keys, i18n[0].keys, 'RELEASE_I18N_KEYS_MISMATCH');
+  }
+  for (const source of sources) {
+    assert.equal(
+      sha256(readFileSync(safeSource(source.path))),
+      source.sha256,
+      'RELEASE_SOURCE_CHANGED: ' + source.path,
+    );
   }
   const result = {
     format: 'modeldb.security-release-candidate.v1',
@@ -573,9 +652,17 @@ async function main() {
       cliHelp: true,
       binShim: true,
       consumerTypes: true,
+      installedBrowserTypesWithoutNode: true,
+      unchangedSource: true,
       postinstall:
         'server installer explicitly executed after --ignore-scripts; third-party lifecycle disabled',
       cleanFrontends: true,
+      frontendBuild: {
+        configFile: false,
+        envFile: false,
+        source: 'allowlisted temporary copy',
+        workspaceDependencies: 'fresh staged package outputs',
+      },
       documentedCliAndSecurityI18n: true,
     },
     consumer,

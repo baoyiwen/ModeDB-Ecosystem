@@ -1,0 +1,19 @@
+{
+  "format": "modeldb.device-drill-preparation-verification.v1",
+  "revision": "SEC-M7-D34",
+  "task": "DR-P4.6",
+  "taskStatus": "waiting-for-actual-devices",
+  "taskComplete": false,
+  "date": "2026-10-29",
+  "sourceSha256": "d16a7feb7682e7196a9bb79c50776746952b5461f8c011fad6d4977ca8965ee0",
+  "unitPass": 59,
+  "tasks": {
+    "registration": "22/23",
+    "registrationP4": "5/6",
+    "registrationWorkPackages": "3/4"
+  },
+  "actualHelloTested": false,
+  "twoDeviceTested": false,
+  "liveMaterialRead": false,
+  "systemTrustInstalled": false
+}

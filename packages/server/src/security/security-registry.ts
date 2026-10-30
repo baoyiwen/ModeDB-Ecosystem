@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import {
   acquireFileLeaseSync,
+  assertFlatGraphSegment,
   fileDigest,
   isVaultKeyReference,
   readAtomicFileSync,
@@ -20,11 +21,42 @@ import type {
   SecurityRegistryStatus,
   SecurityGrant,
   SecurityProtectionState,
+  SecuritySessionParent,
+} from '@mode-db/shared';
+import {
+  DeviceAuthenticationContractError,
+  DeviceRegistrationContractError,
 } from '@mode-db/shared';
 import { LocalVaultKeyProvider } from './local-vault-key-provider.js';
 import { WindowsSecretProtector, type SecretProtector } from './windows-secret-protector.js';
 import { SecurityError } from './security-errors.js';
 import { securityOrigin, isLoopbackAddress, type NetworkSource } from './network-policy.js';
+import {
+  assertRecipientLedger,
+  assertRecipientLoginKey,
+  emptyRecipientLedger,
+  parseRecipientCommand,
+  recipientKeyPage,
+  beginRecipientChallenge,
+  completeRecipientChallenge,
+  recipientPublicKey,
+  type RecipientLedger,
+} from './recipient-keys.js';
+import { parseRecipientDelivery, type RecipientDeliverySelection } from './recipient-delivery.js';
+import { parseRegistrationApprovalRequest } from './registration-approval.js';
+import {
+  isRegistrationMaintenance,
+  parseRegistrationMaintenance,
+  sameRegistrationPublicKey,
+} from './registration-maintenance.js';
+import {
+  assertRegistrationLedger,
+  assertRegistrationLedgerTransition,
+  emptyRegistrationLedger,
+  resetRegistrationAccess,
+  normalizeRegistrationGrants,
+  type RegistrationLedger,
+} from './registration-ledger.js';
 
 interface Principal {
   id: string;
@@ -34,11 +66,13 @@ interface Principal {
 }
 type Credential = { -readonly [P in keyof SecurityCredentialInfo]: SecurityCredentialInfo[P] } & {
   secretHash: string;
+  kind?: 'api-credential' | 'local-management';
 };
 interface Session {
   id: string;
   principalId: string;
   credentialId: string;
+  parent?: SecuritySessionParent;
   secretHash: string;
   createdAt: string;
   expiresAt: string;
@@ -51,6 +85,7 @@ interface Session {
 interface Pairing {
   id: string;
   credentialId: string;
+  parent?: Exclude<SecuritySessionParent, { kind: 'registered-public-key' }>;
   secretHash: string;
   createdAt: string;
   expiresAt: string;
@@ -58,8 +93,18 @@ interface Pairing {
   origin: string;
   securityAdmin?: boolean;
 }
+import {
+  assertAuthenticationLedger,
+  emptyAuthenticationLedger,
+  type AuthenticationLedger,
+  type AuthenticationChallenge,
+} from './authentication-ledger.js';
+
 interface RegistryState {
-  version: 1;
+  version: 1 | 2 | 3 | 4 | 5;
+  recipients?: RecipientLedger;
+  registration?: RegistrationLedger;
+  authentication?: AuthenticationLedger;
   instanceId: string;
   revision: number;
   policyVersion: number;
@@ -92,6 +137,8 @@ export interface VerifiedCredential {
   readonly actor: SecurityActor;
   readonly credential: SecurityCredentialInfo;
   readonly policyVersion: number;
+  /** Present for a verified session, not for a reusable API token. */
+  readonly sessionParent?: SecuritySessionParent;
 }
 
 export interface VerifiedBrowserSession extends VerifiedCredential {
@@ -164,6 +211,75 @@ function browserOriginValue(value: string): string {
   return origin;
 }
 
+function parentOf(entry: Session | Pairing): SecuritySessionParent {
+  return (
+    entry.parent ?? {
+      kind: entry.securityAdmin === true ? 'local-management' : 'api-credential',
+      credentialId: entry.credentialId,
+    }
+  );
+}
+
+/** Validate persisted references independently of liveness; revoked history remains readable. */
+function assertSessionParent(
+  state: RegistryState,
+  entry: Session | Pairing,
+  pairing = false,
+): void {
+  check(
+    entry.parent === undefined ||
+      (entry.parent !== null && typeof entry.parent === 'object' && !Array.isArray(entry.parent)),
+  );
+  const parent = parentOf(entry);
+  check(parent && typeof parent === 'object' && !Array.isArray(parent));
+  check(
+    Object.keys(parent).every((key) =>
+      (parent.kind === 'registered-public-key'
+        ? ['kind', 'credentialId', 'userId']
+        : ['kind', 'credentialId']
+      ).includes(key),
+    ) && parent.credentialId === entry.credentialId,
+  );
+  if (state.version < 3) {
+    check(entry.parent === undefined);
+  } else {
+    check(entry.parent !== undefined);
+  }
+  let principalId: string;
+  if (parent.kind === 'registered-public-key') {
+    check(state.version >= 3 && !pairing && 'accessEpoch' in entry && entry.securityAdmin !== true);
+    const credential = state.registration?.credentials.find((c) => c.id === parent.credentialId);
+    const user = state.registration?.users.find((u) => u.id === parent.userId);
+    const app = state.registration?.applications.find((a) => a.id === credential?.applicationId);
+    check(credential && user && credential.userId === user.id);
+    check(entry.origin === app?.serverOrigin && validDate(entry.absoluteExpiresAt));
+    check(
+      Date.parse(entry.createdAt) < Date.parse(entry.expiresAt) &&
+        Date.parse(entry.expiresAt) <= Date.parse(entry.createdAt) + 30 * 60000 &&
+        Date.parse(entry.expiresAt) <= Date.parse(entry.absoluteExpiresAt) &&
+        Date.parse(entry.absoluteExpiresAt) <= Date.parse(entry.createdAt) + 8 * 3600000,
+    );
+    principalId = user.principalId;
+  } else {
+    check(parent.kind === 'api-credential' || parent.kind === 'local-management');
+    const credential = state.credentials.find((c) => c.id === parent.credentialId);
+    check(credential && (state.version < 3 || credential.kind === parent.kind));
+    principalId = credential.principalId;
+    if (parent.kind === 'local-management') {
+      check(
+        entry.securityAdmin === true &&
+          credential.grants.length === 0 &&
+          entry.origin &&
+          isLoopbackAddress(new URL(entry.origin).hostname) &&
+          state.principals.some((p) => p.id === principalId && p.kind === 'operator'),
+      );
+    } else {
+      check(entry.securityAdmin !== true);
+    }
+  }
+  check(!('principalId' in entry) || entry.principalId === principalId);
+}
+
 /** Encrypted, instance-owned transactional security ledger and authoritative audit journal.
  * Sensitive mutations and their audit event commit together. No business Vault stores this state.
  */
@@ -179,9 +295,15 @@ export class SecurityRegistry {
   private release?: () => void;
   private closed = false;
   private actorId = 'local-os-owner';
+  private localActor = false;
+  private hostedIdentityActor = false;
   private managementEvent?: Pick<DataSecurityEvent, 'actor' | 'source' | 'requestId'>;
   private readonly listeners = new Set<
     (event: { policyVersion: number; credentialIds: readonly string[] }) => void
+  >();
+  private readonly credentialListeners = new Map<
+    string,
+    Set<(event: { policyVersion: number; credentialIds: readonly string[] }) => void>
   >();
 
   private constructor(directory: string, options: SecurityRegistryOptions) {
@@ -342,6 +464,1140 @@ export class SecurityRegistry {
   protectionState(): SecurityProtectionState | undefined {
     this.assertOpen();
     return structuredClone(this.state.protection);
+  }
+
+  /** Fresh deployment only. OS-paired management sessions do not count as data use. */
+  assertDeploymentUnused(): void {
+    this.assertOpen();
+    const s = this.state;
+    if (
+      s.version !== 1 ||
+      s.keyReferences.length ||
+      s.credentials.some(
+        (c) =>
+          c.grants.length ||
+          !s.pairings.some((p) => p.credentialId === c.id && p.securityAdmin === true),
+      ) ||
+      s.principals.some((p) => !s.credentials.some((c) => c.principalId === p.id)) ||
+      s.sessions.some((session) => parentOf(session).kind !== 'local-management')
+    ) {
+      throw new SecurityError('SECURITY_POLICY_CONFLICT');
+    }
+  }
+
+  recordDeploymentPreview(): void {
+    this.commit('deployment.preview', () => undefined);
+  }
+
+  /** Metadata only. Existing instances remain V1 until an explicit trusted storage migration. */
+  registrationStorageStatus(): {
+    ledgerVersion: 1 | 2 | 3 | 4 | 5;
+    mode: 'disabled' | 'enabled';
+    revision: number;
+    applications: number;
+    challenges: number;
+    users: number;
+    credentials: number;
+  } {
+    this.assertOpen();
+    const store = this.state.registration;
+    return {
+      ledgerVersion: this.state.version,
+      mode: store?.mode ?? 'disabled',
+      revision: this.state.revision,
+      applications: store?.applications.length ?? 0,
+      challenges: store?.challenges.length ?? 0,
+      users: store?.users.length ?? 0,
+      credentials: store?.credentials.length ?? 0,
+    };
+  }
+
+  /** Server-internal migration primitive; not wired to HTTP, CLI, or configuration. */
+  migrateRegistrationStorage(expectedRevision: number): void {
+    this.assertRegistrationRevision(expectedRevision);
+    if (this.state.version >= 2) {
+      return;
+    }
+    this.commit('registration.storage.migrate', (state) => {
+      state.version = 2;
+      state.registration = emptyRegistrationLedger();
+    });
+  }
+
+  /** Trusted internal CAS migration only; never runs implicitly on open or exposes a login. */
+  migrateSessionStorage(expectedRevision: number): void {
+    this.assertRegistrationRevision(expectedRevision);
+    if (this.state.version >= 3) {
+      return;
+    }
+    this.commit('session.storage.migrate', (state) => {
+      this.upgradeSessionState(state);
+    });
+  }
+
+  private upgradeSessionState(state: RegistryState): void {
+    if (state.version >= 3) {
+      return;
+    }
+    const adminIds = new Set(
+      [...state.sessions, ...state.pairings]
+        .filter((entry) => entry.securityAdmin === true)
+        .map((entry) => entry.credentialId),
+    );
+    for (const credential of state.credentials) {
+      credential.kind = adminIds.has(credential.id) ? 'local-management' : 'api-credential';
+    }
+    for (const entry of [...state.sessions, ...state.pairings]) {
+      entry.parent = {
+        kind: entry.securityAdmin === true ? 'local-management' : 'api-credential',
+        credentialId: entry.credentialId,
+      };
+    }
+    state.registration ??= emptyRegistrationLedger();
+    state.version = 3;
+  }
+
+  /** Explicit, atomic internal migration; ordinary open and disabled configuration do not upgrade. */
+  migrateAuthenticationStorage(expectedRevision: number): void {
+    this.assertRegistrationRevision(expectedRevision);
+    if (this.state.version >= 4) {
+      return;
+    }
+    this.commit('authentication.storage.migrate', (state) => {
+      this.upgradeSessionState(state);
+      state.authentication = emptyAuthenticationLedger();
+      state.version = 4;
+    });
+  }
+
+  readAuthenticationChallenge(id: string): AuthenticationChallenge | undefined {
+    this.assertOpen();
+    return structuredClone(this.state.authentication?.challenges.find((c) => c.id === id));
+  }
+
+  /** Abandon unfinished ceremonies on restart; collect elapsed terminal entries only. */
+  recoverAuthenticationChallenges(): void {
+    this.assertOpen();
+    if (!this.state.authentication) {
+      return;
+    }
+    if (
+      !this.state.authentication.challenges.some(
+        (c) =>
+          c.state === 'issued' || c.state === 'claimed' || Date.parse(c.expiresAtUtc) <= this.now(),
+      )
+    ) {
+      return;
+    }
+    this.commit('authentication.recover', (state) => {
+      state.authentication!.challenges = state.authentication!.challenges.filter(
+        (c) => Date.parse(c.expiresAtUtc) > this.now(),
+      );
+      for (const c of state.authentication!.challenges) {
+        c.state = c.state === 'succeeded' ? 'succeeded' : 'rejected';
+        c.finishedAtUtc ??= new Date(this.now()).toISOString();
+      }
+    });
+  }
+
+  issueAuthenticationChallenge(challenge: AuthenticationChallenge, event: DataSecurityEvent): void {
+    check(
+      this.state.version >= 4 &&
+        challenge.state === 'issued' &&
+        challenge.accessEpoch === this.state.accessEpoch,
+    );
+    this.commit(
+      'authentication.begin',
+      (state) => {
+        const store = state.authentication!;
+        store.challenges = store.challenges.filter((c) => Date.parse(c.expiresAtUtc) > this.now());
+        if (store.challenges.length >= 1000) {
+          throw new DeviceAuthenticationContractError('SECURITY_AUTHENTICATION_CAPACITY');
+        }
+        store.challenges.push(structuredClone(challenge));
+        assertAuthenticationLedger(store, state.instanceId);
+      },
+      undefined,
+      'succeeded',
+      event,
+    );
+  }
+
+  claimAuthenticationChallenge(id: string, event: DataSecurityEvent): void {
+    this.commit(
+      'authentication.claim',
+      (state) => {
+        const c = state.authentication?.challenges.find((c) => c.id === id);
+        if (!c || c.state !== 'issued') {
+          throw new DeviceAuthenticationContractError('SECURITY_AUTHENTICATION_CHALLENGE_REPLAYED');
+        }
+        if (Date.parse(c.expiresAtUtc) <= this.now() || c.accessEpoch !== state.accessEpoch) {
+          throw new DeviceAuthenticationContractError('SECURITY_AUTHENTICATION_CHALLENGE_EXPIRED');
+        }
+        c.state = 'claimed';
+        c.claimedAtUtc = new Date(this.now()).toISOString();
+      },
+      undefined,
+      'succeeded',
+      event,
+    );
+  }
+
+  rejectAuthenticationChallenge(id: string, event: DataSecurityEvent): void {
+    this.assertOpen();
+    if (this.state.authentication?.challenges.find((c) => c.id === id)?.state !== 'claimed') {
+      return;
+    }
+    this.commit(
+      'authentication.finish',
+      (state) => {
+        const c = state.authentication!.challenges.find((c) => c.id === id)!;
+        c.state = 'rejected';
+        c.finishedAtUtc = new Date(this.now()).toISOString();
+      },
+      undefined,
+      'denied',
+      event,
+    );
+  }
+
+  /** Resolve live ownership internally. Public callers receive a uniform proof rejection. */
+  authenticationKey(rawId: string) {
+    this.assertOpen();
+    const store = this.state.registration;
+    const key = store?.credentials.find((c) => c.rawId === rawId && c.state === 'active');
+    const user = store?.users.find((u) => u.id === key?.userId && u.enabled);
+    const app = store?.applications.find(
+      (a) => a.id === key?.applicationId && a.state === 'approved',
+    );
+    if (
+      !key ||
+      !user ||
+      !app ||
+      !this.state.principals.some((p) => p.id === user.principalId && p.enabled)
+    ) {
+      throw new DeviceAuthenticationContractError('SECURITY_AUTHENTICATION_PROOF_INVALID');
+    }
+    return structuredClone({ key, user, app });
+  }
+
+  /** Counter, terminal challenge, session and successful audit share one durable commit. */
+  completeAuthentication(
+    id: string,
+    rawId: string,
+    counter: number,
+    backedUp: boolean,
+    event: DataSecurityEvent,
+  ): { session: string; expiresAt: string } {
+    const { key, user, app } = this.authenticationKey(rawId);
+    const c = this.readAuthenticationChallenge(id);
+    if (
+      !c ||
+      c.state !== 'claimed' ||
+      c.accessEpoch !== this.state.accessEpoch ||
+      Date.parse(c.expiresAtUtc) <= this.now()
+    ) {
+      throw new DeviceAuthenticationContractError('SECURITY_AUTHENTICATION_CHALLENGE_EXPIRED');
+    }
+    if (
+      app.serverOrigin !== c.serverOrigin ||
+      app.rpId !== c.rpId ||
+      !Number.isSafeInteger(counter) ||
+      counter < 0 ||
+      counter > 0xffffffff ||
+      (key.deviceType === 'singleDevice' &&
+        (key.counter !== 0 || counter !== 0) &&
+        counter <= key.counter)
+    ) {
+      throw new DeviceAuthenticationContractError('SECURITY_AUTHENTICATION_PROOF_INVALID');
+    }
+    const sessionId = randomUUID();
+    const session = 'mdbs_v1_' + sessionId + '_' + randomBytes(32).toString('base64url');
+    const issuedAt = this.now(),
+      at = new Date(issuedAt).toISOString(),
+      expiresAt = new Date(issuedAt + 30 * 60000).toISOString();
+    this.commit(
+      'authentication.login',
+      (state) => {
+        const credential = state.registration!.credentials.find((k) => k.id === key.id)!;
+        credential.counter = Math.max(credential.counter, counter);
+        credential.backedUp = backedUp;
+        credential.updatedAtUtc = at;
+        assertRegistrationLedgerTransition(
+          this.state.registration!,
+          state.registration!,
+          this.now(),
+        );
+        const challenge = state.authentication!.challenges.find((c) => c.id === id)!;
+        challenge.state = 'succeeded';
+        challenge.finishedAtUtc = at;
+        challenge.sessionId = sessionId;
+        state.sessions = state.sessions.filter((s) => Date.parse(s.expiresAt) > this.now());
+        if (state.sessions.length >= 10000) {
+          throw new DeviceAuthenticationContractError('SECURITY_AUTHENTICATION_CAPACITY');
+        }
+        state.sessions.push({
+          id: sessionId,
+          principalId: user.principalId,
+          credentialId: key.id,
+          parent: { kind: 'registered-public-key', credentialId: key.id, userId: user.id },
+          secretHash: hash(session),
+          accessEpoch: state.accessEpoch,
+          createdAt: at,
+          expiresAt,
+          absoluteExpiresAt: new Date(issuedAt + 8 * 3600000).toISOString(),
+          origin: c.serverOrigin,
+        });
+      },
+      key.id,
+      'succeeded',
+      {
+        ...event,
+        actor: { principalId: user.principalId, credentialId: key.id, identityTrust: 'verified' },
+        resource: { credentialId: key.id },
+      },
+    );
+    return { session, expiresAt };
+  }
+
+  /** Trusted storage adapter only. Never return this snapshot through public management APIs. */
+  readRegistrationStorage(): RegistrationLedger {
+    this.assertOpen();
+    if (!this.state.registration) {
+      throw new SecurityError('SECURITY_PROTOCOL_UNSUPPORTED');
+    }
+    return structuredClone(this.state.registration);
+  }
+
+  /** A validated CAS storage transaction, not an authentication or approval entry point.
+   * Future service methods must verify admission/proofs/operator identity before using it. */
+  commitRegistrationStorage(
+    expectedRevision: number,
+    input: RegistrationLedger,
+    event?: DataSecurityEvent,
+    maintenanceEvent?: DataSecurityEvent,
+  ): void {
+    this.assertRegistrationRevision(expectedRevision);
+    if (!this.state.registration) {
+      throw new SecurityError('SECURITY_PROTOCOL_UNSUPPORTED');
+    }
+    assertRegistrationLedger(input, this.state.instanceId, this.state.principals);
+    const next = structuredClone(input);
+    assertRegistrationLedgerTransition(this.state.registration, next, this.now());
+    for (const key of next.credentials) {
+      if (!this.state.registration.credentials.some((previous) => previous.id === key.id)) {
+        assertRecipientLoginKey(this.state.recipients, key.publicKeyCose, this.now());
+      }
+    }
+    const affected = this.registrationInvalidations(next);
+    this.commit(
+      event?.action ?? 'registration.storage.update',
+      (state) => {
+        state.registration = next;
+        if (maintenanceEvent) {
+          state.events.push({
+            ...maintenanceEvent,
+            policyVersion: this.state.policyVersion + (affected.length ? 1 : 0),
+          });
+        }
+        if (affected.length) {
+          state.policyVersion++;
+        }
+        this.revokeInactiveRegistrationSessions(state, affected);
+      },
+      undefined,
+      event?.result ?? 'succeeded',
+      event
+        ? { ...event, policyVersion: this.state.policyVersion + (affected.length ? 1 : 0) }
+        : undefined,
+    );
+    if (affected.length) {
+      this.notify(affected);
+    }
+  }
+
+  /** CAS reduction for OS-local or reverified dedicated management; never expands grants. */
+  restrictRegisteredCredential(
+    expectedRevision: number,
+    credentialId: string,
+    input: unknown,
+  ): void {
+    this.assertOpen();
+    if ((!this.localActor || this.managementEvent) && !this.hostedIdentityActor) {
+      throw new SecurityError('SECURITY_LOCAL_IDENTITY_DENIED');
+    }
+    this.assertRegistrationRevision(expectedRevision);
+    const next = this.readRegistrationStorage();
+    const key = next.credentials.find((c) => c.id === credentialId);
+    check(key && key.state !== 'revoked');
+    key.grants = normalizeRegistrationGrants(input);
+    key.updatedAtUtc = new Date(this.now()).toISOString();
+    if (key.state === 'disabled') {
+      key.disabledAtUtc = key.updatedAtUtc;
+    }
+    assertRegistrationLedger(next, this.state.instanceId, this.state.principals);
+    assertRegistrationLedgerTransition(this.state.registration!, next, this.now(), credentialId);
+    const affected = this.registrationInvalidations(next);
+    this.commit(
+      'registration.credential.restrict',
+      (state) => {
+        state.registration = next;
+        if (affected.length) {
+          state.policyVersion++;
+        }
+      },
+      credentialId,
+    );
+    if (affected.length) {
+      this.notify(affected);
+    }
+  }
+
+  /** Reverse user index fans a user change out to all of its credential subscriptions. */
+  private registrationInvalidations(next: RegistrationLedger): string[] {
+    const before = this.state.registration!;
+    const keys = new Map(next.credentials.map((key) => [key.id, key]));
+    const byUser = new Map<string, string[]>();
+    const affected = new Set<string>();
+    for (const key of before.credentials) {
+      const ids = byUser.get(key.userId) ?? [];
+      ids.push(key.id);
+      byUser.set(key.userId, ids);
+      const current = keys.get(key.id);
+      if (
+        !current ||
+        key.state !== current.state ||
+        JSON.stringify(key.grants ?? []) !== JSON.stringify(current.grants ?? [])
+      ) {
+        affected.add(key.id);
+      }
+    }
+    const users = new Map(next.users.map((user) => [user.id, user]));
+    for (const user of before.users) {
+      if (user.enabled !== users.get(user.id)?.enabled) {
+        for (const id of byUser.get(user.id) ?? []) {
+          affected.add(id);
+        }
+      }
+    }
+    return [...affected];
+  }
+
+  private revokeInactiveRegistrationSessions(
+    state: RegistryState,
+    affected: readonly string[],
+  ): void {
+    if (!affected.length) {
+      return;
+    }
+    const keys = new Map(state.registration!.credentials.map((key) => [key.id, key]));
+    const users = new Map(state.registration!.users.map((user) => [user.id, user]));
+    const inactive = new Set(
+      affected.filter((id) => {
+        const key = keys.get(id);
+        return !key || key.state !== 'active' || !users.get(key.userId)?.enabled;
+      }),
+    );
+    const at = new Date(this.now()).toISOString();
+    for (const session of state.sessions) {
+      if (
+        parentOf(session).kind === 'registered-public-key' &&
+        inactive.has(session.credentialId) &&
+        !session.revokedAt
+      ) {
+        session.revokedAt = at;
+      }
+    }
+  }
+
+  private assertRegistrationRevision(expectedRevision: number): void {
+    this.assertOpen();
+    if (!Number.isSafeInteger(expectedRevision) || expectedRevision !== this.state.revision) {
+      throw new SecurityError('SECURITY_POLICY_CONFLICT');
+    }
+  }
+
+  /** Called only after the dedicated listener boundary. Reverify the actual paired session. */
+  manageHostedIdentity(session: string, origin: string, csrf: string, input: unknown): unknown {
+    if (typeof csrf !== 'string' || !/^[a-f0-9]{64}$/.test(csrf)) {
+      throw new SecurityError('SECURITY_CSRF_REQUIRED');
+    }
+    const verified = this.verifyBrowserSession(session, origin, csrf);
+    if (
+      !verified.securityAdmin ||
+      verified.sessionParent?.kind !== 'local-management' ||
+      Date.parse(verified.absoluteExpiresAt) >
+        Date.parse(verified.credential.createdAt) + 60 * 60000 ||
+      this.managementEvent?.actor.principalId !== verified.actor.principalId ||
+      this.managementEvent?.source.transport !== 'http' ||
+      this.localActor
+    ) {
+      throw new SecurityError('SECURITY_LOCAL_IDENTITY_DENIED');
+    }
+    const previous = this.hostedIdentityActor;
+    this.hostedIdentityActor = true;
+    try {
+      return this.manageRegistration(input);
+    } finally {
+      this.hostedIdentityActor = previous;
+    }
+  }
+
+  /** OS-local CLI or a freshly verified dedicated management session, never public identity. */
+  manageRegistration(input: unknown): unknown {
+    this.assertOpen();
+    if ((!this.localActor || this.managementEvent) && !this.hostedIdentityActor) {
+      throw new SecurityError('SECURITY_LOCAL_IDENTITY_DENIED');
+    }
+    let action = 'registration.maintenance';
+    try {
+      if (
+        input &&
+        typeof input === 'object' &&
+        typeof (input as { action?: unknown }).action === 'string' &&
+        (input as { action: string }).action.startsWith('registration.recipient.')
+      ) {
+        const request = parseRecipientCommand(input);
+        action = request.action;
+        return this.manageRecipientKey(request);
+      }
+      if (
+        input &&
+        typeof input === 'object' &&
+        ['registration.sessions.list', 'registration.session.revoke'].includes(
+          (input as { action: string }).action,
+        )
+      ) {
+        action = (input as { action: string }).action;
+        return this.manageIdentitySession(input);
+      }
+      if (isRegistrationMaintenance(input)) {
+        const request = parseRegistrationMaintenance(input);
+        action = request.action;
+        return this.manageRegisteredIdentity(request);
+      }
+      const r = parseRegistrationApprovalRequest(input);
+      action = r.action;
+      if (r.instanceId !== this.state.instanceId) {
+        throw new SecurityError('SECURITY_FORBIDDEN');
+      }
+      if (r.action === 'registration.list') {
+        const applications = this.state.registration?.applications ?? [];
+        const now = this.now();
+        const entries = applications.slice(r.offset, r.offset + r.limit).map((app) => {
+          const credential = this.state.registration?.credentials.find(
+            (c) => c.id === app.credentialId,
+          );
+          const user = this.state.registration?.users.find((u) => u.id === app.userId);
+          return {
+            id: app.id,
+            displayName: app.displayName,
+            createdAtUtc: app.createdAtUtc,
+            expiresAtUtc: app.expiresAtUtc,
+            state:
+              app.state === 'pending' && Date.parse(app.expiresAtUtc) <= now
+                ? 'expired'
+                : app.state,
+            proofVerified: Boolean(app.candidate),
+            serverOrigin: app.serverOrigin,
+            rpId: app.rpId,
+            ...(app.candidate
+              ? {
+                  publicKeyFingerprint: createHash('sha256')
+                    .update(Buffer.from(app.candidate.publicKeyCose, 'base64url'))
+                    .digest('hex'),
+                  algorithm: app.candidate.algorithm,
+                  deviceType: app.candidate.deviceType,
+                  backedUp: app.candidate.backedUp,
+                }
+              : {}),
+            ...(user ? { principalId: user.principalId, userId: user.id } : {}),
+            ...(credential
+              ? { credentialId: credential.id, grants: structuredClone(credential.grants ?? []) }
+              : {}),
+          };
+        });
+        this.commit('registration.list', () => undefined);
+        return {
+          instanceId: r.instanceId,
+          revision: this.state.revision,
+          applications: entries,
+          total: applications.length,
+          offset: r.offset,
+          nextOffset: r.offset + r.limit < applications.length ? r.offset + r.limit : null,
+        };
+      }
+      this.assertRegistrationRevision(r.revision);
+      if (!this.state.registration) {
+        throw new SecurityError('SECURITY_PROTOCOL_UNSUPPORTED');
+      }
+      const next = structuredClone(this.state),
+        store = next.registration!;
+      const app = store.applications.find((a) => a.id === r.id);
+      if (!app) {
+        throw new SecurityError('SECURITY_NOT_FOUND');
+      }
+      const now = this.now(),
+        at = new Date(now).toISOString();
+      if (
+        app.state !== 'pending' ||
+        Date.parse(app.expiresAtUtc) <= now ||
+        Date.parse(app.createdAtUtc) > now
+      ) {
+        throw new SecurityError('SECURITY_POLICY_CONFLICT');
+      }
+      let principalId: string | undefined;
+      if (r.action === 'registration.approve') {
+        if (!app.candidate || !app.verifiedAtUtc || Date.parse(app.verifiedAtUtc) > now) {
+          throw new SecurityError('SECURITY_FORBIDDEN');
+        }
+        assertRecipientLoginKey(this.state.recipients, app.candidate.publicKeyCose, now);
+        let principal = r.principalId
+          ? next.principals.find((p) => p.id === r.principalId)
+          : undefined;
+        if (r.principalId && (!principal?.enabled || principal.kind !== 'operator')) {
+          throw new SecurityError('SECURITY_FORBIDDEN');
+        }
+        if (!principal) {
+          if (next.principals.length >= 10000) {
+            throw new SecurityError('SECURITY_RESPONSE_LIMIT');
+          }
+          principal = { id: randomUUID(), name: r.name!, kind: 'operator', enabled: true };
+          next.principals.push(principal);
+        }
+        principalId = principal.id;
+        let user = store.users.find((u) => u.principalId === principal.id);
+        if (user && !user.enabled) {
+          throw new SecurityError('SECURITY_FORBIDDEN');
+        }
+        if (!user) {
+          user = {
+            id: randomUUID(),
+            principalId: principal.id,
+            displayName: principal.name.slice(0, 80),
+            enabled: true,
+            createdAtUtc: at,
+            updatedAtUtc: at,
+          };
+          store.users.push(user);
+        }
+        app.state = 'approved';
+        app.decidedAtUtc = at;
+        app.userId = user.id;
+        app.credentialId = randomUUID();
+        store.credentials.push({
+          ...app.candidate,
+          id: app.credentialId,
+          applicationId: app.id,
+          userId: user.id,
+          state: 'active',
+          grants: r.grants,
+          createdAtUtc: at,
+          updatedAtUtc: at,
+        });
+      } else {
+        app.state = 'rejected';
+        app.decidedAtUtc = at;
+        for (const challenge of store.challenges) {
+          if (challenge.applicationId === app.id && challenge.state === 'issued') {
+            challenge.state = Date.parse(challenge.expiresAtUtc) <= now ? 'expired' : 'rejected';
+            challenge.finishedAtUtc = at;
+          }
+        }
+      }
+      assertRegistrationLedger(store, next.instanceId, next.principals);
+      assertRegistrationLedgerTransition(this.state.registration, store, now);
+      const event: DataSecurityEvent = {
+        version: 1,
+        eventId: randomUUID(),
+        timestampUtc: at,
+        category: 'management',
+        action: r.action,
+        result: 'succeeded',
+        taskId: app.id,
+        actor: { principalId: this.actorId, identityTrust: 'verified' },
+        source: { transport: 'local-ipc' },
+        ...this.managementEvent,
+        policyVersion: this.state.policyVersion + 1,
+        ...(app.credentialId ? { resource: { principalId, credentialId: app.credentialId } } : {}),
+      };
+      this.commit(
+        r.action,
+        (state) => {
+          state.principals = next.principals;
+          state.registration = store;
+          state.policyVersion++;
+        },
+        undefined,
+        'succeeded',
+        event,
+      );
+      this.notify([]);
+      return {
+        instanceId: r.instanceId,
+        registrationId: app.id,
+        state: app.state,
+        revision: this.state.revision,
+        ...(app.credentialId
+          ? {
+              principalId,
+              userId: app.userId,
+              credentialId: app.credentialId,
+              grants: r.action === 'registration.approve' ? structuredClone(r.grants) : [],
+            }
+          : {}),
+      };
+    } catch (caught) {
+      const error =
+        caught instanceof DeviceRegistrationContractError
+          ? new SecurityError(
+              caught.code.endsWith('CAPACITY')
+                ? 'SECURITY_RESPONSE_LIMIT'
+                : 'SECURITY_INVALID_REQUEST',
+            )
+          : caught;
+      if (
+        error instanceof SecurityError &&
+        [
+          'SECURITY_INVALID_REQUEST',
+          'SECURITY_NOT_FOUND',
+          'SECURITY_POLICY_CONFLICT',
+          'SECURITY_FORBIDDEN',
+          'SECURITY_CONFIRMATION_REQUIRED',
+          'SECURITY_PROTOCOL_UNSUPPORTED',
+          'SECURITY_RESPONSE_LIMIT',
+        ].includes(error.code)
+      ) {
+        this.commit(action, () => undefined, undefined, 'denied', {
+          version: 1,
+          eventId: randomUUID(),
+          timestampUtc: new Date(this.now()).toISOString(),
+          category: 'management',
+          action,
+          result: 'denied',
+          reasonCode: error.code,
+          actor: { principalId: this.actorId, identityTrust: 'verified' },
+          source: { transport: 'local-ipc' },
+          ...this.managementEvent,
+          policyVersion: this.state.policyVersion,
+        });
+      }
+      throw error;
+    }
+  }
+
+  /** Offline owner only. The instance lease must remain held through sealing and publication. */
+  selectDeliveryRecipient(input: unknown) {
+    this.assertOpen();
+    if (!this.localActor || this.managementEvent || this.hostedIdentityActor) {
+      throw new SecurityError('SECURITY_LOCAL_IDENTITY_DENIED');
+    }
+    const r = parseRecipientDelivery(input);
+    this.assertRegistrationRevision(r.revision);
+    if (r.instanceId !== this.state.instanceId || this.state.version !== 5) {
+      throw new SecurityError('SECURITY_FORBIDDEN');
+    }
+    const key = this.state.recipients!.keys.find((k) => k.id === r.id);
+    const user = this.state.registration!.users.find((u) => u.id === r.userId);
+    if (
+      !key ||
+      key.state !== 'active' ||
+      key.userId !== r.userId ||
+      key.keyVersion !== r.keyVersion ||
+      key.fingerprint !== r.fingerprint ||
+      !user?.enabled ||
+      !this.state.principals.some((p) => p.id === user.principalId && p.enabled) ||
+      !this.state.registration!.credentials.some(
+        (c) => c.userId === r.userId && c.state === 'active',
+      )
+    ) {
+      throw new SecurityError('SECURITY_FORBIDDEN');
+    }
+    return {
+      key: recipientPublicKey(key.publicKey).key,
+      recipient: {
+        id: key.id,
+        userId: key.userId,
+        keyVersion: key.keyVersion,
+        fingerprint: key.fingerprint,
+      },
+    };
+  }
+
+  /** Persist the exact ciphertext digest before it can be published outside the instance. */
+  recordSealedRecipientDelivery(
+    input: RecipientDeliverySelection,
+    database: string,
+    kind: 'backup' | 'asset',
+    packageSha256: string,
+  ): void {
+    const { recipient } = this.selectDeliveryRecipient(input);
+    check(typeof database === 'string');
+    assertFlatGraphSegment(database, 'database');
+    check(['backup', 'asset'].includes(kind) && /^[a-f0-9]{64}(?![\s\S])/.test(packageSha256));
+    this.commit('recipient.delivery.sealed', () => undefined, undefined, 'succeeded', {
+      version: 1,
+      eventId: randomUUID(),
+      timestampUtc: new Date(this.now()).toISOString(),
+      category: 'management',
+      action: 'recipient.delivery.sealed',
+      result: 'succeeded',
+      actor: { principalId: this.actorId, identityTrust: 'verified' },
+      source: { transport: 'local-ipc' },
+      resource: { database },
+      policyVersion: this.state.policyVersion,
+      delivery: {
+        recipientKeyId: recipient.id,
+        userId: recipient.userId,
+        keyVersion: recipient.keyVersion,
+        fingerprint: recipient.fingerprint,
+        packageSha256,
+        kind,
+      },
+    });
+  }
+
+  private manageRecipientKey(r: ReturnType<typeof parseRecipientCommand>): unknown {
+    if (r.instanceId !== this.state.instanceId) {
+      throw new SecurityError('SECURITY_FORBIDDEN');
+    }
+    if (r.action === 'registration.recipient.list') {
+      this.commit(r.action, () => undefined);
+      return recipientKeyPage(
+        this.state.recipients,
+        this.state.instanceId,
+        this.state.revision,
+        r.offset,
+        r.limit,
+      );
+    }
+    this.assertRegistrationRevision(r.revision);
+    if (r.action === 'registration.recipient.initialize') {
+      check(this.state.version >= 4);
+      if (this.state.version < 5) {
+        this.commit(r.action, (state) => {
+          state.version = 5;
+          state.recipients = emptyRecipientLedger();
+        });
+      }
+      return { revision: this.state.revision };
+    }
+    check(this.state.version === 5 && this.state.recipients);
+    const userUsable = (id: string): boolean => {
+      const user = this.state.registration!.users.find((u) => u.id === id);
+      return (
+        !!user?.enabled &&
+        this.state.principals.some((p) => p.id === user.principalId && p.enabled) &&
+        this.state.registration!.credentials.some((k) => k.userId === id && k.state === 'active')
+      );
+    };
+    if (r.action === 'registration.recipient.begin') {
+      if (!userUsable(r.userId)) {
+        throw new SecurityError('SECURITY_FORBIDDEN');
+      }
+      let challenge: ReturnType<typeof beginRecipientChallenge> | undefined;
+      this.commit(r.action, (state) => {
+        challenge = beginRecipientChallenge(
+          state.recipients!,
+          state.instanceId,
+          r.userId,
+          r.publicKey,
+          this.now(),
+          state.registration!,
+        );
+      });
+      return { revision: this.state.revision, challenge };
+    }
+    if (r.action === 'registration.recipient.complete') {
+      check(r.response.instanceId === r.instanceId);
+      const recipients = structuredClone(this.state.recipients!);
+      const accepted = completeRecipientChallenge(recipients, r.response, this.now(), userUsable);
+      this.commit(
+        r.action,
+        (state) => {
+          state.recipients = recipients;
+        },
+        undefined,
+        accepted ? 'succeeded' : 'denied',
+      );
+      if (!accepted) {
+        throw new SecurityError('SECURITY_FORBIDDEN');
+      }
+    } else {
+      const key = this.state.recipients!.keys.find((k) => k.id === r.id);
+      if (!key) {
+        throw new SecurityError('SECURITY_NOT_FOUND');
+      }
+      if (key.state !== 'active') {
+        throw new SecurityError('SECURITY_POLICY_CONFLICT');
+      }
+      this.commit(r.action, (state) => {
+        const key = state.recipients!.keys.find((k) => k.id === r.id)!;
+        key.state = 'retired';
+        key.retiredAtUtc = new Date(this.now()).toISOString();
+      });
+    }
+    return { revision: this.state.revision };
+  }
+
+  private manageRegisteredIdentity(r: ReturnType<typeof parseRegistrationMaintenance>): unknown {
+    if (r.instanceId !== this.state.instanceId) {
+      throw new SecurityError('SECURITY_FORBIDDEN');
+    }
+    const now = this.now(),
+      at = new Date(now).toISOString();
+    const page = (entries: unknown[], offset: number, limit: number, name: string): unknown => {
+      const selected = entries.slice(offset, offset + limit);
+      this.commit(r.action, () => undefined);
+      return {
+        instanceId: r.instanceId,
+        revision: this.state.revision,
+        [name]: selected,
+        total: entries.length,
+        offset,
+        nextOffset: offset + limit < entries.length ? offset + limit : null,
+      };
+    };
+    const store = this.state.registration;
+    if (r.action === 'registration.credentials.list') {
+      const users = new Map(store?.users.map((u) => [u.id, u]) ?? []);
+      const entries = (store?.credentials ?? [])
+        .filter((c) => !r.userId || c.userId === r.userId)
+        .map((c) => ({
+          id: c.id,
+          applicationId: c.applicationId,
+          userId: c.userId,
+          principalId: users.get(c.userId)!.principalId,
+          state: c.state,
+          userEnabled: users.get(c.userId)!.enabled,
+          createdAtUtc: c.createdAtUtc,
+          updatedAtUtc: c.updatedAtUtc,
+          ...(c.disabledAtUtc ? { disabledAtUtc: c.disabledAtUtc } : {}),
+          ...(c.revokedAtUtc ? { revokedAtUtc: c.revokedAtUtc } : {}),
+          algorithm: c.algorithm,
+          deviceType: c.deviceType,
+          backedUp: c.backedUp,
+          publicKeyFingerprint: createHash('sha256')
+            .update(Buffer.from(c.publicKeyCose, 'base64url'))
+            .digest('hex'),
+          grants: structuredClone(c.grants ?? []),
+        }));
+      return page(entries, r.offset, r.limit, 'credentials');
+    }
+    if (r.action === 'registration.users.list') {
+      return page(
+        (store?.users ?? []).map((u) => ({
+          id: u.id,
+          principalId: u.principalId,
+          displayName: u.displayName,
+          enabled: u.enabled,
+          createdAtUtc: u.createdAtUtc,
+          updatedAtUtc: u.updatedAtUtc,
+          credentialCount: store!.credentials.filter((c) => c.userId === u.id).length,
+        })),
+        r.offset,
+        r.limit,
+        'users',
+      );
+    }
+    this.assertRegistrationRevision(r.revision);
+    if (!store) {
+      throw new SecurityError('SECURITY_PROTOCOL_UNSUPPORTED');
+    }
+    const next = structuredClone(store);
+    let principalId: string | undefined, credentialId: string | undefined;
+    let result: Record<string, unknown>;
+    if (r.action === 'registration.user.disable' || r.action === 'registration.user.enable') {
+      const user = next.users.find((u) => u.id === r.id);
+      if (!user) {
+        throw new SecurityError('SECURITY_NOT_FOUND');
+      }
+      const enabled = r.action === 'registration.user.enable';
+      if (user.enabled === enabled) {
+        throw new SecurityError('SECURITY_POLICY_CONFLICT');
+      }
+      if (enabled && !this.state.principals.some((p) => p.id === user.principalId && p.enabled)) {
+        throw new SecurityError('SECURITY_FORBIDDEN');
+      }
+      user.enabled = enabled;
+      user.updatedAtUtc = at;
+      principalId = user.principalId;
+      result = { userId: user.id, enabled };
+    } else {
+      const key = next.credentials.find((c) => c.id === r.id);
+      if (!key) {
+        throw new SecurityError('SECURITY_NOT_FOUND');
+      }
+      const user = next.users.find((u) => u.id === key.userId)!;
+      principalId = user.principalId;
+      credentialId = key.id;
+      if (key.state === 'revoked') {
+        throw new SecurityError('SECURITY_POLICY_CONFLICT');
+      }
+      if (
+        (r.action === 'registration.credential.enable' ||
+          r.action === 'registration.credential.replace') &&
+        (!user.enabled ||
+          !this.state.principals.some((p) => p.id === user.principalId && p.enabled))
+      ) {
+        throw new SecurityError('SECURITY_FORBIDDEN');
+      }
+      if (r.action === 'registration.credential.restrict') {
+        this.restrictRegisteredCredential(r.revision, r.id, r.grants);
+        return {
+          instanceId: r.instanceId,
+          revision: this.state.revision,
+          credentialId: key.id,
+          grants: structuredClone(r.grants),
+        };
+      }
+      if (
+        (r.action === 'registration.credential.disable' && key.state !== 'active') ||
+        (r.action === 'registration.credential.enable' && key.state !== 'disabled')
+      ) {
+        throw new SecurityError('SECURITY_POLICY_CONFLICT');
+      }
+      key.updatedAtUtc = at;
+      delete key.disabledAtUtc;
+      if (r.action === 'registration.credential.disable') {
+        key.state = 'disabled';
+        key.disabledAtUtc = at;
+      } else if (r.action === 'registration.credential.enable') {
+        key.state = 'active';
+      } else {
+        key.state = 'revoked';
+        key.revokedAtUtc = at;
+      }
+      result = { credentialId: key.id, userId: key.userId, state: key.state };
+      if (r.action === 'registration.credential.replace') {
+        const app = next.applications.find((a) => a.id === r.applicationId);
+        if (!app) {
+          throw new SecurityError('SECURITY_NOT_FOUND');
+        }
+        if (
+          app.state !== 'pending' ||
+          Date.parse(app.expiresAtUtc) <= now ||
+          Date.parse(app.createdAtUtc) > now
+        ) {
+          throw new SecurityError('SECURITY_POLICY_CONFLICT');
+        }
+        if (
+          !app.candidate ||
+          !app.verifiedAtUtc ||
+          Date.parse(app.verifiedAtUtc) > now ||
+          app.candidate.rawId === key.rawId ||
+          sameRegistrationPublicKey(app.candidate.publicKeyCose, key.publicKeyCose)
+        ) {
+          throw new SecurityError('SECURITY_FORBIDDEN');
+        }
+        app.state = 'approved';
+        app.decidedAtUtc = at;
+        app.userId = user.id;
+        app.credentialId = randomUUID();
+        next.credentials.push({
+          ...app.candidate,
+          id: app.credentialId,
+          applicationId: app.id,
+          userId: user.id,
+          state: 'active',
+          grants: r.grants,
+          createdAtUtc: at,
+          updatedAtUtc: at,
+        });
+        result = {
+          ...result,
+          registrationId: app.id,
+          replacementCredentialId: app.credentialId,
+          grants: structuredClone(r.grants),
+        };
+      }
+    }
+    this.commitRegistrationStorage(r.revision, next, {
+      version: 1,
+      eventId: randomUUID(),
+      timestampUtc: at,
+      category: 'management',
+      action: r.action,
+      result: 'succeeded',
+      actor: { principalId: this.actorId, identityTrust: 'verified' },
+      source: { transport: 'local-ipc' },
+      ...this.managementEvent,
+      policyVersion: this.state.policyVersion,
+      resource: { principalId, ...(credentialId ? { credentialId } : {}) },
+      ...(r.action === 'registration.credential.replace' ? { taskId: r.applicationId } : {}),
+    });
+    return { instanceId: r.instanceId, revision: this.state.revision, ...result };
+  }
+
+  private manageIdentitySession(input: unknown): unknown {
+    const r = input as Record<string, unknown>;
+    const listing = r.action === 'registration.sessions.list';
+    const allowed = listing
+      ? ['action', 'instanceId', 'offset', 'limit']
+      : ['action', 'instanceId', 'id', 'revision', 'confirm'];
+    const uuid = (v: unknown): boolean =>
+      typeof v === 'string' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.exec(v)?.[0] === v;
+    if (
+      Array.isArray(input) ||
+      Object.keys(r).some((k) => !allowed.includes(k)) ||
+      !uuid(r.instanceId)
+    ) {
+      throw new SecurityError('SECURITY_INVALID_REQUEST');
+    }
+    if (r.instanceId !== this.state.instanceId) {
+      throw new SecurityError('SECURITY_FORBIDDEN');
+    }
+    if (listing) {
+      const offset = r.offset ?? 0,
+        limit = r.limit ?? 25;
+      if (
+        !Number.isSafeInteger(offset) ||
+        (offset as number) < 0 ||
+        (offset as number) > 10000 ||
+        !Number.isSafeInteger(limit) ||
+        (limit as number) < 1 ||
+        (limit as number) > 100
+      ) {
+        throw new SecurityError('SECURITY_INVALID_REQUEST');
+      }
+      const sessions = this.securityCenterSnapshot().sessions;
+      this.commit('registration.sessions.list', () => undefined);
+      return {
+        instanceId: r.instanceId,
+        revision: this.state.revision,
+        sessions: sessions.slice(offset as number, (offset as number) + (limit as number)),
+        total: sessions.length,
+        offset,
+        nextOffset:
+          (offset as number) + (limit as number) < sessions.length
+            ? (offset as number) + (limit as number)
+            : null,
+      };
+    }
+    if (!uuid(r.id) || !Number.isSafeInteger(r.revision) || (r.revision as number) < 0) {
+      throw new SecurityError('SECURITY_INVALID_REQUEST');
+    }
+    if (r.confirm !== true) {
+      throw new SecurityError('SECURITY_CONFIRMATION_REQUIRED');
+    }
+    this.assertRegistrationRevision(r.revision as number);
+    const current = this.state.sessions.find((s) => s.id === r.id);
+    if (!current) {
+      throw new SecurityError('SECURITY_NOT_FOUND');
+    }
+    if (current.revokedAt) {
+      throw new SecurityError('SECURITY_POLICY_CONFLICT');
+    }
+    this.commit(
+      'registration.session.revoke',
+      (state) => {
+        state.sessions.find((s) => s.id === r.id)!.revokedAt = new Date(this.now()).toISOString();
+      },
+      current.credentialId,
+    );
+    this.notify([current.credentialId]);
+    return { instanceId: r.instanceId, revision: this.state.revision, sessionId: r.id };
   }
 
   saveProtection(action: string, protection: SecurityProtectionState): void {
@@ -544,26 +1800,29 @@ export class SecurityRegistry {
       })),
       credentials: this.listCredentials(),
       sessions: this.state.sessions.map((session) => {
-        const credential = this.state.credentials.find((item) => item.id === session.credentialId);
-        const principal = this.state.principals.find((item) => item.id === session.principalId);
+        let parentActive = false;
+        try {
+          this.resolveSessionParent(session);
+          parentActive = true;
+        } catch {
+          // Unusable parents remain visible as inactive metadata, never as an authority.
+        }
         return {
           id: session.id,
           principalId: session.principalId,
           credentialId: session.credentialId,
+          parent: parentOf(session),
           createdAt: session.createdAt,
           expiresAt: session.expiresAt,
           ...(session.revokedAt ? { revokedAt: session.revokedAt } : {}),
           ...(session.origin ? { origin: session.origin } : {}),
           active: Boolean(
-            credential &&
-            principal?.enabled &&
+            parentActive &&
             !session.revokedAt &&
             session.accessEpoch === this.state.accessEpoch &&
-            Date.parse(session.expiresAt) > now &&
-            Date.parse(credential.expiresAt) > now &&
-            (!credential.validUntil || Date.parse(credential.validUntil) > now),
+            Date.parse(session.expiresAt) > now,
           ),
-          securityAdmin: session.securityAdmin === true,
+          securityAdmin: parentOf(session).kind === 'local-management',
         };
       }),
       keyReferences: this.state.keyReferences,
@@ -597,6 +1856,9 @@ export class SecurityRegistry {
       'credential.create',
       (s) => {
         check(s.credentials.length < 10000);
+        if (s.version >= 3) {
+          record.kind = 'api-credential';
+        }
         s.credentials.push(record);
       },
       id,
@@ -610,7 +1872,11 @@ export class SecurityRegistry {
     check(typeof token === 'string' && token.length <= 256);
     const match = /^mdbt_v1_([a-zA-Z0-9-]{36})_([a-zA-Z0-9_-]{43})$/.exec(token);
     const record = this.state.credentials.find((c) => c.id === match?.[1]);
-    if (!record || !equalSecret(token, record.secretHash)) {
+    if (
+      !record ||
+      this.isLocalManagementCredential(record.id) ||
+      !equalSecret(token, record.secretHash)
+    ) {
       throw new SecurityError('SECURITY_CREDENTIAL_INVALID');
     }
     if (record.revokedAt) {
@@ -649,6 +1915,7 @@ export class SecurityRegistry {
     if (!old) {
       throw new SecurityError('SECURITY_NOT_FOUND');
     }
+    check(!this.isLocalManagementCredential(id));
     check(
       !old.revokedAt &&
         Date.parse(old.expiresAt) > this.now() &&
@@ -722,9 +1989,15 @@ export class SecurityRegistry {
     origin: string,
     databases: readonly string[],
     securityAdmin = false,
+    absoluteLifetimeMinutes = 480,
   ): { code: string; id: string; expiresAt: string } {
     origin = browserOriginValue(origin);
     check(isLoopbackAddress(new URL(origin).hostname));
+    check(
+      Number.isFinite(absoluteLifetimeMinutes) &&
+        absoluteLifetimeMinutes > 0 &&
+        absoluteLifetimeMinutes <= 480,
+    );
     check(
       Array.isArray(databases) &&
         databases.length <= 100 &&
@@ -771,8 +2044,11 @@ export class SecurityRegistry {
           principalId,
           name: 'Local browser session',
           secretHash: hash(randomBytes(32).toString('base64url')),
+          ...(s.version >= 3
+            ? { kind: securityAdmin ? ('local-management' as const) : ('api-credential' as const) }
+            : {}),
           createdAt: new Date(now).toISOString(),
-          expiresAt: new Date(now + 8 * 3600000).toISOString(),
+          expiresAt: new Date(now + absoluteLifetimeMinutes * 60000).toISOString(),
           grants: permissions,
         });
         s.pairings.push({
@@ -783,6 +2059,14 @@ export class SecurityRegistry {
           createdAt: new Date(now).toISOString(),
           expiresAt,
           ...(securityAdmin ? { securityAdmin: true } : {}),
+          ...(s.version >= 3
+            ? {
+                parent: {
+                  kind: securityAdmin ? ('local-management' as const) : ('api-credential' as const),
+                  credentialId,
+                },
+              }
+            : {}),
         });
       },
       credentialId,
@@ -793,23 +2077,17 @@ export class SecurityRegistry {
   /** Only OS-issued active pairings/sessions can add an exact browser Origin. */
   allowsBrowserOrigin(origin: string): boolean {
     const now = this.now();
-    const credentialUsable = (id: string): boolean => {
-      const c = this.state.credentials.find((c) => c.id === id);
-      return (
-        !!c &&
-        !c.revokedAt &&
-        Date.parse(c.expiresAt) > now &&
-        (!c.validUntil || Date.parse(c.validUntil) > now) &&
-        this.state.principals.some((p) => p.id === c.principalId && p.enabled)
-      );
+    const parentUsable = (entry: Session | Pairing): boolean => {
+      try {
+        this.resolveSessionParent(entry);
+        return true;
+      } catch {
+        return false;
+      }
     };
     return (
       this.state.pairings.some(
-        (p) =>
-          p.origin === origin &&
-          !p.usedAt &&
-          Date.parse(p.expiresAt) > now &&
-          credentialUsable(p.credentialId),
+        (p) => p.origin === origin && !p.usedAt && Date.parse(p.expiresAt) > now && parentUsable(p),
       ) ||
       this.state.sessions.some(
         (s) =>
@@ -817,7 +2095,7 @@ export class SecurityRegistry {
           !s.revokedAt &&
           s.accessEpoch === this.state.accessEpoch &&
           Date.parse(s.expiresAt) > now &&
-          credentialUsable(s.credentialId),
+          parentUsable(s),
       )
     );
   }
@@ -835,6 +2113,7 @@ export class SecurityRegistry {
     if (!credential) {
       throw new SecurityError('SECURITY_NOT_FOUND');
     }
+    check(!this.isLocalManagementCredential(credentialId));
     this.assertCredentialUsable(credential);
     const id = randomUUID();
     const code = `mdbp_v1_${id}_${randomBytes(32).toString('base64url')}`;
@@ -854,6 +2133,7 @@ export class SecurityRegistry {
         s.pairings.push({
           id,
           credentialId,
+          ...(s.version >= 3 ? { parent: { kind: 'api-credential' as const, credentialId } } : {}),
           origin,
           secretHash: hash(code),
           createdAt: new Date(now).toISOString(),
@@ -870,6 +2150,7 @@ export class SecurityRegistry {
     code: string,
     origin: string,
     lifetimeMinutes = 30,
+    requiredRole?: 'data' | 'management',
   ): { session: string; id: string; expiresAt: string } {
     this.assertOpen();
     check(typeof code === 'string' && code.length <= 256);
@@ -887,12 +2168,14 @@ export class SecurityRegistry {
     if (securityOrigin(origin) !== pairing.origin) {
       throw new SecurityError('SECURITY_ORIGIN_DENIED');
     }
-    check(Number.isFinite(lifetimeMinutes) && lifetimeMinutes > 0 && lifetimeMinutes <= 720);
-    const credential = this.state.credentials.find((c) => c.id === pairing.credentialId);
-    if (!credential) {
-      throw new SecurityError('SECURITY_CREDENTIAL_REVOKED');
+    if (
+      (requiredRole === 'management' && !pairing.securityAdmin) ||
+      (requiredRole === 'data' && pairing.securityAdmin)
+    ) {
+      throw new SecurityError('SECURITY_FORBIDDEN');
     }
-    this.assertCredentialUsable(credential);
+    check(Number.isFinite(lifetimeMinutes) && lifetimeMinutes > 0 && lifetimeMinutes <= 720);
+    const credential = this.resolveSessionParent(pairing);
     const principal = this.state.principals.find(
       (p) => p.id === credential.principalId && p.enabled,
     );
@@ -932,6 +2215,7 @@ export class SecurityRegistry {
           origin: pairing.origin,
           absoluteExpiresAt,
           ...(pairing.securityAdmin ? { securityAdmin: true } : {}),
+          ...(s.version >= 3 ? { parent: parentOf(pairing) } : {}),
         });
       },
       credential.id,
@@ -978,6 +2262,7 @@ export class SecurityRegistry {
     const id = randomUUID();
     const next = `mdbs_v1_${id}_${randomBytes(32).toString('base64url')}`;
     const previous = this.state.sessions.find((v) => v.id === oldId)!;
+    check(parentOf(previous).kind !== 'registered-public-key' || lifetimeMinutes <= 30);
     const absoluteExpiresAt = previous.absoluteExpiresAt ?? previous.expiresAt;
     const expiresAt = new Date(
       Math.min(
@@ -1008,6 +2293,7 @@ export class SecurityRegistry {
           origin: previous.origin,
           absoluteExpiresAt,
           ...(previous.securityAdmin ? { securityAdmin: true } : {}),
+          ...(s.version >= 3 ? { parent: parentOf(previous) } : {}),
         });
       },
       verified.credential.id,
@@ -1032,6 +2318,9 @@ export class SecurityRegistry {
           id,
           principalId: verified.credential.principalId,
           credentialId: verified.credential.id,
+          ...(s.version >= 3
+            ? { parent: { kind: 'api-credential' as const, credentialId: verified.credential.id } }
+            : {}),
           secretHash: hash(session),
           accessEpoch: s.accessEpoch,
           createdAt: new Date(this.now()).toISOString(),
@@ -1060,10 +2349,7 @@ export class SecurityRegistry {
     if (v.revokedAt || v.accessEpoch !== this.state.accessEpoch) {
       throw new SecurityError('SECURITY_CREDENTIAL_REVOKED');
     }
-    const c = this.state.credentials.find((c) => c.id === v.credentialId);
-    if (!c || c.revokedAt) {
-      throw new SecurityError('SECURITY_CREDENTIAL_REVOKED');
-    }
+    const c = this.resolveSessionParent(v);
     if (
       Date.parse(v.expiresAt) <= this.now() ||
       Date.parse(c.expiresAt) <= this.now() ||
@@ -1082,8 +2368,9 @@ export class SecurityRegistry {
         ...(p.kind === 'application' ? { applicationId: p.id } : {}),
         identityTrust: 'verified',
       },
-      credential: info(c),
+      credential: structuredClone(c),
       policyVersion: this.state.policyVersion,
+      sessionParent: structuredClone(parentOf(v)),
     };
   }
 
@@ -1104,8 +2391,26 @@ export class SecurityRegistry {
       sessionExpiresAt: current.expiresAt,
       absoluteExpiresAt: current.absoluteExpiresAt ?? current.expiresAt,
       csrf: expected,
-      ...(current.securityAdmin ? { securityAdmin: true } : {}),
+      ...(verified.sessionParent?.kind === 'local-management' ? { securityAdmin: true } : {}),
     };
+  }
+
+  /** Server-clock deadline for an idle authenticated stream; never extends its session. */
+  accessRemainingMs(access: string): number {
+    const verified = access.startsWith('mdbs_v1_')
+      ? this.verifySession(access)
+      : this.authenticate(access);
+    const session = access.startsWith('mdbs_v1_')
+      ? this.state.sessions.find((entry) => entry.id === access.split('_')[2])
+      : undefined;
+    return Math.max(
+      0,
+      Math.min(
+        Date.parse(verified.credential.expiresAt),
+        verified.credential.validUntil ? Date.parse(verified.credential.validUntil) : Infinity,
+        session ? Date.parse(session.expiresAt) : Infinity,
+      ) - this.now(),
+    );
   }
 
   private browserEvent(
@@ -1131,7 +2436,54 @@ export class SecurityRegistry {
     };
   }
 
-  private assertCredentialUsable(c: Credential): void {
+  private isLocalManagementCredential(id: string): boolean {
+    if (this.state.version >= 3) {
+      return this.state.credentials.some((c) => c.id === id && c.kind === 'local-management');
+    }
+    return (
+      this.state.credentials.some((c) => c.id === id && c.kind === 'local-management') ||
+      [...this.state.pairings, ...this.state.sessions].some(
+        (entry) => entry.credentialId === id && parentOf(entry).kind === 'local-management',
+      )
+    );
+  }
+
+  /** Always project live grants from the correct namespace; never copy sibling API grants. */
+  private resolveSessionParent(entry: Session | Pairing): SecurityCredentialInfo {
+    assertSessionParent(this.state, entry, this.state.pairings.includes(entry as Pairing));
+    const parent = parentOf(entry);
+    let credential: SecurityCredentialInfo | undefined;
+    if (parent.kind === 'registered-public-key') {
+      const key = this.state.registration?.credentials.find((c) => c.id === parent.credentialId);
+      const user = this.state.registration?.users.find((u) => u.id === parent.userId);
+      if (key?.state !== 'active' || !user?.enabled) {
+        throw new SecurityError('SECURITY_CREDENTIAL_REVOKED');
+      }
+      credential = {
+        id: key.id,
+        principalId: user.principalId,
+        name: 'Registered public key',
+        createdAt: key.createdAtUtc,
+        expiresAt: ('absoluteExpiresAt' in entry && entry.absoluteExpiresAt) || entry.expiresAt,
+        grants: structuredClone(key.grants ?? []),
+      };
+    } else {
+      const c = this.state.credentials.find((c) => c.id === parent.credentialId);
+      if (c) {
+        credential = info(c);
+      }
+    }
+    if (
+      !credential ||
+      !this.state.principals.some((p) => p.id === credential.principalId && p.enabled)
+    ) {
+      throw new SecurityError('SECURITY_CREDENTIAL_REVOKED');
+    }
+    this.assertCredentialUsable(credential);
+    return credential;
+  }
+
+  private assertCredentialUsable(c: SecurityCredentialInfo): void {
     if (c.revokedAt) {
       throw new SecurityError('SECURITY_CREDENTIAL_REVOKED');
     }
@@ -1146,7 +2498,10 @@ export class SecurityRegistry {
   /** Invalidate network access only; never touches IMK, DEK, or business Vaults. */
   resetAccess(): void {
     this.assertOpen();
-    const affected = this.state.credentials.map((c) => c.id);
+    const affected = [
+      ...this.state.credentials,
+      ...(this.state.registration?.credentials ?? []),
+    ].map((c) => c.id);
     this.commit('access.reset', (s) => {
       const at = new Date(this.now()).toISOString();
       s.credentials.forEach((c) => {
@@ -1155,8 +2510,28 @@ export class SecurityRegistry {
       s.sessions.forEach((v) => {
         v.revokedAt = at;
       });
+      for (const c of s.authentication?.challenges ?? []) {
+        if (c.state === 'issued' || c.state === 'claimed') {
+          c.state = 'rejected';
+          c.finishedAtUtc = at;
+        }
+      }
       s.accessEpoch++;
       s.policyVersion++;
+      for (const key of s.recipients?.keys ?? []) {
+        if (key.state === 'active') {
+          key.state = 'retired';
+          key.retiredAtUtc = at;
+        }
+      }
+      for (const challenge of s.recipients?.challenges ?? []) {
+        if (challenge.state === 'issued') {
+          challenge.state = 'rejected';
+        }
+      }
+      if (s.registration) {
+        resetRegistrationAccess(s.registration, this.now());
+      }
     });
     this.notify(affected);
   }
@@ -1223,11 +2598,14 @@ export class SecurityRegistry {
     this.assertOpen();
     check(/^S-1-[0-9-]{1,180}$/.test(sid));
     const previous = this.actorId;
+    const previousLocal = this.localActor;
     this.actorId = sid;
+    this.localActor = true;
     try {
       return command();
     } finally {
       this.actorId = previous;
+      this.localActor = previousLocal;
     }
   }
 
@@ -1425,11 +2803,21 @@ export class SecurityRegistry {
   /** Subscribe to durable invalidation notifications, suitable for WS/cache consumers. */
   onInvalidation(
     listener: (event: { policyVersion: number; credentialIds: readonly string[] }) => void,
+    credentialId?: string,
   ): () => void {
     this.assertOpen();
-    this.listeners.add(listener);
+    const listeners = credentialId
+      ? (this.credentialListeners.get(credentialId) ?? new Set())
+      : this.listeners;
+    if (credentialId) {
+      this.credentialListeners.set(credentialId, listeners);
+    }
+    listeners.add(listener);
     return () => {
-      this.listeners.delete(listener);
+      listeners.delete(listener);
+      if (credentialId && !listeners.size) {
+        this.credentialListeners.delete(credentialId);
+      }
     };
   }
 
@@ -1439,12 +2827,23 @@ export class SecurityRegistry {
       return;
     }
     this.closed = true;
+    this.notify([]);
     this.listeners.clear();
+    this.credentialListeners.clear();
     this.release?.();
   }
 
   private notify(credentialIds: readonly string[]): void {
-    for (const listener of this.listeners) {
+    const listeners = new Set(this.listeners);
+    const groups = credentialIds.length
+      ? credentialIds.map((id) => this.credentialListeners.get(id) ?? [])
+      : this.credentialListeners.values();
+    for (const scoped of groups) {
+      for (const listener of scoped) {
+        listeners.add(listener);
+      }
+    }
+    for (const listener of listeners) {
       try {
         listener({ policyVersion: this.state.policyVersion, credentialIds });
       } catch {
@@ -1471,6 +2870,20 @@ export class SecurityRegistry {
     next.events = next.events.filter((event) => Date.parse(event.timestampUtc) >= cutoff);
     const expiredCount = previousEventCount - next.events.length;
     change(next);
+    // Once an owner loses all active login credentials, an in-flight association cannot revive.
+    for (const c of next.recipients?.challenges ?? []) {
+      const user = next.registration!.users.find((u) => u.id === c.userId);
+      if (
+        c.state === 'issued' &&
+        (!user?.enabled ||
+          !next.principals.some((p) => p.id === user.principalId && p.enabled) ||
+          !next.registration!.credentials.some(
+            (k) => k.userId === c.userId && k.state === 'active',
+          ))
+      ) {
+        c.state = 'rejected';
+      }
+    }
     next.revision++;
     if (expiredCount > 0 && action !== 'audit.retention.prune') {
       next.events.push({
@@ -1550,7 +2963,21 @@ export class SecurityRegistry {
         `modeldb-registry-v1:${instanceId}`,
       );
       const s = JSON.parse(plaintext.toString('utf8')) as RegistryState;
-      check(s.version === 1 && s.instanceId === instanceId && ID.test(s.instanceId));
+      check(
+        (s.version === 1 ||
+          s.version === 2 ||
+          s.version === 3 ||
+          s.version === 4 ||
+          s.version === 5) &&
+          s.instanceId === instanceId &&
+          ID.test(s.instanceId),
+      );
+      check(s.version >= 2 || s.registration === undefined);
+      if (s.version >= 4) {
+        assertAuthenticationLedger(s.authentication, instanceId);
+      } else {
+        check(s.authentication === undefined);
+      }
       // Registries created before S4.2 have no pairing collection; normalize that
       // optional field in memory while keeping the encrypted format backward compatible.
       if (s.pairings === undefined) {
@@ -1575,6 +3002,14 @@ export class SecurityRegistry {
             typeof p.enabled === 'boolean',
         ),
       );
+      if (s.version >= 2) {
+        assertRegistrationLedger(s.registration, instanceId, s.principals);
+      }
+      if (s.version === 5) {
+        assertRecipientLedger(s.recipients, instanceId, s.registration!);
+      } else {
+        check(s.recipients === undefined);
+      }
       check(
         Array.isArray(s.credentials) &&
           s.credentials.length <= 10000 &&
@@ -1597,6 +3032,37 @@ export class SecurityRegistry {
             (c.validUntil === undefined || validDate(c.validUntil)),
         );
         grants(c.grants);
+        check(
+          s.version >= 3
+            ? ['api-credential', 'local-management'].includes(c.kind!)
+            : c.kind === undefined,
+        );
+        if (s.version >= 3) {
+          check(
+            Object.keys(c).every((key) =>
+              [
+                'id',
+                'principalId',
+                'name',
+                'secretHash',
+                'createdAt',
+                'expiresAt',
+                'grants',
+                'revokedAt',
+                'validUntil',
+                'replacesId',
+                'kind',
+              ].includes(key),
+            ),
+          );
+        }
+        if (c.kind === 'local-management') {
+          check(
+            c.grants.length === 0 &&
+              s.principals.some((p) => p.id === c.principalId && p.kind === 'operator'),
+          );
+        }
+        check(!s.registration?.credentials.some((key) => key.id === c.id));
       }
       check(
         Array.isArray(s.sessions) &&
@@ -1608,7 +3074,7 @@ export class SecurityRegistry {
           (v) =>
             ID.test(v.id) &&
             HASH.test(v.secretHash) &&
-            s.credentials.some((c) => c.id === v.credentialId && c.principalId === v.principalId) &&
+            s.principals.some((p) => p.id === v.principalId) &&
             validDate(v.createdAt) &&
             validDate(v.expiresAt) &&
             (v.origin === undefined || securityOrigin(v.origin) === v.origin) &&
@@ -1628,7 +3094,7 @@ export class SecurityRegistry {
           (v) =>
             ID.test(v.id) &&
             HASH.test(v.secretHash) &&
-            s.credentials.some((c) => c.id === v.credentialId) &&
+            ID.test(v.credentialId) &&
             validDate(v.createdAt) &&
             validDate(v.expiresAt) &&
             (v.origin === undefined ||
@@ -1637,6 +3103,30 @@ export class SecurityRegistry {
             (v.usedAt === undefined || validDate(v.usedAt)),
         ),
       );
+      for (const [entries, pairing] of [
+        [s.sessions, false],
+        [s.pairings, true],
+      ] as const) {
+        for (const entry of entries) {
+          assertSessionParent(s, entry, pairing);
+          if (s.version >= 3) {
+            const allowed = [
+              'id',
+              'credentialId',
+              'parent',
+              'secretHash',
+              'createdAt',
+              'expiresAt',
+              'origin',
+              'securityAdmin',
+              ...(pairing
+                ? ['usedAt']
+                : ['principalId', 'accessEpoch', 'revokedAt', 'absoluteExpiresAt']),
+            ];
+            check(Object.keys(entry).every((key) => allowed.includes(key)));
+          }
+        }
+      }
       check(
         Array.isArray(s.keyReferences) &&
           s.keyReferences.length <= 10000 &&
@@ -1665,6 +3155,22 @@ export class SecurityRegistry {
               (e.source?.clientIp === undefined || typeof e.source.clientIp === 'string') &&
               (e.source?.clientIpBasis === undefined ||
                 ['socket', 'trusted-proxy'].includes(e.source.clientIpBasis)) &&
+              (e.delivery === undefined ||
+                (s.version === 5 &&
+                  e.category === 'management' &&
+                  e.action === 'recipient.delivery.sealed' &&
+                  e.result === 'succeeded' &&
+                  e.source.transport === 'local-ipc' &&
+                  Object.keys(e.delivery).sort().join(',') ===
+                    'fingerprint,keyVersion,kind,packageSha256,recipientKeyId,userId' &&
+                  ID.test(e.delivery.recipientKeyId) &&
+                  ID.test(e.delivery.userId) &&
+                  Number.isSafeInteger(e.delivery.keyVersion) &&
+                  e.delivery.keyVersion >= 1 &&
+                  e.delivery.keyVersion <= 20 &&
+                  /^[a-f0-9]{64}(?![\s\S])/.test(e.delivery.fingerprint) &&
+                  /^[a-f0-9]{64}(?![\s\S])/.test(e.delivery.packageSha256) &&
+                  ['backup', 'asset'].includes(e.delivery.kind))) &&
               (e.aggregation === undefined ||
                 (e.actor.identityTrust === 'unverified' &&
                   e.result === 'denied' &&

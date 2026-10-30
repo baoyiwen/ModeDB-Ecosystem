@@ -6,6 +6,8 @@
 
 研发验收使用全新临时目录、显式配置与随机端口，步骤见[构建与切换指南](security-v1/release-guide.md)。现有根配置、真实 9091 和业务库不属于默认测试目标。局域网访问必须配置原生 TLS 或可信 HTTPS 反向代理，不能只把 `host` 改成 `0.0.0.0`；实际停机、切换与发布须单独授权。
 
+两台 Windows 通过局域网使用 Designer，请先看[配置实例与逐字段说明](security-v1/windows-lan-config.md)：附本机/TLS 两份 JSON、证书信任、HTTPS 页面、有效名单检查和双库授权步骤。已有实例的来源规则可能来自台账，单改 JSON 不会覆盖已保存的防护状态。
+
 **仓库布局（与本文件字段无关）**：**ModeDB-Ecosystem** 为 **pnpm monorepo**；**`modeldb-server`** 在 **`packages/server`**，图谱引擎在 **`packages/core`**（**`@mode-db/core`**），根目录 **`package.json`**（**`modedb-ecosystem`**，**`private: true`**）仅做脚本编排。应用侧 **API** 见 **[developer-handbook.md](./developer-handbook.md)**。**引擎与 SDK 的 API 说明**见 **[developer-handbook.md](./developer-handbook.md)**。
 
 ---
@@ -503,3 +505,15 @@ modeldb-server start
 - 操作手册 **[operations-manual.md](./operations-manual.md)**
 - 配置加载源码：**`packages/server/src/config-loader.ts`**、默认主目录：**`packages/server/src/modeldb-default-home.ts`**
 - 示例文件：**[modeldb.config.example.json](../modeldb.config.example.json)**
+
+## 公钥登录配置补充（DR-P2.2）
+
+`security.authentication` 可选且默认关闭；`enabled` 必须是布尔值，`allowStorageMigration` 可选且默认 false。启用时必须已有通过校验的 `security.registration.descriptor`、准确 DNS/RP 和可信 HTTPS；仅在明确允许迁移时把 V1/V2/V3 原子升级到 V4。关闭或到期的注册窗口不阻止已有批准身份登录；关闭新登录不自动注销已有会话。原 Token/配对保留，数据密钥和 Vault 格式不变。
+
+完整接入示例、30 分钟/8 小时会话、迁移/回退及错误处理见[公钥登录手册](security-v1/device-registration-runtime-guide.md#8-公钥登录与浏览器会话dr-p22)。这是后端/SDK 功能，正式 Designer 页面尚未接入；不要直接据此修改正在使用的业务实例。
+
+## DR-P3.1 同源托管与本机管理
+
+可显式开启 `security.hosting`，同源 Designer/API 与专用 127.0.0.1 管理监听器分离；本机启动器无需手输 Token，管理 Cookie 空闲 15 分钟/绝对 60 分钟且无数据授权。静态内容启动时白名单快照，拒绝源码/秘密/路径穿越与链接，绑定失败不扩大监听范围。默认保持旧独立前端模式；正式注册/Passkey 状态页继续 DR-P3.2。配置、隔离命令、错误与验证见[手册](security-v1/device-registration-runtime-guide.md#12-同源页面与专用本机管理入口dr-p31)。
+
+开发验证：`pnpm run test:security:hosting`、`node scripts/security-hosting-integration-check.mjs`；构建：`node scripts/security-hosting-build.mjs --output <new-directory>`。构建禁用本地 Vite 配置/env，原 dist 不覆盖；集成强制原生 Windows/Chrome，使用临时合成实例和随机回环端口，缺证据或 skip 不通过。复用现有三语言界面；Hello、LAN、新双机、生产性能与真实切换仍需后续验收。

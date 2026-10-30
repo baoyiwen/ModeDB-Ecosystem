@@ -1,0 +1,15 @@
+{
+  "name": "registration",
+  "args": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "--test-concurrency=1",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-registration-flow.test.ts",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-registration-browser.test.ts"
+  ],
+  "exitCode": 0,
+  "timedOut": false,
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Full-Check-oZne2Y\\registration.original.txt"
+}

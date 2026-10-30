@@ -4,9 +4,26 @@ import type { SecurityNetworkPolicy, NetworkSource } from './network-policy.js';
 import { SecurityError } from './security-errors.js';
 import { networkAddress } from './network-policy.js';
 import type { SecurityProtection } from './security-protection.js';
+import { DEVICE_REGISTRATION_API_V1, DEVICE_AUTHENTICATION_API_V1 } from '@mode-db/shared';
+
+const registrationPath = (url: string) =>
+  [
+    ...Object.values(DEVICE_REGISTRATION_API_V1),
+    ...Object.values(DEVICE_AUTHENTICATION_API_V1),
+  ].some((path) => path === url.split('?')[0]);
 
 export function requestPlane(request: Pick<FastifyRequest, 'url'>): 'data' | 'management' {
   const path = request.url.split('?')[0] ?? '';
+  // Session lifecycle is authentication for data clients; admin routes retain the management policy.
+  if (
+    [
+      '/api/v1/security/session',
+      '/api/v1/security/session/refresh',
+      '/api/v1/security/session/logout',
+    ].includes(path)
+  ) {
+    return 'data';
+  }
   return path.startsWith('/api/v1/management/') ||
     (path.startsWith('/api/v1/security/') && path !== '/api/v1/security/context')
     ? 'management'
@@ -40,6 +57,10 @@ export function installSecurityNetworkBoundary(
 ): void {
   const sources = new WeakMap<FastifyRequest, NetworkSource>();
   app.addHook('onRequest', async (request, reply) => {
+    // These exact routes install their own network gate before parsing, with protocol error bodies.
+    if (registrationPath(request.url)) {
+      return;
+    }
     try {
       const socket = request.raw.socket;
       const source = policy.source(
@@ -97,6 +118,9 @@ export function installSecurityNetworkBoundary(
     }
   });
   app.addHook('onSend', async (request, reply, payload) => {
+    if (registrationPath(request.url)) {
+      return payload;
+    }
     const source = sources.get(request);
     if (source && reply.statusCode === 401 && protection) {
       try {

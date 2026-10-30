@@ -1,0 +1,6 @@
+{
+  "command": "node scripts/assert-no-security-material.mjs",
+  "exitCode": 0,
+  "stdout": "{\"ok\":true,\"trackedRuntimeEntries\":0,\"materialRead\":false}\n",
+  "stderr": ""
+}

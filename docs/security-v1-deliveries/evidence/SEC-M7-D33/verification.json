@@ -1,0 +1,25 @@
+{
+  "format": "modeldb.performance-verification.v1",
+  "revision": "SEC-M7-D33",
+  "task": "DR-P4.5",
+  "date": "2026-10-28",
+  "timezone": "Asia/Shanghai",
+  "sourceSha256": "825e9c69e211dc89edf34e03554b185b2e784cffe312d1435476cdd17934c9e4",
+  "confirmationSha256": "6353457e963c48becdab4901686e6f8002e8dbbbf63cf8ec10628e4ce951ed26",
+  "tasks": {
+    "registration": "22/23",
+    "registrationP4": "5/6",
+    "registrationWorkPackages": "3/4"
+  },
+  "sampleCount": 504,
+  "historicalEvidenceVerified": 1666,
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "realTwoDeviceTested": false,
+    "productionCapacityClaimed": false,
+    "childProcessResourcesMeasured": false,
+    "frontendChanged": false
+  }
+}

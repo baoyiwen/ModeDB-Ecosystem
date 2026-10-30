@@ -1,0 +1,38 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): df35ff563b07477f772104f4dee0c5e00702914161635d802b972d7abc4516f3
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:58515
+#   ➜ Local:   http://localhost:58515/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:58515/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:58515/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-asset-browser-VwoKa9\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url http://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-asset-browser-VwoKa9\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-asset-browser-VwoKa9\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-asset-browser-VwoKa9\\modeldb.config.json"
+# [modeldb-server][catalog] received: metadataSource=model_designer_workspace displayName=false modelLabels=1 fieldLabels=1 directFieldLabels=1 fallbackFieldLabels=1 snapshotFieldLabels=0 props=1
+# [modeldb-server][catalog] received: metadataSource=received displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [asset-browser] opened imported interface editor
+# [asset-browser] imported disabled policy reviewed and target release published through UI
+# [asset-browser] target row response status 200 [ 'version', 'result', 'requestId' ]
+# [asset-browser] target release grant, projected data, cross-database/raw/system refusal and revocation passed
+# [modeldb-server][catalog] received: metadataSource=model_designer_workspace displayName=false modelLabels=1 fieldLabels=1 directFieldLabels=1 fallbackFieldLabels=1 snapshotFieldLabels=0 props=1
+# [modeldb-server][catalog] received: metadataSource=received displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# Subtest: reviews an imported asset in Chrome, republishes it, and requires a fresh target release grant
+ok 1 - reviews an imported asset in Chrome, republishes it, and requires a fresh target release grant
+  ---
+  duration_ms: 129020.7069
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 130055.2082

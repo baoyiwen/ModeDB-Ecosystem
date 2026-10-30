@@ -57,6 +57,8 @@ export interface DatabaseOperationContext {
   readonly atlas?: string;
   /** Verbose query logging. */
   readonly dev?: boolean;
+  /** Optional caller guard after async preparation and between independent raw batch items. */
+  readonly reauthorize?: () => void;
 }
 
 function findRelationByForward(engine: AuthoringEngine, forward: string): RelationDefinition {
@@ -281,6 +283,7 @@ export async function executeDatabaseOperation(
     let failureCount = 0;
     for (const u of op.updates) {
       try {
+        ctx.reauthorize?.();
         const rec = await engine.update(u.model, u.id, u.partial, { sync: false });
         if (rec) {
           successCount++;
@@ -322,6 +325,7 @@ export async function executeDatabaseOperation(
     let failureCount = 0;
     for (const d of op.deletes) {
       try {
+        ctx.reauthorize?.();
         const ok = await engine.delete(d.model, d.id, { sync: false });
         if (ok) {
           successCount++;
@@ -522,6 +526,7 @@ export async function executeDatabaseOperation(
     const rel = findRelationByLabels(engine, op.forward, op.reverse);
     assertRegistrationOrder(rel, op.source.model, op.target.model, 'bindPair');
     const before = await engine.indexer.getForward(rel, op.source.id);
+    ctx.reauthorize?.();
     await engine.bind(op.forward, 'MANUAL', { pairs: [[op.source.id, op.target.id]] });
     const after = await engine.indexer.getForward(rel, op.source.id);
     await flush();
@@ -568,6 +573,7 @@ export async function executeDatabaseOperation(
     );
 
     const peerRows = await engine.persistence.getMergedReader().getAll(op.peerModel);
+    ctx.reauthorize?.();
     const peerIndex = new Map<string, string>();
     for (const row of peerRows) {
       const rec = row as Record<string, unknown>;
@@ -611,6 +617,7 @@ export async function executeDatabaseOperation(
     let pairsCount = 0;
     if (manualPairs.length > 0) {
       const before = await engine.indexer.getStats(rel);
+      ctx.reauthorize?.();
       await engine.indexer.bind(rel, 'MANUAL', [], [], { pairs: manualPairs });
       await flush();
       const after = await engine.indexer.getStats(rel);
@@ -633,6 +640,7 @@ export async function executeDatabaseOperation(
     const rel = findRelationByLabels(engine, op.forward, op.reverse);
     assertRegistrationOrder(rel, op.source.model, op.target.model, 'unlinkPair');
     const before = await engine.indexer.getForward(rel, op.source.id);
+    ctx.reauthorize?.();
     await engine.unlink(op.forward, [[op.source.id, op.target.id]]);
     const after = await engine.indexer.getForward(rel, op.source.id);
     await flush();
@@ -666,6 +674,7 @@ export async function executeDatabaseOperation(
         pairsCount: 0,
       };
     }
+    ctx.reauthorize?.();
     await engine.unlink(op.forward, [[op.source.id, op.previousTarget.id]]);
     try {
       await engine.bind(op.forward, 'MANUAL', {
@@ -695,6 +704,8 @@ export async function executeDatabaseOperation(
 
   if (op.op === 'bind') {
     const rel = findRelationByForward(engine, op.forward);
+    const before = await engine.indexer.getStats(rel);
+    ctx.reauthorize?.();
     if (op.matchOn) {
       engine.updateRelationLogic(
         op.forward,
@@ -702,7 +713,6 @@ export async function executeDatabaseOperation(
         op.matchOn as MatchPredicate,
       );
     }
-    const before = await engine.indexer.getStats(rel);
     const pairs =
       op.strategy === 'MANUAL' && op.pairs
         ? (op.pairs.map(([s, t]) => [s, t] as const) as readonly (readonly [string, string])[])

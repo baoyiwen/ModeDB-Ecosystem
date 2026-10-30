@@ -1,0 +1,17 @@
+{
+  "reviewed": true,
+  "actualScreenshots": 18,
+  "viewed": [
+    "native/screenshots/history-en-1280.png",
+    "native/screenshots/review-ja-390.png",
+    "native/screenshots/challenge-en-1280.png"
+  ],
+  "checks": {
+    "themeConsistency": true,
+    "wideAndNarrow": true,
+    "metadataWrapping": true,
+    "reviewFocus": true,
+    "translatedApplicationLabels": true
+  },
+  "note": "Native file chooser labels follow OS/browser language. Screenshot verification does not establish physical authenticator or two-device acceptance."
+}

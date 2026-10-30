@@ -1,0 +1,28 @@
+{
+  "command": [
+    "node",
+    "node_modules/prettier/bin/prettier.cjs",
+    "--check",
+    "package.json",
+    "packages/shared/src/security-contracts.ts",
+    "packages/shared/src/index.ts",
+    "packages/server/src/security/security-registry.ts",
+    "packages/server/src/security/registration-service.ts",
+    "scripts/security-registration-storage-check.mjs",
+    "scripts/security-release-evidence.mjs",
+    "docs/security-v1/AGENTS.md",
+    "docs/security-v1/overview.md",
+    "docs/security-v1/user-guide.md",
+    "docs/security-v1/release-guide.md",
+    "docs/security-v1/device-registration-protocol-contract.md",
+    "docs/security-v1/device-registration-runtime-guide.md",
+    "docs/security-v1-milestones.md",
+    "docs/security-v1-plan.md",
+    "docs/security-v1-identity-contract.md",
+    "docs/security-browser-sessions.md",
+    "docs/security-v1-deliveries/SEC-M7.md"
+  ],
+  "exitCode": 0,
+  "stdout": "Checking formatting...\nAll matched files use Prettier code style!\n",
+  "stderr": ""
+}

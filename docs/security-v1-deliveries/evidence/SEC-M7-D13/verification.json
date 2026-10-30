@@ -1,0 +1,330 @@
+{
+  "format": "modeldb.security-registration-protocol-verification.v1",
+  "revision": "SEC-M7-D13",
+  "recordedAtUtc": "2026-10-26T14:06:20.790Z",
+  "task": "DR-P1.2",
+  "workspace": {
+    "head": "fd40ade27acdec54c4e5ba4dd8ddc5ac4e061a0f",
+    "uncommitted": true,
+    "existingChangesAndStagedRuntimeRemovalsPreserved": true
+  },
+  "tasks": {
+    "closed": ["DR-P1.1", "DR-P1.2"],
+    "v1Milestones": "7/7",
+    "v1Tasks": "20/20",
+    "registration": "2/23",
+    "requiredWorkPackages": "0/4",
+    "next": "DR-P1.3"
+  },
+  "runtimeRegistrationImplemented": false,
+  "checks": {
+    "scopedFormatting": true,
+    "scopedLint": true,
+    "sharedTypecheck": true,
+    "testTypecheck": true,
+    "sdkTypecheck": true,
+    "browserBoundary": true,
+    "offlineDependencyInstall": true,
+    "gitMaterialGuard": true,
+    "scopedGitDiffCheck": true
+  },
+  "runtime": {
+    "platform": "win32",
+    "node": "v24.22.1",
+    "pnpm": "11.25.0",
+    "otherNodeVersionsValidated": false,
+    "browserAuthenticatorValidated": false
+  },
+  "unit": {
+    "tests": 29,
+    "pass": 29,
+    "fail": 0,
+    "cancelled": 0,
+    "skip": 0,
+    "todo": 0
+  },
+  "evidenceToolUnit": {
+    "tests": 12,
+    "pass": 12,
+    "fail": 0,
+    "cancelled": 0,
+    "skip": 0,
+    "todo": 0
+  },
+  "commands": [
+    {
+      "name": "contracts",
+      "command": "node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap test/unit/security-registration-contract.test.mjs test/unit/security-device-registration-contract.test.ts",
+      "exitCode": 0,
+      "logSha256": "bba6ee890b1eb4693c1a4a7c985e37abdf9f7cec7413843b5544c29ca46c0e49"
+    },
+    {
+      "name": "evidence-unit",
+      "command": "node --test --test-reporter=tap test/unit/security-release-evidence.test.mjs",
+      "exitCode": 0,
+      "logSha256": "c00f86102a1d5dbdb9735d5531de48f0667b48c4f2c65906c56de09262527382"
+    },
+    {
+      "name": "shared-types",
+      "command": "node node_modules/typescript/bin/tsc --noEmit -p packages/shared/tsconfig.json",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "test-types",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --strict --module Node16 --moduleResolution Node16 --target ES2022 --types node --skipLibCheck test/unit/security-device-registration-contract.test.ts",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "consumer",
+      "command": "node scripts/security-registration-consumer-check.mjs",
+      "exitCode": 0,
+      "logSha256": "29314008e6395f5e293561e2c1e6c63021b8fdcaa388d2906f86d51dae8a980a"
+    },
+    {
+      "name": "lint",
+      "command": "node node_modules/eslint/bin/eslint.js packages/shared/src/device-registration-contracts.ts packages/shared/src/index.ts packages/sdk/src/index.ts scripts/security-registration-library-check.mjs scripts/security-registration-consumer-check.mjs scripts/security-release-evidence.mjs",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "format",
+      "command": "node node_modules/prettier/bin/prettier.cjs --check packages/shared/src/device-registration-contracts.ts packages/shared/src/index.ts packages/sdk/src/index.ts scripts/security-registration-library-check.mjs scripts/security-registration-consumer-check.mjs scripts/security-release-evidence.mjs scripts/security-registration-dependencies/package.json package.json docs/security-v1/AGENTS.md docs/security-v1-milestones.md docs/security-v1-plan.md docs/security-v1/device-registration-proposal.md docs/security-v1/device-registration-deployment-contract.md docs/security-v1/device-registration-protocol-contract.md docs/security-v1/overview.md docs/security-v1/user-guide.md docs/security-v1-deliveries/SEC-M7.md test/README.md docs/security-v1-deliveries/evidence/SEC-M7-D13/dependency-check.json docs/security-v1-deliveries/evidence/SEC-M7-D13/consumer-check.json",
+      "exitCode": 0,
+      "logSha256": "17aa973d3f004560237d9a95171210b0671deff23d61628eecf7322ff5938f20"
+    },
+    {
+      "name": "material-guard",
+      "command": "node scripts/assert-no-security-material.mjs",
+      "exitCode": 0,
+      "logSha256": "a7e7fc2ec8f1a80a462896ab55e74f9fffd4ce24edc7a542c6b8ef18a0a6e49f"
+    },
+    {
+      "name": "documents",
+      "command": "Inline scoped Markdown link/anchor and registration-task check (exact script in checks.original.json.txt)",
+      "exitCode": 0,
+      "logSha256": "9d94f21f021be21364de25d9999b4f466b2f6b7d4801cf1d3ee34610582c1b85"
+    }
+  ],
+  "offlineInstall": {
+    "report": "docs/security-v1-deliveries/evidence/SEC-M7-D13/dependency-check.json",
+    "originalOutput": "docs/security-v1-deliveries/evidence/SEC-M7-D13/offline-install.original.txt",
+    "exitCode": 0,
+    "reused": 25,
+    "downloaded": 0,
+    "ignoreScripts": true,
+    "frozenLockfile": true,
+    "supplyChainMetadataPrewarmed": true
+  },
+  "consumerCheck": {
+    "report": "docs/security-v1-deliveries/evidence/SEC-M7-D13/consumer-check.json",
+    "freshSharedDeclarations": true,
+    "strictSdkTypes": true,
+    "browserPlatformBundles": true,
+    "domWithoutNodeAmbientTypes": true
+  },
+  "documentValidation": {
+    "ok": true,
+    "documentFiles": 10,
+    "localLinksAndAnchors": 208,
+    "failures": [],
+    "registrationTaskRows": 23,
+    "completedRegistrationTasks": 2
+  },
+  "sources": [
+    {
+      "path": "docs/security-v1-deliveries/SEC-M7.md",
+      "sha256": "e0f44a5d7d96b1f8d04b1520f19104678b2c86f934a8c582a2be6f1d611d9ba0",
+      "sha256Lf": "608381e92c5d5952301a004756e51315e4a4bc3a948d0b29a46ee3206a1deae9"
+    },
+    {
+      "path": "docs/security-v1-milestones.md",
+      "sha256": "a48aa5640dd8772b3adeefc9fb52e96dcb09ceb7d26c2547fac17da6acb96232",
+      "sha256Lf": "a48aa5640dd8772b3adeefc9fb52e96dcb09ceb7d26c2547fac17da6acb96232"
+    },
+    {
+      "path": "docs/security-v1-plan.md",
+      "sha256": "7cd5285be164685943ed5953843a494fa1e044d765c6a4f9d6f54930858afaae",
+      "sha256Lf": "a615ddf682a8dce17b564cd27b4c37f082314777ca0bf078d5112d9c0910cb8d"
+    },
+    {
+      "path": "docs/security-v1/AGENTS.md",
+      "sha256": "8dfdf671645c2182686759ddba102b3dd570f7e34a7e841983ac14ecf1ad695d",
+      "sha256Lf": "bd9e6a757ea4b2d9fc967cc1eb31511783f476628b401deb1fb3ddfce8db5f58"
+    },
+    {
+      "path": "docs/security-v1/device-registration-deployment-contract.md",
+      "sha256": "8ff3d7a65f75be71cbfe92df49ab6acbe9769b8d7c306e3d3559a4f91836d17f",
+      "sha256Lf": "8ff3d7a65f75be71cbfe92df49ab6acbe9769b8d7c306e3d3559a4f91836d17f"
+    },
+    {
+      "path": "docs/security-v1/device-registration-proposal.md",
+      "sha256": "3bcc48d089690af8e60e6080136795e6cb4d927288b5438a7f11e7441679a512",
+      "sha256Lf": "3bcc48d089690af8e60e6080136795e6cb4d927288b5438a7f11e7441679a512"
+    },
+    {
+      "path": "docs/security-v1/device-registration-protocol-contract.md",
+      "sha256": "d59c22eff9b7b71d4e3dc77c8d2947569ee4caa5ab6b19f06545acf39716a2b4",
+      "sha256Lf": "d59c22eff9b7b71d4e3dc77c8d2947569ee4caa5ab6b19f06545acf39716a2b4"
+    },
+    {
+      "path": "docs/security-v1/examples/device-registration.deployment.v1.json",
+      "sha256": "316f6db2dea17d4606d42dc3c723513d905ce433b3ca62a58cb28a8bc9c489ac",
+      "sha256Lf": "316f6db2dea17d4606d42dc3c723513d905ce433b3ca62a58cb28a8bc9c489ac"
+    },
+    {
+      "path": "docs/security-v1/overview.md",
+      "sha256": "f1eeb5ca2d183c2e4a04d2dd2f82275f5de3300227802f0c9bf429e4d8d5feca",
+      "sha256Lf": "7c840dd3b29d90ce7d0f14ee58e3e6cf47ec644e95eff42ebe9cd8828b3a278e"
+    },
+    {
+      "path": "docs/security-v1/user-guide.md",
+      "sha256": "03d9be520142df621833d892e172e0038dafbc281a9264fc28254e7fe738b699",
+      "sha256Lf": "1813dbfd8b4946047a37650280d63a490539e09073189ac3de7fe88f518ccbb1"
+    },
+    {
+      "path": "package.json",
+      "sha256": "762d20fa71c6d27dce9a9cade88f81174e7fcc75e41e42733d04b3ad35446dc6",
+      "sha256Lf": "dcc012363940e4235d5d6b7c9d412be88386947ca88bacfe685bca0f37de51d1"
+    },
+    {
+      "path": "packages/sdk/src/index.ts",
+      "sha256": "61e291c1207e420f0d22c6f822d19159f81cc0b4e0600b507cca34e2ee44badc",
+      "sha256Lf": "ff36b6f0a30ccee7b9acf418d407287a24d585c73d3a4a18c9e51423b629152c"
+    },
+    {
+      "path": "packages/shared/src/device-registration-contracts.ts",
+      "sha256": "6bce8ce0dda964dd0718d6230f829142298e9eb5248f4592d5149210d58a1610",
+      "sha256Lf": "6bce8ce0dda964dd0718d6230f829142298e9eb5248f4592d5149210d58a1610"
+    },
+    {
+      "path": "packages/shared/src/index.ts",
+      "sha256": "8bbb2d967deb64b9a8b009a6bd4f7786fa88027da4a2d2916a049f9d77d0d452",
+      "sha256Lf": "e935da9a6ac7a2e69df281b595ef43532cd64681105d8b79b849f3091a71ecf1"
+    },
+    {
+      "path": "scripts/security-registration-consumer-check.mjs",
+      "sha256": "2aed5a56b2ff76d68d6efa635a5e800739eb583cf2e697cec22c9dc71e2b2d51",
+      "sha256Lf": "2aed5a56b2ff76d68d6efa635a5e800739eb583cf2e697cec22c9dc71e2b2d51"
+    },
+    {
+      "path": "scripts/security-registration-contract.mjs",
+      "sha256": "cb5a267d638564821cc365fd9b28afa81658d040ede9595690f42d708f5b48f0",
+      "sha256Lf": "cb5a267d638564821cc365fd9b28afa81658d040ede9595690f42d708f5b48f0"
+    },
+    {
+      "path": "scripts/security-registration-dependencies/LICENSE.simplewebauthn.md",
+      "sha256": "bd9e3f45696472076c7160c7f66e54b2d62d38bc2646c812d19be83ee4400c63",
+      "sha256Lf": "bd9e3f45696472076c7160c7f66e54b2d62d38bc2646c812d19be83ee4400c63"
+    },
+    {
+      "path": "scripts/security-registration-dependencies/package.json",
+      "sha256": "d5c9a88768396b96b3c1f247d25a2bfaa8ec41c29c5444f4c197431af65d0628",
+      "sha256Lf": "d5c9a88768396b96b3c1f247d25a2bfaa8ec41c29c5444f4c197431af65d0628"
+    },
+    {
+      "path": "scripts/security-registration-dependencies/pnpm-lock.yaml",
+      "sha256": "9ce653344dbca0656967850303cf3027b562fd1513f2aac956580bda6e748d4e",
+      "sha256Lf": "9ce653344dbca0656967850303cf3027b562fd1513f2aac956580bda6e748d4e"
+    },
+    {
+      "path": "scripts/security-registration-library-check.mjs",
+      "sha256": "ac84e12d352b48e86f24b6eb097dd213136b2d7d1360fd98f17b51ac2e0b9c59",
+      "sha256Lf": "ac84e12d352b48e86f24b6eb097dd213136b2d7d1360fd98f17b51ac2e0b9c59"
+    },
+    {
+      "path": "scripts/security-release-evidence.mjs",
+      "sha256": "640498f9fa60f5bb394c4847b2ad1e8565188be64d7fd5cf53b55d14b18e9c67",
+      "sha256Lf": "d77d7f18afe4a6331f4af9b45a69054411d894a8d19fd277741a86c9d05782ca"
+    },
+    {
+      "path": "test/README.md",
+      "sha256": "f792b08c29aa3d00fd3e2c302739be8d1a6f674d0a9c3061da10ba612441725b",
+      "sha256Lf": "63358af882dcaeef2340abff33a4682807e7dfba494dc1e2eb14168a8c3cd06d"
+    },
+    {
+      "path": "test/fixtures/security-registration-tls/README.md",
+      "sha256": "1d6ac0175c11695df3c26d3a603adfefd09437fa6e152582c21e302afdc44957",
+      "sha256Lf": "1d6ac0175c11695df3c26d3a603adfefd09437fa6e152582c21e302afdc44957"
+    },
+    {
+      "path": "test/fixtures/security-registration-tls/modeldb-a.crt",
+      "sha256": "11e6daaeb24fc20a7041c4f8fd03916889bfde3b5ea09e4e05475253af20f871",
+      "sha256Lf": "11e6daaeb24fc20a7041c4f8fd03916889bfde3b5ea09e4e05475253af20f871"
+    },
+    {
+      "path": "test/fixtures/security-registration-tls/modeldb-a.key",
+      "sha256": "ad536c9c74bd77cbcc39f3ac00217162fc1a41dd07900700dce6b246488c4cdd",
+      "sha256Lf": "ad536c9c74bd77cbcc39f3ac00217162fc1a41dd07900700dce6b246488c4cdd"
+    },
+    {
+      "path": "test/unit/security-device-registration-contract.test.ts",
+      "sha256": "08a10310627b06af463c2e3e0132706384147305af3a8d7af939f602a0565df6",
+      "sha256Lf": "08a10310627b06af463c2e3e0132706384147305af3a8d7af939f602a0565df6"
+    },
+    {
+      "path": "test/unit/security-registration-contract.test.mjs",
+      "sha256": "a2844e75f80aeb4f9cc18c44714e6d8aa8e5388b1fd773a788242bca6b8a3185",
+      "sha256Lf": "a2844e75f80aeb4f9cc18c44714e6d8aa8e5388b1fd773a788242bca6b8a3185"
+    },
+    {
+      "path": "test/unit/security-release-evidence.test.mjs",
+      "sha256": "d1d42848657b50965b2b205404fa266b41cff199b7afe8f5d2efe0b7e9dfac03",
+      "sha256Lf": "d1d42848657b50965b2b205404fa266b41cff199b7afe8f5d2efe0b7e9dfac03"
+    }
+  ],
+  "boundaries": {
+    "realServicesAccessed": false,
+    "realConfigurationReadOrModified": false,
+    "realCredentialsCertificatesKeysVaultBusinessDataOrAclAccessed": false,
+    "syntheticTlsFixturesOnly": true,
+    "networkUse": "Official public npm metadata and isolated dependency downloads only, with external-access approval.",
+    "rootLockfileOrServerDependencyChanged": false,
+    "publishedDeployedOrCommitted": false
+  },
+  "failuresAndRepairs": [
+    {
+      "kind": "pnpm-exec",
+      "result": "Earlier wrapper attempted dependency/store database access and failed; installed local Node entry points used."
+    },
+    {
+      "kind": "native-ts-test-loader",
+      "result": "Direct Node test runner could not resolve .js imports to .ts sources; used existing tsx."
+    },
+    {
+      "kind": "contract-review",
+      "result": "Initial lint/format and input-boundary gaps corrected before freeze; canonical decoded bytes, exact whole-string matching and negative cases added."
+    },
+    {
+      "kind": "registry-network",
+      "result": "Default sandbox public-registry fetch EACCES; approved public metadata/download access succeeded in dedicated temporary directories."
+    },
+    {
+      "kind": "offline-metadata",
+      "result": "Initial offline attempt ERR_PNPM_NO_OFFLINE_META; prewarmed dedicated metadata cache with frozen online install; fresh offline frozen install succeeded without disabling policy or integrity checks."
+    },
+    {
+      "kind": "library-probe",
+      "result": "Initial traversal treated .pnpm/lock.yaml as directory; limited traversal to directories; final 25-package probe passed."
+    },
+    {
+      "kind": "browser-tool-resolution",
+      "result": "Root esbuild import and unresolved tsx symlink anchor failed; resolved esbuild from declared tsx actual installation; browser bundles passed."
+    },
+    {
+      "kind": "test-typecheck",
+      "result": "Initial fixture TLS mode inferred as broad string; narrowed fixture type; targeted strict test typecheck passed."
+    }
+  ],
+  "limitations": [
+    "Public schema and dependency selection only. Capability/register/login/approval HTTP runtime and persistent registration ledger are not implemented.",
+    "Runtime Server dependency and root lock integration must adopt and revalidate this exact graph in DR-P1.4.",
+    "No normal WebAuthn proof, real authenticator, Windows Hello, Node 22 or two-device authentication acceptance.",
+    "No advisory-database audit or registry signature/provenance verification; not a no-vulnerabilities claim.",
+    "Capacity numbers are frozen initial runtime limits, not a performance/flood acceptance result.",
+    "No whole-repository check/full business regression/browser/performance run in this task; previous runtime evidence remains historical.",
+    "No page or translation changes; no visual/i18n acceptance. test/** remains excluded by existing lint/format policy.",
+    "D12 recorded an earlier unintended read-only repository format scan; this task does not rewrite that historical boundary."
+  ]
+}

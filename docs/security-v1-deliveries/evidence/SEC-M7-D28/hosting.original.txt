@@ -1,0 +1,226 @@
+TAP version 13
+# Subtest: hosting report requires both native Windows and actual localized Chrome evidence
+ok 1 - hosting report requires both native Windows and actual localized Chrome evidence
+  ---
+  duration_ms: 1.0276
+  type: 'test'
+  ...
+# Subtest: hosting report rejects process failure, missing/duplicate summaries, skipped and count drift
+ok 2 - hosting report rejects process failure, missing/duplicate summaries, skipped and count drift
+  ---
+  duration_ms: 1.0856
+  type: 'test'
+  ...
+# Subtest: hosting report rejects missing native/browser records and every incomplete check
+ok 3 - hosting report rejects missing native/browser records and every incomplete check
+  ---
+  duration_ms: 1.4072
+  type: 'test'
+  ...
+# Subtest: hosting report rejects inflated hardware/trust claims, wrong browser and incomplete screenshots
+ok 4 - hosting report rejects inflated hardware/trust claims, wrong browser and incomplete screenshots
+  ---
+  duration_ms: 0.5198
+  type: 'test'
+  ...
+# Subtest: hosting remains explicit and validates every field without address or file discovery
+ok 5 - hosting remains explicit and validates every field without address or file discovery
+  ---
+  duration_ms: 9.1399
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses modeldb.config.json without serving it
+ok 6 - build snapshot refuses modeldb.config.json without serving it
+  ---
+  duration_ms: 2.2488
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses .env without serving it
+ok 7 - build snapshot refuses .env without serving it
+  ---
+  duration_ms: 1.8163
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses server.key without serving it
+ok 8 - build snapshot refuses server.key without serving it
+  ---
+  duration_ms: 1.661
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses bundle.js.map without serving it
+ok 9 - build snapshot refuses bundle.js.map without serving it
+  ---
+  duration_ms: 1.7532
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses source.ts without serving it
+ok 10 - build snapshot refuses source.ts without serving it
+  ---
+  duration_ms: 1.6665
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses arbitrary.html without serving it
+ok 11 - build snapshot refuses arbitrary.html without serving it
+  ---
+  duration_ms: 1.6024
+  type: 'test'
+  ...
+# Subtest: build snapshot rejects protected overlap, directory junctions, hardlinks and oversized files
+ok 12 - build snapshot rejects protected overlap, directory junctions, hardlinks and oversized files
+  ---
+  duration_ms: 11.0142
+  type: 'test'
+  ...
+# Subtest: public build serves only exact GET/HEAD snapshot paths with same-origin security headers
+ok 13 - public build serves only exact GET/HEAD snapshot paths with same-origin security headers
+  ---
+  duration_ms: 272.7077
+  type: 'test'
+  ...
+# Subtest: data listener refuses encoded traversal before static or API handlers
+ok 14 - data listener refuses encoded traversal before static or API handlers
+  ---
+  duration_ms: 90.0363
+  type: 'test'
+  ...
+# Subtest: data listener refuses double encoding before static or API handlers
+ok 15 - data listener refuses double encoding before static or API handlers
+  ---
+  duration_ms: 96.4104
+  type: 'test'
+  ...
+# Subtest: data listener refuses encoded slash before static or API handlers
+ok 16 - data listener refuses encoded slash before static or API handlers
+  ---
+  duration_ms: 91.0907
+  type: 'test'
+  ...
+# Subtest: data listener refuses raw traversal before static or API handlers
+ok 17 - data listener refuses raw traversal before static or API handlers
+  ---
+  duration_ms: 90.6485
+  type: 'test'
+  ...
+# Subtest: data listener refuses backslash before static or API handlers
+ok 18 - data listener refuses backslash before static or API handlers
+  ---
+  duration_ms: 92.4666
+  type: 'test'
+  ...
+# Subtest: data listener refuses rebinding before static or API handlers
+ok 19 - data listener refuses rebinding before static or API handlers
+  ---
+  duration_ms: 96.2776
+  type: 'test'
+  ...
+# Subtest: data listener refuses wrong port before static or API handlers
+ok 20 - data listener refuses wrong port before static or API handlers
+  ---
+  duration_ms: 88.385
+  type: 'test'
+  ...
+# Subtest: data listener refuses null origin before static or API handlers
+ok 21 - data listener refuses null origin before static or API handlers
+  ---
+  duration_ms: 89.6798
+  type: 'test'
+  ...
+# Subtest: data listener refuses cross-origin before static or API handlers
+ok 22 - data listener refuses cross-origin before static or API handlers
+  ---
+  duration_ms: 93.3872
+  type: 'test'
+  ...
+# Subtest: data listener refuses same-site ports before static or API handlers
+ok 23 - data listener refuses same-site ports before static or API handlers
+  ---
+  duration_ms: 88.1276
+  type: 'test'
+  ...
+# Subtest: management listener rejects forwarded even on its real loopback socket
+ok 24 - management listener rejects forwarded even on its real loopback socket
+  ---
+  duration_ms: 89.0081
+  type: 'test'
+  ...
+# Subtest: management listener rejects x-forwarded-for even on its real loopback socket
+ok 25 - management listener rejects x-forwarded-for even on its real loopback socket
+  ---
+  duration_ms: 87.1328
+  type: 'test'
+  ...
+# Subtest: management listener rejects x-forwarded-host even on its real loopback socket
+ok 26 - management listener rejects x-forwarded-host even on its real loopback socket
+  ---
+  duration_ms: 88.1204
+  type: 'test'
+  ...
+# Subtest: management listener rejects x-forwarded-proto even on its real loopback socket
+ok 27 - management listener rejects x-forwarded-proto even on its real loopback socket
+  ---
+  duration_ms: 89.2091
+  type: 'test'
+  ...
+# Subtest: management listener rejects x-real-ip even on its real loopback socket
+ok 28 - management listener rejects x-real-ip even on its real loopback socket
+  ---
+  duration_ms: 89.3141
+  type: 'test'
+  ...
+# Subtest: management listener rejects via even on its real loopback socket
+ok 29 - management listener rejects via even on its real loopback socket
+  ---
+  duration_ms: 88.7993
+  type: 'test'
+  ...
+# Subtest: management APIs and page cannot be reached through data listener, even from loopback
+ok 30 - management APIs and page cannot be reached through data listener, even from loopback
+  ---
+  duration_ms: 92.0724
+  type: 'test'
+  ...
+# Subtest: OS launch is exact, one-use, management-only and never consumed by a wrong session role
+ok 31 - OS launch is exact, one-use, management-only and never consumed by a wrong session role
+  ---
+  duration_ms: 147.5944
+  type: 'test'
+  ...
+# Subtest: hosted management idle 15 minutes and absolute 60 minutes survive refresh and restart
+ok 32 - hosted management idle 15 minutes and absolute 60 minutes survive refresh and restart
+  ---
+  duration_ms: 179.5283
+  type: 'test'
+  ...
+# Subtest: data pairings cannot create a management session and conflict binding never falls back
+ok 33 - data pairings cannot create a management session and conflict binding never falls back
+  ---
+  duration_ms: 104.1419
+  type: 'test'
+  ...
+# Subtest: old eight-hour management identities are refused by the hosted management listener
+ok 34 - old eight-hour management identities are refused by the hosted management listener
+  ---
+  duration_ms: 96.9337
+  type: 'test'
+  ...
+# Subtest: failed hosted rejection audit cannot report an ordinary denial or return static bytes
+ok 35 - failed hosted rejection audit cannot report an ordinary denial or return static bytes
+  ---
+  duration_ms: 78.9062
+  type: 'test'
+  ...
+# Subtest: management websocket upgrade cannot bypass its data-route allowlist
+ok 36 - management websocket upgrade cannot bypass its data-route allowlist
+  ---
+  duration_ms: 79.5287
+  type: 'test'
+  ...
+1..36
+# tests 36
+# suites 0
+# pass 36
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3767.5655

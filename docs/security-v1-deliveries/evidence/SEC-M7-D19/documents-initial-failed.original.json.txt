@@ -1,0 +1,6 @@
+{
+  "script": "docs/security-v1-deliveries/evidence/SEC-M7-D19/documents-check.original.mjs.txt",
+  "exitCode": 1,
+  "stdout": "{\n  \"ok\": false,\n  \"documentFiles\": 16,\n  \"localLinksAndAnchors\": 318,\n  \"failures\": [\n    \"docs/security-v1-deliveries/SEC-M7.md missing evidence/SEC-M7-D19/regression.original.txt\"\n  ],\n  \"registrationTaskRows\": 23,\n  \"completedRegistrationTasks\": 8\n}\n",
+  "stderr": "node:assert:152\r\n  throw new AssertionError(obj);\r\n  ^\r\n\r\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\r\n\r\n1 !== 0\r\n\r\n    at [eval]:42:8\r\n    at runScriptInThisContext (node:internal/vm:219:10)\r\n    at node:internal/process/execution:451:12\r\n    at [eval]-wrapper:6:24\r\n    at runScriptInContext (node:internal/process/execution:449:60)\r\n    at evalFunction (node:internal/process/execution:283:30)\r\n    at evalTypeScript (node:internal/process/execution:295:3)\r\n    at node:internal/main/eval_string:71:3 {\r\n  generatedMessage: true,\r\n  code: 'ERR_ASSERTION',\r\n  actual: 1,\r\n  expected: 0,\r\n  operator: 'strictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v24.22.1\r\n"
+}

@@ -1,0 +1,39 @@
+{
+  "format": "modeldb.public-clients-check.v1",
+  "task": "DR-P3.5",
+  "ok": false,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-bgAqq2",
+  "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-bgAqq2\\builds",
+  "screenshots": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-bgAqq2\\screenshots",
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-bgAqq2\\integration.tap",
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-public-clients-browser.test.ts",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-browser-apps.test.ts"
+  ],
+  "exitCode": 1,
+  "errorCode": "IDENTITY_PROCESS_FAILED",
+  "build": {
+    "configFile": false,
+    "envFile": false,
+    "existingDistUnchanged": true,
+    "applications": [
+      "model-designer",
+      "data-studio",
+      "web"
+    ]
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "formalRegistrationUiTested": true
+  },
+  "report": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-bgAqq2\\integration-check.json"
+}

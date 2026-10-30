@@ -1,0 +1,124 @@
+TAP version 13
+# Subtest: all three browser applications purge legacy secrets and keep credentials only in memory
+ok 1 - all three browser applications purge legacy secrets and keep credentials only in memory
+  ---
+  duration_ms: 0.9026
+  type: 'test'
+  ...
+# Subtest: model-designer: a valid launcher overrides saved Token mode without persisting its secret
+ok 2 - model-designer: a valid launcher overrides saved Token mode without persisting its secret
+  ---
+  duration_ms: 65.1181
+  type: 'test'
+  ...
+# Subtest: model-designer: launcher and explicit mode selection work with write storage blocked
+ok 3 - model-designer: launcher and explicit mode selection work with write storage blocked
+  ---
+  duration_ms: 6.943
+  type: 'test'
+  ...
+# Subtest: model-designer: launcher and explicit mode selection work with all storage blocked
+ok 4 - model-designer: launcher and explicit mode selection work with all storage blocked
+  ---
+  duration_ms: 5.6409
+  type: 'test'
+  ...
+# Subtest: model-designer: no launcher leaves the saved Token preference in place
+ok 5 - model-designer: no launcher leaves the saved Token preference in place
+  ---
+  duration_ms: 4.2731
+  type: 'test'
+  ...
+# Subtest: model-designer: malformed code leaves the saved Token preference in place
+ok 6 - model-designer: malformed code leaves the saved Token preference in place
+  ---
+  duration_ms: 4.5801
+  type: 'test'
+  ...
+# Subtest: model-designer: remote plaintext endpoint leaves the saved Token preference in place
+ok 7 - model-designer: remote plaintext endpoint leaves the saved Token preference in place
+  ---
+  duration_ms: 4.0647
+  type: 'test'
+  ...
+# Subtest: data-studio: a valid launcher overrides saved Token mode without persisting its secret
+ok 8 - data-studio: a valid launcher overrides saved Token mode without persisting its secret
+  ---
+  duration_ms: 4.9257
+  type: 'test'
+  ...
+# Subtest: data-studio: launcher and explicit mode selection work with write storage blocked
+ok 9 - data-studio: launcher and explicit mode selection work with write storage blocked
+  ---
+  duration_ms: 3.9738
+  type: 'test'
+  ...
+# Subtest: data-studio: launcher and explicit mode selection work with all storage blocked
+ok 10 - data-studio: launcher and explicit mode selection work with all storage blocked
+  ---
+  duration_ms: 4.2581
+  type: 'test'
+  ...
+# Subtest: data-studio: no launcher leaves the saved Token preference in place
+ok 11 - data-studio: no launcher leaves the saved Token preference in place
+  ---
+  duration_ms: 5.0137
+  type: 'test'
+  ...
+# Subtest: data-studio: malformed code leaves the saved Token preference in place
+ok 12 - data-studio: malformed code leaves the saved Token preference in place
+  ---
+  duration_ms: 4.1608
+  type: 'test'
+  ...
+# Subtest: data-studio: remote plaintext endpoint leaves the saved Token preference in place
+ok 13 - data-studio: remote plaintext endpoint leaves the saved Token preference in place
+  ---
+  duration_ms: 4.6303
+  type: 'test'
+  ...
+# Subtest: web: a valid launcher overrides saved Token mode without persisting its secret
+ok 14 - web: a valid launcher overrides saved Token mode without persisting its secret
+  ---
+  duration_ms: 5.2966
+  type: 'test'
+  ...
+# Subtest: web: launcher and explicit mode selection work with write storage blocked
+ok 15 - web: launcher and explicit mode selection work with write storage blocked
+  ---
+  duration_ms: 3.8854
+  type: 'test'
+  ...
+# Subtest: web: launcher and explicit mode selection work with all storage blocked
+ok 16 - web: launcher and explicit mode selection work with all storage blocked
+  ---
+  duration_ms: 4.0201
+  type: 'test'
+  ...
+# Subtest: web: no launcher leaves the saved Token preference in place
+ok 17 - web: no launcher leaves the saved Token preference in place
+  ---
+  duration_ms: 4.0736
+  type: 'test'
+  ...
+# Subtest: web: malformed code leaves the saved Token preference in place
+ok 18 - web: malformed code leaves the saved Token preference in place
+  ---
+  duration_ms: 3.881
+  type: 'test'
+  ...
+# Subtest: web: remote plaintext endpoint leaves the saved Token preference in place
+ok 19 - web: remote plaintext endpoint leaves the saved Token preference in place
+  ---
+  duration_ms: 3.5721
+  type: 'test'
+  ...
+1..19
+# tests 19
+# suites 0
+# pass 19
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 365.3343

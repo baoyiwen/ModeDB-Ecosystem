@@ -1,0 +1,26 @@
+{
+  "command": [
+    "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+    "node_modules/eslint/bin/eslint.js",
+    "packages/shared/src/device-authentication-contracts.ts",
+    "packages/shared/src/index.ts",
+    "packages/server/src/security/authentication-ledger.ts",
+    "packages/server/src/security/authentication-service.ts",
+    "packages/server/src/security/authentication-routes.ts",
+    "packages/server/src/security/browser-session-http.ts",
+    "packages/server/src/security/security-registry.ts",
+    "packages/server/src/security/registry-entrypoints.ts",
+    "packages/server/src/security/network-boundary.ts",
+    "packages/server/src/config-loader.ts",
+    "packages/server/src/dual-track-app.ts",
+    "packages/sdk/src/browser-session.ts",
+    "packages/sdk/src/index.ts",
+    "scripts/security-authentication-integration-check.mjs",
+    "scripts/security-registration-storage-check.mjs",
+    "scripts/security-registration-consumer-check.mjs",
+    "scripts/security-release-evidence.mjs"
+  ],
+  "exitCode": 0,
+  "stdout": "",
+  "stderr": ""
+}

@@ -7,6 +7,7 @@ import type { SecurityAuditQuery, SecurityGrant } from '@mode-db/shared';
 import { SecurityError, type SecurityErrorCode } from './security-errors.js';
 import { dispatchSecurityControl, type SecurityControl } from './security-control.js';
 import type { SecurityRegistry } from './security-registry.js';
+import { WindowsSecretProtector } from './windows-secret-protector.js';
 
 // This fixed Windows broker enforces the pipe DACL and the impersonated OS
 // identity before forwarding any operation to the Node parent over stdio.
@@ -89,17 +90,28 @@ export function localManagementPipe(directory: string): string {
   return String.raw`\\.\pipe\modeldb-security-${name}`;
 }
 
+/** Defense in depth after the broker's DACL and impersonation; never accepts a SID from JSON. */
+export function assertLocalSecurityCaller(caller: string, owner: string): void {
+  if (!/^S-1-[0-9-]{1,180}$/.test(caller) || (caller !== owner && caller !== 'S-1-5-18')) {
+    throw new SecurityError('SECURITY_LOCAL_IDENTITY_DENIED');
+  }
+}
+
 /** Dispatch only supported maintenance actions; no arbitrary engine or filesystem access. */
 export function dispatchLocalSecurity(
   registry: SecurityRegistry,
   input: unknown,
   browserDatabases: readonly string[] = [],
   control?: SecurityControl,
+  hostedManagement?: () => string | undefined,
 ): unknown {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     throw new SecurityError('SECURITY_INVALID_REQUEST');
   }
   const r = input as Record<string, unknown>;
+  if (typeof r.action === 'string' && r.action.startsWith('registration.')) {
+    return registry.manageRegistration(input);
+  }
   if (typeof r.action === 'string' && /^(network\.|maintenance\.|master\.)/.test(r.action)) {
     if (!control) {
       throw new SecurityError('SECURITY_LOCAL_CHANNEL_UNAVAILABLE');
@@ -107,6 +119,19 @@ export function dispatchLocalSecurity(
     return dispatchSecurityControl(control, input);
   }
   switch (r.action) {
+    case 'browser.hosted.security.launch': {
+      const origin = hostedManagement?.();
+      if (!origin || Object.keys(r).some((k) => k !== 'action')) {
+        throw new SecurityError('SECURITY_LOCAL_CHANNEL_UNAVAILABLE');
+      }
+      const paired = registry.createLocalBrowserPairing(origin, [], true, 60);
+      return {
+        ...paired,
+        origin,
+        url: origin + '/security/',
+        instanceId: registry.status().instanceId,
+      };
+    }
     case 'browser.launch':
       if (
         r.databases !== undefined &&
@@ -119,6 +144,9 @@ export function dispatchLocalSecurity(
         ...((r.databases ?? []) as string[]),
       ]);
     case 'browser.security.launch':
+      if (hostedManagement) {
+        throw new SecurityError('SECURITY_INVALID_REQUEST');
+      }
       if (
         r.databases !== undefined &&
         (!Array.isArray(r.databases) || r.databases.some((v) => typeof v !== 'string'))
@@ -203,10 +231,12 @@ export async function startLocalSecurityChannel(
   registry: SecurityRegistry,
   browserDatabases: () => readonly string[] = () => [],
   control?: SecurityControl,
+  hostedManagement?: () => string | undefined,
 ): Promise<{ close(): Promise<void> }> {
   if (process.platform !== 'win32') {
     throw new SecurityError('SECURITY_LOCAL_CHANNEL_UNAVAILABLE');
   }
+  const owner = new WindowsSecretProtector().currentIdentity();
   const child = spawn(
     join(
       process.env.SystemRoot ?? 'C:\\Windows',
@@ -259,6 +289,7 @@ export async function startLocalSecurityChannel(
         if (!ready || line.length > 90000 || separator < 0 || !/^S-1-[0-9-]{1,180}$/.test(caller)) {
           throw new SecurityError('SECURITY_INVALID_REQUEST');
         }
+        assertLocalSecurityCaller(caller, owner);
         response = {
           ok: true,
           result: registry.withLocalActor(caller, () =>
@@ -267,6 +298,7 @@ export async function startLocalSecurityChannel(
               JSON.parse(Buffer.from(line.slice(separator + 1), 'base64').toString('utf8')),
               browserDatabases(),
               control,
+              hostedManagement,
             ),
           ),
         };
@@ -305,17 +337,23 @@ export async function startLocalSecurityChannel(
     JSON.stringify({ name: localManagementPipe(directory).split('\\').at(-1) }) + '\n',
   );
   await startup;
+  let closePromise: Promise<void> | undefined;
   return {
-    async close() {
+    close() {
+      if (closePromise) {
+        return closePromise;
+      }
       closing = true;
       lines.close();
-      if (child.exitCode !== null) {
-        return;
+      if (child.exitCode !== null || child.signalCode !== null) {
+        closePromise = Promise.resolve();
+        return closePromise;
       }
-      await new Promise<void>((done) => {
+      closePromise = new Promise<void>((done) => {
         child.once('exit', () => done());
         child.kill();
       });
+      return closePromise;
     },
   };
 }

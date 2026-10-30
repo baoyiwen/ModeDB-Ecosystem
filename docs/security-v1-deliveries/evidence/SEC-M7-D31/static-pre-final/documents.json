@@ -1,0 +1,15 @@
+{
+  "ok": false,
+  "documentFiles": 17,
+  "localLinksAndAnchors": 468,
+  "failures": [
+    {
+      "path": "docs/security-v1-milestones.md",
+      "link": "security-v1-deliveries/SEC-M7.md#d31dr-p43-新发行安装与合成升级停用验收",
+      "reason": "anchor"
+    }
+  ],
+  "registrationTaskRows": 23,
+  "completedRegistrationTasks": 20,
+  "cliExamplesKnown": true
+}

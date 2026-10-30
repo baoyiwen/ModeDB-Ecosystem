@@ -1,0 +1,14 @@
+✓ Lockfile passes supply-chain policies (verified 13h ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +25
++++++++++++++++++++++++++
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: C:\Users\51153\AppData\Local\Temp\ModeDB-WebAuthn-Dependency-uPbO5K\store\v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 25, reused 25, downloaded 0, added 25, done
+
+dependencies:
++ @simplewebauthn/server 14.0.3
+
+Done in 832ms using pnpm v11.25.0

@@ -1,0 +1,10 @@
+{
+  "ok": false,
+  "documentFiles": 17,
+  "localLinksAndAnchors": 339,
+  "failures": [
+    "docs/security-v1-deliveries/SEC-M7.md missing evidence/SEC-M7-D20/documents.original.json.txt"
+  ],
+  "registrationTaskRows": 23,
+  "completedRegistrationTasks": 9
+}

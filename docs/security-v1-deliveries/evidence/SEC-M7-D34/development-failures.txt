@@ -1,0 +1,4 @@
+Development observations (summary, not original process transcripts):
+Initial TLS test: ERR_INVALID_IP_ADDRESS from the lookup callback; explicit IPv4 fixed it.
+Initial native smoke: VAULT_PROTECTION_UNAVAILABLE because an inherited-ACL directory was created before protector validation; now the protector creates a fresh directory.
+First frozen run: 58 unit checks and native smoke passed; static Unicode wrapper expectation failed because assertion redaction reduced the intended pin mismatch code to DEVICE_STEP_FAILED. Original frozen logs and source manifest are retained in before-error-code-repair. A symbolic first-line extractor now preserves codes while dropping assertion actual/expected values.

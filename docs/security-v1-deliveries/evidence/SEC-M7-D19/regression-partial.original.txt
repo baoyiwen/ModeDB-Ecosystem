@@ -1,0 +1,790 @@
+TAP version 13
+# [ModeDB] START Connection: open websocket trace=7bc47f6b
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:53754/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=7bc47f6b 8.48ms
+#   结果: { ms: 8.48, url: 'ws://127.0.0.1:53754/api/v1/stream' }
+# Subtest: source expiry affects existing WS messages and queued writes before any new mutation
+ok 1 - source expiry affects existing WS messages and queued writes before any new mutation
+  ---
+  duration_ms: 537.5238
+  type: 'test'
+  ...
+# Subtest: browser pairing binds Origin, session CSRF, actual expiry and safe logout
+ok 2 - browser pairing binds Origin, session CSRF, actual expiry and safe logout
+  ---
+  duration_ms: 331.1536
+  type: 'test'
+  ...
+# Subtest: pins canonical releases, projects only published fields and denies cross-database/raw/sys/instance access
+ok 3 - pins canonical releases, projects only published fields and denies cross-database/raw/sys/instance access
+  ---
+  duration_ms: 573.6867
+  type: 'test'
+  ...
+# [ModeDB] START Connection: open websocket trace=14d5ada5
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:53774/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=14d5ada5 2.32ms
+#   结果: { ms: 2.32, url: 'ws://127.0.0.1:53774/api/v1/stream' }
+# Subtest: generated Postman/HTTP and native curl match SDK calls and report expiry, revocation and protocol failures
+ok 4 - generated Postman/HTTP and native curl match SDK calls and report expiry, revocation and protocol failures
+  ---
+  duration_ms: 663.8291
+  type: 'test'
+  ...
+# [ModeDB] START Connection: open websocket trace=708f8abe
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:53779/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=708f8abe 2.42ms
+#   结果: { ms: 2.42, url: 'ws://127.0.0.1:53779/api/v1/stream' }
+# Subtest: SDK short and stream authenticate before exposure, preserve revived rows and revoke existing sessions
+ok 5 - SDK short and stream authenticate before exposure, preserve revived rows and revoke existing sessions
+  ---
+  duration_ms: 319.0943
+  type: 'test'
+  ...
+# [ModeDB] START Management API: GET /api/v1/management/databases trace=ee917326
+#   说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+#   请求摘要: { url: 'http://127.0.0.1:54913/api/v1/management/databases' }
+# [ModeDB] OK Management API: GET /api/v1/management/databases trace=ee917326 1.65ms
+#   结果: {
+#     ms: 1.65,
+#     status: 200,
+#     path: '/api/v1/management/databases',
+#     databases: 1
+#   }
+# [ModeDB] START Management API: GET /api/v1/management/databases/business/catalog trace=04f5661e
+#   说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+#   请求摘要: {
+#     url: 'http://127.0.0.1:54913/api/v1/management/databases/business/catalog'
+#   }
+# [ModeDB] OK Management API: GET /api/v1/management/databases/business/catalog trace=04f5661e 1.14ms
+#   结果: {
+#     ms: 1.14,
+#     status: 200,
+#     path: '/api/v1/management/databases/business/catalog',
+#     database: 'business',
+#     models: 1,
+#     relations: 0,
+#     hasDatabaseDisplayName: false,
+#     modelDisplayNames: 0,
+#     fieldLabels: 1
+#   }
+# [ModeDB] START Connection: open websocket trace=b817c3f8
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:54913/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=b817c3f8 0.97ms
+#   结果: { ms: 0.97, url: 'ws://127.0.0.1:54913/api/v1/stream' }
+# Subtest: browser SDK uses cookies for management, restored HTTP RPC and CSRF-protected WS with revocation
+ok 6 - browser SDK uses cookies for management, restored HTTP RPC and CSRF-protected WS with revocation
+  ---
+  duration_ms: 459.2421
+  type: 'test'
+  ...
+# [ModeDB] START Connection: open websocket trace=18959e59
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:54930/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=18959e59 2.31ms
+#   结果: { ms: 2.31, url: 'ws://127.0.0.1:54930/api/v1/stream' }
+# [ModeDB] START Connection: open websocket trace=b92e56a0
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:54934/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=b92e56a0 1.76ms
+#   结果: { ms: 1.76, url: 'ws://127.0.0.1:54934/api/v1/stream' }
+# Subtest: SDK clients retry a failed handshake and share a successful concurrent ModelDB connection
+ok 7 - SDK clients retry a failed handshake and share a successful concurrent ModelDB connection
+  ---
+  duration_ms: 945.6916
+  type: 'test'
+  ...
+# Subtest: rechecks queued writes and requires explicit schema/import capabilities before any mutation
+ok 8 - rechecks queued writes and requires explicit schema/import capabilities before any mutation
+  ---
+  duration_ms: 244.4625
+  type: 'test'
+  ...
+# Subtest: checks publisher business permissions before changing any release row
+ok 9 - checks publisher business permissions before changing any release row
+  ---
+  duration_ms: 277.2028
+  type: 'test'
+  ...
+# Subtest: rechecks each published batch item after revocation and refuses unsupported atomic batches before writes
+ok 10 - rechecks each published batch item after revocation and refuses unsupported atomic batches before writes
+  ---
+  duration_ms: 281.9332
+  type: 'test'
+  ...
+# Subtest: a binding grant delegates neither child query nor child operation without separately pinned grants
+ok 11 - a binding grant delegates neither child query nor child operation without separately pinned grants
+  ---
+  duration_ms: 335.3371
+  type: 'test'
+  ...
+# Subtest: backup creation/list/download have distinct scoped checks and ordinary readers cannot create backups
+ok 12 - backup creation/list/download have distinct scoped checks and ordinary readers cannot create backups
+  ---
+  duration_ms: 384.8927
+  type: 'test'
+  ...
+# Subtest: an authorized restore disconnects existing database streams and preserves the access credential
+ok 13 - an authorized restore disconnects existing database streams and preserves the access credential
+  ---
+  duration_ms: 262.1004
+  type: 'test'
+  ...
+# Subtest: audit failure before execution denies writes and outcome failure reports uncertainty after a committed write
+ok 14 - audit failure before execution denies writes and outcome failure reports uncertainty after a committed write
+  ---
+  duration_ms: 189.2746
+  type: 'test'
+  ...
+# Subtest: raw relation changes and indirect deletes require whole-database write scope
+ok 15 - raw relation changes and indirect deletes require whole-database write scope
+  ---
+  duration_ms: 520.8065
+  type: 'test'
+  ...
+# Subtest: accepts the public descriptor and exact capacity contract
+ok 16 - accepts the public descriptor and exact capacity contract
+  ---
+  duration_ms: 3.3481
+  type: 'test'
+  ...
+# Subtest: rejects descriptor trust-boundary drift and secrets
+ok 17 - rejects descriptor trust-boundary drift and secrets
+  ---
+  duration_ms: 0.5577
+  type: 'test'
+  ...
+# Subtest: enforces request size, protocol and encoded payload limits
+ok 18 - enforces request size, protocol and encoded payload limits
+  ---
+  duration_ms: 3.0495
+  type: 'test'
+  ...
+# Subtest: requires trusted instance binding and explicit state transitions
+ok 19 - requires trusted instance binding and explicit state transitions
+  ---
+  duration_ms: 0.3779
+  type: 'test'
+  ...
+# Subtest: accepts metadata-only registration audit events and rejects sensitive or unknown fields
+ok 20 - accepts metadata-only registration audit events and rejects sensitive or unknown fields
+  ---
+  duration_ms: 0.7434
+  type: 'test'
+  ...
+# Subtest: binds downloaded descriptions to trusted deployment, TLS and validity
+ok 21 - binds downloaded descriptions to trusted deployment, TLS and validity
+  ---
+  duration_ms: 1.5464
+  type: 'test'
+  ...
+# Subtest: requires explicit capabilities and a separate 32-byte continuation secret for status
+ok 22 - requires explicit capabilities and a separate 32-byte continuation secret for status
+  ---
+  duration_ms: 0.6479
+  type: 'test'
+  ...
+# Subtest: fails closed for unknown state kinds, prototype keys and audit attribution
+ok 23 - fails closed for unknown state kinds, prototype keys and audit attribution
+  ---
+  duration_ms: 1.5653
+  type: 'test'
+  ...
+# Subtest: validates creation options with required UV, algorithms and ephemeral binding
+ok 24 - validates creation options with required UV, algorithms and ephemeral binding
+  ---
+  duration_ms: 0.8921
+  type: 'test'
+  ...
+# Subtest: status exposes application metadata without granting a session or leaking principals
+ok 25 - status exposes application metadata without granting a session or leaking principals
+  ---
+  duration_ms: 0.6977
+  type: 'test'
+  ...
+# Subtest: rejects unprotected remote binds, fake public TLS, bad proxy/origin/CIDR configuration
+ok 26 - rejects unprotected remote binds, fake public TLS, bad proxy/origin/CIDR configuration
+  ---
+  duration_ms: 6.8175
+  type: 'test'
+  ...
+# Subtest: normalizes IPv4/IPv6, enforces deny precedence, empty allow-lists, separate planes and expiry
+ok 27 - normalizes IPv4/IPv6, enforces deny precedence, empty allow-lists, separate planes and expiry
+  ---
+  duration_ms: 3.0597
+  type: 'test'
+  ...
+# Subtest: ignores forged forwarded headers on direct sockets and stops at the first untrusted proxy hop
+ok 28 - ignores forged forwarded headers on direct sockets and stops at the first untrusted proxy hop
+  ---
+  duration_ms: 1.0962
+  type: 'test'
+  ...
+# Subtest: rejects disallowed Origins before parsing bodies or executing handlers; CORS permits exact origins only
+ok 29 - rejects disallowed Origins before parsing bodies or executing handlers; CORS permits exact origins only
+  ---
+  duration_ms: 273.3278
+  type: 'test'
+  ...
+# Subtest: SDK endpoint handling preserves HTTPS/IPv6 and rejects remote plaintext before sending credentials
+ok 30 - SDK endpoint handling preserves HTTPS/IPv6 and rejects remote plaintext before sending credentials
+  ---
+  duration_ms: 1.5077
+  type: 'test'
+  ...
+# Subtest: real HTTPS/WSS SDK round trips require trusted certificates and reject mismatched certificate names
+ok 31 - real HTTPS/WSS SDK round trips require trusted certificates and reject mismatched certificate names
+  ---
+  duration_ms: 722.307
+  type: 'test'
+  ...
+# Subtest: SDK refuses redirects instead of following a secure request toward a different transport
+ok 32 - SDK refuses redirects instead of following a secure request toward a different transport
+  ---
+  duration_ms: 21.9218
+  type: 'test'
+  ...
+# Subtest: approval requires a verified local actor context; JSON role and SID cannot establish it
+ok 33 - approval requires a verified local actor context; JSON role and SID cannot establish it
+  ---
+  duration_ms: 109.0721
+  type: 'test'
+  ...
+# Subtest: the parent broker check rejects foreign or malformed SIDs and accepts owner/SYSTEM only
+ok 34 - the parent broker check rejects foreign or malformed SIDs and accepts owner/SYSTEM only
+  ---
+  duration_ms: 0.4469
+  type: 'test'
+  ...
+# Subtest: local lists are bounded metadata with stable fingerprints; V1 lists do not migrate
+ok 35 - local lists are bounded metadata with stable fingerprints; V1 lists do not migrate
+  ---
+  duration_ms: 267.0889
+  type: 'test'
+  ...
+# Subtest: approval atomically creates an operator, user, scoped public-key credential and audit, but no token or session
+ok 36 - approval atomically creates an operator, user, scoped public-key credential and audit, but no token or session
+  ---
+  duration_ms: 147.4737
+  type: 'test'
+  ...
+# Subtest: existing enabled operators reuse a user while application principals and disabled users are rejected
+ok 37 - existing enabled operators reuse a user while application principals and disabled users are rejected
+  ---
+  duration_ms: 269.0969
+  type: 'test'
+  ...
+# Subtest: approved public polling returns only status, never the approved principal, grants or a business session
+ok 38 - approved public polling returns only status, never the approved principal, grants or a business session
+  ---
+  duration_ms: 141.4566
+  type: 'test'
+  ...
+# Subtest: older V2 credentials without a grants field load with empty scopes and inherit no Bearer privileges
+ok 39 - older V2 credentials without a grants field load with empty scopes and inherit no Bearer privileges
+  ---
+  duration_ms: 187.0986
+  type: 'test'
+  ...
+# Subtest: unverified, expired and future-dated applications cannot be approved
+ok 40 - unverified, expired and future-dated applications cannot be approved
+  ---
+  duration_ms: 283.8911
+  type: 'test'
+  ...
+# Subtest: rejection is terminal and also consumes an unfinished application challenge
+ok 41 - rejection is terminal and also consumes an unfinished application challenge
+  ---
+  duration_ms: 141.4882
+  type: 'test'
+  ...
+# Subtest: stale revisions and terminal decisions reject without creating duplicate principals or credentials
+ok 42 - stale revisions and terminal decisions reject without creating duplicate principals or credentials
+  ---
+  duration_ms: 173.9154
+  type: 'test'
+  ...
+# Subtest: wrong instance, missing confirmation, identity injection and ambiguous operator selection fail with audited denials
+ok 43 - wrong instance, missing confirmation, identity injection and ambiguous operator selection fail with audited denials
+  ---
+  duration_ms: 240.9389
+  type: 'test'
+  ...
+# Subtest: approval grants require exact databases, known actions and pinned callable releases; explicit empty scopes remain denied by default
+ok 44 - approval grants require exact databases, known actions and pinned callable releases; explicit empty scopes remain denied by default
+  ---
+  duration_ms: 252.0299
+  type: 'test'
+  ...
+# Subtest: stored registration scopes cannot be replaced and reset revokes the approved identity without changing key files
+ok 45 - stored registration scopes cannot be replaced and reset revokes the approved identity without changing key files
+  ---
+  duration_ms: 207.8853
+  type: 'test'
+  ...
+# Subtest: approval respects per-operator capacity without creating partial user or credential rows
+ok 46 - approval respects per-operator capacity without creating partial user or credential rows
+  ---
+  duration_ms: 1162.5379
+  type: 'test'
+  ...
+# Subtest: CLI rejects missing explicit config, duplicate or unrelated options and oversized grants before loading any configuration
+ok 47 - CLI rejects missing explicit config, duplicate or unrelated options and oversized grants before loading any configuration
+  ---
+  duration_ms: 1.5376
+  type: 'test'
+  ...
+# Subtest: protection write failure never reports approved and persists no partial operator association
+ok 48 - protection write failure never reports approved and persists no partial operator association
+  ---
+  duration_ms: 117.104
+  type: 'test'
+  ...
+# Subtest: audit capacity refuses the whole approval transaction
+ok 49 - audit capacity refuses the whole approval transaction
+  ---
+  duration_ms: 307.7226
+  type: 'test'
+  ...
+# Subtest: approval recovers a consistent identity and audit after staged failure
+ok 50 - approval recovers a consistent identity and audit after staged failure
+  ---
+  duration_ms: 142.3279
+  type: 'test'
+  ...
+# Subtest: approval recovers a consistent identity and audit after journaled failure
+ok 51 - approval recovers a consistent identity and audit after journaled failure
+  ---
+  duration_ms: 131.1735
+  type: 'test'
+  ...
+# Subtest: approval recovers a consistent identity and audit after replaced failure
+ok 52 - approval recovers a consistent identity and audit after replaced failure
+  ---
+  duration_ms: 121.5883
+  type: 'test'
+  ...
+# Subtest: required Windows DPAPI and actual local CLI list/approve/reject preserve OS attribution and issue no access secrets
+ok 53 - required Windows DPAPI and actual local CLI list/approve/reject preserve OS attribution and issue no access secrets
+  ---
+  duration_ms: 27932.6823
+  type: 'test'
+  ...
+# Subtest: omitted/disabled configuration leaves V1 unchanged; enabled requires exact binding, valid window and explicit migration
+ok 54 - omitted/disabled configuration leaves V1 unchanged; enabled requires exact binding, valid window and explicit migration
+  ---
+  duration_ms: 101.9505
+  type: 'test'
+  ...
+# Subtest: begin persists independent secret/challenge digests and no session or grant; public schemas and projection remain valid
+ok 55 - begin persists independent secret/challenge digests and no session or grant; public schemas and projection remain valid
+  ---
+  duration_ms: 129.7067
+  type: 'test'
+  ...
+# Subtest: expired configured windows start disabled without migrating V1 and preserve proof-verified applications for private polling
+ok 56 - expired configured windows start disabled without migrating V1 and preserve proof-verified applications for private polling
+  ---
+  duration_ms: 180.9574
+  type: 'test'
+  ...
+# Subtest: direct TLS registration rejects a missing certificate, wrong certificate host and wrong owner pin before migration
+ok 57 - direct TLS registration rejects a missing certificate, wrong certificate host and wrong owner pin before migration
+  ---
+  duration_ms: 64.4652
+  type: 'test'
+  ...
+# Subtest: the actual pinned WebAuthn library validates a synthetic none attestation; only a pending candidate is persisted
+ok 58 - the actual pinned WebAuthn library validates a synthetic none attestation; only a pending candidate is persisted
+  ---
+  duration_ms: 255.7953
+  type: 'test'
+  ...
+# Subtest: proof origin substitution is rejected by the library/admission and consumes the challenge
+ok 59 - proof origin substitution is rejected by the library/admission and consumes the challenge
+  ---
+  duration_ms: 132.5933
+  type: 'test'
+  ...
+# Subtest: proof rp substitution is rejected by the library/admission and consumes the challenge
+ok 60 - proof rp substitution is rejected by the library/admission and consumes the challenge
+  ---
+  duration_ms: 124.1616
+  type: 'test'
+  ...
+# Subtest: proof uv substitution is rejected by the library/admission and consumes the challenge
+ok 61 - proof uv substitution is rejected by the library/admission and consumes the challenge
+  ---
+  duration_ms: 193.5954
+  type: 'test'
+  ...
+# Subtest: proof up substitution is rejected by the library/admission and consumes the challenge
+ok 62 - proof up substitution is rejected by the library/admission and consumes the challenge
+  ---
+  duration_ms: 143.147
+  type: 'test'
+  ...
+# Subtest: proof challenge substitution is rejected by the library/admission and consumes the challenge
+ok 63 - proof challenge substitution is rejected by the library/admission and consumes the challenge
+  ---
+  duration_ms: 141.0767
+  type: 'test'
+  ...
+# Subtest: proof fmt substitution is rejected by the library/admission and consumes the challenge
+ok 64 - proof fmt substitution is rejected by the library/admission and consumes the challenge
+  ---
+  duration_ms: 123.5454
+  type: 'test'
+  ...
+# Subtest: parallel complete requests verify at most once and a restart never resurrects a claimed challenge
+ok 65 - parallel complete requests verify at most once and a restart never resurrects a claimed challenge
+  ---
+  duration_ms: 272.9065
+  type: 'test'
+  ...
+# Subtest: status secret/instance/ID mismatches return the same NOT_FOUND; poll interval is per valid application
+ok 66 - status secret/instance/ID mismatches return the same NOT_FOUND; poll interval is per valid application
+  ---
+  duration_ms: 139.8018
+  type: 'test'
+  ...
+# Subtest: elapsed challenge/application storage is reclaimed and expired windows refuse new admission without deleting registered data
+ok 67 - elapsed challenge/application storage is reclaimed and expired windows refuse new admission without deleting registered data
+  ---
+  duration_ms: 124.3164
+  type: 'test'
+  ...
+# Subtest: reset/window/source changes during asynchronous proof verification fail closed without a candidate
+ok 68 - reset/window/source changes during asynchronous proof verification fail closed without a candidate
+  ---
+  duration_ms: 596.4813
+  type: 'test'
+  ...
+# Subtest: duplicate raw credential IDs cannot become two pending candidates
+ok 69 - duplicate raw credential IDs cannot become two pending candidates
+  ---
+  duration_ms: 168.6867
+  type: 'test'
+  ...
+# Subtest: source and global budgets are bounded, shared descriptor budget is enforced and successful reads are sampled
+ok 70 - source and global budgets are bounded, shared descriptor budget is enforced and successful reads are sampled
+  ---
+  duration_ms: 95.6156
+  type: 'test'
+  ...
+# Subtest: bounded proof queue refuses overflow and leaves a local registry operation available
+ok 71 - bounded proof queue refuses overflow and leaves a local registry operation available
+  ---
+  duration_ms: 1823.6518
+  type: 'test'
+  ...
+# Subtest: storage/protection failure never returns begin success or invents an empty registry
+ok 72 - storage/protection failure never returns begin success or invents an empty registry
+  ---
+  duration_ms: 105.9983
+  type: 'test'
+  ...
+# Subtest: final candidate persistence failure preserves a consumed challenge; restart rejects the abandoned attempt
+ok 73 - final candidate persistence failure preserves a consumed challenge; restart rejects the abandoned attempt
+  ---
+  duration_ms: 144.9319
+  type: 'test'
+  ...
+# Subtest: HTTP routes enforce same-origin/Host/Fetch Metadata before parsing, omit CORS/cookies, bound bodies and never authenticate a registration
+ok 74 - HTTP routes enforce same-origin/Host/Fetch Metadata before parsing, omit CORS/cookies, bound bodies and never authenticate a registration
+  ---
+  duration_ms: 471.9429
+  type: 'test'
+  ...
+# [modeldb-server] storage fingerprint (sha256): 7fa8e137b9de12f8c7f9547691665b10e9f33f0939975af97351577bef4c3673
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:60639
+#   ➜ Local:   http://localhost:60639/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:60639/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:60639/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-CLQYzb\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url http://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-CLQYzb\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-CLQYzb\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-CLQYzb\\modeldb.config.json"
+# [modeldb-server] storage fingerprint (sha256): 7fa8e137b9de12f8c7f9547691665b10e9f33f0939975af97351577bef4c3673
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:60646
+#   ➜ Local:   https://localhost:60646/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test
+#     HTTP RPC:  https://modeldb-a.example.test/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-CLQYzb\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-CLQYzb\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-CLQYzb\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Native-CLQYzb\\modeldb.config.json"
+# Subtest: native Windows DPAPI Server exposes disabled-by-default discovery, then isolated HTTPS registration without CORS or business access
+ok 75 - native Windows DPAPI Server exposes disabled-by-default discovery, then isolated HTTPS registration without CORS or business access
+  ---
+  duration_ms: 31008.8322
+  type: 'test'
+  ...
+# Subtest: new/opened V1 instances stay unmigrated and disabled until an explicit CAS migration
+ok 76 - new/opened V1 instances stay unmigrated and disabled until an explicit CAS migration
+  ---
+  duration_ms: 158.6993
+  type: 'test'
+  ...
+# Subtest: migration preserves instance, grants, revocations, sessions, pairings, key bytes and old audit prefix
+ok 77 - migration preserves instance, grants, revocations, sessions, pairings, key bytes and old audit prefix
+  ---
+  duration_ms: 194.7378
+  type: 'test'
+  ...
+# Subtest: persists linked applications/public keys/users, clones snapshots and hides storage from public snapshots/audit
+ok 78 - persists linked applications/public keys/users, clones snapshots and hides storage from public snapshots/audit
+  ---
+  duration_ms: 131.6305
+  type: 'test'
+  ...
+# Subtest: rejects untrusted fields, unknown mode, foreign binding, duplicate IDs, missing links and unsupported storage versions
+ok 79 - rejects untrusted fields, unknown mode, foreign binding, duplicate IDs, missing links and unsupported storage versions
+  ---
+  duration_ms: 116.8287
+  type: 'test'
+  ...
+# Subtest: CAS, monotone counters, immutable links and terminal credential states reject stale/rollback writes
+ok 80 - CAS, monotone counters, immutable links and terminal credential states reject stale/rollback writes
+  ---
+  duration_ms: 187.8832
+  type: 'test'
+  ...
+# Subtest: expired challenges can be reclaimed but issued or consumed challenges cannot be resurrected
+ok 81 - expired challenges can be reclaimed but issued or consumed challenges cannot be resurrected
+  ---
+  duration_ms: 142.6656
+  type: 'test'
+  ...
+# Subtest: access reset atomically revokes public-key records and rejects pending applications/challenges
+ok 82 - access reset atomically revokes public-key records and rejects pending applications/challenges
+  ---
+  duration_ms: 182.9577
+  type: 'test'
+  ...
+# Subtest: the frozen V1 reader refuses an upgraded store and leaves all protected materials unchanged
+ok 83 - the frozen V1 reader refuses an upgraded store and leaves all protected materials unchanged
+  ---
+  duration_ms: 289.4904
+  type: 'test'
+  ...
+# Subtest: migration recovers without identity/audit loss after interruption at staged
+ok 84 - migration recovers without identity/audit loss after interruption at staged
+  ---
+  duration_ms: 132.0182
+  type: 'test'
+  ...
+# Subtest: migration recovers without identity/audit loss after interruption at journaled
+ok 85 - migration recovers without identity/audit loss after interruption at journaled
+  ---
+  duration_ms: 160.7143
+  type: 'test'
+  ...
+# Subtest: migration recovers without identity/audit loss after interruption at replaced
+ok 86 - migration recovers without identity/audit loss after interruption at replaced
+  ---
+  duration_ms: 156.7806
+  type: 'test'
+  ...
+# Subtest: write/protection or audit-capacity failures preserve old state and never report migration success
+ok 87 - write/protection or audit-capacity failures preserve old state and never report migration success
+  ---
+  duration_ms: 116.6517
+  type: 'test'
+  ...
+# Subtest: unknown/corrupt formats and orphan registration fields fail closed without replacing the store
+ok 88 - unknown/corrupt formats and orphan registration fields fail closed without replacing the store
+  ---
+  duration_ms: 402.8046
+  type: 'test'
+  ...
+# Subtest: bounded pending records reject overflow without allocating or writing new protected state
+ok 89 - bounded pending records reject overflow without allocating or writing new protected state
+  ---
+  duration_ms: 101.0877
+  type: 'test'
+  ...
+# Subtest: storage schema rejects cyclic input, malformed origins and application principals with stable errors
+ok 90 - storage schema rejects cyclic input, malformed origins and application principals with stable errors
+  ---
+  duration_ms: 158.0275
+  type: 'test'
+  ...
+# Subtest: pending proof storage requires a consumed unexpired challenge and no future timestamps
+ok 91 - pending proof storage requires a consumed unexpired challenge and no future timestamps
+  ---
+  duration_ms: 114.0481
+  type: 'test'
+  ...
+# Subtest: per-user credential storage and challenge collections enforce their exact capacity bounds
+ok 92 - per-user credential storage and challenge collections enforce their exact capacity bounds
+  ---
+  duration_ms: 123.1595
+  type: 'test'
+  ...
+# Subtest: registration record and audit recover as one commit at staged
+ok 93 - registration record and audit recover as one commit at staged
+  ---
+  duration_ms: 138.4276
+  type: 'test'
+  ...
+# Subtest: registration record and audit recover as one commit at journaled
+ok 94 - registration record and audit recover as one commit at journaled
+  ---
+  duration_ms: 152.7525
+  type: 'test'
+  ...
+# Subtest: registration record and audit recover as one commit at replaced
+ok 95 - registration record and audit recover as one commit at replaced
+  ---
+  duration_ms: 203.9944
+  type: 'test'
+  ...
+# Subtest: corrupt migration intent stays available for diagnosis and does not fall back to an empty registry
+ok 96 - corrupt migration intent stays available for diagnosis and does not fall back to an empty registry
+  ---
+  duration_ms: 131.6545
+  type: 'test'
+  ...
+# Subtest: a real child exit after the migration intent is durable recovers through the dead-owner lease
+ok 97 - a real child exit after the migration intent is durable recovers through the dead-owner lease
+  ---
+  duration_ms: 16394.3664
+  type: 'test'
+  ...
+# Subtest: Windows DPAPI protects an isolated migrated registry and preserves its instance key
+ok 98 - Windows DPAPI protects an isolated migrated registry and preserves its instance key
+  ---
+  duration_ms: 8751.8639
+  type: 'test'
+  ...
+# [modeldb-server] storage fingerprint (sha256): b4712ddbedea85a506d28c07eb31b8ba91fc14034dd6b9a9adbabe65111a9d08
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:60640
+#   ➜ Local:   https://localhost:60640/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#     HTTP RPC:  https://127.0.0.1:60640/api/v1/rpc
+#     WebSocket: wss://127.0.0.1:60640/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-tls-kjbiBX\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url https://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-tls-kjbiBX\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-tls-kjbiBX\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-tls-kjbiBX\\modeldb.config.json"
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [security-protection] TLS/WS policy preview, apply, confirm and rollback passed
+# [security-protection] OS pipe repaired management lockout
+# [security-protection] HTTP rate limit and temporary ban/unban passed
+# Subtest: real registry/DPAPI HTTPS server authorizes management and data through the native TLS listener
+ok 99 - real registry/DPAPI HTTPS server authorizes management and data through the native TLS listener
+  ---
+  duration_ms: 76135.8992
+  type: 'test'
+  ...
+# [modeldb-server] storage fingerprint (sha256): 91010a2a2d25525cd250eac65f9dd5a1e3b59cf6f02a1c82645018259dd82744
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:58629
+#   ➜ Local:   http://localhost:58629/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:58629/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:58629/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-http-ewUysn\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url http://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-http-ewUysn\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-http-ewUysn\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-registry-http-ewUysn\\modeldb.config.json"
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# Subtest: real registry/DPAPI server gates scoped database management and reopens restored Vaults
+ok 100 - real registry/DPAPI server gates scoped database management and reopens restored Vaults
+  ---
+  duration_ms: 61657.4351
+  type: 'test'
+  ...
+# [modeldb-server] storage fingerprint (sha256): 3e17df7deea11391bc05315df914cad943dc7dcdb6161f4bf8f9d0e70b8d0a06
+# Subtest: offline factory-reset CLI verifies DPAPI backup, refuses a live instance and preserves configuration
+ok 101 - offline factory-reset CLI verifies DPAPI backup, refuses a live instance and preserves configuration
+  ---
+  duration_ms: 30797.5876
+  type: 'test'
+  ...
+# Subtest: DPAPI protects independent per-database keys and survives a fresh provider
+ok 102 - DPAPI protects independent per-database keys and survives a fresh provider
+  ---
+  duration_ms: 9232.0097
+  type: 'test'
+  ...
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:63881
+#   ➜ Local:   http://localhost:63881/ (本机访问)
+#   Direct client addresses:
+#     HTTP:      http://127.0.0.1:63881 (HTTP API 根地址)
+#     Action:    http://127.0.0.1:63881/v2/action (单次操作接口)
+#     Bulk:      http://127.0.0.1:63881/v2/bulk (批量操作接口)
+#     Health:    http://127.0.0.1:63881/health (健康检查)
+#     Status:    http://127.0.0.1:63881/api/v1/management/status (引擎状态)
+#     WebSocket: ws://127.0.0.1:63881/ (实时 RPC)
+#     Stream:    ws://127.0.0.1:63881/v2/stream (流式 RPC)
+#   Console commands:
+#     Stop:      Ctrl+C
+#     Status:    modeldb-server info -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-bixtQk\\modeldb.config.json"
+#     Databases: modeldb-server ls -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-bixtQk\\modeldb.config.json"
+#     Create DB: modeldb-server create-db <db-name> -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-bixtQk\\modeldb.config.json"
+#     Backup:    modeldb-server backup <db-name> --reason manual -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-bixtQk\\modeldb.config.json"
+#   Note: management URLs require the configured connect token in the request header.
+#   Remote access: disabled by the loopback bind. Start with --host 0.0.0.0 for direct LAN access.
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server] storage fingerprint (sha256): 3e17df7deea11391bc05315df914cad943dc7dcdb6161f4bf8f9d0e70b8d0a06
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:63882
+#   ➜ Local:   http://localhost:63882/ (本机访问)
+#   Direct client addresses:
+#     HTTP:      http://127.0.0.1:63882 (HTTP API 根地址)
+#     Action:    http://127.0.0.1:63882/v2/action (单次操作接口)
+#     Bulk:      http://127.0.0.1:63882/v2/bulk (批量操作接口)
+#     Health:    http://127.0.0.1:63882/health (健康检查)
+#     Status:    http://127.0.0.1:63882/api/v1/management/status (引擎状态)
+#     WebSocket: ws://127.0.0.1:63882/ (实时 RPC)
+#     Stream:    ws://127.0.0.1:63882/v2/stream (流式 RPC)
+#   Console commands:
+#     Stop:      Ctrl+C
+#     Status:    modeldb-server info -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-bixtQk\\modeldb.config.json"
+#     Databases: modeldb-server ls -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-bixtQk\\modeldb.config.json"
+#     Create DB: modeldb-server create-db <db-name> -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-bixtQk\\modeldb.config.json"
+#     Backup:    modeldb-server backup <db-name> --reason manual -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-key-server-bixtQk\\modeldb.config.json"
+#   Note: management URLs require the configured connect token in the request header.
+#   Remote access: disabled by the loopback bind. Start with --host 0.0.0.0 for direct LAN access.
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# Subtest: reopens the same server database with a different network credential
+ok 103 - reopens the same server database with a different network credential
+  ---
+  duration_ms: 4239.7261
+  type: 'test'
+  ...
+1..103
+# tests 103
+# suites 0
+# pass 103
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 139909.16

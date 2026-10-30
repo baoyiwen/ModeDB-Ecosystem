@@ -1,0 +1,102 @@
+{
+  "format": "modeldb.security-registration-storage-verification.v1",
+  "revision": "SEC-M7-D14",
+  "task": "DR-P1.3",
+  "date": "2026-10-27",
+  "timezone": "Asia/Shanghai",
+  "baseCommit": "fd40ade27acdec54c4e5ba4dd8ddc5ac4e061a0f",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "tasks": {
+    "v1Milestones": "7/7",
+    "v1": "20/20",
+    "registration": "3/23",
+    "registrationP1": "3/6",
+    "registrationWorkPackages": "0/4"
+  },
+  "runtimeRegistrationImplemented": false,
+  "registrationStorageImplemented": true,
+  "unit": {
+    "pass": 52,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "storageUnit": {
+    "pass": 23,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "legacyRegistryUnit": {
+    "pass": 10,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "evidenceToolUnit": {
+    "pass": 14,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "checks": {
+    "defaultDisabled": true,
+    "atomicMigration": true,
+    "oldReaderRefusesV2": true,
+    "isolatedDpapi": true,
+    "hardExitRecovery": true,
+    "serverTypecheck": true,
+    "strictStorageTypes": true,
+    "browserBoundary": true,
+    "scopedFormatting": true,
+    "scopedLint": true,
+    "materialGuard": true,
+    "scopedDiff": true
+  },
+  "documentValidation": {
+    "ok": true,
+    "documentFiles": 12,
+    "localLinksAndAnchors": 220,
+    "failures": [],
+    "registrationTaskRows": 23,
+    "completedRegistrationTasks": 3
+  },
+  "failureHistory": [
+    {
+      "scope": "storage-unit first run",
+      "result": "22/23",
+      "cause": "Wrong test expectation SCHEMA_INVALID for malformed Origin; corrected to frozen ORIGIN_MISMATCH. Production validation unchanged.",
+      "rawFailureLogArchived": false
+    },
+    {
+      "scope": "first strict storage test typecheck",
+      "cause": "Unused validator import; added actual malformed-input negative tests using it, then strict/noUnused check passed.",
+      "rawFailureLogArchived": false
+    }
+  ],
+  "scope": {
+    "onlyTemporarySyntheticInstances": true,
+    "liveInstanceAccessed": false,
+    "liveConfigurationOrSecretsOrDataAccessed": false,
+    "uiOrTranslationsChanged": false,
+    "fullRepositoryCheckRun": false,
+    "fullBusinessOrBrowserRegressionRun": false,
+    "newReleaseInstallOrPerformanceRun": false,
+    "realWebAuthnOrTwoMachineAuthenticationRun": false,
+    "fullOldReleaseInstallOrDowngradeRun": false,
+    "hardwarePowerLossOrPhysicalDiskExhaustionRun": false
+  },
+  "limitations": [
+    "Storage primitives do not authenticate proofs, authorize administrators, publish HTTP routes, grant access or provide a migration CLI.",
+    "The frozen previous registry reader is exercised, not an installed prior release.",
+    "Type checks reuse installed common/core declarations; existing dist is unchanged.",
+    "test/** remains excluded by repository lint/format ignores.",
+    "D13 offline dependency evidence remains historical; no Server root-lock integration or new dependency install."
+  ],
+  "nextTask": "DR-P1.4"
+}

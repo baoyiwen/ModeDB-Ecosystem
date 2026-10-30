@@ -1,0 +1,48 @@
+vite v6.4.3 building for production...
+transforming...
+✓ 282 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-uIcCyr/designer-build/index.html                                          0.91 kB │ gzip:   0.55 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-uIcCyr/designer-build/assets/index-DoV6_xnk.css                         185.21 kB │ gzip:  30.24 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-uIcCyr/designer-build/assets/browser-D5I-_5zT.js                          0.62 kB │ gzip:   0.43 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-uIcCyr/designer-build/assets/export-model-map-Cd3uNtej.js                 3.66 kB │ gzip:   1.67 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-uIcCyr/designer-build/assets/workbook-Blk3dKSi.js                        12.03 kB │ gzip:   4.54 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-uIcCyr/designer-build/assets/OperationDesignerPanel-Bl6l6z1D.js          24.57 kB │ gzip:   6.51 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-uIcCyr/designer-build/assets/BindingSurfaceDesignerPanel-cE5h2r_o.js     49.01 kB │ gzip:  13.08 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-uIcCyr/designer-build/assets/exceljs.min-Cmdw67dE.js                    939.80 kB │ gzip: 271.12 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-uIcCyr/designer-build/assets/index-BfIJZgm9.js                        1,133.59 kB │ gzip: 326.58 kB
+✓ built in 3.63s
+{"name":"admin","ok":true,"exitCode":0,"root":"C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-uIcCyr"}
+vite v6.4.3 building for production...
+transforming...
+✓ 282 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-8OvGcE/designer-build/index.html                                          0.91 kB │ gzip:   0.55 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-8OvGcE/designer-build/assets/index-DoV6_xnk.css                         185.21 kB │ gzip:  30.24 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-8OvGcE/designer-build/assets/browser-D5I-_5zT.js                          0.62 kB │ gzip:   0.43 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-8OvGcE/designer-build/assets/export-model-map-Cd3uNtej.js                 3.66 kB │ gzip:   1.67 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-8OvGcE/designer-build/assets/workbook-Blk3dKSi.js                        12.03 kB │ gzip:   4.54 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-8OvGcE/designer-build/assets/OperationDesignerPanel-Bl6l6z1D.js          24.57 kB │ gzip:   6.51 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-8OvGcE/designer-build/assets/BindingSurfaceDesignerPanel-cE5h2r_o.js     49.01 kB │ gzip:  13.08 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-8OvGcE/designer-build/assets/exceljs.min-Cmdw67dE.js                    939.80 kB │ gzip: 271.12 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-8OvGcE/designer-build/assets/index-BfIJZgm9.js                        1,133.59 kB │ gzip: 326.58 kB
+✓ built in 3.59s
+{"name":"identity","ok":true,"exitCode":0,"root":"C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-8OvGcE"}
+vite v6.4.3 building for production...
+transforming...
+✓ 282 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-dFVid9/designer-build/index.html                                          0.91 kB │ gzip:   0.55 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-dFVid9/designer-build/assets/index-DoV6_xnk.css                         185.21 kB │ gzip:  30.24 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-dFVid9/designer-build/assets/browser-D5I-_5zT.js                          0.62 kB │ gzip:   0.43 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-dFVid9/designer-build/assets/export-model-map-Cd3uNtej.js                 3.66 kB │ gzip:   1.67 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-dFVid9/designer-build/assets/workbook-Blk3dKSi.js                        12.03 kB │ gzip:   4.54 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-dFVid9/designer-build/assets/OperationDesignerPanel-Bl6l6z1D.js          24.57 kB │ gzip:   6.51 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-dFVid9/designer-build/assets/BindingSurfaceDesignerPanel-cE5h2r_o.js     49.01 kB │ gzip:  13.08 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-dFVid9/designer-build/assets/exceljs.min-Cmdw67dE.js                    939.80 kB │ gzip: 271.12 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Hosting-Check-dFVid9/designer-build/assets/index-BfIJZgm9.js                        1,133.59 kB │ gzip: 326.58 kB
+✓ built in 3.94s
+{"name":"hosting","ok":true,"exitCode":0,"root":"C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Hosting-Check-dFVid9"}

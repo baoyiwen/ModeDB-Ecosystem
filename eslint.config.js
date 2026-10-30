@@ -16,6 +16,8 @@ export default [
       'coverage/**',
       'data/**',
       'security/**',
+      // Archived evidence includes generated bundles and frozen tooling snapshots.
+      'docs/security-v1-deliveries/evidence/**',
       'packages/**/dist/**',
       'packages/**/tsup.config.ts',
       // Colocated `tsc` emit next to sources (not part of the TS program).
@@ -54,18 +56,7 @@ export default [
       parser: tsparser,
       parserOptions: {
         projectService: {
-          // No `**` in globs (typescript-eslint); one segment under scripts/ is enough here.
-          allowDefaultProject: [
-            '*.config.js',
-            '*.config.mjs',
-            '*.config.ts',
-            'lint-staged.config.mjs',
-            'scripts/*.mjs',
-            'packages/server/scripts/*.mjs',
-            'packages/data-ui/scripts/*.mjs',
-          ],
-          // Repository tooling scripts are intentionally outside package tsconfig files.
-          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 16,
+          allowDefaultProject: ['*.config.ts'],
         },
       },
     },
@@ -93,6 +84,20 @@ export default [
       'prefer-const': 'error',
       eqeqeq: ['error', 'always'],
       curly: ['error', 'all'],
+    },
+  },
+
+  {
+    // These JS tools are outside TS projects; the configured rules need no type information.
+    files: [
+      '*.config.{js,mjs,cjs}',
+      'lint-staged.config.mjs',
+      'scripts/*.mjs',
+      'packages/server/scripts/*.mjs',
+      'packages/data-ui/scripts/*.mjs',
+    ],
+    languageOptions: {
+      parserOptions: { projectService: false },
     },
   },
 

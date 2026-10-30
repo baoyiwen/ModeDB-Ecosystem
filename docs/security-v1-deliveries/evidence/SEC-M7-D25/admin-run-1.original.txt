@@ -1,0 +1,50 @@
+vite v6.4.3 building for production...
+transforming...
+✓ 282 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-hBzaa2/designer-build/index.html                                          0.91 kB │ gzip:   0.55 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-hBzaa2/designer-build/assets/index-gM7Sh_m-.css                         185.26 kB │ gzip:  30.28 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-hBzaa2/designer-build/assets/browser-OWe4U0HN.js                          0.62 kB │ gzip:   0.43 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-hBzaa2/designer-build/assets/export-model-map-CO1q35Au.js                 3.66 kB │ gzip:   1.67 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-hBzaa2/designer-build/assets/workbook-YBrJoHVv.js                        12.03 kB │ gzip:   4.54 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-hBzaa2/designer-build/assets/OperationDesignerPanel-CQxFK75q.js          24.57 kB │ gzip:   6.51 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-hBzaa2/designer-build/assets/BindingSurfaceDesignerPanel-CS8Iup0r.js     49.01 kB │ gzip:  13.07 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-hBzaa2/designer-build/assets/exceljs.min-DIC3JL4c.js                    939.80 kB │ gzip: 271.12 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-hBzaa2/designer-build/assets/index-CFbeKNaj.js                        1,133.54 kB │ gzip: 326.57 kB
+✓ built in 3.76s
+{
+  "format": "modeldb.identity-admin-check.v1",
+  "task": "DR-P3.3",
+  "ok": false,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-hBzaa2",
+  "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-hBzaa2\\designer-build",
+  "screenshots": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-hBzaa2\\screenshots",
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-hBzaa2\\integration.tap",
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-identity-admin-browser.test.ts"
+  ],
+  "exitCode": 1,
+  "errorCode": "IDENTITY_PROCESS_FAILED",
+  "build": {
+    "ok": true,
+    "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-hBzaa2\\designer-build",
+    "configFile": false,
+    "envFile": false,
+    "existingDistUnchanged": true
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "identityMaintenanceUiTested": true
+  },
+  "report": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-hBzaa2\\integration-check.json"
+}

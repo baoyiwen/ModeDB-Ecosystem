@@ -1,0 +1,83 @@
+[
+  {
+    "name": "contracts",
+    "cmd": "node node_modules/tsx/dist/cli.mjs --test --test-reporter=tap test/unit/security-registration-contract.test.mjs test/unit/security-device-registration-contract.test.ts",
+    "chunk_id": "ecd574",
+    "wall_time_seconds": 0.0000202,
+    "exit_code": 0,
+    "original_token_count": 1409,
+    "output": "TAP version 13\n# Subtest: accepts the public descriptor and exact capacity contract\nok 1 - accepts the public descriptor and exact capacity contract\n  ---\n  duration_ms: 2.5958\n  type: 'test'\n  ...\n# Subtest: rejects descriptor trust-boundary drift and secrets\nok 2 - rejects descriptor trust-boundary drift and secrets\n  ---\n  duration_ms: 0.6851\n  type: 'test'\n  ...\n# Subtest: enforces request size, protocol and encoded payload limits\nok 3 - enforces request size, protocol and encoded payload limits\n  ---\n  duration_ms: 6.2466\n  type: 'test'\n  ...\n# Subtest: requires trusted instance binding and explicit state transitions\nok 4 - requires trusted instance binding and explicit state transitions\n  ---\n  duration_ms: 0.3653\n  type: 'test'\n  ...\n# Subtest: accepts metadata-only registration audit events and rejects sensitive or unknown fields\nok 5 - accepts metadata-only registration audit events and rejects sensitive or unknown fields\n  ---\n  duration_ms: 0.9\n  type: 'test'\n  ...\n# Subtest: binds downloaded descriptions to trusted deployment, TLS and validity\nok 6 - binds downloaded descriptions to trusted deployment, TLS and validity\n  ---\n  duration_ms: 0.8907\n  type: 'test'\n  ...\n# Subtest: requires explicit capabilities and a separate 32-byte continuation secret for status\nok 7 - requires explicit capabilities and a separate 32-byte continuation secret for status\n  ---\n  duration_ms: 0.3909\n  type: 'test'\n  ...\n# Subtest: fails closed for unknown state kinds, prototype keys and audit attribution\nok 8 - fails closed for unknown state kinds, prototype keys and audit attribution\n  ---\n  duration_ms: 0.3673\n  type: 'test'\n  ...\n# Subtest: validates creation options with required UV, algorithms and ephemeral binding\nok 9 - validates creation options with required UV, algorithms and ephemeral binding\n  ---\n  duration_ms: 0.4733\n  type: 'test'\n  ...\n# Subtest: status exposes application metadata without granting a session or leaking principals\nok 10 - status exposes application metadata without granting a session or leaking principals\n  ---\n  duration_ms: 0.3672\n  type: 'test'\n  ...\n# Subtest: accepts the frozen synthetic deployment contract and canonical origin\nok 11 - accepts the frozen synthetic deployment contract and canonical origin\n  ---\n  duration_ms: 7.4628\n  type: 'test'\n  ...\n# Subtest: rejects HTTP origins\nok 12 - rejects HTTP origins\n  ---\n  duration_ms: 2.0211\n  type: 'test'\n  ...\n# Subtest: rejects IP origins\nok 13 - rejects IP origins\n  ---\n  duration_ms: 0.4271\n  type: 'test'\n  ...\n# Subtest: rejects localhost origins\nok 14 - rejects localhost origins\n  ---\n  duration_ms: 0.267\n  type: 'test'\n  ...\n# Subtest: rejects paths and query strings\nok 15 - rejects paths and query strings\n  ---\n  duration_ms: 0.3166\n  type: 'test'\n  ...\n# Subtest: rejects RP ID drift\nok 16 - rejects RP ID drift\n  ---\n  duration_ms: 0.4761\n  type: 'test'\n  ...\n# Subtest: rejects owner-pinned TLS without an SPKI pin\nok 17 - rejects owner-pinned TLS without an SPKI pin\n  ---\n  duration_ms: 0.3239\n  type: 'test'\n  ...\n# Subtest: rejects host-derived identity\nok 18 - rejects host-derived identity\n  ---\n  duration_ms: 0.2236\n  type: 'test'\n  ...\n# Subtest: rejects public descriptor secrets and grants\nok 19 - rejects public descriptor secrets and grants\n  ---\n  duration_ms: 0.182\n  type: 'test'\n  ...\n# Subtest: rejects invalid performance samples\nok 20 - rejects invalid performance samples\n  ---\n  duration_ms: 0.2586\n  type: 'test'\n  ...\n# Subtest: requires exact instance binding and rejects a different instance\nok 21 - requires exact instance binding and rejects a different instance\n  ---\n  duration_ms: 0.2258\n  type: 'test'\n  ...\n# Subtest: rejects simultaneous Origin/RP substitution and port drift against trusted deployment state\nok 22 - rejects simultaneous Origin/RP substitution and port drift against trusted deployment state\n  ---\n  duration_ms: 1.0681\n  type: 'test'\n  ...\n# Subtest: rejects non-canonical origins and wildcard DNS names\nok 23 - rejects non-canonical origins and wildcard DNS names\n  ---\n  duration_ms: 0.4914\n  type: 'test'\n  ...\n# Subtest: keeps the documented JSON example identical to the checked synthetic contract\nok 24 - keeps the documented JSON example identical to the checked synthetic contract\n  ---\n  duration_ms: 1.1255\n  type: 'test'\n  ...\n# Subtest: rejects origin aliases, user information, query strings and fragments\nok 25 - rejects origin aliases, user information, query strings and fragments\n  ---\n  duration_ms: 0.6395\n  type: 'test'\n  ...\n# Subtest: rejects sensitive fields at all descriptor object boundaries\nok 26 - rejects sensitive fields at all descriptor object boundaries\n  ---\n  duration_ms: 4.8318\n  type: 'test'\n  ...\n# Subtest: requires secure user verification, distinct runtime versions and finite positive baseline values\nok 27 - requires secure user verification, distinct runtime versions and finite positive baseline values\n  ---\n  duration_ms: 1.1561\n  type: 'test'\n  ...\n# Subtest: checks certificate SAN, validity and the owner-approved SPKI pin without trusting the descriptor itself\nok 28 - checks certificate SAN, validity and the owner-approved SPKI pin without trusting the descriptor itself\n  ---\n  duration_ms: 1.4065\n  type: 'test'\n  ...\n# Subtest: uses isolated DNS/TLS to reject an untrusted root, wrong SAN and wrong pin before any HTTP request\nok 29 - uses isolated DNS/TLS to reject an untrusted root, wrong SAN and wrong pin before any HTTP request\n  ---\n  duration_ms: 65.9105\n  type: 'test'\n  ...\n1..29\n# tests 29\n# suites 0\n# pass 29\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 375.3188\n"
+  },
+  {
+    "name": "evidence-unit",
+    "cmd": "node --test --test-reporter=tap test/unit/security-release-evidence.test.mjs",
+    "chunk_id": "d7600c",
+    "wall_time_seconds": 0.0000127,
+    "exit_code": 0,
+    "original_token_count": 613,
+    "output": "TAP version 13\n# Subtest: selects the current receipt and allows only development CRLF/LF differences\nok 1 - selects the current receipt and allows only development CRLF/LF differences\n  ---\n  duration_ms: 56.714\n  type: 'test'\n  ...\n# Subtest: rejects changed source text\nok 2 - rejects changed source text\n  ---\n  duration_ms: 28.8555\n  type: 'test'\n  ...\n# Subtest: rejects changed historical screenshot bytes\nok 3 - rejects changed historical screenshot bytes\n  ---\n  duration_ms: 35.81\n  type: 'test'\n  ...\n# Subtest: rejects modified verification artifacts\nok 4 - rejects modified verification artifacts\n  ---\n  duration_ms: 37.4268\n  type: 'test'\n  ...\n# Subtest: does not accept skipped tests even with matching artifact hashes\nok 5 - does not accept skipped tests even with matching artifact hashes\n  ---\n  duration_ms: 44.1169\n  type: 'test'\n  ...\n# Subtest: rejects runtime and traversal paths before opening them\nok 6 - rejects runtime and traversal paths before opening them\n  ---\n  duration_ms: 87.0116\n  type: 'test'\n  ...\n# Subtest: rejects linked source ancestors\nok 7 - rejects linked source ancestors\n  ---\n  duration_ms: 27.2696\n  type: 'test'\n  ...\n# Subtest: fails closed for incomplete newest evidence and duplicate source paths\nok 8 - fails closed for incomplete newest evidence and duplicate source paths\n  ---\n  duration_ms: 27.8894\n  type: 'test'\n  ...\n# Subtest: verifies a registration-contract receipt separately from historical runtime acceptance\nok 9 - verifies a registration-contract receipt separately from historical runtime acceptance\n  ---\n  duration_ms: 52.1962\n  type: 'test'\n  ...\n# Subtest: rejects incomplete registration evidence without falling back to a passed D11 receipt\nok 10 - rejects incomplete registration evidence without falling back to a passed D11 receipt\n  ---\n  duration_ms: 195.6443\n  type: 'test'\n  ...\n# Subtest: validates protocol evidence and the separately locked offline dependency graph\nok 11 - validates protocol evidence and the separately locked offline dependency graph\n  ---\n  duration_ms: 58.1767\n  type: 'test'\n  ...\n# Subtest: fails closed for protocol skips, unavailable offline install and unverified browser boundary\nok 12 - fails closed for protocol skips, unavailable offline install and unverified browser boundary\n  ---\n  duration_ms: 241.1121\n  type: 'test'\n  ...\n1..12\n# tests 12\n# suites 0\n# pass 12\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 975.8475\n"
+  },
+  {
+    "name": "shared-types",
+    "cmd": "node node_modules/typescript/bin/tsc --noEmit -p packages/shared/tsconfig.json",
+    "chunk_id": "297a8d",
+    "wall_time_seconds": 0.0000148,
+    "exit_code": 0,
+    "original_token_count": 0,
+    "output": ""
+  },
+  {
+    "name": "test-types",
+    "cmd": "node node_modules/typescript/bin/tsc --noEmit --strict --module Node16 --moduleResolution Node16 --target ES2022 --types node --skipLibCheck test/unit/security-device-registration-contract.test.ts",
+    "chunk_id": "8d2248",
+    "wall_time_seconds": 0.0000113,
+    "exit_code": 0,
+    "original_token_count": 0,
+    "output": ""
+  },
+  {
+    "name": "consumer",
+    "cmd": "node scripts/security-registration-consumer-check.mjs",
+    "chunk_id": "5403af",
+    "wall_time_seconds": 2.7866438000000002,
+    "exit_code": 0,
+    "original_token_count": 187,
+    "output": "{\n  \"ok\": true,\n  \"format\": \"modeldb.registration-consumer-check.v1\",\n  \"node\": \"v24.22.1\",\n  \"root\": \"C:\\\\Users\\\\51153\\\\AppData\\\\Local\\\\Temp\\\\ModeDB-Registration-Consumers-6SxlFC\",\n  \"checks\": {\n    \"freshSharedDeclarations\": true,\n    \"strictSdkConsumer\": true,\n    \"domTypesWithoutNode\": true,\n    \"sharedBrowserBundle\": true,\n    \"sdkBrowserBundle\": true,\n    \"serverLibraryExcluded\": true\n  },\n  \"bundles\": [\n    {\n      \"entry\": \"packages/shared/src/index.ts\",\n      \"bytes\": 82579,\n      \"sha256\": \"17261afe09010d9a0fb2a807fa1a4433d9de25a955fda59fc2b81428f7c2ec74\"\n    },\n    {\n      \"entry\": \"packages/sdk/src/index.ts\",\n      \"bytes\": 142077,\n      \"sha256\": \"e53f60cf5ce92f6f2405721834561dea301fff5ae16c3a14563885d2b15cb125\"\n    }\n  ]\n}\n"
+  },
+  {
+    "name": "lint",
+    "cmd": "node node_modules/eslint/bin/eslint.js packages/shared/src/device-registration-contracts.ts packages/shared/src/index.ts packages/sdk/src/index.ts scripts/security-registration-library-check.mjs scripts/security-registration-consumer-check.mjs scripts/security-release-evidence.mjs",
+    "chunk_id": "7f4ba8",
+    "wall_time_seconds": 5.9446463000000005,
+    "exit_code": 0,
+    "original_token_count": 0,
+    "output": ""
+  },
+  {
+    "name": "format",
+    "cmd": "node node_modules/prettier/bin/prettier.cjs --check packages/shared/src/device-registration-contracts.ts packages/shared/src/index.ts packages/sdk/src/index.ts scripts/security-registration-library-check.mjs scripts/security-registration-consumer-check.mjs scripts/security-release-evidence.mjs scripts/security-registration-dependencies/package.json package.json docs/security-v1/AGENTS.md docs/security-v1-milestones.md docs/security-v1-plan.md docs/security-v1/device-registration-proposal.md docs/security-v1/device-registration-deployment-contract.md docs/security-v1/device-registration-protocol-contract.md docs/security-v1/overview.md docs/security-v1/user-guide.md docs/security-v1-deliveries/SEC-M7.md test/README.md docs/security-v1-deliveries/evidence/SEC-M7-D13/dependency-check.json docs/security-v1-deliveries/evidence/SEC-M7-D13/consumer-check.json",
+    "chunk_id": "ae4946",
+    "wall_time_seconds": 1.6240503,
+    "exit_code": 0,
+    "original_token_count": 17,
+    "output": "Checking formatting...\nAll matched files use Prettier code style!\n"
+  },
+  {
+    "name": "material-guard",
+    "cmd": "node scripts/assert-no-security-material.mjs",
+    "chunk_id": "bbc72c",
+    "wall_time_seconds": 0.3036427,
+    "exit_code": 0,
+    "original_token_count": 15,
+    "output": "{\"ok\":true,\"trackedRuntimeEntries\":0,\"materialRead\":false}\n"
+  },
+  {
+    "name": "documents",
+    "cmd": "node --input-type=module -e '\nimport assert from \"node:assert/strict\";\nimport {readFileSync,existsSync} from \"node:fs\";\nimport {dirname,resolve} from \"node:path\";\nconst docs=JSON.parse(process.argv[1]);\nconst slug=s=>s.replace(/\\[([^\\]]+)\\]\\([^)]*\\)/g,\"$1\").replace(/<[^>]*>/g,\"\").replace(/[`*_]/g,\"\").toLowerCase().replace(/[^\\p{L}\\p{N}_ -]/gu,\"\").replace(/ /g,\"-\");\nlet count=0;const failures=[];\nfor(const file of docs) {\n const content=readFileSync(file,\"utf8\");\n for(const match of content.matchAll(/\\[[^\\]\\n]*\\]\\(([^)\\n]+)\\)/g)) {\n  const href=match[1].replace(/^<|>$/g,\"\");\n  if(/^[a-z][a-z0-9+.-]*:/i.test(href))continue;\n  const [rel,anchor]=href.split(\"#\");\n  const target=resolve(dirname(file),decodeURIComponent(rel||\"./\"+file.split(\"/\").at(-1)));\n  count++;\n  if(!existsSync(target)){failures.push(file+\" missing \"+href);continue;}\n  if(anchor && target.endsWith(\".md\")){\n   const seen=new Map();const anchors=new Set();\n   for(const heading of readFileSync(target,\"utf8\").matchAll(/^#{1,6}\\s+(.+)$/gm)){\n    const base=slug(heading[1]);const n=seen.get(base)||0;seen.set(base,n+1);anchors.add(base+(n?\"-\"+n:\"\"));\n   }\n   if(!anchors.has(decodeURIComponent(anchor)))failures.push(file+\" anchor \"+href);\n  }\n }\n}\nconst ledger=readFileSync(\"docs/security-v1-milestones.md\",\"utf8\");\nconst rows=[...ledger.matchAll(/^\\| (DR-P[1-4]\\.\\d+)\\s+\\|(.+)$/gm)];\nassert.equal(rows.length,23);\nassert.equal(new Set(rows.map(r=>r[1])).size,23);\nassert.equal(rows.filter(r=>r[2].includes(\"完成（D\")).length,2);\nconst result={ok:failures.length===0,documentFiles:docs.length,localLinksAndAnchors:count,failures,registrationTaskRows:rows.length,completedRegistrationTasks:2};\nconsole.log(JSON.stringify(result,null,2));assert.equal(failures.length,0);\n' '[\"docs/security-v1/AGENTS.md\",\"docs/security-v1-milestones.md\",\"docs/security-v1-plan.md\",\"docs/security-v1/device-registration-proposal.md\",\"docs/security-v1/device-registration-deployment-contract.md\",\"docs/security-v1/device-registration-protocol-contract.md\",\"docs/security-v1/overview.md\",\"docs/security-v1/user-guide.md\",\"docs/security-v1-deliveries/SEC-M7.md\",\"test/README.md\"]'",
+    "chunk_id": "d97970",
+    "wall_time_seconds": 0.389859,
+    "exit_code": 0,
+    "original_token_count": 39,
+    "output": "{\n  \"ok\": true,\n  \"documentFiles\": 10,\n  \"localLinksAndAnchors\": 208,\n  \"failures\": [],\n  \"registrationTaskRows\": 23,\n  \"completedRegistrationTasks\": 2\n}\n"
+  }
+]

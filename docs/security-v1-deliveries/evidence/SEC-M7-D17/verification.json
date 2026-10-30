@@ -1,0 +1,196 @@
+{
+  "format": "modeldb.security-registration-integration-verification.v1",
+  "revision": "SEC-M7-D17",
+  "task": "DR-P1.6",
+  "date": "2026-10-27",
+  "timezone": "America/New_York",
+  "baseCommit": "fd40ade27acdec54c4e5ba4dd8ddc5ac4e061a0f",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "browser": "Chrome/156.0.8078.48",
+  "tasks": {
+    "v1Milestones": "7/7",
+    "v1": "20/20",
+    "registration": "6/23",
+    "registrationP1": "6/6",
+    "registrationWorkPackages": "1/4"
+  },
+  "registrationStorageImplemented": true,
+  "runtimeRegistrationImplemented": true,
+  "approvalImplemented": true,
+  "publicKeyLoginImplemented": false,
+  "unit": {
+    "pass": 95,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "integrationUnit": {
+    "pass": 9,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "contractUnit": {
+    "pass": 29,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "storageUnit": {
+    "pass": 23,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "runtimeUnit": {
+    "pass": 22,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "approvalUnit": {
+    "pass": 21,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "legacyRegistryUnit": {
+    "pass": 10,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "windowsKeyUnit": {
+    "pass": 3,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "registryAndWindowsKeyUnit": {
+    "pass": 13,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "networkUnit": {
+    "pass": 9,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "evidenceToolUnit": {
+    "pass": 20,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "reportToolUnit": {
+    "pass": 4,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "totalTargetedUnit": {
+    "pass": 150,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "checks": {
+    "fullRegistrationApproval": true,
+    "actualVirtualAuthenticator": true,
+    "nativeHttpsDpapiCli": true,
+    "pendingAndChallengeCapacity": true,
+    "localRepairAtCapacity": true,
+    "hardExitRecovery": true,
+    "atomicIdentityAndAudit": true,
+    "noBusinessSession": true,
+    "stableFailureReport": true,
+    "serverTypecheck": true,
+    "strictIntegrationTypes": true,
+    "browserBoundary": true,
+    "scopedFormatting": true,
+    "scopedLint": true,
+    "materialGuard": true,
+    "scopedDiff": true,
+    "boundedDpapiBufferFix": true
+  },
+  "documentValidation": {
+    "ok": true,
+    "documentFiles": 13,
+    "localLinksAndAnchors": 263,
+    "failures": [],
+    "registrationTaskRows": 23,
+    "completedRegistrationTasks": 6
+  },
+  "failureHistory": [
+    {
+      "reports": [
+        "integration-failed-01.json",
+        "integration-failed-02.json"
+      ],
+      "cause": "Sandboxed Chrome GPU subprocess access denied; CDP closed before acceptance. Executed the same isolated workflow outside the sandbox with automatic approval. No Chrome security sandbox or production checks disabled."
+    },
+    {
+      "reports": [
+        "integration-failed-03.json"
+      ],
+      "cause": "Native capacity setup exceeded the DPAPI bridge 1 MiB stdout limit. Increased the bounded bridge buffer to 48 MiB without changing registry file limits, DPAPI format or identity rules. This first normal-environment run used Node 24.15.0; final acceptance pins Node 24.22.1."
+    },
+    {
+      "reports": [
+        "integration-failed-04.json",
+        "integration-failed-05.json"
+      ],
+      "cause": "Capacity fixtures counted old challenges that startup reclaimed and a previous pending application. Explicitly rejected prior work, waited for its challenge expiry, validly reclaimed those challenges and prepared exactly 999 unverified capacity records; no limits were relaxed."
+    },
+    {
+      "scope": "Initial strict types and scoped lint",
+      "cause": "Removed generic type arguments from an untyped fixture json method and added required braces. Exact failed output is retained in checks.original.json.txt.",
+      "rawFailureLogArchived": true
+    }
+  ],
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveInstanceAccessed": false,
+    "liveConfigurationOrSecretsOrDataAccessed": false,
+    "liveAclChanged": false,
+    "uiOrTranslationsChanged": false,
+    "systemTrustInstalled": false,
+    "fullRepositoryCheckRun": false,
+    "fullBusinessOrProductionPageRegressionRun": false,
+    "newReleaseInstallOrPerformanceRun": false,
+    "realHardwareAuthenticatorOrNewTwoMachineRun": false,
+    "realForeignOsAccountConnectionRun": false,
+    "hardwarePowerLossOrPhysicalDiskExhaustionRun": false,
+    "entire32MiBRegistryBoundaryRun": false,
+    "dependencyGraphChanged": false,
+    "dependenciesReinstalled": false
+  },
+  "limitations": [
+    "Actual Chrome CDP virtual authenticator evidence is distinct from Windows Hello, hardware provenance and new two-machine acceptance. None registration does not prove private-key possession; public-key login remains DR-P2.",
+    "Native browser acceptance uses HTTPS, actual DPAPI/Named Pipe and CLI. Eight other full-flow cases use real WebAuthn library validation with explicitly synthetic AES-GCM protection and trusted local-dispatch input.",
+    "Capacity fixtures explicitly prepare unverified synthetic issued rows, then the browser exercises a real boundary request and overflow. These are not 1000 authenticators, performance, flood-load or production capacity acceptance.",
+    "Approval persists identity and exact database grants but issues no API token, Cookie, pairing code or business session. Registration can be disabled after approval without deleting identities.",
+    "Three actual child hard exits establish application/process recovery at staged/journaled/replaced. They do not establish behavior under physical disk exhaustion, hardware power loss or OS-admin rollback.",
+    "The DPAPI output buffer is bounded at 48 MiB; registry file limits and protection format remain unchanged. The complete 32 MiB registry limit and production memory/latency have not been tested.",
+    "Node 24.22.1 final acceptance. Node 22, full release installation, full business/production-page regression, actual foreign-account pipe access and binary downgrade remain untested in this delivery.",
+    "No UI or translation changes; no visual/i18n acceptance. Existing test/** lint/format exclusions remain; strict type checks and test execution are recorded separately. Existing dist unchanged, common/core installed declarations reused.",
+    "Dependencies and locks unchanged; no new installation. D15 offline dependency installation evidence is historical only. Failed reports and historical evidence retain original bytes."
+  ],
+  "nextTask": "DR-P2.1"
+}

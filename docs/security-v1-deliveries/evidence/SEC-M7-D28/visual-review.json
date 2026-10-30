@@ -1,0 +1,18 @@
+{
+  "scope": "Representative screenshots from the complete pre-style candidate; the final candidate repeats the same unchanged UI and automated locale/layout checks.",
+  "productUiChanged": false,
+  "reviewedScreenshots": [
+    "run-1793153573700/screenshots/identity/login-en-390.png",
+    "run-1793153573700/screenshots/admin/approval-review-ja-390.png",
+    "run-1793153573700/screenshots/deployment/lan-zh-1280.png",
+    "run-1793153573700/screenshots/public/data-studio/pending-ja-390.png",
+    "run-1793153573700/screenshots/public/web/approved-zh-CN-1280.png"
+  ],
+  "observations": [
+    "Identity and pending/approved states preserve the existing themes, readable labels and primary actions.",
+    "Narrow English/Japanese layouts wrap long guidance and identifiers within their cards.",
+    "The deployment form preserves spacing, labels and distinct inputs in the wide Chinese layout.",
+    "The narrow approval confirmation remains readable and scrollable; confirmation controls stay distinct."
+  ],
+  "fullScreenshotSetReviewedManually": false
+}

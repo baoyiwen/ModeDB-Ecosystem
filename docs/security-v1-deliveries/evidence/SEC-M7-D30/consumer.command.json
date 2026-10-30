@@ -1,0 +1,9 @@
+{
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "scripts/security-registration-consumer-check.mjs"
+  ],
+  "node": "v24.15.0",
+  "exitCode": 0,
+  "timedOut": false
+}

@@ -1,0 +1,205 @@
+{
+  "format": "modeldb.security-authentication-resilience-checks.v1",
+  "task": "DR-P2.5",
+  "commands": [
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-authentication.test.ts",
+        "test/unit/security-authentication-storage.test.ts"
+      ],
+      "node": "v24.22.1",
+      "exitCode": 0,
+      "durationMs": 9325,
+      "log": "authentication.original.txt",
+      "error": null
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-dynamic-authorization.test.ts"
+      ],
+      "node": "v24.22.1",
+      "exitCode": 0,
+      "durationMs": 12464,
+      "log": "dynamic.original.txt",
+      "error": null
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-session-parent.test.ts",
+        "test/unit/security-registration-contract.test.mjs",
+        "test/unit/security-device-registration-contract.test.ts",
+        "test/unit/security-registration-storage.test.ts",
+        "test/unit/security-registration-runtime.test.ts",
+        "test/unit/security-registration-approval.test.ts",
+        "test/unit/security-registry.test.ts",
+        "test/unit/security-windows-keys.test.ts",
+        "test/unit/security-browser-session.test.ts",
+        "test/unit/security-network.test.ts",
+        "test/unit/security-authorization.test.ts",
+        "test/unit/security-registry-http.test.ts"
+      ],
+      "node": "v24.22.1",
+      "exitCode": 0,
+      "durationMs": 144182,
+      "log": "regression.original.txt",
+      "error": null
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-registration-maintenance.test.ts"
+      ],
+      "node": "v24.22.1",
+      "exitCode": 0,
+      "durationMs": 78762,
+      "log": "maintenance.original.txt",
+      "error": null
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-authentication-resilience.test.ts"
+      ],
+      "node": "v24.22.1",
+      "exitCode": 0,
+      "log": "resilience.original.txt",
+      "durationMs": 41272.1762
+    },
+    {
+      "command": [
+        "C:\\nvm4w\\nodejs\\node.exe",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-authentication-browser.test.ts"
+      ],
+      "node": "v24.15.0",
+      "exitCode": 0,
+      "log": "browser.original.txt",
+      "durationMs": 110503.8394,
+      "executionEnvironment": "outside-process-sandbox"
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-release-evidence.test.mjs",
+        "test/unit/security-authentication-report.test.mjs",
+        "test/unit/security-authentication-resilience-report.test.mjs"
+      ],
+      "exitCode": 0,
+      "log": "tools.original.txt"
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "scripts/security-registration-storage-check.mjs"
+      ],
+      "exitCode": 0,
+      "log": "types.original.txt"
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "scripts/security-registration-consumer-check.mjs"
+      ],
+      "exitCode": 0,
+      "log": "consumer.original.txt"
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "scripts/assert-no-security-material.mjs"
+      ],
+      "exitCode": 0,
+      "log": "material-guard.original.txt"
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/eslint/bin/eslint.js",
+        "packages/server/src/security/authentication-service.ts",
+        "scripts/security-authentication-resilience-check.mjs",
+        "scripts/security-registration-storage-check.mjs",
+        "scripts/security-release-evidence.mjs"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/prettier/bin/prettier.cjs",
+        "--check",
+        "packages/server/src/security/authentication-service.ts",
+        "scripts/security-authentication-resilience-check.mjs",
+        "scripts/security-registration-storage-check.mjs",
+        "scripts/security-release-evidence.mjs",
+        "docs/security-v1/device-registration-protocol-contract.md",
+        "docs/security-v1/device-registration-runtime-guide.md",
+        "docs/security-v1/overview.md",
+        "docs/security-v1/user-guide.md",
+        "docs/security-v1-identity-contract.md",
+        "docs/security-v1-authorization-contract.md",
+        "docs/security-browser-sessions.md",
+        "docs/security-v1-plan.md",
+        "docs/security-v1/AGENTS.md",
+        "docs/security-v1-milestones.md",
+        "docs/security-v1-deliveries/SEC-M7.md",
+        "package.json"
+      ],
+      "exitCode": 0,
+      "log": "format.original.txt"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "packages/server/src/security/authentication-service.ts",
+        "scripts/security-authentication-resilience-check.mjs",
+        "scripts/security-registration-storage-check.mjs",
+        "scripts/security-release-evidence.mjs",
+        "docs/security-v1/device-registration-protocol-contract.md",
+        "docs/security-v1/device-registration-runtime-guide.md",
+        "docs/security-v1/overview.md",
+        "docs/security-v1/user-guide.md",
+        "docs/security-v1-identity-contract.md",
+        "docs/security-v1-authorization-contract.md",
+        "docs/security-browser-sessions.md",
+        "docs/security-v1-plan.md",
+        "docs/security-v1/AGENTS.md",
+        "docs/security-v1-milestones.md",
+        "docs/security-v1-deliveries/SEC-M7.md",
+        "package.json",
+        "test/fixtures/security-authentication-exit-child.ts",
+        "test/unit/security-authentication-resilience.test.ts",
+        "test/unit/security-authentication-resilience-report.test.mjs",
+        "test/unit/security-release-evidence.test.mjs",
+        "test/README.md"
+      ],
+      "exitCode": 0,
+      "log": "diff.original.txt"
+    }
+  ]
+}

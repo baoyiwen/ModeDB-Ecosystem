@@ -1,0 +1,52 @@
+packages/shared/src/deployment-wizard.ts 56ms (unchanged)
+packages/server/src/security/deployment-wizard.ts 59ms (unchanged)
+packages/server/src/security/deployment-files.ts 30ms (unchanged)
+packages/server/src/security/security-control.ts 12ms (unchanged)
+packages/server/src/cli-security-deployment.ts 6ms (unchanged)
+packages/server/src/cli-security.ts 56ms (unchanged)
+packages/server/src/dual-track-app.ts 141ms (unchanged)
+scripts/security-deployment-wizard-check.mjs 29ms (unchanged)
+packages/shared/src/registered-identity-admin.ts 7ms (unchanged)
+packages/shared/src/index.ts 5ms (unchanged)
+packages/sdk/src/security-center.ts 9ms (unchanged)
+packages/sdk/src/index.ts 4ms
+packages/server/src/security/security-registry.ts 173ms (unchanged)
+packages/server/src/security/registry-entrypoints.ts 60ms (unchanged)
+scripts/security-identity-admin-check.mjs 9ms (unchanged)
+scripts/security-release-evidence.mjs 69ms (unchanged)
+scripts/security-registration-storage-check.mjs 5ms (unchanged)
+scripts/security-registration-consumer-check.mjs 7ms (unchanged)
+packages/sdk/src/browser-identity-client.ts 9ms (unchanged)
+packages/data-ui/scripts/copy-css.mjs 1ms (unchanged)
+scripts/security-public-clients-check.mjs 8ms (unchanged)
+apps/model-designer/src/components/DeploymentWizardPanel.tsx 37ms (unchanged)
+apps/model-designer/src/styles/deployment-wizard.css 283ms (unchanged)
+apps/model-designer/src/components/RegisteredIdentityPanel.tsx 51ms (unchanged)
+apps/model-designer/src/components/SecurityCenterWorkspace.tsx 64ms (unchanged)
+apps/model-designer/src/styles/designer-shell.css 450ms (unchanged)
+apps/model-designer/src/i18n/locales/zh/ui.json 25ms (unchanged)
+apps/model-designer/src/i18n/locales/en/ui.json 15ms (unchanged)
+apps/model-designer/src/i18n/locales/ja/ui.json 23ms (unchanged)
+packages/data-ui/src/index.ts 3ms
+packages/data-ui/src/components/browser-identity-panel.tsx 23ms
+packages/data-ui/src/components/browser-identity-panel.css 8ms
+apps/model-designer/src/components/BrowserIdentityPanel.tsx 3ms
+apps/model-designer/src/config/browser-identity-state.ts 1ms (unchanged)
+apps/data-studio/src/components/ConnectionPanel.tsx 22ms
+apps/data-studio/src/styles/studio-shell.css 31ms
+apps/web/src/App.tsx 53ms
+apps/web/src/index.css 54ms
+apps/web/src/i18n/messages.ts 22ms
+apps/data-studio/src/i18n/locales/zh/ui.json 5ms (unchanged)
+apps/data-studio/src/i18n/locales/en/ui.json 4ms (unchanged)
+apps/data-studio/src/i18n/locales/ja/ui.json 6ms (unchanged)
+docs/security-v1/device-registration-deployment-contract.md 597ms (unchanged)
+docs/security-v1/device-registration-protocol-contract.md 103ms
+docs/security-v1/device-registration-runtime-guide.md 122ms
+docs/security-v1/overview.md 35ms
+docs/security-v1/user-guide.md 87ms
+docs/security-v1-plan.md 170ms
+docs/security-v1/AGENTS.md 34ms (unchanged)
+docs/security-v1-milestones.md 162ms (unchanged)
+docs/security-v1-deliveries/SEC-M7.md 267ms (unchanged)
+package.json 2ms (unchanged)

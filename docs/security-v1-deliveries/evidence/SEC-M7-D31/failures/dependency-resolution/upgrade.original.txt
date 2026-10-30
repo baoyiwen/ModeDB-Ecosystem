@@ -1,0 +1,7 @@
+MODULE_NOT_FOUND
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1476:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1049:27)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1094:12)
+    at require.resolve (node:internal/modules/helpers:171:31)
+    at verifyInstalledUpgrade (file:///C:/workspace/web_code/ModeDB-Ecosystem/scripts/security-installed-upgrade.mjs:32:36)
+    at async file:///C:/workspace/web_code/ModeDB-Ecosystem/scripts/security-installed-upgrade.mjs:527:20

@@ -1,0 +1,42 @@
+{
+  "unit": {
+    "executable": "C:\\nvm4w\\nodejs\\node.exe",
+    "nodeVersion": "v24.15.0",
+    "args": [
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-device-drill.test.mjs",
+      "test/unit/security-release-evidence.test.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "unit.original.txt",
+    "startedAtUtc": "2026-10-29T05:17:27.877Z",
+    "endedAtUtc": "2026-10-29T05:17:47.877Z"
+  },
+  "smoke": {
+    "executable": "C:\\nvm4w\\nodejs\\node.exe",
+    "nodeVersion": "v24.15.0",
+    "args": [
+      "scripts/security-device-drill.mjs",
+      "smoke"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "smoke.original.txt",
+    "startedAtUtc": "2026-10-29T05:17:47.878Z",
+    "endedAtUtc": "2026-10-29T05:18:15.053Z"
+  },
+  "static": {
+    "executable": "C:\\nvm4w\\nodejs\\node.exe",
+    "nodeVersion": "v24.15.0",
+    "args": [
+      "docs/security-v1-deliveries/evidence/SEC-M7-D34/static-checks.mjs"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "log": "static.original.txt",
+    "startedAtUtc": "2026-10-29T05:18:15.056Z",
+    "endedAtUtc": "2026-10-29T05:18:21.978Z"
+  }
+}

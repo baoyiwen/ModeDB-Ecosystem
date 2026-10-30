@@ -1,0 +1,20 @@
+/** Refresh only D28's current candidate references after the final style-compliant run. */
+import assert from 'node:assert/strict';
+import { readFileSync, writeFileSync } from 'node:fs';
+const base = 'docs/security-v1-deliveries/evidence/SEC-M7-D28/';
+const selected = JSON.parse(readFileSync(base + 'selected-candidate.json', 'utf8'));
+const report = JSON.parse(readFileSync(selected.directory + '/candidate-check.json', 'utf8')); assert.equal(report.ok, true);
+assert.notEqual(report.candidateSha256, 'f10a5827dec955c5419dce5f3d272ae09e1d0815ff2bd5798ba8c0c11bc7b5fb');
+const before = JSON.parse(readFileSync(base + 'run-1793153573700/candidate-manifest.json', 'utf8'));
+const after = JSON.parse(readFileSync(selected.directory + '/candidate-manifest.json', 'utf8'));
+assert.deepEqual(after.applications, before.applications, 'Style fixes must not change product builds');
+assert.deepEqual(after.sources.map(f => f.path), before.sources.map(f => f.path));
+const changedSources = after.sources.filter((file, i) => file.sha256 !== before.sources[i].sha256).map(f => f.path);
+assert.deepEqual(changedSources, ['scripts/security-browser-candidate-check.mjs']);
+writeFileSync(base + 'style-revalidation.json', JSON.stringify({ ok: true, previousCandidateSha256: 'f10a5827dec955c5419dce5f3d272ae09e1d0815ff2bd5798ba8c0c11bc7b5fb', currentCandidateSha256: report.candidateSha256, unchangedProductBuildFiles: after.applications.length, changedCandidateSourcePaths: changedSources, finalNativePass: report.totalNativePass }, null, 2) + '\n');
+const path = 'docs/security-v1-deliveries/SEC-M7.md', source = readFileSync(path, 'utf8'), marker = '\n## D28：';
+const index = source.indexOf(marker); assert.ok(index > 0);
+const prefix = source.slice(0, index); let current = source.slice(index);
+current = current.replaceAll('f10a5827dec955c5419dce5f3d272ae09e1d0815ff2bd5798ba8c0c11bc7b5fb', report.candidateSha256).replaceAll('run-1793153573700', selected.directory.split('/').at(-1));
+if (!current.includes('花括号')) current = current.replace('最终原始工具测试完整归档。', '最终原始工具测试完整归档。限定静态检查另发现工具脚本缺少仓库要求的花括号，补齐纯样式后 lint/格式/材料守卫通过，并重跑 49 项工具、7 项候选报告及全部 9 项原生浏览器验收；当前摘要已重新绑定，先前通过和失败记录均保留。');
+writeFileSync(path, prefix + current); console.log(JSON.stringify({ ok: true, candidateSha256: report.candidateSha256, directory: selected.directory }));

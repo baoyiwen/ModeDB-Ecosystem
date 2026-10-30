@@ -1,0 +1,208 @@
+TAP version 13
+# Subtest: key replacement recognizes equivalent ES256/RSA material across COSE encodings and rejects invalid keys
+ok 1 - key replacement recognizes equivalent ES256/RSA material across COSE encodings and rejects invalid keys
+  ---
+  duration_ms: 65.1957
+  type: 'test'
+  ...
+# Subtest: maintenance schemas reject identity injection, mixed namespaces, wrong types and unbounded pages
+ok 2 - maintenance schemas reject identity injection, mixed namespaces, wrong types and unbounded pages
+  ---
+  duration_ms: 1.4928
+  type: 'test'
+  ...
+# Subtest: only the verified OS context can maintain identities; public login cannot obtain maintenance privileges
+ok 3 - only the verified OS context can maintain identities; public login cannot obtain maintenance privileges
+  ---
+  duration_ms: 330.98
+  type: 'test'
+  ...
+# Subtest: local credential and user lists project only bounded review metadata and leave V1 un-migrated
+ok 4 - local credential and user lists project only bounded review metadata and leave V1 un-migrated
+  ---
+  duration_ms: 273.512
+  type: 'test'
+  ...
+# Subtest: credential disable invalidates only its own key and sessions and persists a minimal OS audit
+ok 5 - credential disable invalidates only its own key and sessions and persists a minimal OS audit
+  ---
+  duration_ms: 263.4891
+  type: 'test'
+  ...
+# Subtest: credential revoke invalidates only its own key and sessions and persists a minimal OS audit
+ok 6 - credential revoke invalidates only its own key and sessions and persists a minimal OS audit
+  ---
+  duration_ms: 245.6149
+  type: 'test'
+  ...
+# Subtest: enabling requires disabled state and a live user, preserves reduced grants and never revives old sessions
+ok 7 - enabling requires disabled state and a live user, preserves reduced grants and never revives old sessions
+  ---
+  duration_ms: 231.2188
+  type: 'test'
+  ...
+# Subtest: user disable covers every registered key while API identity stays independent; enabling requires fresh login
+ok 8 - user disable covers every registered key while API identity stays independent; enabling requires fresh login
+  ---
+  duration_ms: 273.6338
+  type: 'test'
+  ...
+# Subtest: terminal states, wrong namespaces, missing confirmation and stale CAS fail with audited denials
+ok 9 - terminal states, wrong namespaces, missing confirmation and stale CAS fail with audited denials
+  ---
+  duration_ms: 250.8098
+  type: 'test'
+  ...
+# Subtest: formal reduction accepts subsets only and cannot widen a resource or mutate an exact release digest
+ok 10 - formal reduction accepts subsets only and cannot widen a resource or mutate an exact release digest
+  ---
+  duration_ms: 170.9532
+  type: 'test'
+  ...
+# Subtest: atomic replacement of active key preserves its user, revokes old sessions and requires a new valid proof
+ok 11 - atomic replacement of active key preserves its user, revokes old sessions and requires a new valid proof
+  ---
+  duration_ms: 229.6586
+  type: 'test'
+  ...
+# Subtest: atomic replacement of disabled key preserves its user, revokes old sessions and requires a new valid proof
+ok 12 - atomic replacement of disabled key preserves its user, revokes old sessions and requires a new valid proof
+  ---
+  duration_ms: 251.091
+  type: 'test'
+  ...
+# Subtest: replacement never inherits old grants; explicit empty grants remain zero scope
+ok 13 - replacement never inherits old grants; explicit empty grants remain zero scope
+  ---
+  duration_ms: 201.3863
+  type: 'test'
+  ...
+# Subtest: replacement rejects unverified candidate and leaves old credential and target application intact
+ok 14 - replacement rejects unverified candidate and leaves old credential and target application intact
+  ---
+  duration_ms: 147.8253
+  type: 'test'
+  ...
+# Subtest: replacement rejects expired candidate and leaves old credential and target application intact
+ok 15 - replacement rejects expired candidate and leaves old credential and target application intact
+  ---
+  duration_ms: 163.7656
+  type: 'test'
+  ...
+# Subtest: replacement rejects approved candidate and leaves old credential and target application intact
+ok 16 - replacement rejects approved candidate and leaves old credential and target application intact
+  ---
+  duration_ms: 133.8201
+  type: 'test'
+  ...
+# Subtest: replacement rejects user-disabled candidate and leaves old credential and target application intact
+ok 17 - replacement rejects user-disabled candidate and leaves old credential and target application intact
+  ---
+  duration_ms: 180.8253
+  type: 'test'
+  ...
+# Subtest: replacement rejects same-key candidate and leaves old credential and target application intact
+ok 18 - replacement rejects same-key candidate and leaves old credential and target application intact
+  ---
+  duration_ms: 165.8863
+  type: 'test'
+  ...
+# Subtest: replacement rejects same-key-reencoded candidate and leaves old credential and target application intact
+ok 19 - replacement rejects same-key-reencoded candidate and leaves old credential and target application intact
+  ---
+  duration_ms: 164.0383
+  type: 'test'
+  ...
+# Subtest: lost credentials are revoked first; a fresh application needs explicit owner association and approval before login
+ok 20 - lost credentials are revoked first; a fresh application needs explicit owner association and approval before login
+  ---
+  duration_ms: 231.2692
+  type: 'test'
+  ...
+# Subtest: per-user tombstone capacity also applies to replacement; it cannot partially revoke the old key
+ok 21 - per-user tombstone capacity also applies to replacement; it cannot partially revoke the old key
+  ---
+  duration_ms: 1746.3911
+  type: 'test'
+  ...
+# Subtest: explicit CLI rejects missing configs, duplicate flags, unrelated namespaces and invalid grant files before loading a config
+ok 22 - explicit CLI rejects missing configs, duplicate flags, unrelated namespaces and invalid grant files before loading a config
+  ---
+  duration_ms: 1.7621
+  type: 'test'
+  ...
+# Subtest: audit capacity rejects an entire maintenance transaction without changing state or key files
+ok 23 - audit capacity rejects an entire maintenance transaction without changing state or key files
+  ---
+  duration_ms: 159.0349
+  type: 'test'
+  ...
+# Subtest: credential.disable staged interruption recovers one complete identity/session/audit transaction
+ok 24 - credential.disable staged interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 155.9579
+  type: 'test'
+  ...
+# Subtest: credential.disable journaled interruption recovers one complete identity/session/audit transaction
+ok 25 - credential.disable journaled interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 168.1749
+  type: 'test'
+  ...
+# Subtest: credential.disable replaced interruption recovers one complete identity/session/audit transaction
+ok 26 - credential.disable replaced interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 152.8846
+  type: 'test'
+  ...
+# Subtest: user.disable staged interruption recovers one complete identity/session/audit transaction
+ok 27 - user.disable staged interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 153.885
+  type: 'test'
+  ...
+# Subtest: user.disable journaled interruption recovers one complete identity/session/audit transaction
+ok 28 - user.disable journaled interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 155.0287
+  type: 'test'
+  ...
+# Subtest: user.disable replaced interruption recovers one complete identity/session/audit transaction
+ok 29 - user.disable replaced interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 155.0488
+  type: 'test'
+  ...
+# Subtest: credential.replace staged interruption recovers one complete identity/session/audit transaction
+ok 30 - credential.replace staged interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 255.6885
+  type: 'test'
+  ...
+# Subtest: credential.replace journaled interruption recovers one complete identity/session/audit transaction
+ok 31 - credential.replace journaled interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 238.8031
+  type: 'test'
+  ...
+# Subtest: credential.replace replaced interruption recovers one complete identity/session/audit transaction
+ok 32 - credential.replace replaced interruption recovers one complete identity/session/audit transaction
+  ---
+  duration_ms: 234.122
+  type: 'test'
+  ...
+# Subtest: required native Windows DPAPI and actual CLI maintain, replace and recover a software-signed identity
+ok 33 - required native Windows DPAPI and actual CLI maintain, replace and recover a software-signed identity
+  ---
+  duration_ms: 71879.8845
+  type: 'test'
+  ...
+1..33
+# tests 33
+# suites 0
+# pass 33
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 80706.3012

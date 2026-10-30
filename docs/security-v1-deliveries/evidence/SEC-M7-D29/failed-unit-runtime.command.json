@@ -1,0 +1,30 @@
+{
+  "command": [
+    "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+    "node_modules/tsx/dist/cli.mjs",
+    "--test",
+    "--test-concurrency=1",
+    "--test-reporter=tap",
+    "test/unit/security-recipient-keys.test.ts",
+    "test/unit/security-recipient-report.test.mjs",
+    "test/unit/security-registry.test.ts",
+    "test/unit/security-registry-http.test.ts",
+    "test/unit/security-registration-storage.test.ts",
+    "test/unit/security-registration-runtime.test.ts",
+    "test/unit/security-registration-approval.test.ts",
+    "test/unit/security-registration-maintenance.test.ts",
+    "test/unit/security-session-parent.test.ts",
+    "test/unit/security-authentication.test.ts",
+    "test/unit/security-authentication-storage.test.ts",
+    "test/unit/security-dynamic-authorization.test.ts",
+    "test/unit/security-identity-admin.test.ts",
+    "test/unit/security-identity-admin-report.test.mjs",
+    "test/unit/security-hosting.test.ts",
+    "test/unit/security-hosting-report.test.mjs",
+    "test/unit/security-browser-session.test.ts",
+    "test/unit/security-authorization.test.ts",
+    "test/unit/security-network.test.ts",
+    "test/unit/security-protection.test.ts"
+  ],
+  "node": "v24.22.1"
+}

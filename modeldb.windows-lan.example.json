@@ -1,0 +1,71 @@
+{
+  "host": "0.0.0.0",
+  "port": 9091,
+  "advertisedHost": "192.168.0.100",
+  "publicBaseUrl": "https://192.168.0.100:9091",
+  "workspace": "vault",
+  "logDir": "logs",
+  "bufferThreshold": 100,
+  "cacheSize": "1GB",
+  "mode": "production",
+  "dev": true,
+  "designerWorkspace": "model_designer_workspace",
+  "security": {
+    "version": 1,
+    "network": {
+      "transport": {
+        "mode": "tls",
+        "certificateFile": "certs/server.crt",
+        "privateKeyFile": "certs/server.key"
+      },
+      "allowedOrigins": ["https://192.168.0.100:5175"],
+      "data": {
+        "allowListEnabled": true,
+        "allow": [
+          {
+            "id": "loopback-v4",
+            "source": "127.0.0.0/8"
+          },
+          {
+            "id": "loopback-v6",
+            "source": "::1/128"
+          },
+          {
+            "id": "server-a",
+            "source": "192.168.0.100/32"
+          }
+        ],
+        "deny": []
+      },
+      "management": {
+        "allowListEnabled": true,
+        "allow": [
+          {
+            "id": "loopback-v4",
+            "source": "127.0.0.0/8"
+          },
+          {
+            "id": "loopback-v6",
+            "source": "::1/128"
+          },
+          {
+            "id": "server-a",
+            "source": "192.168.0.100/32"
+          }
+        ],
+        "deny": []
+      }
+    },
+    "audit": {
+      "retentionDays": 365,
+      "maxEvents": 10000
+    }
+  },
+  "autoBackup": {
+    "enabled": true,
+    "intervalMs": 3600000,
+    "runOnStart": false,
+    "reason": "scheduled",
+    "databases": ["railway_domain_v1", "model_designer_workspace"]
+  }
+}

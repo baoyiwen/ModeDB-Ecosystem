@@ -273,25 +273,28 @@ export class WireRequestDispatcher {
       });
     }
     if (body.op === 'executeOperationInterface') {
-      return this.opts.writeGate.runExclusive(atlas, () =>
-        executePublishedOperationInterface({
-          authorization,
-          atlas,
-          designerWorkspace: this.opts.designerWorkspace,
-          body,
-          getEngine: this.opts.getEngine,
-        }),
-      );
-    }
-    if (body.op === 'executeBindingSurface') {
-      const execute = () =>
-        executePublishedBindingSurface({
+      return this.opts.writeGate.runExclusive(atlas, () => {
+        authorization?.preflight(atlas, body);
+        return executePublishedOperationInterface({
           authorization,
           atlas,
           designerWorkspace: this.opts.designerWorkspace,
           body,
           getEngine: this.opts.getEngine,
         });
+      });
+    }
+    if (body.op === 'executeBindingSurface') {
+      const execute = () => {
+        authorization?.preflight(atlas, body);
+        return executePublishedBindingSurface({
+          authorization,
+          atlas,
+          designerWorkspace: this.opts.designerWorkspace,
+          body,
+          getEngine: this.opts.getEngine,
+        });
+      };
       return body.action.kind === 'mutate'
         ? this.opts.writeGate.runExclusive(atlas, execute)
         : execute();
@@ -304,11 +307,13 @@ export class WireRequestDispatcher {
         );
       }
       const engine = await this.opts.getEngine(atlas);
-      await authorization?.operation(atlas, body, engine);
+      const recheck = await authorization?.operation(atlas, body, engine);
+      recheck?.();
       const result = await executeDatabaseOperation(
         { runtime: engine.createRuntime(), atlas, dev: this.opts.dev },
         body,
       );
+      recheck?.();
       if (this.opts.dev) {
         console.error(
           '[modeldb-server][dev] executeQuery result',
@@ -320,16 +325,24 @@ export class WireRequestDispatcher {
 
     if (isMutatingDatabaseOperation(body)) {
       return this.opts.writeGate.runExclusive(atlas, async () => {
+        authorization?.preflight(atlas, body);
         const engine = await this.opts.getEngine(atlas);
-        await authorization?.operation(atlas, body, engine);
-        return executeDatabaseOperation({ engine, atlas, flush: () => engine.flushAll() }, body);
+        const recheck = await authorization?.operation(atlas, body, engine);
+        recheck?.();
+        return executeDatabaseOperation(
+          { engine, atlas, flush: () => engine.flushAll(), reauthorize: recheck },
+          body,
+        );
       });
     }
 
     // Read-only engine ops: previewBind / relationStats.
     const engine = await this.opts.getEngine(atlas);
-    await authorization?.operation(atlas, body, engine);
-    return executeDatabaseOperation({ engine, atlas }, body);
+    const recheck = await authorization?.operation(atlas, body, engine);
+    recheck?.();
+    const result = await executeDatabaseOperation({ engine, atlas }, body);
+    recheck?.();
+    return result;
   }
 }
 

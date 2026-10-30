@@ -1,0 +1,47 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): 80faa2347d1081447cab2e756813ff792acdec9976ef9d468a0f8275155d34d7
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:53708
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:53708
+#     HTTP RPC:  https://modeldb-a.example.test:53708/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:53708/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-oU5b4s\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:53708/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-oU5b4s\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-oU5b4s\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-oU5b4s\\modeldb.config.json"
+# [modeldb-server] storage fingerprint (sha256): 80faa2347d1081447cab2e756813ff792acdec9976ef9d468a0f8275155d34d7
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:53708
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:53708
+#     HTTP RPC:  https://modeldb-a.example.test:53708/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:53708/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-oU5b4s\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:53708/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-oU5b4s\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-oU5b4s\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-oU5b4s\\modeldb.config.json"
+# Subtest: local approval and registered identity maintenance UI, conflict recovery and localized layouts
+ok 1 - local approval and registered identity maintenance UI, conflict recovery and localized layouts
+  ---
+  duration_ms: 82760.9831
+  type: 'test'
+  ...
+# {"format":"modeldb.identity-admin-browser.v1","ok":true,"browser":"Chrome/156.0.8078.48","screenshots":24,"hardwareAuthenticatorTested":false,"systemTrustInstalled":false,"liveMaterialRead":false,"checks":{"freshDesignerBuild":true,"nativeDpapi":true,"osPairedManagement":true,"uiApproval":true,"uiRejection":true,"exactGrants":true,"approvalRequiresLogin":true,"actualWebAuthnLogin":true,"dataListenerDenied":true,"uiUserMaintenance":true,"uiCredentialMaintenance":true,"uiRestriction":true,"uiReplacement":true,"uiSessionRevoke":true,"explicitConfirmation":true,"conflictRequiresReload":true,"noAutomaticRetry":true,"pagination":true,"localizedZhEnJa":true,"wideAndNarrow":true,"labelsAndFocus":true}}
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 88669.0206

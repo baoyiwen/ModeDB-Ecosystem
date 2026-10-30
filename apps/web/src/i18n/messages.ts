@@ -11,6 +11,75 @@ export const LOCALE_LABEL: Record<LocaleId, string> = {
 };
 
 const en = {
+  identity_sessionExpired:
+    'Your session has expired or is no longer valid. Sign in again with your passkey.',
+  identity_title: 'Connect with a passkey',
+  identity_subtitle: 'Verify in your browser without entering a token.',
+  identity_server: 'Current server',
+  identity_instance: 'Instance ID',
+  identity_login: 'Sign in with Passkey / Windows Hello',
+  identity_session: 'Identity verified. Continue to your authorized libraries.',
+  identity_continue: 'Continue to libraries',
+  identity_logout: 'Sign out',
+  identity_registerTitle: 'First visit? Request access',
+  identity_registerHint:
+    'Create a passkey and submit a request. After local approval on the server, sign in separately.',
+  identity_name: 'Request name (for the administrator)',
+  identity_register: 'Create passkey and request access',
+  identity_download: 'Download connection descriptor',
+  identity_import: "Import this server's JSON descriptor (optional)",
+  identity_imported:
+    'Descriptor matches the current server. The file is never executed and grants no access.',
+  identity_pendingTitle: 'Awaiting local administrator approval',
+  identity_pending:
+    'Request submitted. Use a trusted channel to explain your identity and required library access to the administrator.',
+  identity_approvedTitle: 'Request approved',
+  identity_approved:
+    'Use the sign-in button above to verify with your new passkey. Approval alone does not create a session.',
+  identity_rejectedTitle: 'Request rejected',
+  identity_rejected:
+    'Contact the administrator to confirm the reason. Confirm the registration window and permissions before applying again.',
+  identity_expiredTitle: 'Request or challenge expired',
+  identity_expired:
+    'Start a new request. An existing approved passkey can sign in directly without registering again.',
+  identity_application: 'Request ID',
+  identity_expires: 'Request expires',
+  identity_polling:
+    'Checks at intervals of at least 5 seconds. Closing this page loses its status-query capability.',
+  identity_dismiss: 'Dismiss status details',
+  identity_working: "Working… Complete the browser's verification prompt.",
+  identity_retry: 'Retry',
+  identity_cancelled:
+    'Verification was cancelled or timed out. You can retry; cancellation grants no access.',
+  identity_unsupported:
+    'Use a trusted HTTPS domain and a browser with WebAuthn support. Check the address, certificate trust and browser support. Do not bypass certificate warnings.',
+  identity_limited:
+    'Too many requests or the server is busy. Wait at least one minute before retrying.',
+  identity_identity:
+    'This passkey cannot sign in. It may be unapproved, disabled, revoked or from another instance. Contact the administrator.',
+  identity_descriptor:
+    "The descriptor or instance binding does not match. Download the latest JSON on the correct server page; do not use another instance's file.",
+  identity_closed:
+    'Registration is closed. Existing approved passkeys can still sign in. Contact the local administrator for new requests.',
+  identity_loginClosed:
+    'Passkey login is not enabled on this server. Contact the local administrator.',
+  identity_unavailable:
+    'The request could not be completed. Check the network and server before retrying. Do not resubmit a request whose outcome is uncertain.',
+  identity_helpTitle: 'Replacement, lost credentials and recovery',
+  identity_help:
+    'Passkeys may sync through your platform; they do not prove physical device binding. Windows Hello availability depends on the browser and OS.',
+  identity_replaceTitle: 'Replace a passkey',
+  identity_replace:
+    'Create a new pending request and share its ID with the local administrator through a trusted channel. Sign in after identity checks and key replacement. This page cannot take over an existing user.',
+  identity_recoverTitle: 'Lost passkey or disabled access',
+  identity_recover:
+    "Use another approved passkey or ask the server's local administrator to verify your identity, revoke lost credentials and approve a replacement. Recovery cannot bypass verification.",
+  identity_transient:
+    'Reloading or closing loses the in-memory query secret; the request remains on the server. Ask the administrator to check its name and ID instead of repeatedly creating requests. Once approved, sign in directly.',
+  identity_trust:
+    'Descriptors contain public deployment information only. Downloading, importing or reaching the server does not grant approval. Verify the server identity through a trusted channel.',
+  identity_legacy: 'Other methods: pairing code / application token',
+  identity_advanced: 'Other connections: pairing code or application credential',
   'session.authMode': 'Authentication',
   'session.browserMode': 'Browser session (recommended)',
   'session.tokenMode': 'Service credential (advanced)',
@@ -299,6 +368,64 @@ const en = {
 } as const;
 
 const zhCN: Record<keyof typeof en, string> = {
+  identity_sessionExpired: '登录会话已到期或失效。请重新使用通行密钥登录。',
+  identity_title: '使用通行密钥连接',
+  identity_subtitle: '在浏览器中验证身份，无需输入 Token。',
+  identity_server: '当前服务器',
+  identity_instance: '实例标识',
+  identity_login: '使用 Passkey / Windows Hello 登录',
+  identity_session: '已验证身份。可继续选择有权访问的逻辑库。',
+  identity_continue: '继续选择逻辑库',
+  identity_logout: '退出登录',
+  identity_registerTitle: '首次连接？申请访问权限',
+  identity_registerHint: '创建通行密钥并提交申请。管理员在服务器本机批准后，仍需单独登录。',
+  identity_name: '申请名称（供管理员识别）',
+  identity_register: '创建通行密钥并申请',
+  identity_download: '下载连接描述文件',
+  identity_import: '导入此服务器的 JSON 描述文件（可选）',
+  identity_imported: '描述文件已与当前服务器核对；文件不会执行，也不授予权限。',
+  identity_pendingTitle: '等待本机管理员审批',
+  identity_pending: '申请已提交。请通过可信渠道向管理员说明身份和所需库权限。',
+  identity_approvedTitle: '申请已批准',
+  identity_approved:
+    '请点击上方登录按钮，再次使用刚创建的通行密钥验证身份。批准本身不会创建登录会话。',
+  identity_rejectedTitle: '申请已被拒绝',
+  identity_rejected: '请联系管理员核实原因。需要再次申请时，由管理员确认注册窗口与授权范围。',
+  identity_expiredTitle: '申请或挑战已到期',
+  identity_expired: '请重新开始申请。已有获批通行密钥可直接登录，无需重新注册。',
+  identity_application: '申请编号',
+  identity_expires: '申请到期时间',
+  identity_polling: '每隔至少 5 秒查询一次。关闭页面会丢失本次查询能力。',
+  identity_dismiss: '关闭状态详情',
+  identity_working: '正在处理，请完成浏览器的身份验证提示…',
+  identity_retry: '重试',
+  identity_cancelled: '验证已取消或超时。可以重试；取消不会授予访问权限。',
+  identity_unsupported:
+    '此页面需要可信 HTTPS 域名和支持 WebAuthn 的浏览器。请确认服务器地址、证书信任和浏览器支持；不要绕过证书警告。',
+  identity_limited: '请求过于频繁或服务繁忙。请至少等待一分钟后重试。',
+  identity_identity:
+    '此通行密钥无法登录，可能未批准、已停用、已撤销或不属于当前实例。请联系管理员。',
+  identity_descriptor:
+    '描述文件或实例绑定不匹配。请在正确服务器页面下载最新 JSON 文件；不要使用其他实例的文件。',
+  identity_closed: '注册窗口已关闭。已有获批通行密钥仍可登录；新申请需联系本机管理员。',
+  identity_loginClosed: '此服务器尚未启用通行密钥登录，请联系本机管理员。',
+  identity_unavailable:
+    '暂时无法完成请求。请检查网络及服务器状态后重试，勿重复提交不确定是否已成功的申请。',
+  identity_helpTitle: '更换设备、丢失凭据与恢复',
+  identity_help:
+    'Passkey 可以由系统同步，不代表物理设备绑定。Windows Hello 是否可用由浏览器与系统决定。',
+  identity_replaceTitle: '更换通行密钥',
+  identity_replace:
+    '先创建新的待审申请，将申请编号通过可信渠道交给本机管理员。管理员核实身份并执行换钥后再登录；页面不能自行接管原用户。',
+  identity_recoverTitle: '通行密钥丢失或访问被停用',
+  identity_recover:
+    '使用另一枚已获批的通行密钥，或联系服务器本机管理员核实身份、撤销丢失凭据并批准替换。没有自动绕过验证的恢复入口。',
+  identity_transient:
+    '刷新或关闭页面会丢失申请查询秘密，申请仍保留在服务器。请让管理员按申请名称和编号核查；不要仅为恢复状态反复创建申请。获批后可直接登录。',
+  identity_trust:
+    '连接描述文件仅包含公开部署信息。下载、导入或能访问服务器均不等于获批；请通过可信渠道核对服务器身份。',
+  identity_legacy: '其他连接方式：原配对码 / 应用 Token',
+  identity_advanced: '其他连接方式：配对码或应用凭据',
   'session.authMode': '连接验证方式',
   'session.browserMode': '浏览器会话（推荐）',
   'session.tokenMode': '服务凭证（高级）',

@@ -2,10 +2,12 @@ import type { SecurityProtectionConfig } from '@mode-db/shared';
 import type { SecurityProtection } from './security-protection.js';
 import type { SecurityMaintenance } from './security-maintenance.js';
 import { SecurityError } from './security-errors.js';
+import type { DeploymentWizard } from './deployment-files.js';
 
 export interface SecurityControl {
   readonly protection: SecurityProtection;
   readonly maintenance?: SecurityMaintenance;
+  readonly deployment?: DeploymentWizard;
 }
 
 /** Session refresh never extends the five-minute local pairing proof for key maintenance. */
@@ -35,6 +37,8 @@ export function dispatchSecurityControl(
     'network.unban': ['id'],
     'maintenance.status': [],
     'master.rotate': ['confirm'],
+    'deployment.status': [],
+    'deployment.preview': ['draft'],
   };
   if (
     typeof request.action !== 'string' ||
@@ -46,6 +50,14 @@ export function dispatchSecurityControl(
     throw new SecurityError('SECURITY_INVALID_REQUEST');
   }
   switch (request.action) {
+    case 'deployment.status':
+    case 'deployment.preview':
+      if (!control.deployment) {
+        throw new SecurityError('SECURITY_FORBIDDEN');
+      }
+      return request.action === 'deployment.status'
+        ? control.deployment.status()
+        : control.deployment.preview(request.draft as Parameters<DeploymentWizard['preview']>[0]);
     case 'network.status':
       return control.protection.snapshot();
     case 'network.preview':

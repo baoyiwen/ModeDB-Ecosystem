@@ -13,6 +13,9 @@ import { spawn } from 'node:child_process';
 import { assertFlatGraphSegment } from '@mode-db/common';
 import { runBackupSecurityCli } from './cli-backup-security.js';
 import { runAssetCli } from './cli-asset.js';
+import { runRegistrationApprovalCli } from './cli-security-registration.js';
+import { runDeploymentCli } from './cli-security-deployment.js';
+import { runRecipientListCli } from './cli-recipient-list.js';
 import {
   securityOrigin,
   isLoopbackAddress,
@@ -68,6 +71,18 @@ export function resolveAuditExportPath(directory: string, target: string): strin
 /** Security maintenance through the OS-authenticated local pipe only. */
 export async function runSecurityCli(argv: string[]): Promise<void> {
   const action = argv[0];
+  if (action === 'recipient-list') {
+    await runRecipientListCli(argv);
+    return;
+  }
+  if (action?.startsWith('deployment-')) {
+    runDeploymentCli(argv);
+    return;
+  }
+  if (action?.startsWith('registration-')) {
+    await runRegistrationApprovalCli(argv);
+    return;
+  }
   if (action?.startsWith('asset-')) {
     await runAssetCli(argv);
     return;
@@ -132,7 +147,18 @@ export async function runSecurityCli(argv: string[]): Promise<void> {
   if (action === 'help' || !action) {
     process.stdout.write(
       'security serve|status|principal-create|credentials|audit|audit-export|token-create|token-rotate|token-revoke|session-pair|browser-open|security-open|reset-access [-c <config>]\n' +
+        'deployment-init --target <new-absolute-directory> --designer <absolute-public-build> [--port 9090] --yes (no config discovery; loopback bootstrap)\n' +
+        'deployment-finalize --target <initialized-absolute-directory> --plan <absolute-plan-file> --digest <reviewed-sha256> --yes (offline, fresh unused instance only; writes a new config once, no restart)\n' +
         'credentials [--offset 0] [--limit 25] (use a smaller limit if metadata exceeds the response bound)\n' +
+        'registration-list -c <config> --instance <id> [--offset 0] [--limit 25] (OS-local application metadata and current revision)\n' +
+        'registration-approve -c <config> --instance <id> --id <application-id> --revision <n> (--principal <operator-id> | --name <new-operator-name>) --grants-file <json-array> --yes (atomic registration only; no login/session)\n' +
+        'registration-reject -c <config> --instance <id> --id <application-id> --revision <n> --yes (terminal rejection)\n' +
+        'registration-credentials-list -c <config> --instance <id> [--user <user-id>] [--offset 0] [--limit 25]\n' +
+        'registration-users-list -c <config> --instance <id> [--offset 0] [--limit 25]\n' +
+        'registration-credential-disable|registration-credential-enable|registration-credential-revoke -c <config> --instance <id> --id <registered-credential-id> --revision <n> --yes\n' +
+        'registration-user-disable|registration-user-enable -c <config> --instance <id> --id <registered-user-id> --revision <n> --yes (registered identities only)\n' +
+        'registration-credential-restrict -c <config> --instance <id> --id <registered-credential-id> --revision <n> --grants-file <json-array> --yes (remove capabilities only)\n' +
+        'registration-credential-replace -c <config> --instance <id> --id <old-registered-credential-id> --application <new-verified-application-id> --revision <n> --grants-file <json-array> --yes (atomic replacement; then new public-key login)\n' +
         'audit [--offset 0] [--limit 50] [audit filters] (read a bounded page through the OS-local channel)\n' +
         'audit-export --output <new-file.jsonl> [audit filters] (no-overwrite JSONL export via the OS-authenticated local channel)\n' +
         'audit filters: --from <utc> --to <utc> --category <name> --result <name> --action <name> --principal <id> --credential <id> --database <name> --request-id <id> --client-ip <ip>\n' +
@@ -140,7 +166,8 @@ export async function runSecurityCli(argv: string[]): Promise<void> {
         'token-rotate --id <id> [--grace-minutes 10] --output <protected-file>\n' +
         'session-pair --id <credential-id> --origin <frontend-origin> [--minutes 10] (one-time browser pairing code)\n' +
         'browser-open [--url http://127.0.0.1:5175/] [--server <server-origin>] [--databases <name1,name2>] (trusted local browser launcher)\n' +
-        'security-open [--url http://127.0.0.1:5175/] [--server <server-origin>] (opens the Designer with a short-lived security-admin session)\n' +
+        'security-open -c <config> (hosting: exact live 127.0.0.1 management page, OS authentication; no URL/server override; idle 15m/absolute 60m)\n' +
+        'security-open [--url http://127.0.0.1:5175/] [--server <server-origin>] (standalone frontend compatibility only when hosting is disabled)\n' +
         'reset-access --yes (revokes access; does not change data keys)\n' +
         'network-status | network-preview --rules-file <json> | network-apply --rules-file <json> --revision <n> --preview <preview-id>\n' +
         'network-confirm --id <pending-id> | network-rollback --revision <n> | network-unban --id <ban-id>\n' +
@@ -158,7 +185,9 @@ export async function runSecurityCli(argv: string[]): Promise<void> {
         'asset-export -c <config> --instance <id> --database <db> --selection <json> --asset-id <id> --asset-version <semver> --public-key <recipient.pem> --signing-key <private.json> --passphrase-file <protected-file> --output <new-file> --yes (offline; selected business models only)\n' +
         'asset-preview|asset-import -c <config> --instance <id> --database <new-db> --package <file> --private-key <recipient.private.json> --passphrase-file <protected-file> --publisher-key <publisher.pem> --publisher-fingerprint <verified-sha256> [--preview-digest <digest> --yes] (offline; import requires preview confirmation)\n' +
         'backup-key-create --output <protected-prefix> --passphrase-file <protected-file>\n' +
-        'backup-export --database <name> --public-key <pem> --output <new-package> --instance <id> --yes -c <config> (offline)\n' +
+        'recipient-list -c <config> --instance <id> [--offset <n> --limit <n>] (offline metadata; stop instance first)\n' +
+        'backup-export|asset-export: V5 requires --recipient-id <id> --recipient-user <userId> --recipient-version <n> --recipient-fingerprint <sha256> --revision <exact> instead of --public-key; use recipient-list after stopping the instance. Other required export flags remain unchanged.\n' +
+        'backup-export --database <name> --public-key <pem> --output <new-package> --instance <id> --yes -c <config> (offline legacy V1-V4 only)\n' +
         'backup-import --database <new-name> --private-key <private.json> --package <package> --passphrase-file <protected-file> --instance <id> --yes -c <config> (offline; stores a verified local backup)\n',
     );
     return;
@@ -353,6 +382,22 @@ export async function runSecurityCli(argv: string[]): Promise<void> {
     return;
   }
   if (action === 'browser-open' || action === 'security-open') {
+    if (action === 'security-open' && cfg.securityHosting?.enabled) {
+      if (
+        (!options.has('-c') && !options.has('--config')) ||
+        ['--url', '--server', '--databases'].some((k) => options.has(k))
+      ) {
+        throw new SecurityError('SECURITY_INVALID_REQUEST');
+      }
+      const paired = (await callLocalSecurity(directory, {
+        action: 'browser.hosted.security.launch',
+      })) as { code: string; origin: string; url: string; expiresAt: string };
+      await openHostedSecurityBrowser(paired);
+      process.stdout.write(
+        JSON.stringify({ opened: true, origin: paired.origin, expiresAt: paired.expiresAt }) + '\n',
+      );
+      return;
+    }
     const target = new URL(options.get('--url') ?? 'http://127.0.0.1:5175/');
     const origin = securityOrigin(target.origin);
     if (
@@ -629,4 +674,49 @@ export async function runSecurityCli(argv: string[]): Promise<void> {
       closeSync(fd);
     }
   }
+}
+
+/** The OS-authenticated pipe supplies the exact live management endpoint; no caller URL override. */
+export async function openHostedSecurityBrowser(paired: {
+  code: string;
+  origin: string;
+  url: string;
+  expiresAt: string;
+}): Promise<void> {
+  const target = hostedSecurityLaunchUrl(paired);
+  await new Promise<void>((done, reject) => {
+    const opener = spawn('rundll32.exe', ['url.dll,FileProtocolHandler', target.href], {
+      windowsHide: true,
+      stdio: 'ignore',
+    });
+    opener.once('error', () => reject(new SecurityError('SECURITY_LOCAL_CHANNEL_UNAVAILABLE')));
+    opener.once('exit', (code) =>
+      code === 0 ? done() : reject(new SecurityError('SECURITY_LOCAL_CHANNEL_UNAVAILABLE')),
+    );
+  });
+}
+export function hostedSecurityLaunchUrl(paired: {
+  code: string;
+  origin: string;
+  url: string;
+}): URL {
+  const target = new URL(paired.url);
+  if (
+    target.origin !== paired.origin ||
+    target.protocol !== 'http:' ||
+    target.hostname !== '127.0.0.1' ||
+    target.pathname !== '/security/' ||
+    target.username ||
+    target.password ||
+    target.search ||
+    target.hash ||
+    !/^mdbp_v1_[a-zA-Z0-9-]{36}_[a-zA-Z0-9_-]{43}$/.test(paired.code)
+  ) {
+    throw new SecurityError('SECURITY_INVALID_REQUEST');
+  }
+  target.hash = new URLSearchParams({
+    'modeldb-pair': paired.code,
+    'modeldb-server': paired.origin,
+  }).toString();
+  return target;
 }

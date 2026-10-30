@@ -1,0 +1,116 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): 02af7976a4b8e3c6dffe3475da531ecd3f6f993a5dc947fd5473f8b6844835ab
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:63748
+#   ➜ Local:   http://localhost:63748/ (本机访问)
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: loopback; source/Origin policy is enforced.
+#     HTTP RPC:  http://127.0.0.1:63748/api/v1/rpc
+#     WebSocket: ws://127.0.0.1:63748/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-browser-apps-x0gxYt\\modeldb.config.json"
+#     Designer:    modeldb-server security browser-open --url http://127.0.0.1:5175/ -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-browser-apps-x0gxYt\\modeldb.config.json"
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-browser-apps-x0gxYt\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\modedb-browser-apps-x0gxYt\\modeldb.config.json"
+# [security-browser] connection: zh/en/ja, wide/narrow layout, label/focus and blocked preference writes passed
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [security-browser] forbidden: zh/en/ja, wide/narrow layout, label/focus and blocked preference writes passed
+# [modeldb-server][catalog] graph: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] graph: metadataSource=graph displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [security-browser] Query interface: complete POST URL, Bearer example and Postman download passed
+# [security-browser] security: zh/en/ja, wide/narrow layout, label/focus and blocked preference writes passed
+# [security-browser] administrator: independent entry and business isolation passed
+# Subtest: three production browser apps pair through the Windows pipe, restore after reload and revoke on logout
+not ok 1 - three production browser apps pair through the Windows pipe, restore after reload and revoke on logout
+  ---
+  duration_ms: 246554.6779
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-browser-apps.test.ts:28:327'
+  failureType: 'testCodeFailure'
+  error: 'BROWSER_ACCEPTANCE_TIMEOUT'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    waitFor (C:\workspace\web_code\ModeDB-Ecosystem\test\integration\security-browser-apps.test.ts:35:9)
+    async TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\integration\security-browser-apps.test.ts:354:9)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+# [modeldb-server] storage fingerprint (sha256): c86363e2b9031439b3b52fe1a47727c44d081f9d2496cc4f4865680effc001dd
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:63747
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:63747
+#     HTTP RPC:  https://modeldb-a.example.test:63747/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:63747/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-2KqGpt\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:63747/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-2KqGpt\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-2KqGpt\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-2KqGpt\\modeldb.config.json"
+# Subtest: data-studio public identity registration, approval, Passkey and library connection
+not ok 2 - data-studio public identity registration, approval, Passkey and library connection
+  ---
+  duration_ms: 15315.6466
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-public-clients-browser.test.ts:1:1060'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_INVALID_REQUEST'
+  code: 'SECURITY_INVALID_REQUEST'
+  name: 'SecurityError'
+  stack: |-
+    Socket.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\local-management-channel.ts:415:20)
+    Socket.emit (node:events:509:28)
+    addChunk (node:internal/streams/readable:563:12)
+    readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+    Readable.push (node:internal/streams/readable:394:5)
+    Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+  ...
+# [modeldb-server] storage fingerprint (sha256): bb078d1ee6b2f16fb1fcfd485a2e59be1f772925371f3801066ec545cb1e6b02
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:58770
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:58770
+#     HTTP RPC:  https://modeldb-a.example.test:58770/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:58770/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-RTgEJ9\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:58770/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-RTgEJ9\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-RTgEJ9\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-RTgEJ9\\modeldb.config.json"
+# Subtest: web public identity registration, approval, Passkey and library connection
+not ok 3 - web public identity registration, approval, Passkey and library connection
+  ---
+  duration_ms: 14096.892
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-public-clients-browser.test.ts:1:1060'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_INVALID_REQUEST'
+  code: 'SECURITY_INVALID_REQUEST'
+  name: 'SecurityError'
+  stack: |-
+    Socket.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\local-management-channel.ts:415:20)
+    Socket.emit (node:events:509:28)
+    addChunk (node:internal/streams/readable:563:12)
+    readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+    Readable.push (node:internal/streams/readable:394:5)
+    Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 0
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 253527.666

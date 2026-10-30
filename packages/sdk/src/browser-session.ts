@@ -4,9 +4,18 @@ import {
   type ConnectionEndpoint,
 } from './connection-endpoint.js';
 import { ConnectionSecurityError, remoteResponseError } from './connection-security.js';
+import {
+  DEVICE_AUTHENTICATION_API_V1 as AUTH,
+  DEVICE_AUTHENTICATION_FORMAT,
+  assertDeviceAuthenticationBeginResponse,
+  assertDeviceAuthenticationCompleteRequest,
+  type DeviceAuthenticationBeginResponseV1,
+  type DeviceAuthenticationBindingV1,
+} from '@mode-db/shared';
 
 export interface BrowserSessionConfig extends ConnectionEndpoint {
   readonly fetchImpl?: typeof fetch;
+  readonly signal?: AbortSignal;
 }
 
 export interface BrowserSessionInfo {
@@ -75,6 +84,7 @@ async function request<T>(
   fetchImpl: typeof fetch,
   body?: unknown,
   csrf?: string,
+  signal?: AbortSignal,
 ): Promise<T> {
   secureOrigin(origin);
   const response = await fetchImpl(`${origin}${path}`, {
@@ -82,6 +92,7 @@ async function request<T>(
     redirect: 'error',
     credentials: 'include',
     cache: 'no-store',
+    signal,
     headers: {
       ...(body === undefined ? {} : { 'content-type': 'application/json' }),
       ...(csrf ? { 'x-modeldb-csrf': csrf } : {}),
@@ -130,6 +141,104 @@ export async function pairBrowserSession(
   );
 }
 
+export interface BrowserPublicKeyLoginConfig extends BrowserSessionConfig {
+  /** Optional public credential ID for a non-discoverable authenticator. */
+  readonly rawId?: string;
+  /** Trusted browser embedding seam; defaults to navigator.credentials.get. */
+  readonly getCredential?: (options: CredentialRequestOptions) => Promise<Credential | null>;
+}
+
+/** Prove possession to this exact same-origin HTTPS deployment; authentication stays HttpOnly. */
+export async function loginBrowserSession(
+  config: BrowserPublicKeyLoginConfig,
+  binding: DeviceAuthenticationBindingV1,
+): Promise<BrowserSessionInfo> {
+  const origin = connectionOrigin(config);
+  if (
+    new URL(origin).protocol !== 'https:' ||
+    typeof location === 'undefined' ||
+    location.origin !== origin
+  ) {
+    throw new ConnectionSecurityError('SECURITY_AUTHENTICATION_ORIGIN_DENIED', 403);
+  }
+  const fetchImpl = config.fetchImpl ?? fetch;
+  // Explicit projection prevents a supplied object from injecting extra request fields.
+  const base = {
+    format: DEVICE_AUTHENTICATION_FORMAT,
+    version: 1 as const,
+    instanceId: binding.instanceId,
+    deploymentDescriptorSha256: binding.deploymentDescriptorSha256,
+  };
+  const begin = await request<DeviceAuthenticationBeginResponseV1>(
+    origin,
+    AUTH.begin,
+    'POST',
+    fetchImpl,
+    { ...base, ...(config.rawId ? { rawId: config.rawId } : {}) },
+    undefined,
+    config.signal,
+  );
+  assertDeviceAuthenticationBeginResponse(begin);
+  if (
+    begin.instanceId !== base.instanceId ||
+    begin.deploymentDescriptorSha256 !== base.deploymentDescriptorSha256 ||
+    begin.publicKey.rpId !== new URL(origin).hostname ||
+    Date.parse(begin.expiresAtUtc) <= Date.now()
+  ) {
+    throw new ConnectionSecurityError('SECURITY_AUTHENTICATION_DEPLOYMENT_MISMATCH', 403);
+  }
+  const decode = (s: string): ArrayBuffer =>
+    Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)).buffer;
+  const encode = (b: ArrayBuffer): string =>
+    btoa(String.fromCharCode(...new Uint8Array(b)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+  const get = config.getCredential ?? ((options) => navigator.credentials.get(options));
+  const credential = (await get({
+    signal: config.signal,
+    publicKey: {
+      ...begin.publicKey,
+      challenge: decode(begin.publicKey.challenge),
+      allowCredentials: begin.publicKey.allowCredentials.map((c) => ({ ...c, id: decode(c.id) })),
+    },
+  })) as PublicKeyCredential | null;
+  if (!credential || credential.type !== 'public-key') {
+    throw new ConnectionSecurityError('SECURITY_AUTHENTICATION_PROOF_INVALID', 401);
+  }
+  config.signal?.throwIfAborted();
+  const response = credential.response as AuthenticatorAssertionResponse;
+  const complete = {
+    ...base,
+    challengeId: begin.challengeId,
+    credential: {
+      id: credential.id,
+      rawId: encode(credential.rawId),
+      type: 'public-key' as const,
+      clientExtensionResults: {},
+      response: {
+        clientDataJSON: encode(response.clientDataJSON),
+        authenticatorData: encode(response.authenticatorData),
+        signature: encode(response.signature),
+        userHandle: response.userHandle ? encode(response.userHandle) : null,
+      },
+    },
+  };
+  assertDeviceAuthenticationCompleteRequest(complete);
+  return remember(
+    origin,
+    await request<BrowserSessionInfo>(
+      origin,
+      AUTH.complete,
+      'POST',
+      fetchImpl,
+      complete,
+      undefined,
+      config.signal,
+    ),
+  );
+}
+
 /** Restore the anti-CSRF proof after a reload, without exposing the authentication cookie. */
 export async function getBrowserSession(config: BrowserSessionConfig): Promise<BrowserSessionInfo> {
   const origin = connectionOrigin(config);
@@ -140,6 +249,9 @@ export async function getBrowserSession(config: BrowserSessionConfig): Promise<B
       '/api/v1/security/session',
       'GET',
       config.fetchImpl ?? fetch,
+      undefined,
+      undefined,
+      config.signal,
     ),
   );
 }

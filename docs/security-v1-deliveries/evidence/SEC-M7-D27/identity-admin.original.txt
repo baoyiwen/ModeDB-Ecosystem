@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: identity admin report accepts formal UI/native checks and accurate browser limits
+ok 1 - identity admin report accepts formal UI/native checks and accurate browser limits
+  ---
+  duration_ms: 0.9888
+  type: 'test'
+  ...
+# Subtest: identity admin report rejects incomplete, skipped or ambiguous TAP summaries
+ok 2 - identity admin report rejects incomplete, skipped or ambiguous TAP summaries
+  ---
+  duration_ms: 1.5386
+  type: 'test'
+  ...
+# Subtest: identity admin report requires every formal UI check and one browser record
+ok 3 - identity admin report requires every formal UI check and one browser record
+  ---
+  duration_ms: 1.2194
+  type: 'test'
+  ...
+# Subtest: identity admin report rejects hardware/trust inflation and missing layouts
+ok 4 - identity admin report rejects hardware/trust inflation and missing layouts
+  ---
+  duration_ms: 0.3645
+  type: 'test'
+  ...
+# Subtest: dedicated admin command checks listener, Cookie, Origin, CSRF, proxy headers and extra fields
+ok 5 - dedicated admin command checks listener, Cookie, Origin, CSRF, proxy headers and extra fields
+  ---
+  duration_ms: 375.8122
+  type: 'test'
+  ...
+# Subtest: ordinary paired data identity and forged actor context cannot acquire registration administration
+ok 6 - ordinary paired data identity and forged actor context cannot acquire registration administration
+  ---
+  duration_ms: 139.9405
+  type: 'test'
+  ...
+# Subtest: bounded metadata pages, explicit confirmation and CAS approval preserve exact grants and HTTP audit actor
+ok 7 - bounded metadata pages, explicit confirmation and CAS approval preserve exact grants and HTTP audit actor
+  ---
+  duration_ms: 260.8417
+  type: 'test'
+  ...
+# Subtest: HTTP user/key enable-disable, irreversible revoke, reductions and atomic replacement reuse CLI validation
+ok 8 - HTTP user/key enable-disable, irreversible revoke, reductions and atomic replacement reuse CLI validation
+  ---
+  duration_ms: 309.0992
+  type: 'test'
+  ...
+# Subtest: session maintenance is paginated, CAS protected, namespace strict and can revoke the current management session
+ok 9 - session maintenance is paginated, CAS protected, namespace strict and can revoke the current management session
+  ---
+  duration_ms: 237.7807
+  type: 'test'
+  ...
+# Subtest: registration.list rejects unbounded or malformed pages
+ok 10 - registration.list rejects unbounded or malformed pages
+  ---
+  duration_ms: 173.9277
+  type: 'test'
+  ...
+# Subtest: registration.users.list rejects unbounded or malformed pages
+ok 11 - registration.users.list rejects unbounded or malformed pages
+  ---
+  duration_ms: 172.2016
+  type: 'test'
+  ...
+# Subtest: registration.credentials.list rejects unbounded or malformed pages
+ok 12 - registration.credentials.list rejects unbounded or malformed pages
+  ---
+  duration_ms: 173.0755
+  type: 'test'
+  ...
+# Subtest: registration.sessions.list rejects unbounded or malformed pages
+ok 13 - registration.sessions.list rejects unbounded or malformed pages
+  ---
+  duration_ms: 168.33
+  type: 'test'
+  ...
+# Subtest: audit-capacity failure prevents an admin mutation and preserves pending state
+ok 14 - audit-capacity failure prevents an admin mutation and preserves pending state
+  ---
+  duration_ms: 150.2876
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3481.4493

@@ -436,6 +436,10 @@ describe('Pivot composite table presentation', () => {
       client: {
         model: () => ({
           query: () => ({
+            is() { return this; },
+            contains() { return this; },
+            gt() { return this; },
+            lt() { return this; },
             execute: async () => [
               {
                 name: 'Root',

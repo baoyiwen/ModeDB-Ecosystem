@@ -1,0 +1,25 @@
+{
+  "ok": false,
+  "documentFiles": 11,
+  "localLinksAndAnchors": 297,
+  "failures": [
+    {
+      "file": "docs/security-v1-deliveries/SEC-M7.md",
+      "target": "evidence/SEC-M7-D21/checks.original.json.txt",
+      "reason": "missing-file"
+    },
+    {
+      "file": "docs/security-v1-deliveries/SEC-M7.md",
+      "target": "evidence/SEC-M7-D21/verification.json",
+      "reason": "missing-file"
+    },
+    {
+      "file": "docs/security-v1-deliveries/SEC-M7.md",
+      "target": "evidence/SEC-M7-D21/acceptance.json",
+      "reason": "missing-file"
+    }
+  ],
+  "registrationTaskRows": 23,
+  "completedRegistrationTasks": 10,
+  "cliExamplesKnown": true
+}

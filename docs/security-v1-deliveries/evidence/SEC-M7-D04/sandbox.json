@@ -1,0 +1,24 @@
+{
+  "format": "modeldb.designer-sandbox.v1",
+  "home": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Sandbox-t2vZXn",
+  "config": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Sandbox-t2vZXn\\modeldb.config.json",
+  "candidateManifest": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Release-o6QVeK\\release-candidate.json",
+  "candidateManifestSha256": "d39644fe8cdf63d1693cf4833ed24200c9e01e6fc0c0da883e9944343a473bda",
+  "database": "security_demo",
+  "designerDatabase": "model_designer_workspace",
+  "syntheticOnly": true,
+  "real9091Touched": false,
+  "status": "stopped",
+  "api": "http://127.0.0.1:63144",
+  "designer": "http://127.0.0.1:63145",
+  "step": "frontend",
+  "checks": {
+    "paired": true,
+    "httpOnly": true,
+    "replayDenied": true,
+    "authorizedQuery": true,
+    "anonymousDenied": true,
+    "designerPage": true,
+    "configNotServed": true
+  }
+}

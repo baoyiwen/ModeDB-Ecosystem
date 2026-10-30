@@ -1,0 +1,198 @@
+
+════════════════════════════════════════════════════════════
+  0. Reset workspace + logical library directory
+════════════════════════════════════════════════════════════
+  ✓ workspace C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\e2e_engine_workspace ready
+
+════════════════════════════════════════════════════════════
+  1. AuthoringEngine: create logical DB, models (inheritance), relation, bind, seed
+════════════════════════════════════════════════════════════
+  ✓ DDL + MANUAL bind + seed rows
+
+════════════════════════════════════════════════════════════
+  2. Start ModelDB server (Fastify + WebSocket)
+════════════════════════════════════════════════════════════
+[modeldb-server] storage fingerprint (sha256): 2e567021efb088aebc41b4fd6f91ea0c74832d2d117ef063745b7d150c9b80b5
+[ModelDB] Engine is running
+  Listen: 127.0.0.1:52441
+  ➜ Local:   http://localhost:52441/ (本机访问)
+  Direct client addresses:
+    HTTP:      http://127.0.0.1:52441 (HTTP API 根地址)
+    Action:    http://127.0.0.1:52441/v2/action (单次操作接口)
+    Bulk:      http://127.0.0.1:52441/v2/bulk (批量操作接口)
+    Health:    http://127.0.0.1:52441/health (健康检查)
+    Status:    http://127.0.0.1:52441/api/v1/management/status (引擎状态)
+    WebSocket: ws://127.0.0.1:52441/ (实时 RPC)
+    Stream:    ws://127.0.0.1:52441/v2/stream (流式 RPC)
+
+  Console commands:
+    Stop:      Ctrl+C
+    Status:    modeldb-server info -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\e2e_engine_workspace\modeldb.config.json"
+    Databases: modeldb-server ls -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\e2e_engine_workspace\modeldb.config.json"
+    Create DB: modeldb-server create-db <db-name> -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\e2e_engine_workspace\modeldb.config.json"
+    Backup:    modeldb-server backup <db-name> --reason manual -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Regression-fWHzh1\data\e2e_engine_workspace\modeldb.config.json"
+
+  Note: management URLs require the configured connect token in the request header.
+  Remote access: disabled by the loopback bind. Start with --host 0.0.0.0 for direct LAN access.
+  ✓ listening on 127.0.0.1:52441
+
+════════════════════════════════════════════════════════════
+  3. ModelDB SDK: management + use + query + insertMany + alterModel (wire)
+════════════════════════════════════════════════════════════
+[ModeDB] START Management API: GET /api/v1/management/databases trace=fd3f4666
+  说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+  请求摘要: { url: 'http://127.0.0.1:52441/api/v1/management/databases' }
+[modeldb-server][catalog] e2e_engine_flow: metadataSource=e2e_engine_flow displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+[ModeDB] OK Management API: GET /api/v1/management/databases trace=fd3f4666 773.98ms
+  结果: {
+    ms: 773.98,
+    status: 200,
+    path: '/api/v1/management/databases',
+    databases: 1
+  }
+  ✓ listDatabases includes authored atlas
+[ModeDB] START Connection: open websocket trace=d2d74379
+  说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+  请求摘要: { url: 'ws://127.0.0.1:52441/v2/stream' }
+[modeldb-server] connect 127.0.0.1
+[ModeDB] OK Connection: open websocket trace=d2d74379 4.84ms
+  结果: { ms: 4.84, url: 'ws://127.0.0.1:52441/v2/stream' }
+[ModeDB] START WebSocket RPC: handshake trace=35c23bd8
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: { database: 'e2e_engine_flow' }
+[ModeDB] OK WebSocket RPC: handshake trace=35c23bd8 758.05ms
+  结果: { ms: 758.05, database: 'e2e_engine_flow' }
+[ModeDB] START WebSocket RPC: executeQuery trace=2f2d6fc5
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '8528a392-b3cc-431a-8272-184bafe72e3e',
+    database: 'e2e_engine_flow',
+    op: 'executeQuery',
+    model: 'Employee',
+    page: 0,
+    cursor: undefined,
+    limit: undefined
+  }
+[modeldb-server][rpc] START executeQuery db=e2e_engine_flow id=8528a392-b3cc-431a-8272-184bafe72e3e {
+  op: 'executeQuery',
+  model: 'Employee',
+  page: 0,
+  cursor: undefined,
+  limit: undefined
+}
+[modeldb-server][rpc] OK executeQuery db=e2e_engine_flow id=8528a392-b3cc-431a-8272-184bafe72e3e 1.93ms { kind: 'rows', rows: 1 }
+[ModeDB] OK WebSocket RPC: executeQuery trace=2f2d6fc5 3.24ms
+  结果: { ms: 3.24, kind: 'rows', rows: 1 }
+  ✓ query Employee returns rows
+  ✓ hydrated row type
+[ModeDB] START WebSocket RPC: insertMany trace=439f3d64
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: 'cd03f702-cf70-4856-8b15-6ddeae96c122',
+    database: 'e2e_engine_flow',
+    op: 'insertMany',
+    model: 'Employee',
+    relation: undefined,
+    strategy: undefined,
+    batchSize: undefined
+  }
+[modeldb-server][rpc] START insertMany db=e2e_engine_flow id=cd03f702-cf70-4856-8b15-6ddeae96c122 {
+  op: 'insertMany',
+  model: 'Employee',
+  relation: undefined,
+  strategy: undefined,
+  batchSize: undefined
+}
+[modeldb-server][rpc] OK insertMany db=e2e_engine_flow id=cd03f702-cf70-4856-8b15-6ddeae96c122 9.48ms {
+  kind: 'mutation',
+  op: 'insertMany',
+  ok: undefined,
+  successCount: 1,
+  failureCount: 0,
+  pairsCount: undefined
+}
+[ModeDB] OK WebSocket RPC: insertMany trace=439f3d64 10.44ms
+  结果: {
+    ms: 10.44,
+    kind: 'mutation',
+    op: 'insertMany',
+    ok: undefined,
+    successCount: 1,
+    failureCount: 0,
+    pairsCount: undefined
+  }
+[ModeDB] START WebSocket RPC: executeQuery trace=55b130c8
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '2739dd99-346b-40a6-a128-91f0b8eee364',
+    database: 'e2e_engine_flow',
+    op: 'executeQuery',
+    model: 'Employee',
+    page: 0,
+    cursor: undefined,
+    limit: undefined
+  }
+[modeldb-server][rpc] START executeQuery db=e2e_engine_flow id=2739dd99-346b-40a6-a128-91f0b8eee364 {
+  op: 'executeQuery',
+  model: 'Employee',
+  page: 0,
+  cursor: undefined,
+  limit: undefined
+}
+[modeldb-server][rpc] OK executeQuery db=e2e_engine_flow id=2739dd99-346b-40a6-a128-91f0b8eee364 0.2ms { kind: 'rows', rows: 2 }
+[ModeDB] OK WebSocket RPC: executeQuery trace=55b130c8 0.78ms
+  结果: { ms: 0.78, kind: 'rows', rows: 2 }
+  ✓ insertMany visible in query
+[ModeDB] START WebSocket RPC: alterModel trace=6d199c25
+  说明: 前端正在通过 WebSocket 调用引擎数据库操作，例如查询、写入、绑定关系或修改模型。
+  请求摘要: {
+    id: '1ecfbdac-6952-42ce-a872-7a53833ed198',
+    database: 'e2e_engine_flow',
+    op: 'alterModel',
+    model: 'Person',
+    relation: undefined,
+    strategy: undefined,
+    batchSize: undefined
+  }
+[modeldb-server][rpc] START alterModel db=e2e_engine_flow id=1ecfbdac-6952-42ce-a872-7a53833ed198 {
+  op: 'alterModel',
+  model: 'Person',
+  relation: undefined,
+  strategy: undefined,
+  batchSize: undefined
+}
+[modeldb-server][rpc] OK alterModel db=e2e_engine_flow id=1ecfbdac-6952-42ce-a872-7a53833ed198 7.78ms {
+  kind: 'mutation',
+  op: 'alterModel',
+  ok: true,
+  successCount: undefined,
+  failureCount: undefined,
+  pairsCount: undefined
+}
+[ModeDB] OK WebSocket RPC: alterModel trace=6d199c25 8.38ms
+  结果: {
+    ms: 8.38,
+    kind: 'mutation',
+    op: 'alterModel',
+    ok: true,
+    successCount: undefined,
+    failureCount: undefined,
+    pairsCount: undefined
+  }
+  ✓ alterModel patch over wire
+
+════════════════════════════════════════════════════════════
+  4. AuthoringEngine (reopen): update + relation logic tweak + delete
+════════════════════════════════════════════════════════════
+  ✓ Person has title after remote alterModel
+  ✓ updateRelationLogic(manages)
+  ✓ engine.update Employee
+  ✓ Employee e2 exists after remote insertMany
+  ✓ engine.delete Employee e2
+
+════════════════════════════════════════════════════════════
+  5. Disconnect (server stop)
+════════════════════════════════════════════════════════════
+  ✓ client already closed
+
+e2e-engine-workflow: 14 passed, 0 failed

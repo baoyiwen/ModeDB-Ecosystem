@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "previousCandidateSha256": "f10a5827dec955c5419dce5f3d272ae09e1d0815ff2bd5798ba8c0c11bc7b5fb",
+  "currentCandidateSha256": "a39423ce9d819166dde529bdd1ca3862d648f29bac8a6d3461637811ca2b3e4e",
+  "unchangedProductBuildFiles": 18,
+  "changedCandidateSourcePaths": [
+    "scripts/security-browser-candidate-check.mjs"
+  ],
+  "finalNativePass": 9
+}

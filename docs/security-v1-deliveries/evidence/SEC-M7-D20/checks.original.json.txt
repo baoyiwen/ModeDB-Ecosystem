@@ -1,0 +1,261 @@
+{
+  "format": "modeldb.security-dynamic-authorization-checks.v1",
+  "task": "DR-P2.3",
+  "testCommands": [
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-dynamic-authorization.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "dynamic.original.txt",
+      "stderr": "dynamic.stderr.original.txt"
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-authentication.test.ts",
+        "test/unit/security-authentication-storage.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "authentication.original.txt",
+      "stderr": "authentication.stderr.original.txt"
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-session-parent.test.ts",
+        "test/unit/security-registration-contract.test.mjs",
+        "test/unit/security-device-registration-contract.test.ts",
+        "test/unit/security-registration-storage.test.ts",
+        "test/unit/security-registration-runtime.test.ts",
+        "test/unit/security-registration-approval.test.ts",
+        "test/unit/security-registry.test.ts",
+        "test/unit/security-windows-keys.test.ts",
+        "test/unit/security-browser-session.test.ts",
+        "test/unit/security-network.test.ts",
+        "test/unit/security-authorization.test.ts",
+        "test/unit/security-registry-http.test.ts"
+      ],
+      "exitCode": 0,
+      "log": "regression.original.txt",
+      "stderr": "regression.stderr.original.txt"
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/tsx/dist/cli.mjs",
+        "--test",
+        "--test-reporter=tap",
+        "test/unit/security-release-evidence.test.mjs",
+        "test/unit/security-authentication-report.test.mjs"
+      ],
+      "exitCode": 0,
+      "log": "tools.original.txt",
+      "stderr": "tools.stderr.original.txt"
+    }
+  ],
+  "staticChecks": [
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "scripts/security-registration-storage-check.mjs"
+      ],
+      "exitCode": 0,
+      "log": "types.original.txt"
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/eslint/bin/eslint.js",
+        "packages/core/src/network/operation-executor.ts",
+        "packages/server/src/security/security-registry.ts",
+        "packages/server/src/security/authorization-service.ts",
+        "packages/server/src/security/registration-ledger.ts",
+        "packages/server/src/security/registry-entrypoints.ts",
+        "packages/server/src/request-dispatcher.ts",
+        "packages/server/src/published-interface-runtime.ts",
+        "packages/server/src/published-operation-interface-runtime.ts",
+        "packages/server/src/published-binding-surface-runtime.ts",
+        "scripts/security-registration-storage-check.mjs",
+        "scripts/security-release-evidence.mjs"
+      ],
+      "exitCode": 0,
+      "log": "lint.original.txt"
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/prettier/bin/prettier.cjs",
+        "--check",
+        "packages/core/src/network/operation-executor.ts",
+        "packages/server/src/security/security-registry.ts",
+        "packages/server/src/security/authorization-service.ts",
+        "packages/server/src/security/registration-ledger.ts",
+        "packages/server/src/security/registry-entrypoints.ts",
+        "packages/server/src/request-dispatcher.ts",
+        "packages/server/src/published-interface-runtime.ts",
+        "packages/server/src/published-operation-interface-runtime.ts",
+        "packages/server/src/published-binding-surface-runtime.ts",
+        "scripts/security-registration-storage-check.mjs",
+        "scripts/security-release-evidence.mjs",
+        "docs/security-v1/device-registration-protocol-contract.md",
+        "docs/security-v1/device-registration-runtime-guide.md",
+        "docs/security-v1/overview.md",
+        "docs/security-v1/user-guide.md",
+        "docs/security-v1-identity-contract.md",
+        "docs/security-v1-authorization-contract.md",
+        "docs/security-browser-sessions.md",
+        "docs/security-v1-plan.md",
+        "docs/security-v1/AGENTS.md",
+        "docs/security-v1-milestones.md",
+        "docs/security-v1-deliveries/SEC-M7.md",
+        "test/README.md",
+        "package.json"
+      ],
+      "exitCode": 0,
+      "log": "format.original.txt"
+    },
+    {
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "scripts/assert-no-security-material.mjs"
+      ],
+      "exitCode": 0,
+      "log": "material-guard.original.txt"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "packages/core/src/network/operation-executor.ts",
+        "packages/server/src/security/security-registry.ts",
+        "packages/server/src/security/authorization-service.ts",
+        "packages/server/src/security/registration-ledger.ts",
+        "packages/server/src/security/registry-entrypoints.ts",
+        "packages/server/src/request-dispatcher.ts",
+        "packages/server/src/published-interface-runtime.ts",
+        "packages/server/src/published-operation-interface-runtime.ts",
+        "packages/server/src/published-binding-surface-runtime.ts",
+        "scripts/security-registration-storage-check.mjs",
+        "scripts/security-release-evidence.mjs",
+        "docs/security-v1/device-registration-protocol-contract.md",
+        "docs/security-v1/device-registration-runtime-guide.md",
+        "docs/security-v1/overview.md",
+        "docs/security-v1/user-guide.md",
+        "docs/security-v1-identity-contract.md",
+        "docs/security-v1-authorization-contract.md",
+        "docs/security-browser-sessions.md",
+        "docs/security-v1-plan.md",
+        "docs/security-v1/AGENTS.md",
+        "docs/security-v1-milestones.md",
+        "docs/security-v1-deliveries/SEC-M7.md",
+        "test/README.md",
+        "package.json"
+      ],
+      "exitCode": 0,
+      "log": "diff-check.original.txt"
+    }
+  ],
+  "nativeIntegration": {
+    "format": "modeldb.authentication-integration-check.v1",
+    "ok": true,
+    "task": "DR-P2.2",
+    "node": "v24.22.1",
+    "platform": "win32",
+    "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Flow-Report-u732EK",
+    "command": [
+      "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+      "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+      "--test",
+      "--test-reporter=tap",
+      "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-authentication-browser.test.ts"
+    ],
+    "exitCode": 0,
+    "durationMs": 108473.5711,
+    "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Authentication-Flow-Report-u732EK\\integration.tap",
+    "unit": {
+      "pass": 1,
+      "fail": 0,
+      "skip": 0,
+      "cancelled": 0,
+      "todo": 0
+    },
+    "browser": {
+      "format": "modeldb.authentication-browser.v1",
+      "ok": true,
+      "browser": "Chrome/156.0.8078.48",
+      "checks": {
+        "actualBrowserWebAuthnGet": true,
+        "freshSdkBundle": true,
+        "nativeTlsDpapiApproval": true,
+        "pendingDenied": true,
+        "httpOnlySecureStrict": true,
+        "dataScope": true,
+        "adminDenied": true,
+        "reloadRecovery": true,
+        "csrfRotation": true,
+        "logout": true,
+        "restartRecovery": true,
+        "disabledNewLogin": true,
+        "expiredRegistrationIndependent": true,
+        "noApiCredential": true,
+        "instanceKeyUnchanged": true
+      },
+      "hardwareAuthenticatorTested": false,
+      "systemTrustInstalled": false
+    },
+    "scope": {
+      "temporarySyntheticOnly": true,
+      "liveMaterialRead": false,
+      "hardwareAuthenticatorTested": false,
+      "productionRegistrationUiTested": false,
+      "publicKeyLoginImplemented": true,
+      "systemTrustInstalled": false
+    }
+  },
+  "consumerCheck": {
+    "ok": true,
+    "format": "modeldb.registration-consumer-check.v1",
+    "node": "v24.22.1",
+    "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Consumers-emTwjv",
+    "checks": {
+      "freshSharedDeclarations": true,
+      "strictSdkConsumer": true,
+      "domTypesWithoutNode": true,
+      "sharedBrowserBundle": true,
+      "sdkBrowserBundle": true,
+      "serverLibraryExcluded": true
+    },
+    "bundles": [
+      {
+        "entry": "packages/shared/src/index.ts",
+        "bytes": 87304,
+        "sha256": "4f5aa34eb00f123cc2dfc2b537281b2804c68ff40d32816a012406959531640b"
+      },
+      {
+        "entry": "packages/sdk/src/index.ts",
+        "bytes": 150572,
+        "sha256": "6e7d7a81567c9ebf107ca79a30e7c41336afe3088c869cca9ffead459a459cce"
+      }
+    ]
+  },
+  "preexistingSecurityIndexDeletionsPreserved": 4,
+  "documentCheck": {
+    "script": "docs/security-v1-deliveries/evidence/SEC-M7-D20/documents-check.original.mjs.txt",
+    "exitCode": 0,
+    "log": "documents.original.json.txt"
+  },
+  "historicalEvidenceVerified": 142
+}

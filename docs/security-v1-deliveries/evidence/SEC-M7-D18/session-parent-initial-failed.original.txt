@@ -1,0 +1,586 @@
+TAP version 13
+# Subtest: V1 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+ok 1 - V1 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+  ---
+  duration_ms: 153.7768
+  type: 'test'
+  ...
+# Subtest: V2 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+ok 2 - V2 open is read-only; explicit CAS migration preserves tokens, pairings, sessions and keys
+  ---
+  duration_ms: 148.6936
+  type: 'test'
+  ...
+# Subtest: V3 API issuance, invitation, rotation and revocation preserve the API namespace
+ok 3 - V3 API issuance, invitation, rotation and revocation preserve the API namespace
+  ---
+  duration_ms: 123.5924
+  type: 'test'
+  ...
+# Subtest: local management remains empty-scope and cannot be rotated or paired into a reusable API identity
+ok 4 - local management remains empty-scope and cannot be rotated or paired into a reusable API identity
+  ---
+  duration_ms: 98.4217
+  type: 'test'
+  ...
+# Subtest: registered parent resolves only its own live grants and never mints or inherits API credentials
+not ok 5 - registered parent resolves only its own live grants and never mints or inherits API credentials
+  ---
+  duration_ms: 63.5329
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:8432'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:137:33)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: registered parent fails closed after disabled-key
+not ok 6 - registered parent fails closed after disabled-key
+  ---
+  duration_ms: 54.3861
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:10196'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:161:19)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: registered parent fails closed after revoked-key
+not ok 7 - registered parent fails closed after revoked-key
+  ---
+  duration_ms: 54.4348
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:10196'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:161:19)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: registered parent fails closed after disabled-user
+not ok 8 - registered parent fails closed after disabled-user
+  ---
+  duration_ms: 53.6454
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:10196'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:161:19)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: registered parent fails closed after disabled-principal
+not ok 9 - registered parent fails closed after disabled-principal
+  ---
+  duration_ms: 55.3011
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:10196'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:161:19)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: registered parent fails closed after expired
+not ok 10 - registered parent fails closed after expired
+  ---
+  duration_ms: 55.0883
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:10196'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:161:19)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: registered parent fails closed after reset
+not ok 11 - registered parent fails closed after reset
+  ---
+  duration_ms: 52.2515
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:10196'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:161:19)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: missing parent
+not ok 12 - rejects malformed persisted parent: missing parent
+  ---
+  duration_ms: 51.9702
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: null parent
+not ok 13 - rejects malformed persisted parent: null parent
+  ---
+  duration_ms: 51.5852
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: unknown kind
+not ok 14 - rejects malformed persisted parent: unknown kind
+  ---
+  duration_ms: 52.0661
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: foreign credential
+not ok 15 - rejects malformed persisted parent: foreign credential
+  ---
+  duration_ms: 55.5654
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: foreign user
+not ok 16 - rejects malformed persisted parent: foreign user
+  ---
+  duration_ms: 63.0855
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: foreign principal
+not ok 17 - rejects malformed persisted parent: foreign principal
+  ---
+  duration_ms: 70.4297
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: API namespace confusion
+not ok 18 - rejects malformed persisted parent: API namespace confusion
+  ---
+  duration_ms: 68.6484
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: management namespace confusion
+not ok 19 - rejects malformed persisted parent: management namespace confusion
+  ---
+  duration_ms: 61.3437
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: public key with admin flag
+not ok 20 - rejects malformed persisted parent: public key with admin flag
+  ---
+  duration_ms: 58.805
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: public key with wrong Origin
+not ok 21 - rejects malformed persisted parent: public key with wrong Origin
+  ---
+  duration_ms: 56.8036
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: public key with no absolute expiry
+not ok 22 - rejects malformed persisted parent: public key with no absolute expiry
+  ---
+  duration_ms: 58.3549
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: public key with long lifetime
+not ok 23 - rejects malformed persisted parent: public key with long lifetime
+  ---
+  duration_ms: 59.9632
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: public key with long absolute expiry
+not ok 24 - rejects malformed persisted parent: public key with long absolute expiry
+  ---
+  duration_ms: 54.4915
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: secret on parent
+not ok 25 - rejects malformed persisted parent: secret on parent
+  ---
+  duration_ms: 54.7215
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: secret on session
+not ok 26 - rejects malformed persisted parent: secret on session
+  ---
+  duration_ms: 60.9048
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: public key pairing
+not ok 27 - rejects malformed persisted parent: public key pairing
+  ---
+  duration_ms: 60.7616
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: rejects malformed persisted parent: downgraded root with new parent
+not ok 28 - rejects malformed persisted parent: downgraded root with new parent
+  ---
+  duration_ms: 58.5252
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-session-parent.test.ts:1:12578'
+  failureType: 'testCodeFailure'
+  error: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  code: 'SECURITY_REGISTRATION_SCHEMA_INVALID'
+  name: 'DeviceRegistrationContractError'
+  stack: |-
+    invalid (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:100:9)
+    requireValue (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:104:5)
+    assertRegistrationLedgerTransition (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\registration-ledger.ts:488:7)
+    SecurityRegistry.commitRegistrationStorage (C:\workspace\web_code\ModeDB-Ecosystem\packages\server\src\security\security-registry.ts:504:5)
+    publicSession (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:67:14)
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-session-parent.test.ts:197:11)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+  ...
+# Subtest: session migration and audit recover atomically at staged
+ok 29 - session migration and audit recover atomically at staged
+  ---
+  duration_ms: 113.8285
+  type: 'test'
+  ...
+# Subtest: session migration and audit recover atomically at journaled
+ok 30 - session migration and audit recover atomically at journaled
+  ---
+  duration_ms: 115.6754
+  type: 'test'
+  ...
+# Subtest: session migration and audit recover atomically at replaced
+ok 31 - session migration and audit recover atomically at replaced
+  ---
+  duration_ms: 105.9018
+  type: 'test'
+  ...
+# Subtest: protection and audit failures never report a successful migration
+ok 32 - protection and audit failures never report a successful migration
+  ---
+  duration_ms: 52.1259
+  type: 'test'
+  ...
+1..32
+# tests 32
+# suites 0
+# pass 8
+# fail 24
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2680.4503
