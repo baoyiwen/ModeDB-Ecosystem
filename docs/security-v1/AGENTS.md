@@ -1,5 +1,9 @@
 # 项目说明
 
+D35 后续：lint-staged会隐藏部分暂存配置的未暂存修复，不能用工作区lint通过推断提交钩子通过。此次再次报18文件上限已确认暂存配置仍旧，已仅同步三个检查配置修复到暂存区，暂存blob复验98源码0错误/4警告、160格式通过。后续检查提交问题时同时核对工作区和 `git show :eslint.config.js`，保留其他暂存/未暂存改动，不通过关闭stash或跳过钩子绕过。详见SEC-M7/D35后续反馈；DR-P4.6状态不变。
+
+D35（2026-10-30）：提交工具修复不改变D34验收状态。归档 `docs/security-v1-deliveries/evidence/` 在ESLint、Prettier及lint-staged中统一排除，历史报告/构建/工具快照原字节不得自动重排；常规JS工具保留规则并使用非项目解析，业务TS仍走项目服务。见SEC-M7/D35；不要为通过提交而把归档加入TS项目或更新历史摘要。
+
 D34 当前接续：DR-P4.6 进行中，双机隔离演练脚本/逐步手册已准备，实际 Windows Hello/两台设备仍待用户执行。新增扩展保持22/23、DR-P4为5/6、必需工作包3/4。先读 SEC-M7/D34、唯一台账与[Windows双机手册](windows-device-drill-guide.md)。B 用户确认“尚未设置或不确定 Hello”，先指导设置→账户→登录选项，不索取PIN/生物特征。Prepare/Smoke不算双机验收；内置restart为同进程重建服务，还需stop后新Serve的进程重启拒绝。仅transfer公开ticket/证书可交B，pin独立核对，不传私钥/实例/profile。两端冻结LF源码摘要，默认新临时合成目录，可信私网仅显式Prepare地址后由用户Serve；不安装系统信任或改hosts。总证据D34只报告preparation-passed-device-pending，不能回填硬件完成。D33及以前结果/下一任务为各自历史，原字节不回写；真实服务与材料边界不变。
 
 ## 项目目标
