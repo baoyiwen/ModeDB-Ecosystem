@@ -1,5 +1,7 @@
 # ModelDB 安全 V1 使用手册
 
+D37：进入编辑器后 `status` 的 `state`、`applicationId` 为 null 是正常的，身份面板已卸载；`ready` 以服务端会话为准，应显示 `sessionStatus: 200`、`ready: true`、`editorReady: true`。`save` 不依赖提前执行 `status`，会重新核实登录与开库；成功显示 `SUCCESS: save`。随后 `refresh` 等待新页面恢复并只读回，成功显示 `SUCCESS: refresh`。旧脚本若出现 ready=false/editorReady=true 及笼统失败，请两端同步修复后新建演练，保留旧报告，不改 ticket 摘要；详细步骤与错误码见[双机手册](windows-device-drill-guide.md)。
+
 D36：Passkey 登录后点击“继续访问模型库”，选择业务库并“打开库”。管理员须预建并分别授权业务库和 `model_designer_workspace`；后者初始化/保存需要 `model.read`、`model.write`、`schema.manage`、`transfer.import`。列库/catalog 使用数据面只读入口，创建/删除/备份仍是管理操作。Server 与 SDK/托管 Designer 同步更新，按[双机手册](windows-device-drill-guide.md)新建一轮演练，不放宽管理来源。
 
 D34：[两台Windows实际认证器操作手册](windows-device-drill-guide.md)提供Hello检查、A Prepare/Serve、B Client、准确ID审批/停用、合成保存/刷新/断网以及同进程和独立进程重启拒绝步骤。命令使用现成`.ps1`，无需复制多行here-string；仅回传脱敏报告。实际双机/取消/丢失恢复项目尚待执行，不能把Smoke当作完成。

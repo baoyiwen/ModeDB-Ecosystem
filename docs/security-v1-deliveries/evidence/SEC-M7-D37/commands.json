@@ -1,0 +1,57 @@
+[
+  {
+    "command": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "test/unit/security-device-drill.test.mjs",
+      "test/unit/security-designer-identity-report.test.mjs"
+    ],
+    "exitCode": 0,
+    "log": "unit.final.tap",
+    "pass": 31
+  },
+  {
+    "command": [
+      "C:/nvm4w/nodejs/node.exe",
+      "scripts/security-registration-storage-check.mjs"
+    ],
+    "exitCode": 0,
+    "log": "types.original.txt"
+  },
+  {
+    "command": [
+      "C:/nvm4w/nodejs/node.exe",
+      "scripts/security-designer-identity-check.mjs"
+    ],
+    "exitCode": 1,
+    "log": "browser.original.txt",
+    "report": "browser-failed.original.json",
+    "reason": "20s editor restore timeout; preserved"
+  },
+  {
+    "command": [
+      "C:/nvm4w/nodejs/node.exe",
+      "scripts/security-designer-identity-check.mjs"
+    ],
+    "exitCode": 0,
+    "log": "browser.final.txt",
+    "report": "browser-final.original.json",
+    "pass": 1
+  },
+  {
+    "command": [
+      "node",
+      "node_modules/eslint/bin/eslint.js",
+      "scripts/security-device-drill-client-state.mjs",
+      "scripts/security-device-drill-runner.mjs"
+    ],
+    "exitCode": 1,
+    "log": "lint.original.txt",
+    "reason": "missing curly braces; fixed"
+  },
+  {
+    "report": "static-final.json",
+    "exitCode": 0
+  }
+]

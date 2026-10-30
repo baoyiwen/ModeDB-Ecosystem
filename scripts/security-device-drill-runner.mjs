@@ -27,7 +27,11 @@ import { AuthoringEngine } from '../packages/core/authoring/engine.ts';
 import { buildHostedDesigner } from './security-hosting-build.mjs';
 import { deviceBrowser } from './security-device-drill-browser.mjs';
 import {
-  assertProbe,
+  readDeviceClientStatus,
+  refreshDeviceClient,
+  saveDeviceClient,
+} from './security-device-drill-client-state.mjs';
+import {
   assertIsolatedConfig,
   createDrillCertificate,
   digest,
@@ -37,7 +41,6 @@ import {
   ownFile,
   privateIPv4,
   readTicket,
-  saveExpression,
   sourceFingerprint,
   uuidPattern,
   validateTicket,
@@ -510,42 +513,13 @@ async function client(args) {
       'B> status / save / refresh / denied / offline / online / stop',
       async (command) => {
         if (command === 'status') {
-          const state = await page.evaluate(
-            `({state:document.querySelector('[data-identity-state]')?.getAttribute('data-identity-state')??null,applicationId:document.querySelector('[data-identity-state] dd')?.textContent??null,ready:!!document.querySelector('[data-identity-session="ready"]'),editorReady:!document.querySelector('.designer-connection-flow')&&!!document.querySelector('canvas'),issue:document.querySelector('[data-identity-issue]')?.getAttribute('data-identity-issue')??null})`,
-          );
-          if (state.applicationId && !uuidPattern.test(state.applicationId)) {
-            state.applicationId = null;
-          }
-          output(state);
-          if (state.state === 'pending') {
-            assert.equal(await ready(), 401);
-            check('formalPending');
-          }
-          if (state.state === 'approved' && !state.ready) {
-            assert.equal(await ready(), 401);
-            check('approvalRequiresFreshLogin');
-          }
-          if (state.ready && (await ready()) === 200) {
-            check('formalLogin');
-          }
-          if (state.editorReady && (await ready()) === 200) {
-            check('formalLibraryOpened');
-          }
+          output(await readDeviceClientStatus(page, check));
         } else if (command === 'save') {
-          assert.equal(report.checks.formalLogin, true);
-          assert.equal(report.checks.formalLibraryOpened, true, 'DEVICE_OPEN_LIBRARY_BEFORE_SAVE');
-          assertProbe(await page.evaluate(saveExpression(true)));
-          check('syntheticSaveReadbackAndBoundaries');
+          await saveDeviceClient(page, check);
+          output('SUCCESS: save');
         } else if (command === 'refresh') {
-          assert.equal(report.checks.syntheticSaveReadbackAndBoundaries, true);
-          await page.call('Page.reload');
-          const deadline = Date.now() + 20000;
-          while ((await ready()) !== 200) {
-            assert.ok(Date.now() < deadline);
-            await delay(100);
-          }
-          assertProbe(await page.evaluate(saveExpression(false)));
-          check('reloadReadback');
+          await refreshDeviceClient(page, report.checks, check);
+          output('SUCCESS: refresh');
         } else if (command === 'denied') {
           const denied = await page.evaluate(
             `(async()=>({session:(await fetch('/api/v1/security/session')).status,context:(await fetch('/api/v1/security/context?database=synthetic_business')).status,issue:document.querySelector('[data-identity-issue]')?.getAttribute('data-identity-issue')??null}))()`,

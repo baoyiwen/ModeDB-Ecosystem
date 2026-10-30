@@ -19,6 +19,13 @@ import {utc} from '../fixtures/security-registration-integration.js';
 import {assertSyntheticBrowserSave} from '../fixtures/security-browser-save.js';
 import type {DeviceRegistrationConnectionDescriptorV1, SecurityGrant} from '@mode-db/shared';
 const {deviceDrillGrants}=await import(new URL('../../scripts/security-device-drill-contract.mjs',import.meta.url).href) as {deviceDrillGrants:readonly SecurityGrant[]};
+type DrillPage=Awaited<ReturnType<typeof registrationBrowser>>;
+type DrillCheck=(name:string)=>void;
+const {readDeviceClientStatus,saveDeviceClient,refreshDeviceClient}=await import(new URL('../../scripts/security-device-drill-client-state.mjs',import.meta.url).href) as {
+  readDeviceClientStatus:(page:DrillPage,check:DrillCheck)=>Promise<{ready:boolean;editorReady:boolean;state:string|null;sessionStatus:number}>,
+  saveDeviceClient:(page:DrillPage,check:DrillCheck)=>Promise<void>,
+  refreshDeviceClient:(page:DrillPage,checks:Record<string,boolean>,check:DrillCheck)=>Promise<void>
+};
 
 test('formal Designer registration, pending/rejection/approval, Passkey login, library opening, recovery and localized layouts', {timeout:420000}, async t=>{
   assert.equal(process.platform,'win32','Native Windows is required');
@@ -115,18 +122,29 @@ test('formal Designer registration, pending/rejection/approval, Passkey login, l
     await click('.designer-connection-actions button.designer-btn-primary');
     const editorReady=()=>page!.evaluate<boolean>(`!document.querySelector('.designer-connection-flow') && !!document.querySelector('canvas')`);
     await waitFor(editorReady,Boolean,120000);
+    // Match B's exact order: first status occurs only after the identity panel
+    // unmounts. Use the interactive runner's steps, not an independent RPC fixture.
+    const clientChecks:Record<string,boolean>={},clientCheck:DrillCheck=name=>{clientChecks[name]=true;};
+    const clientStatus=await readDeviceClientStatus(page,clientCheck);
+    assert.equal(clientStatus.state,null);assert.equal(clientStatus.ready,true);assert.equal(clientStatus.editorReady,true);assert.equal(clientStatus.sessionStatus,200);
+    assert.equal(clientChecks.formalLogin,true);assert.equal(clientChecks.formalLibraryOpened,true);
+    await saveDeviceClient(page,clientCheck);assert.equal(clientChecks.syntheticSaveReadbackAndBoundaries,true);
     assert.equal(await page.evaluate<boolean>(`(async()=>{const c=await fetch('/api/v1/databases/synthetic_business/catalog').then(r=>r.json());return c.models.some(m=>m.name==='SyntheticItem')&&c.models.every(m=>!m.name.startsWith('sys_'));})()`),true,'Designer metadata remains outside the business database');
     // A connected Designer restores the editor, rather than the login panel, on reload.
-    await page.call('Page.reload');await waitFor(editorReady,Boolean,120000);
+    await refreshDeviceClient(page,clientChecks,clientCheck);assert.equal(clientChecks.reloadReadback,true);
     await assertSyntheticBrowserSave(page,false);
     const credentials=await local({action:'registration.credentials.list',instanceId}) as {revision:number;credentials:Array<{id:string}>};
     assert.equal(credentials.credentials.length,1);
     await local({action:'registration.credential.disable',instanceId,id:credentials.credentials[0]!.id,revision:credentials.revision,confirm:true});
+    const revokedChecks:Record<string,boolean>={},revokedCheck:DrillCheck=name=>{revokedChecks[name]=true;};
+    assert.equal((await readDeviceClientStatus(page,revokedCheck)).ready,false);
+    await assert.rejects(saveDeviceClient(page,revokedCheck),/DEVICE_LOGIN_REQUIRED_BEFORE_SAVE/);
+    assert.deepEqual(revokedChecks,{});
     assert.equal(await page.evaluate<number>(`fetch('/api/v1/security/context?database=synthetic_business').then(r=>r.status)`),401);
     assert.equal(await page.evaluate<number>(`fetch('/api/v1/databases').then(r=>r.status)`),401);
     assert.equal(await page.evaluate<number>(`fetch('/api/v1/databases/synthetic_business/catalog').then(r=>r.status)`),401);
     await navigate();await ready();await click('[data-identity-login]');
     await waitFor(()=>page!.evaluate<string>(`document.querySelector('[data-identity-issue]')?.getAttribute('data-identity-issue')`),v=>v==='identity',30000);
-    t.diagnostic(JSON.stringify({format:'modeldb.designer-identity-browser.v1',ok:true,browser:page.version,screenshots:24,hardwareAuthenticatorTested:false,systemTrustInstalled:false,liveMaterialRead:false,checks:{formalLibraryOpened:true,designerBusinessIsolation:true,dataOnlySourcePolicy:true,syntheticSaveReadback:true,freshDesignerBuild:true,formalRegistration:true,pendingNoAuthority:true,rejectedState:true,localOsApproval:true,approvalRequiresLogin:true,actualWebAuthnLogin:true,syntheticDataScope:true,managementDenied:true,httpOnlySecureStrict:true,reloadRestoresSession:true,continuationNotPersisted:true,logout:true,expiredWindowLogin:true,revocationDenied:true,cancelledExplained:true,localizedZhEnJa:true,wideAndNarrow:true,labelsAndFocus:true}}));
+    t.diagnostic(JSON.stringify({format:'modeldb.designer-identity-browser.v1',ok:true,browser:page.version,screenshots:24,hardwareAuthenticatorTested:false,systemTrustInstalled:false,liveMaterialRead:false,checks:{drillFirstStatusInEditor:true,drillSaveAndRefresh:true,drillRevokedSaveDenied:true,formalLibraryOpened:true,designerBusinessIsolation:true,dataOnlySourcePolicy:true,syntheticSaveReadback:true,freshDesignerBuild:true,formalRegistration:true,pendingNoAuthority:true,rejectedState:true,localOsApproval:true,approvalRequiresLogin:true,actualWebAuthnLogin:true,syntheticDataScope:true,managementDenied:true,httpOnlySecureStrict:true,reloadRestoresSession:true,continuationNotPersisted:true,logout:true,expiredWindowLogin:true,revocationDenied:true,cancelledExplained:true,localizedZhEnJa:true,wideAndNarrow:true,labelsAndFocus:true}}));
   }finally{await page?.close();await app?.close();}
 });

@@ -4,6 +4,8 @@
 
 D36 修复登录后进入模型库的 `SECURITY_SOURCE_DENIED`：数据面列库/catalog 与管理操作分开，预建并准确授权业务库及设计器专属库。旧轮保留；A/B 同步本次源码后新建 Prepare，重新传公开 ticket/证书、独立核对新 pin、注册和审批，不修改旧轮摘要或放开 management 来源。
 
+D37 修复开库后 `ready: false` / `editorReady: true`、`save` 与 `refresh` 连带失败：旧工具依赖已经卸载的身份面板而漏记登录，并非这条输出已证明数据库写入失败。修复后的登录判断取自服务端，保存时重新检查会话和编辑器。源码摘要已改变，仍须两端同步后新 Prepare；保留旧现场，不能将旧报告改写为成功。
+
 ## 1. B 先确认 Windows Hello
 
 在 B 打开 **设置 → 账户 → 登录选项**，查看是否已设置“PIN（Windows Hello）”。已设置 PIN 即可，不要求购买指纹或人脸设备。未设置则按 Windows 指引添加，由你本人输入 Windows 账户验证信息和 PIN。若显示“此选项当前不可用”，记录非敏感错误文字，先解决设备/组织策略；不要改用文件签名冒充 Hello。
@@ -83,7 +85,9 @@ offline
 online
 ```
 
-进入编辑器后的 `status` 应显示 `editorReady: true`，记录 `formalLibraryOpened`；未开库执行 `save` 会提示 `DEVICE_OPEN_LIBRARY_BEFORE_SAVE`。成功还会记录 `formalLogin`、`syntheticSaveReadbackAndBoundaries`、`reloadReadback`、`simulatedOfflineRejected`。`save` 通过正式会话 RPC 保存固定合成行并读回，验证无 CSRF、跨库拒绝和公共管理入口的准确拒绝（404/`SECURITY_NOT_FOUND` 或 403/`SECURITY_SOURCE_DENIED`，其他错误不算通过）。它不等同完整画布业务验收；`refresh` 验证重载后会话和合成行读回。
+进入编辑器后的 `status` 应显示 `sessionStatus: 200`、`ready: true`、`editorReady: true`，记录 `formalLogin` 与 `formalLibraryOpened`。此时 `state`、`applicationId` 为 null 是正常的，因为身份面板已卸载，不表示审批丢失。`save` 会当下重新查询服务端会话和编辑器，不依赖在登录面板先输入一次 `status`；401/403/503、网络失败或仅有画布均不能证明登录成功。未登录或未开库会在写入前拒绝。
+
+`save` 通过正式会话 RPC 保存固定合成行并读回，验证无 CSRF、跨库拒绝和公共管理入口的准确拒绝（404/`SECURITY_NOT_FOUND` 或 403/`SECURITY_SOURCE_DENIED`，其他错误不算通过），成功输出 `SUCCESS: save` 并记录 `syntheticSaveReadbackAndBoundaries`。它不等同完整画布业务验收；随后 `refresh` 必须等新文档加载、会话和编辑器恢复，再只读回合成行，不重发写入；成功输出 `SUCCESS: refresh` 并记录 `reloadReadback`。断网验证另记录 `simulatedOfflineRejected`。任一步失败均不表示该项验收已完成。
 
 `offline` 用当前隔离浏览器的 DevTools 网络仿真产生断网，网络请求必须失败；`online` 只恢复网络并检查会话，不自动补发写请求。这不等于拔网线或服务端断网测试。另可由操作者临时断开 B 的网络，观察失败再恢复，记录真实操作的结果；不要以误报成功或自动重试写入作为通过。
 
@@ -128,17 +132,22 @@ node --test --test-reporter=tap .\test\unit\security-device-drill.test.mjs
 
 烟测启动全新回环TLS/DPAPI/Named Pipe、可见独立 Chrome，检查正式注册页面/安全上下文、匿名/公共管理拒绝、关闭及重启；不创建虚拟认证器，也不生成硬件通过声明。不加载本地 Vite/env、不覆盖旧 dist、不安装依赖。生成证书使用已锁定的传递依赖 `@peculiar/x509`。
 
-| 提示                                                                 | 处理                                                                               |
-| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `DEVICE_NON_ELEVATED_REQUIRED`                                       | 关闭管理员终端，在普通 PowerShell 重试。                                           |
-| `DEVICE_SERVER_ADDRESS_NOT_ON_THIS_COMPUTER`                         | 用 A 实际网卡私网地址，不能照抄示例。                                              |
-| `DEVICE_SOURCE_MISMATCH_SYNC_CODE`                                   | 两端同步全部本次源码；不要复制实例/密钥。重新准备演练。                            |
-| `DEVICE_PIN_MISMATCH_OBTAIN_FROM_A_SEPARATELY`                       | 向 A 独立核对 pin，不绕过检查。                                                    |
-| `DEVICE_TICKET_EXPIRED`                                              | 保留本轮，重新 Prepare，新生成 ticket 与 pin 一起核对。                            |
-| `DEVICE_PREPARED_BYTES_CHANGED` / `DEVICE_GENERATED_CONFIG_REQUIRED` | 本轮现场变动，保留核查；不要修改摘要强行启动。                                     |
-| `DEVICE_PAGE_UNAVAILABLE_CHECK_NETWORK`                              | 检查 A Serve、两端IP、隔离端口可达与网络策略；不关闭全局防火墙。                   |
-| `DEVICE_SECURE_CONTEXT_REQUIRED`                                     | 停止；核对专用浏览器启动方式/组织策略，不降为HTTP。                                |
-| `platformAuthenticatorAvailable: false`                              | 先设置Hello/检查浏览器策略；不能以软件签名替代验收。                               |
-| `DEVICE_STEP_FAILED`                                                 | 本步骤未通过，报告保留；检查执行顺序、审批准确ID、页面状态及终端错误，不宣称通过。 |
+| 提示                                                                 | 处理                                                                                     |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `DEVICE_NON_ELEVATED_REQUIRED`                                       | 关闭管理员终端，在普通 PowerShell 重试。                                                 |
+| `DEVICE_SERVER_ADDRESS_NOT_ON_THIS_COMPUTER`                         | 用 A 实际网卡私网地址，不能照抄示例。                                                    |
+| `DEVICE_SOURCE_MISMATCH_SYNC_CODE`                                   | 两端同步全部本次源码；不要复制实例/密钥。重新准备演练。                                  |
+| `DEVICE_PIN_MISMATCH_OBTAIN_FROM_A_SEPARATELY`                       | 向 A 独立核对 pin，不绕过检查。                                                          |
+| `DEVICE_TICKET_EXPIRED`                                              | 保留本轮，重新 Prepare，新生成 ticket 与 pin 一起核对。                                  |
+| `DEVICE_PREPARED_BYTES_CHANGED` / `DEVICE_GENERATED_CONFIG_REQUIRED` | 本轮现场变动，保留核查；不要修改摘要强行启动。                                           |
+| `DEVICE_PAGE_UNAVAILABLE_CHECK_NETWORK`                              | 检查 A Serve、两端IP、隔离端口可达与网络策略；不关闭全局防火墙。                         |
+| `DEVICE_SECURE_CONTEXT_REQUIRED`                                     | 停止；核对专用浏览器启动方式/组织策略，不降为HTTP。                                      |
+| `platformAuthenticatorAvailable: false`                              | 先设置Hello/检查浏览器策略；不能以软件签名替代验收。                                     |
+| `DEVICE_LOGIN_REQUIRED_BEFORE_SAVE`                                  | 当前会话未通过，先在正式页面重新登录；查看 status 的 sessionStatus，不通过画布推断身份。 |
+| `DEVICE_OPEN_LIBRARY_BEFORE_SAVE`                                    | 登录后点击继续，选择合成业务库并打开，等编辑器出现。                                     |
+| `DEVICE_SAVE_BEFORE_REFRESH`                                         | 先解决 save 的失败；尚未保存通过时不会执行刷新验证。                                     |
+| `DEVICE_EDITOR_SESSION_NOT_RESTORED`                                 | 刷新后新文档的会话/编辑器未按时恢复；检查服务、网络和页面状态，保留本轮。                |
+| `DEVICE_SAVE_READBACK_OR_BOUNDARY_FAILED`                            | 合成保存/读回或权限负例未通过；只回传脱敏报告，不通过重复写入或扩大权限绕过。            |
+| `DEVICE_STEP_FAILED`                                                 | 本步骤未通过，报告保留；检查执行顺序、审批准确ID、页面状态及终端错误，不宣称通过。       |
 
 命令行进度提示为开发演练工具的英文错误码，不是新增产品页面。正式页面沿用现有中英日翻译与布局；本轮无页面/可见翻译改造，不产生新的视觉验收结论。

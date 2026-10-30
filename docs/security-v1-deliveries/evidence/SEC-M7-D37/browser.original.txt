@@ -1,0 +1,50 @@
+vite v6.4.3 building for production...
+transforming...
+✓ 290 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-xMlUQI/designer-build/index.html                                          0.91 kB │ gzip:   0.55 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-xMlUQI/designer-build/assets/index-DhWdvLmj.css                         193.06 kB │ gzip:  31.47 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-xMlUQI/designer-build/assets/browser-DIAoS5Tw.js                          0.62 kB │ gzip:   0.43 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-xMlUQI/designer-build/assets/export-model-map-D3hTalQR.js                 3.66 kB │ gzip:   1.67 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-xMlUQI/designer-build/assets/workbook-CF0ixlqo.js                        12.03 kB │ gzip:   4.54 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-xMlUQI/designer-build/assets/OperationDesignerPanel-BAvmYQA_.js          24.57 kB │ gzip:   6.51 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-xMlUQI/designer-build/assets/BindingSurfaceDesignerPanel-CPpacMi8.js     49.01 kB │ gzip:  13.08 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-xMlUQI/designer-build/assets/exceljs.min-sXC454dQ.js                    939.80 kB │ gzip: 271.13 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Identity-Check-xMlUQI/designer-build/assets/index-BQJy2GUQ.js                        1,179.00 kB │ gzip: 339.84 kB
+✓ built in 4.78s
+{
+  "format": "modeldb.designer-identity-check.v1",
+  "task": "DR-P3.2",
+  "ok": false,
+  "node": "v24.15.0",
+  "platform": "win32",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-xMlUQI",
+  "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-xMlUQI\\designer-build",
+  "screenshots": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-xMlUQI\\screenshots",
+  "log": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-xMlUQI\\integration.tap",
+  "command": [
+    "C:\\nvm4w\\nodejs\\node.exe",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\node_modules\\tsx\\dist\\cli.mjs",
+    "--test",
+    "--test-reporter=tap",
+    "C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-designer-identity-browser.test.ts"
+  ],
+  "exitCode": 1,
+  "errorCode": "IDENTITY_PROCESS_FAILED",
+  "build": {
+    "ok": true,
+    "output": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-xMlUQI\\designer-build",
+    "configFile": false,
+    "envFile": false,
+    "existingDistUnchanged": true
+  },
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "hardwareAuthenticatorTested": false,
+    "systemTrustInstalled": false,
+    "formalRegistrationUiTested": true
+  },
+  "report": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Identity-Check-xMlUQI\\integration-check.json"
+}

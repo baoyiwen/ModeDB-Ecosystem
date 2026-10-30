@@ -1,5 +1,7 @@
 # 项目说明
 
+D37 当前接续（2026-10-30）：B 已进入编辑器，但旧演练工具在身份面板卸载后漏记 formalLogin，导致 save 前置拒绝和 refresh 连带失败。Client status 现以服务端 session HTTP 200 判断 ready；save 当下重查会话/编辑器，不依赖先输入 status，refresh 必须保存通过并等待新文档恢复后读回。失败保留准确符号码，不放宽真实 RPC/CSRF/跨库/管理拒绝断言。先读 SEC-M7/D37 和双机手册；两端同步后新 Prepare，旧报告/现场保留，不能改旧 ticket 摘要。用户开库成功不能关闭双机验收，DR-P4.6 仍进行中，22/23、5/6、3/4 不变，真实材料边界不变。
+
 D36 当前接续（2026-10-30）：用户 B 已回报申请 approved、ready=true，表示审批/登录成功，不能关闭完整双机验收。修复后普通列库/catalog 走 `/api/v1/databases` 数据面，旧 management 别名及管理写入保持原来源规则；SDK/Server/托管页面一起更新，不做跨平面拒绝回退。演练预建业务/设计器双库，准确授予元数据库初始化/保存权限；B 必须本人点击继续→打开库，编辑器出现后 status 记录 editorReady/formalLibraryOpened，再 save。旧轮保留，两端同步后全新 Prepare，重新核对新 ticket/pin 并注册审批。先读 SEC-M7/D36 与双机手册；DR-P4.6 仍进行中，22/23、5/6、3/4 不变，真实材料边界不变。
 
 D35 后续：lint-staged会隐藏部分暂存配置的未暂存修复，不能用工作区lint通过推断提交钩子通过。此次再次报18文件上限已确认暂存配置仍旧，已仅同步三个检查配置修复到暂存区，暂存blob复验98源码0错误/4警告、160格式通过。后续检查提交问题时同时核对工作区和 `git show :eslint.config.js`，保留其他暂存/未暂存改动，不通过关闭stash或跳过钩子绕过。详见SEC-M7/D35后续反馈；DR-P4.6状态不变。
@@ -41,7 +43,7 @@ D27：公共 SDK 客户端与 data-ui 展示适配器已接入三个前端，480
 
 ## 开始工作前
 
-- 接续之前的工作时，先阅读 `docs/security-v1-milestones.md` 和当前阶段最新交付报告；当前应先读 `docs/security-v1-deliveries/SEC-M7.md` 的 D36，并保留 SEC-M6 / D09—D12、SEC-M7 / D02—D35 证据及 SEC-M5 的历史记录。
+- 接续之前的工作时，先阅读 `docs/security-v1-milestones.md` 和当前阶段最新交付报告；当前应先读 `docs/security-v1-deliveries/SEC-M7.md` 的 D37，并保留 SEC-M6 / D09—D12、SEC-M7 / D02—D36 证据及 SEC-M5 的历史记录。
 - 阅读与本次任务直接相关的总体方案、契约和代码，并检查相关目录中的现有 `AGENTS.md`。本文件不替代这些模块规则。
 - 每次涉及新页面开发或旧页面改造时，先读 `apps/AGENTS.md` 和所在应用的指引；页面美观与 i18n 均为必需交付要求，后续接续会话也必须读取。
 - 检查 `git status --short`，识别并保留用户已有改动。不要覆盖或清理与当前任务无关的工作区变更。

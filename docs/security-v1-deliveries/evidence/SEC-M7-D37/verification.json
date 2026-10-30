@@ -1,0 +1,138 @@
+{
+  "format": "modeldb.device-drill-targeted-fix.v1",
+  "revision": "SEC-M7-D37",
+  "task": "DR-P4.6",
+  "status": "targeted-fix-passed-device-acceptance-pending",
+  "taskComplete": false,
+  "tasks": {
+    "registration": "22/23",
+    "registrationP4": "5/6",
+    "registrationWorkPackages": "3/4"
+  },
+  "unit": {
+    "pass": 31,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0
+  },
+  "browser": {
+    "pass": 1,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "todo": 0,
+    "checks": {
+      "drillFirstStatusInEditor": true,
+      "drillSaveAndRefresh": true,
+      "drillRevokedSaveDenied": true,
+      "formalLibraryOpened": true,
+      "designerBusinessIsolation": true,
+      "dataOnlySourcePolicy": true,
+      "syntheticSaveReadback": true,
+      "freshDesignerBuild": true,
+      "formalRegistration": true,
+      "pendingNoAuthority": true,
+      "rejectedState": true,
+      "localOsApproval": true,
+      "approvalRequiresLogin": true,
+      "actualWebAuthnLogin": true,
+      "syntheticDataScope": true,
+      "managementDenied": true,
+      "httpOnlySecureStrict": true,
+      "reloadRestoresSession": true,
+      "continuationNotPersisted": true,
+      "logout": true,
+      "expiredWindowLogin": true,
+      "revocationDenied": true,
+      "cancelledExplained": true,
+      "localizedZhEnJa": true,
+      "wideAndNarrow": true,
+      "labelsAndFocus": true
+    }
+  },
+  "finalTotalPass": 32,
+  "types": true,
+  "static": true,
+  "publicArtifactsScanned": true,
+  "sourceSha256": "28d7eaed37339dc286bffdce4ba092ee4b9f0326a6f944ccc2cfdd84e9bae928",
+  "artifacts": [
+    {
+      "path": "browser-failed.original.json",
+      "sha256": "1ee70933c32c39859d0ea9378729dbdb754ed8c779aa85f178f64e878af96651"
+    },
+    {
+      "path": "browser-failed.original.tap",
+      "sha256": "e2b007f827afe71977dad5c965eec7f163f4a28281935c4148a907b060cc6655"
+    },
+    {
+      "path": "browser-final.original.json",
+      "sha256": "ff2f493b68f4a6d81d1fbfed41352cfa4affbb05caeed16b558900808a85edee"
+    },
+    {
+      "path": "browser-final.original.tap",
+      "sha256": "78caf67d5eb98a1eb17a324a6632629c5e3f66ade071b7aa23714ab4499a0075"
+    },
+    {
+      "path": "browser.final.txt",
+      "sha256": "2e9841f5fc113a5dbe5863a2cf3cd11a538c3f69900a706cc2bc38a673b96ab1"
+    },
+    {
+      "path": "browser.original.txt",
+      "sha256": "7a0833bb173fce8b453127259a8df597dc8ad4c60bc0b8fd79e1650d5b27de39"
+    },
+    {
+      "path": "commands.json",
+      "sha256": "d8f9f970e02e4c8733c66648036315b76159226267c1e455f6f202b8925eaf03"
+    },
+    {
+      "path": "lint.original.txt",
+      "sha256": "5daa5046678d86f922642b31bb4dd1b9768a72360cd0242235ef6dc38e3b0173"
+    },
+    {
+      "path": "source-manifest.json",
+      "sha256": "a239109fd8c8932256865c50f2501442d2243d158acb60c9d58ab771ec11d0e7"
+    },
+    {
+      "path": "static-check.json",
+      "sha256": "67b956fbd24e7d40d9c8559bb9a6d5918620606affa866ddae3b4437544d9b70"
+    },
+    {
+      "path": "static-final.json",
+      "sha256": "19d7393aad2091fbf938b29499470c50c4f7e56dca56a4cb54679ab4a6ce3968"
+    },
+    {
+      "path": "types.original.txt",
+      "sha256": "c861cac3f212ee1a39a0f725e00423f31ec7082817f822ca236fef933c17be82"
+    },
+    {
+      "path": "unit.final.tap",
+      "sha256": "80015b946eea8714afffc1d5dc339689d199c8ea779ebe389ad703b7e0d2ceb3"
+    },
+    {
+      "path": "unit.original.tap",
+      "sha256": "5d40aeba95f639f4527595d84e46a9cf0c216fbd4ffaddaa77e1fbb49a8f0407"
+    }
+  ],
+  "priorFailures": [
+    "lint.original.txt",
+    "browser-failed.original.json",
+    "browser-failed.original.tap"
+  ],
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "actualHelloTested": false,
+    "twoDeviceTested": false,
+    "hardwareAuthenticatorTested": false,
+    "liveMaterialRead": false,
+    "systemTrustInstalled": false,
+    "virtualAuthenticatorUsed": true,
+    "releaseReceipt": false
+  },
+  "remaining": [
+    "actual A/B save and refresh reports",
+    "revocation and both kinds of restart rejection",
+    "operator cancellation/loss/recovery confirmation"
+  ],
+  "note": "Targeted repair evidence only. Historical receipts and failed runs are preserved; this is not final release or device acceptance."
+}

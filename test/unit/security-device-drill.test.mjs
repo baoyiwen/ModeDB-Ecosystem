@@ -7,6 +7,7 @@ import { createServer, request } from 'node:https';
 import { it } from 'node:test';
 import { assertIsolatedConfig, assertProbe, createDrillCertificate, digest, deviceFailureCode, drillRoot, ownFile, privateIPv4, readTicket, saveExpression, validateTicket } from '../../scripts/security-device-drill-contract.mjs';
 import { assertDeviceSmoke, verifyDevicePreparationEvidence } from '../../scripts/security-device-drill-evidence.mjs';
+import { readDeviceClientStatus, saveDeviceClient, refreshDeviceClient } from '../../scripts/security-device-drill-client-state.mjs';
 
 function ticket() {
   const runId = randomUUID(), rpId = `drill-${runId}.example.test`;
@@ -78,6 +79,120 @@ it('save probe accepts only the exact hosted or source-policy management refusal
     assert.equal(result.managementDenied,expected);
     if(expected)assertProbe(result);
   }
+});
+function clientFixture() {
+  const view = { sessionStatus: 200, editor: true, identityState: null, applicationId: null, offline: false, managementStatus: 404 };
+  const checks = {}, requests = [], calls = [];
+  const document = { querySelector(selector) {
+    if (selector === 'canvas') return view.editor ? {} : null;
+    if (selector === '.designer-connection-flow') return view.editor ? null : {};
+    if (selector === '[data-identity-state]') return view.identityState ? { getAttribute: () => view.identityState } : null;
+    if (selector === '[data-identity-state] dd') return view.applicationId ? { textContent: view.applicationId } : null;
+    return null;
+  } };
+  const fetch = async (path, options) => {
+    requests.push({ path, options });
+    if (view.offline) throw Error('synthetic network failure');
+    if (path === '/api/v1/security/session') return Response.json({ csrf: 'synthetic' }, { status: view.sessionStatus });
+    if (path === '/api/v1/security/admin/overview') return Response.json({ error: view.managementStatus === 404 ? 'SECURITY_NOT_FOUND' : 'SECURITY_STORE_WRITE_FAILED' }, { status: view.managementStatus });
+    const body = JSON.parse(options.body);
+    const denied = body.database === 'synthetic_other' || !options.headers['x-modeldb-csrf'];
+    return Response.json(denied ? { error: 'SECURITY_FORBIDDEN' } : { result: 'device-drill-saved' }, { status: denied ? 403 : 200 });
+  };
+  const performance = { timeOrigin: 1 };
+  const page = { evaluate: expression => new Function('document', 'fetch', 'performance', 'return ' + expression)(document, fetch, performance), call: async method => { calls.push(method); if (method === 'Page.reload') performance.timeOrigin++; } };
+  return { view, checks, requests, calls, page, check: name => { checks[name] = true; } };
+}
+it('records a current login when the first status is in the editor with the identity panel unmounted', async () => {
+  const f = clientFixture();
+  const status = await readDeviceClientStatus(f.page, f.check);
+  assert.deepEqual(status, { state: null, applicationId: null, sessionStatus: 200, ready: true, editorReady: true, issue: null });
+  assert.deepEqual(f.checks, { formalLogin: true, formalLibraryOpened: true });
+  await saveDeviceClient(f.page, f.check);
+  assert.equal(f.checks.syntheticSaveReadbackAndBoundaries, true);
+});
+it('saves directly from the editor without any earlier status command, then reloads and reads without writing again', async () => {
+  const f = clientFixture();
+  await saveDeviceClient(f.page, f.check);
+  const writes = () => f.requests.filter(r => r.options && JSON.parse(r.options.body).operation.op === 'insert').length;
+  assert.equal(writes(), 2, 'one denied CSRF probe and one authenticated synthetic insert');
+  await refreshDeviceClient(f.page, f.checks, f.check);
+  assert.deepEqual(f.calls, ['Page.reload']);
+  assert.equal(writes(), 2);
+  assert.equal(f.checks.reloadReadback, true);
+});
+it('requires current authentication before saving despite a visible canvas or previous successful login', async () => {
+  for (const sessionStatus of [401, 403, 503]) {
+    const f = clientFixture(); f.view.sessionStatus = sessionStatus;
+    const status = await readDeviceClientStatus(f.page, f.check);
+    assert.equal(status.ready, false); assert.equal(status.sessionStatus, sessionStatus);
+    assert.deepEqual(f.checks, {});
+    f.checks.formalLogin = true; f.checks.formalLibraryOpened = true;
+    await assert.rejects(saveDeviceClient(f.page, f.check), /DEVICE_LOGIN_REQUIRED_BEFORE_SAVE/);
+    assert.equal(f.requests.some(r => r.options), false);
+    assert.equal(f.checks.syntheticSaveReadbackAndBoundaries, undefined);
+  }
+});
+it('refresh waits for a new document and tolerates a destroyed navigation context before accepting readback', async () => {
+  const f = clientFixture(); await saveDeviceClient(f.page, f.check);
+  const evaluate = f.page.evaluate; let timeReads = 0;
+  f.page.evaluate = async expression => {
+    if (expression === 'performance.timeOrigin') {
+      timeReads++;
+      if (timeReads === 2) return 1; // Page.reload returned while the old document was still present.
+      if (timeReads === 3) throw Error('synthetic destroyed execution context');
+    }
+    return evaluate(expression);
+  };
+  await refreshDeviceClient(f.page, f.checks, f.check);
+  assert.ok(timeReads >= 4); assert.equal(f.checks.reloadReadback, true);
+});
+it('never accepts a reload when the browser stays on the old document until the deadline', async t => {
+  const f = clientFixture(); await saveDeviceClient(f.page, f.check);
+  let now = Date.now(), reads = 0;
+  t.mock.method(Date, 'now', () => now);
+  const evaluate = f.page.evaluate;
+  f.page.evaluate = async expression => {
+    if (expression === 'performance.timeOrigin') {
+      if (++reads > 1) now += 120001;
+      return 1;
+    }
+    return evaluate(expression);
+  };
+  const before = f.requests.length;
+  await assert.rejects(refreshDeviceClient(f.page, f.checks, f.check), /DEVICE_EDITOR_SESSION_NOT_RESTORED/);
+  assert.equal(f.checks.reloadReadback, undefined); assert.equal(f.requests.length, before);
+});
+it('records pending and approved-without-login evidence only for an actual 401 response', async () => {
+  for (const identityState of ['pending', 'approved']) for (const sessionStatus of [401, 403, 503]) {
+    const f = clientFixture(); Object.assign(f.view, { editor: false, identityState, sessionStatus, applicationId: 'unsafe text' });
+    const status = await readDeviceClientStatus(f.page, f.check);
+    assert.equal(status.applicationId, null);
+    assert.deepEqual(f.checks, sessionStatus === 401 ? { [identityState === 'pending' ? 'formalPending' : 'approvalRequiresFreshLogin']: true } : {});
+  }
+});
+it('does not save or mark acceptance on network failure', async () => {
+  const f = clientFixture(); f.view.offline = true;
+  await assert.rejects(readDeviceClientStatus(f.page, f.check));
+  await assert.rejects(saveDeviceClient(f.page, f.check));
+  assert.deepEqual(f.checks, {}); assert.equal(f.requests.some(r => r.options), false);
+});
+it('refuses a save before opening a library and explains refresh before a successful save', async () => {
+  const f = clientFixture(); f.view.editor = false;
+  await assert.rejects(saveDeviceClient(f.page, f.check), /DEVICE_OPEN_LIBRARY_BEFORE_SAVE/);
+  assert.equal(f.requests.some(r => r.options), false);
+  await assert.rejects(refreshDeviceClient(f.page, f.checks, f.check), /DEVICE_SAVE_BEFORE_REFRESH/);
+  assert.deepEqual(f.calls, []);
+});
+it('failed authorization boundaries never mark save or refreshed readback as passing', async () => {
+  const f = clientFixture(); f.view.managementStatus = 503;
+  await assert.rejects(saveDeviceClient(f.page, f.check), /DEVICE_SAVE_READBACK_OR_BOUNDARY_FAILED/);
+  assert.equal(f.checks.syntheticSaveReadbackAndBoundaries, undefined);
+  await assert.rejects(refreshDeviceClient(f.page, f.checks, f.check), /DEVICE_SAVE_BEFORE_REFRESH/);
+  f.view.managementStatus = 404; await saveDeviceClient(f.page, f.check);
+  f.view.managementStatus = 503;
+  await assert.rejects(refreshDeviceClient(f.page, f.checks, f.check), /DEVICE_SAVE_READBACK_OR_BOUNDARY_FAILED/);
+  assert.equal(f.checks.reloadReadback, undefined);
 });
 it('generates unique TLS keys and verifies the exact DNS name in a real TLS handshake', async () => {
   const rpId = ticket().rpId;

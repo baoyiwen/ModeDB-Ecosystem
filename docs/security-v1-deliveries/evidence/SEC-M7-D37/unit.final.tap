@@ -1,0 +1,196 @@
+TAP version 13
+# Subtest: identity report accepts formal UI/native checks and accurate browser limits
+ok 1 - identity report accepts formal UI/native checks and accurate browser limits
+  ---
+  duration_ms: 1.0669
+  type: 'test'
+  ...
+# Subtest: identity report rejects incomplete, skipped or ambiguous TAP summaries
+ok 2 - identity report rejects incomplete, skipped or ambiguous TAP summaries
+  ---
+  duration_ms: 1.3442
+  type: 'test'
+  ...
+# Subtest: identity report requires every formal UI check and one browser record
+ok 3 - identity report requires every formal UI check and one browser record
+  ---
+  duration_ms: 1.9433
+  type: 'test'
+  ...
+# Subtest: identity report rejects hardware/trust inflation and missing layouts
+ok 4 - identity report rejects hardware/trust inflation and missing layouts
+  ---
+  duration_ms: 0.5857
+  type: 'test'
+  ...
+# Subtest: accepts an exact private A/B ticket and the explicit loopback smoke ticket
+ok 5 - accepts an exact private A/B ticket and the explicit loopback smoke ticket
+  ---
+  duration_ms: 3.2659
+  type: 'test'
+  ...
+# Subtest: rejects public, ambiguous, wildcard, multicast and special addresses
+ok 6 - rejects public, ambiguous, wildcard, multicast and special addresses
+  ---
+  duration_ms: 1.0641
+  type: 'test'
+  ...
+# Subtest: rejects mismatched origins, RP, credentials in URLs and the real service port
+ok 7 - rejects mismatched origins, RP, credentials in URLs and the real service port
+  ---
+  duration_ms: 0.7839
+  type: 'test'
+  ...
+# Subtest: rejects expired, far future and noncanonical time tickets
+ok 8 - rejects expired, far future and noncanonical time tickets
+  ---
+  duration_ms: 0.2753
+  type: 'test'
+  ...
+# Subtest: rejects extra secret fields, missing hashes and malformed run IDs
+ok 9 - rejects extra secret fields, missing hashes and malformed run IDs
+  ---
+  duration_ms: 0.7111
+  type: 'test'
+  ...
+# Subtest: requires only a bounded public connection file for B
+ok 10 - requires only a bounded public connection file for B
+  ---
+  duration_ms: 2.4842
+  type: 'test'
+  ...
+# Subtest: rejects existing workspace paths and traversal before opening a file
+ok 11 - rejects existing workspace paths and traversal before opening a file
+  ---
+  duration_ms: 9.9173
+  type: 'test'
+  ...
+# Subtest: rejects a directory junction even when its file exists
+ok 12 - rejects a directory junction even when its file exists
+  ---
+  duration_ms: 3.1646
+  type: 'test'
+  ...
+# Subtest: accepts the generated layout and rejects every path redirection or security override
+ok 13 - accepts the generated layout and rejects every path redirection or security override
+  ---
+  duration_ms: 1.345
+  type: 'test'
+  ...
+# Subtest: requires all synthetic save and authorization boundary assertions
+ok 14 - requires all synthetic save and authorization boundary assertions
+  ---
+  duration_ms: 0.5331
+  type: 'test'
+  ...
+# Subtest: save probe accepts only the exact hosted or source-policy management refusal, never arbitrary errors
+ok 15 - save probe accepts only the exact hosted or source-policy management refusal, never arbitrary errors
+  ---
+  duration_ms: 14.9044
+  type: 'test'
+  ...
+# Subtest: records a current login when the first status is in the editor with the identity panel unmounted
+ok 16 - records a current login when the first status is in the editor with the identity panel unmounted
+  ---
+  duration_ms: 0.8748
+  type: 'test'
+  ...
+# Subtest: saves directly from the editor without any earlier status command, then reloads and reads without writing again
+ok 17 - saves directly from the editor without any earlier status command, then reloads and reads without writing again
+  ---
+  duration_ms: 0.8703
+  type: 'test'
+  ...
+# Subtest: requires current authentication before saving despite a visible canvas or previous successful login
+ok 18 - requires current authentication before saving despite a visible canvas or previous successful login
+  ---
+  duration_ms: 0.5323
+  type: 'test'
+  ...
+# Subtest: refresh waits for a new document and tolerates a destroyed navigation context before accepting readback
+ok 19 - refresh waits for a new document and tolerates a destroyed navigation context before accepting readback
+  ---
+  duration_ms: 209.3303
+  type: 'test'
+  ...
+# Subtest: never accepts a reload when the browser stays on the old document until the deadline
+ok 20 - never accepts a reload when the browser stays on the old document until the deadline
+  ---
+  duration_ms: 2.2531
+  type: 'test'
+  ...
+# Subtest: records pending and approved-without-login evidence only for an actual 401 response
+ok 21 - records pending and approved-without-login evidence only for an actual 401 response
+  ---
+  duration_ms: 0.2556
+  type: 'test'
+  ...
+# Subtest: does not save or mark acceptance on network failure
+ok 22 - does not save or mark acceptance on network failure
+  ---
+  duration_ms: 0.1075
+  type: 'test'
+  ...
+# Subtest: refuses a save before opening a library and explains refresh before a successful save
+ok 23 - refuses a save before opening a library and explains refresh before a successful save
+  ---
+  duration_ms: 0.1729
+  type: 'test'
+  ...
+# Subtest: failed authorization boundaries never mark save or refreshed readback as passing
+ok 24 - failed authorization boundaries never mark save or refreshed readback as passing
+  ---
+  duration_ms: 0.7411
+  type: 'test'
+  ...
+# Subtest: generates unique TLS keys and verifies the exact DNS name in a real TLS handshake
+ok 25 - generates unique TLS keys and verifies the exact DNS name in a real TLS handshake
+  ---
+  duration_ms: 390.7393
+  type: 'test'
+  ...
+# Subtest: the wrapper forwards Unicode paths as arguments without PowerShell JSON parsing
+ok 26 - the wrapper forwards Unicode paths as arguments without PowerShell JSON parsing
+  ---
+  duration_ms: 0.3728
+  type: 'test'
+  ...
+# Subtest: accepts preparation only and refuses to promote smoke to hardware or final acceptance
+ok 27 - accepts preparation only and refuses to promote smoke to hardware or final acceptance
+  ---
+  duration_ms: 0.4169
+  type: 'test'
+  ...
+# Subtest: refuses missing, false or extra smoke assertions
+ok 28 - refuses missing, false or extra smoke assertions
+  ---
+  duration_ms: 3.1613
+  type: 'test'
+  ...
+# Subtest: retains assertion codes while removing paths and actual or expected secret values
+ok 29 - retains assertion codes while removing paths and actual or expected secret values
+  ---
+  duration_ms: 0.411
+  type: 'test'
+  ...
+# Subtest: binds preparation logs, source and command results while keeping device acceptance pending
+ok 30 - binds preparation logs, source and command results while keeping device acceptance pending
+  ---
+  duration_ms: 1.0003
+  type: 'test'
+  ...
+# Subtest: rejects evidence without logs, changed sources, duplicated TAP totals or inflated completion
+ok 31 - rejects evidence without logs, changed sources, duplicated TAP totals or inflated completion
+  ---
+  duration_ms: 0.9881
+  type: 'test'
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 31
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 771.5975

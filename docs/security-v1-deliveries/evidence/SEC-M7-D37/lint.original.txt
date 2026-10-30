@@ -1,0 +1,10 @@
+
+C:\workspace\web_code\ModeDB-Ecosystem\scripts\security-device-drill-client-state.mjs
+  21:36  error  Expected { after 'if' condition  curly
+  22:37  error  Expected { after 'if' condition  curly
+  26:28  error  Expected { after 'if' condition  curly
+  65:44  error  Expected { after 'if' condition  curly
+
+✖ 4 problems (4 errors, 0 warnings)
+  4 errors and 0 warnings potentially fixable with the `--fix` option.
+

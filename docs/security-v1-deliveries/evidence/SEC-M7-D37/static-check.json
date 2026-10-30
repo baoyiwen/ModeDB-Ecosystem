@@ -1,0 +1,65 @@
+{
+  "ok": true,
+  "results": [
+    {
+      "name": "lint",
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/eslint/bin/eslint.js",
+        "scripts/security-device-drill-client-state.mjs",
+        "scripts/security-device-drill-runner.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "format",
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "node_modules/prettier/bin/prettier.cjs",
+        "--check",
+        "scripts/security-device-drill-client-state.mjs",
+        "scripts/security-device-drill-runner.mjs",
+        "docs/security-v1/AGENTS.md",
+        "docs/security-v1-milestones.md",
+        "docs/security-v1/overview.md",
+        "docs/security-v1/user-guide.md",
+        "docs/security-v1/windows-device-drill-guide.md"
+      ],
+      "exitCode": 0,
+      "stdout": "Checking formatting...\nAll matched files use Prettier code style!\n",
+      "stderr": ""
+    },
+    {
+      "name": "security-material-guard",
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "scripts/assert-no-security-material.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"ok\":true,\"trackedRuntimeEntries\":0,\"materialRead\":false}\n",
+      "stderr": ""
+    },
+    {
+      "name": "source-artifacts-guard",
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "scripts/assert-no-build-artifacts-in-src.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "name": "sdk-boundary-guard",
+      "command": [
+        "C:\\Users\\51153\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\node\\bin\\node.exe",
+        "scripts/assert-sdk-client-only.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ]
+}

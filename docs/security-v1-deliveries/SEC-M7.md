@@ -1241,3 +1241,21 @@ Windows / Node v24.15.0，A→B→B→A 四个独立实例，固定1000行、正
 只使用新临时合成实例与随机回环端口；未读取/修改真实配置、根 security/certs、真实凭据/密钥/Vault/业务库/ACL/系统信任，没有连接重启9091、提交、推送、发布或切换。A/B 旧轮保留；两端同步修复后从全新 Prepare 开始，使用新 ticket/证书/独立核对 pin 并重新注册审批，依[双机手册](../security-v1/windows-device-drill-guide.md)实际打开编辑器，再检查 status/save/refresh/offline、停用后旧会话及新证明、同进程和独立进程重启拒绝及取消/丢失/恢复策略。
 
 **DR-P4.6 保持进行中，新增扩展22/23、DR-P4为5/6、必需工作包3/4。下一步为用户完成修复后新轮 A/B 实际认证器验收并交回脱敏报告，不能以本机虚拟认证器回归关闭最后一项。**
+
+## D37：DR-P4.6 编辑器内会话识别与演练保存刷新修复
+
+日期：2026-10-30。状态：**演练工具修复，实际双机完整验收仍进行中**。B 回报已经进入编辑器，`status` 为 state/applicationId=null、ready=false、editorReady=true，随后 save/refresh 为 `DEVICE_STEP_FAILED`。开库后身份面板已卸载，旧工具以该 DOM 判断 ready，未记录 formalLogin；save 依赖这个历史检查并在发送 RPC 前失败，refresh 又因没有保存通过而拒绝。现有输出能定位这个工具缺陷，不能证明数据库保存已通过，也不能排除修复后真实 RPC 验证还会发现其他问题。
+
+开始时 Git 工作区干净，读取专项规则、唯一台账、D36 及演练/正式浏览器验证代码。新增共享 `security-device-drill-client-state.mjs`，由交互 runner 和正式浏览器验收共同调用：status 只用服务端 session HTTP 200 认定 ready，额外输出非敏感 sessionStatus；state/applicationId 在编辑器内允许为 null。保存当下重新查询会话/编辑器，既不依赖提前输入 status，也不凭历史成功或画布证明当前认证。pending/批准未登录证据只接受实际401，不将403/503或网络失败算作通过。
+
+保存仍执行原固定合成 RPC 与完整 CSRF/跨库/公共管理拒绝断言；刷新必须已有保存通过，确认 performance.timeOrigin 已变为新文档，等待会话与编辑器恢复后只读回，不重复写入。恢复时限与原正式编辑器测试一致为120秒，暂时销毁的浏览器执行上下文允许在期限内重试，超时或负例不通过仍拒绝。补 `DEVICE_LOGIN_REQUIRED_BEFORE_SAVE`、`DEVICE_OPEN_LIBRARY_BEFORE_SAVE`、`DEVICE_SAVE_BEFORE_REFRESH`、`DEVICE_EDITOR_SESSION_NOT_RESTORED`、`DEVICE_SAVE_READBACK_OR_BOUNDARY_FAILED`；成功步骤输出 `SUCCESS: save` / `SUCCESS: refresh`。错误仍只输出符号码，不记录 Cookie、CSRF、证明或业务正文。
+
+定向工具/身份报告测试 **31/31** 通过，0 fail/skip/cancelled/todo；覆盖首次在编辑器 status、直接 save、当前401/403/503/断网与历史成功标志、未开库、失败边界、不重发写入、旧文档超时和导航执行上下文消失。新 shared/Core 声明、整个 Server 与限定安全测试（含正式浏览器）严格类型通过，不覆盖 dist。限定 lint、格式和三个源码守卫通过；首次 lint 的四条缺花括号错误已修正，原失败输出保留。正式浏览器首轮通过开库与共享保存步骤后，在20秒编辑器恢复时限失败；保留原报告/TAP，按既有120秒编辑器时限重新完整验证 **1/1** 通过。合计 **32/32**，0 fail/skip/cancelled/todo（最终通过批次）；首轮失败不从历史中移除。
+
+最终原生 Windows/Node24.15.0、Chrome156、真实 DPAPI/Named Pipe 和全新托管 Designer 验证，直接进入编辑器后第一次读取共享 status 即 ready/editorReady=true、formalLogin/formalLibraryOpened=true；共享 save/refresh 完成真实合成 RPC、完整负例及新文档恢复读回。停用后共享 status 不再认为已登录，save 在写入前拒绝；原正式注册/审批/登录、会话生命周期与新鲜证明拒绝也通过。测试使用虚拟认证器，非实际 Hello；原 zh/en/ja、宽窄屏24张截图及布局断言沿用执行，本次未人工复核截图，不宣称新增页面设计验收。
+
+简介、使用手册、双机手册、AGENTS 和唯一台账同步。没有产品页面、布局或可见翻译改动，不新增人工视觉结论。不重跑全量业务、安全、性能、七包安装或双机烟测；共享 helper 的真实浏览器验证不能替代 B 本人的实际认证器和双机保存/刷新、撤销/两种重启拒绝、取消/丢失恢复验收。
+
+只操作新临时合成实例、随机回环 HTTPS、原生 Windows DPAPI/Named Pipe 与新 Chrome profile；未读取或修改真实配置、根 security/certs、真实凭据/密钥/Vault/业务库/ACL/系统信任，不连接或重启9091，不提交、推送、发布或切换。公开定向证据见 [D37验证记录](evidence/SEC-M7-D37/verification.json)；它不是总证据核验器 receipt，不回写 D34/D36 或更早报告/摘要。实际 A/B 旧轮保留，两端同步本次脚本和测试后从新 Prepare 开始，重新传公开 ticket/证书、独立核对新 pin，并注册审批。
+
+**DR-P4.6 仍进行中，新增扩展22/23、DR-P4为5/6、必需工作包3/4。下一步为新轮实际双机报告与人工认证器/恢复确认。**
