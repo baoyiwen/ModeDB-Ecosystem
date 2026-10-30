@@ -1747,8 +1747,8 @@ export class RemoteModelDBClient {
   }
 
   /**
-   * Lists logical databases under the server workspace (**`GET /api/v1/management/databases`**).
-   * Uses **`X-ModelDB-Connect-Token`** (same as wire **`connectToken`**).
+   * Lists readable logical databases. Registry credentials/sessions use the data-plane
+   * `GET /api/v1/databases`; legacy connect tokens retain the management URL.
    */
   static async listDatabases(options: {
     readonly host: string;
@@ -1761,7 +1761,9 @@ export class RemoteModelDBClient {
     const json = await fetchManagementJson<ManagementDatabasesResponse>(
       origin,
       options,
-      '/api/v1/management/databases',
+      options.browserSession || options.token?.trim().startsWith('mdbt_v1_')
+        ? '/api/v1/databases'
+        : '/api/v1/management/databases',
     );
     if (!json || !Array.isArray(json.databases)) {
       throw new Error('listDatabases: invalid response shape.');
@@ -1788,7 +1790,8 @@ export class RemoteModelDBClient {
   }
 
   /**
-   * Model + relation catalog for one logical DB (**`GET …/databases/:name/catalog`**).
+   * Model + relation catalog for one readable logical DB. Registry access uses
+   * the data-plane URL; legacy connect tokens retain the management URL.
    */
   static async getDatabaseCatalog(options: {
     readonly host: string;
@@ -1803,7 +1806,9 @@ export class RemoteModelDBClient {
     return fetchManagementJson<ManagementCatalogResponse>(
       origin,
       options,
-      `/api/v1/management/databases/${enc}/catalog`,
+      options.browserSession || options.token?.trim().startsWith('mdbt_v1_')
+        ? `/api/v1/databases/${enc}/catalog`
+        : `/api/v1/management/databases/${enc}/catalog`,
     );
   }
 

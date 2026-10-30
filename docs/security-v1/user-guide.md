@@ -1,5 +1,7 @@
 # ModelDB 安全 V1 使用手册
 
+D36：Passkey 登录后点击“继续访问模型库”，选择业务库并“打开库”。管理员须预建并分别授权业务库和 `model_designer_workspace`；后者初始化/保存需要 `model.read`、`model.write`、`schema.manage`、`transfer.import`。列库/catalog 使用数据面只读入口，创建/删除/备份仍是管理操作。Server 与 SDK/托管 Designer 同步更新，按[双机手册](windows-device-drill-guide.md)新建一轮演练，不放宽管理来源。
+
 D34：[两台Windows实际认证器操作手册](windows-device-drill-guide.md)提供Hello检查、A Prepare/Serve、B Client、准确ID审批/停用、合成保存/刷新/断网以及同进程和独立进程重启拒绝步骤。命令使用现成`.ps1`，无需复制多行here-string；仅回传脱敏报告。实际双机/取消/丢失恢复项目尚待执行，不能把Smoke当作完成。
 
 重复检查注册/登录性能和洪泛期间的本机修复能力，见[独立性能验证手册](performance-guide.md)。入口为 `node scripts/security-performance-check.mjs explore`，再按该手册登记门槛和独立确认；全部使用新临时合成环境，不需要提供真实数据库配置。不要同时运行其他验收或压测。

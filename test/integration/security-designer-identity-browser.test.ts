@@ -11,13 +11,16 @@ import {ensureModelDbLayoutAtRoot} from '../../packages/server/src/modeldb-defau
 import {loadModelDBServerConfig} from '../../packages/server/src/config-loader.js';
 import {buildDualTrackFastify} from '../../packages/server/src/dual-track-app.js';
 import {SecurityRegistry} from '../../packages/server/src/security/security-registry.js';
+import {LocalVaultKeyProvider} from '../../packages/server/src/security/local-vault-key-provider.js';
+import {AuthoringEngine} from '../../packages/core/authoring/engine.js';
 import {callLocalSecurity} from '../../packages/server/src/security/local-management-channel.js';
 import {registrationBrowser, waitFor} from '../fixtures/security-registration-browser.js';
-import {scopes, utc} from '../fixtures/security-registration-integration.js';
+import {utc} from '../fixtures/security-registration-integration.js';
 import {assertSyntheticBrowserSave} from '../fixtures/security-browser-save.js';
-import type {DeviceRegistrationConnectionDescriptorV1} from '@mode-db/shared';
+import type {DeviceRegistrationConnectionDescriptorV1, SecurityGrant} from '@mode-db/shared';
+const {deviceDrillGrants}=await import(new URL('../../scripts/security-device-drill-contract.mjs',import.meta.url).href) as {deviceDrillGrants:readonly SecurityGrant[]};
 
-test('formal Designer registration, pending/rejection/approval, Passkey login, recovery and localized layouts', {timeout:240000}, async t=>{
+test('formal Designer registration, pending/rejection/approval, Passkey login, library opening, recovery and localized layouts', {timeout:420000}, async t=>{
   assert.equal(process.platform,'win32','Native Windows is required');
   const root=mkdtempSync(join(tmpdir(),'ModeDB-Designer-Identity-')),dir=join(root,'security');
   const cfg=await loadModelDBServerConfig(ensureModelDbLayoutAtRoot(root),{port:0});
@@ -29,7 +32,7 @@ test('formal Designer registration, pending/rejection/approval, Passkey login, r
   const cert=new X509Certificate(readFileSync(join(tls,'modeldb-a.crt'))),spki=createHash('sha256').update(cert.publicKey.export({type:'spki',format:'der'})).digest(),now=Date.now();
   const descriptor:DeviceRegistrationConnectionDescriptorV1={format:'modeldb.device-registration-connection.v1',version:1,instanceId,serverOrigin:origin,rpId:'modeldb-a.example.test',registrationMode:'enabled',issuedAtUtc:utc(now-1000),expiresAtUtc:utc(now+3600000),deploymentDescriptorSha256:'a'.repeat(64),tls:{mode:'owner-pinned',minVersion:'TLS1.2',spkiSha256:spki.toString('hex')}};
   const build=process.env.MODELDB_HOSTING_TEST_BUILD,screenshots=process.env.MODELDB_HOSTING_TEST_SCREENSHOTS;assert.ok(build);assert.ok(screenshots);mkdirSync(screenshots,{recursive:true});
-  const options={...cfg,host:'127.0.0.1',port,publicBaseUrl:origin,securityMode:'registry' as const,securityAuthentication:{enabled:true,allowStorageMigration:true},securityRegistration:{descriptor,allowStorageMigration:true},securityHosting:{enabled:true,designerDirectory:build,managementPort:0},securityNetwork:{transport:{mode:'tls' as const,certificateFile:join(tls,'modeldb-a.crt'),privateKeyFile:join(tls,'modeldb-a.key')},data:{allowListEnabled:false}},securityAudit:{maxEvents:20000,retentionDays:365}};
+  const options={...cfg,host:'127.0.0.1',port,publicBaseUrl:origin,securityMode:'registry' as const,securityAuthentication:{enabled:true,allowStorageMigration:true},securityRegistration:{descriptor,allowStorageMigration:true},securityHosting:{enabled:true,designerDirectory:build,managementPort:0},securityNetwork:{transport:{mode:'tls' as const,certificateFile:join(tls,'modeldb-a.crt'),privateKeyFile:join(tls,'modeldb-a.key')},data:{allowListEnabled:false},management:{allowListEnabled:true,allow:[]}},securityAudit:{maxEvents:20000,retentionDays:365}};
   let app:Awaited<ReturnType<typeof buildDualTrackFastify>>|undefined,page:Awaited<ReturnType<typeof registrationBrowser>>|undefined;
   const local=(input:unknown)=>callLocalSecurity(dir,input);
   const state=()=>page!.evaluate<string>(`document.querySelector('[data-identity-state]')?.getAttribute('data-identity-state')`);
@@ -47,11 +50,12 @@ test('formal Designer registration, pending/rejection/approval, Passkey login, r
     }
   };
   try{
+    // Locally provision both isolated databases; this client's management sources are denied.
+    for(const database of ['synthetic_business','model_designer_workspace']){
+      const engine=new AuthoringEngine({atlas:database,storageRoot:cfg.workspace,keyProvider:new LocalVaultKeyProvider(dir),engineLogger:false});
+      try{if(database==='synthetic_business')engine.registerModel('SyntheticItem',{label:'String'});await engine.flushAll();}finally{await engine.close();}
+    }
     app=await buildDualTrackFastify(options);page=await registrationBrowser(root,spki.toString('base64'));await navigate();await ready();
-    const seedPrincipal=await local({action:'principal.create',name:'Synthetic seed'}) as {id:string};
-    const seed=await local({action:'credential.create',principalId:seedPrincipal.id,name:'Synthetic seed',grants:[{database:'synthetic_business',resource:'*',actions:['model.read','model.write','schema.manage','database.manage']}]}) as {token:string};
-    assert.equal(await page.evaluate<number>(`fetch('/api/v1/management/databases',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+${JSON.stringify(seed.token)}},body:JSON.stringify({name:'synthetic_business'})}).then(r=>r.status)`),200);
-    assert.equal(await page.evaluate<number>(`fetch('/api/v1/rpc',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+${JSON.stringify(seed.token)}},body:JSON.stringify({version:1,database:'synthetic_business',operation:{op:'registerModel',model:'SyntheticItem',schema:{label:'String'}}})}).then(r=>r.status)`),200);
     await page.call('Network.clearBrowserCookies');await navigate();await ready();await shot('login');
     // A real UI cancellation path without completing or weakening WebAuthn verification.
     await page.evaluate(`globalThis.savedCredentialGet = navigator.credentials.get.bind(navigator.credentials); navigator.credentials.get = async()=>{throw new DOMException('Synthetic user cancellation','NotAllowedError');};true`);
@@ -86,12 +90,13 @@ test('formal Designer registration, pending/rejection/approval, Passkey login, r
     assert.equal(await page.evaluate<boolean>(`!JSON.stringify({...localStorage,...sessionStorage}).includes('continuationSecret') && !document.documentElement.innerHTML.includes('continuationSecret')`),true);
     assert.equal(await page.evaluate<number>(`fetch('/api/v1/security/context?database=synthetic_business').then(r=>r.status)`),401);
     list=await local({action:'registration.list',instanceId}) as {revision:number};
-    await local({action:'registration.approve',instanceId,id:approved,revision:list.revision,confirm:true,name:'Synthetic UI operator',grants:[{...scopes[0],actions:['model.read','model.write']}]});
+    await local({action:'registration.approve',instanceId,id:approved,revision:list.revision,confirm:true,name:'Synthetic UI operator',grants:deviceDrillGrants});
     await waitFor(state,v=>v==='approved',15000);await shot('approved');
     assert.equal(await page.evaluate<number>(`fetch('/api/v1/security/session').then(r=>r.status)`),401);
     await click('[data-identity-login]');await waitFor(()=>page!.evaluate<boolean>(`!!document.querySelector('[data-identity-session="ready"]')`),Boolean,30000);
     assert.equal(await page.evaluate<number>(`fetch('/api/v1/security/context?database=synthetic_business').then(r=>r.status)`),200);
     assert.equal(await page.evaluate<number>(`fetch('/api/v1/security/admin/overview').then(r=>r.status)`),404);
+    assert.equal(await page.evaluate<number>(`fetch('/api/v1/management/databases').then(r=>r.status)`),403);
     const cookies=await page.call<{cookies:Array<{httpOnly:boolean;secure:boolean;sameSite:string;name:string}>}>('Network.getCookies',{urls:[origin]});assert.ok(cookies.cookies.some(c=>c.name.startsWith('mdbs_session_')&&c.httpOnly&&c.secure&&c.sameSite==='Strict'));
     assert.equal(await page.evaluate<string>('document.cookie'),'');
     await assertSyntheticBrowserSave(page,true);
@@ -105,12 +110,23 @@ test('formal Designer registration, pending/rejection/approval, Passkey login, r
     app=await buildDualTrackFastify({...options,securityRegistration:{descriptor:{...descriptor,registrationMode:'disabled',issuedAtUtc:utc(now-7200000),expiresAtUtc:utc(now-3600000)}}});
     await navigate();await ready();assert.equal(await page.evaluate<number>(`fetch('/security/registration/v1/connection').then(r=>r.status)`),410);
     await click('[data-identity-login]');await waitFor(()=>page!.evaluate<boolean>(`!!document.querySelector('[data-identity-session="ready"]')`),Boolean,30000);
+    await click('.designer-identity button.designer-btn-primary');
+    await waitFor(()=>page!.evaluate<boolean>(`[...document.querySelectorAll('.designer-connection-flow select option')].some(e=>e.value==='synthetic_business') && !!document.querySelector('.designer-connection-actions button.designer-btn-primary:not(:disabled)')`),Boolean,90000);
+    await click('.designer-connection-actions button.designer-btn-primary');
+    const editorReady=()=>page!.evaluate<boolean>(`!document.querySelector('.designer-connection-flow') && !!document.querySelector('canvas')`);
+    await waitFor(editorReady,Boolean,120000);
+    assert.equal(await page.evaluate<boolean>(`(async()=>{const c=await fetch('/api/v1/databases/synthetic_business/catalog').then(r=>r.json());return c.models.some(m=>m.name==='SyntheticItem')&&c.models.every(m=>!m.name.startsWith('sys_'));})()`),true,'Designer metadata remains outside the business database');
+    // A connected Designer restores the editor, rather than the login panel, on reload.
+    await page.call('Page.reload');await waitFor(editorReady,Boolean,120000);
+    await assertSyntheticBrowserSave(page,false);
     const credentials=await local({action:'registration.credentials.list',instanceId}) as {revision:number;credentials:Array<{id:string}>};
     assert.equal(credentials.credentials.length,1);
     await local({action:'registration.credential.disable',instanceId,id:credentials.credentials[0]!.id,revision:credentials.revision,confirm:true});
     assert.equal(await page.evaluate<number>(`fetch('/api/v1/security/context?database=synthetic_business').then(r=>r.status)`),401);
+    assert.equal(await page.evaluate<number>(`fetch('/api/v1/databases').then(r=>r.status)`),401);
+    assert.equal(await page.evaluate<number>(`fetch('/api/v1/databases/synthetic_business/catalog').then(r=>r.status)`),401);
     await navigate();await ready();await click('[data-identity-login]');
     await waitFor(()=>page!.evaluate<string>(`document.querySelector('[data-identity-issue]')?.getAttribute('data-identity-issue')`),v=>v==='identity',30000);
-    t.diagnostic(JSON.stringify({format:'modeldb.designer-identity-browser.v1',ok:true,browser:page.version,screenshots:24,hardwareAuthenticatorTested:false,systemTrustInstalled:false,liveMaterialRead:false,checks:{syntheticSaveReadback:true,freshDesignerBuild:true,formalRegistration:true,pendingNoAuthority:true,rejectedState:true,localOsApproval:true,approvalRequiresLogin:true,actualWebAuthnLogin:true,syntheticDataScope:true,managementDenied:true,httpOnlySecureStrict:true,reloadRestoresSession:true,continuationNotPersisted:true,logout:true,expiredWindowLogin:true,revocationDenied:true,cancelledExplained:true,localizedZhEnJa:true,wideAndNarrow:true,labelsAndFocus:true}}));
+    t.diagnostic(JSON.stringify({format:'modeldb.designer-identity-browser.v1',ok:true,browser:page.version,screenshots:24,hardwareAuthenticatorTested:false,systemTrustInstalled:false,liveMaterialRead:false,checks:{formalLibraryOpened:true,designerBusinessIsolation:true,dataOnlySourcePolicy:true,syntheticSaveReadback:true,freshDesignerBuild:true,formalRegistration:true,pendingNoAuthority:true,rejectedState:true,localOsApproval:true,approvalRequiresLogin:true,actualWebAuthnLogin:true,syntheticDataScope:true,managementDenied:true,httpOnlySecureStrict:true,reloadRestoresSession:true,continuationNotPersisted:true,logout:true,expiredWindowLogin:true,revocationDenied:true,cancelledExplained:true,localizedZhEnJa:true,wideAndNarrow:true,labelsAndFocus:true}}));
   }finally{await page?.close();await app?.close();}
 });

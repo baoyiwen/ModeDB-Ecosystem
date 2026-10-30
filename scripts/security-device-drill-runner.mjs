@@ -31,6 +31,7 @@ import {
   assertIsolatedConfig,
   createDrillCertificate,
   digest,
+  deviceDrillGrants,
   deviceFailureCode,
   drillRoot,
   ownFile,
@@ -49,9 +50,7 @@ const output = (value) =>
     typeof value === 'string' ? value + '\n' : JSON.stringify(value, null, 2) + '\n',
   );
 const envHash = (runId) => digest(runId + '\0' + hostname().toLowerCase());
-const grants = [
-  { database: 'synthetic_business', resource: '*', actions: ['model.read', 'model.write'] },
-];
+const grants = deviceDrillGrants;
 let report;
 let reportPath;
 const save = () => {
@@ -200,6 +199,17 @@ async function prepare(serverAddress, clientAddress) {
     await engine.flushAll();
   } finally {
     await engine.close();
+  }
+  // Provision locally: ordinary LAN clients cannot create databases via management.
+  const designer = new AuthoringEngine({
+    atlas: cfg.designerWorkspace,
+    storageRoot: cfg.workspace,
+    keyProvider: new LocalVaultKeyProvider(join(root, 'security')),
+  });
+  try {
+    await designer.flushAll();
+  } finally {
+    await designer.close();
   }
   const artifacts = [
     ...buildInventory(root),
@@ -501,7 +511,7 @@ async function client(args) {
       async (command) => {
         if (command === 'status') {
           const state = await page.evaluate(
-            `({state:document.querySelector('[data-identity-state]')?.getAttribute('data-identity-state')??null,applicationId:document.querySelector('[data-identity-state] dd')?.textContent??null,ready:!!document.querySelector('[data-identity-session="ready"]'),issue:document.querySelector('[data-identity-issue]')?.getAttribute('data-identity-issue')??null})`,
+            `({state:document.querySelector('[data-identity-state]')?.getAttribute('data-identity-state')??null,applicationId:document.querySelector('[data-identity-state] dd')?.textContent??null,ready:!!document.querySelector('[data-identity-session="ready"]'),editorReady:!document.querySelector('.designer-connection-flow')&&!!document.querySelector('canvas'),issue:document.querySelector('[data-identity-issue]')?.getAttribute('data-identity-issue')??null})`,
           );
           if (state.applicationId && !uuidPattern.test(state.applicationId)) {
             state.applicationId = null;
@@ -518,8 +528,12 @@ async function client(args) {
           if (state.ready && (await ready()) === 200) {
             check('formalLogin');
           }
+          if (state.editorReady && (await ready()) === 200) {
+            check('formalLibraryOpened');
+          }
         } else if (command === 'save') {
           assert.equal(report.checks.formalLogin, true);
+          assert.equal(report.checks.formalLibraryOpened, true, 'DEVICE_OPEN_LIBRARY_BEFORE_SAVE');
           assertProbe(await page.evaluate(saveExpression(true)));
           check('syntheticSaveReadbackAndBoundaries');
         } else if (command === 'refresh') {

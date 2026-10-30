@@ -1,5 +1,7 @@
 # 设备注册接口使用说明
 
+D36 数据发现：`GET /api/v1/databases` 只列当前凭据具备准确库名、`resource: "*"` 和 `model.read` 的库；`GET /api/v1/databases/:name/catalog` 要求读权限，沿用设计器库的 schema 权限检查，异步读取后重查来源和授权。两者执行 data 来源/限流及 Cookie/Bearer 认证，不提供管理写入。SDK registry Token/浏览器会话使用新路径，legacy Token 保留 `/api/v1/management/...`；旧管理别名保持 management 来源约束及显式授予库的列表语义。Server 与 SDK/托管页面一起更新，失败不自动跨平面回退；预建与双库授权见[双机手册](windows-device-drill-guide.md)。
+
 D34实际Windows Hello/双机操作入口为[双机隔离演练手册](windows-device-drill-guide.md)。Prepare/Serve/Client复用本章正式协议和OS本机管理；Smoke不创建虚拟认证器且不完成硬件验收。实际注册/登录、停用后旧会话/新签名、独立进程重启与恢复策略仍需两端证据和操作者确认。
 
 DR-P1.4 提供默认关闭的注册 HTTP，DR-P1.5 提供本机审批 CLI。证明通过后先保存待审候选；管理员批准才建立主体、公钥凭证和明确授权。批准不创建 Token、登录会话或 Cookie。DR-P2 提供公钥登录，DR-P3.2 提供同源托管 Designer 的注册与 Passkey 登录页面，原配对和应用 Token 模式继续保留。

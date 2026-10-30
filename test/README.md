@@ -1,5 +1,7 @@
 # Tests (`test/`)
 
+D36: `node node_modules/tsx/dist/cli.mjs --test test/unit/security-data-discovery.test.ts` covers data-only source policies, anonymous/cross-database denial, metadata shape, grant/revocation races and SDK legacy compatibility. `node scripts/security-designer-identity-check.mjs` now clicks through the formal library flow into the real editor and reloads it, with management sources explicitly denied; its Chrome authenticator remains virtual. The device drill requires human library opening (`status` reports `editorReady`) before `save`. Real A/B acceptance remains pending; see the two-Windows guide.
+
 DR-P4.6 preparation: `node --test --test-reporter=tap test/unit/security-device-drill.test.mjs`; native loopback/DPAPI/Named Pipe/visible Chrome smoke: `node scripts/security-device-drill.mjs smoke`. See [the two-Windows guide](../docs/security-v1/windows-device-drill-guide.md). Smoke uses a new synthetic instance and unique TLS key, never a virtual authenticator; it cannot complete actual Hello/two-device acceptance. No existing dist, local Vite/env, live configuration or 9091 is used. Actual A/B, hardware confirmation and recovery-policy exercises remain pending.
 
 ## Commands

@@ -1,0 +1,47 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): 742e7b74b1ff1660590ce5243e3a6fd3242eccc22362bb15a16b8fe8d4453a92
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:62158
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:62158
+#     HTTP RPC:  https://modeldb-a.example.test:62158/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:62158/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-ajv10u\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:62158/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-ajv10u\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-ajv10u\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-ajv10u\\modeldb.config.json"
+# Subtest: formal Designer registration, pending/rejection/approval, Passkey login, library opening, recovery and localized layouts
+not ok 1 - formal Designer registration, pending/rejection/approval, Passkey login, library opening, recovery and localized layouts
+  ---
+  duration_ms: 47744.877
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\integration\\security-designer-identity-browser.test.ts:1:1467'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    
+    false !== true
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\integration\security-designer-identity-browser.test.ts:105:12)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 48939.1035

@@ -1,5 +1,7 @@
 # 安全 V1 构建、安装与切换指南
 
+D36 增加数据面列库/catalog 路径，Server 与 SDK/托管页面需同步更新；legacy Token 和旧管理别名保持原边界，不在授权拒绝后回退。双机演练源码已变化，保留旧轮后两端同步并重新 Prepare，不修改旧摘要或复用旧 ticket/pin。D34 以前证据原字节保留，不能当作当前修复的重新发布/安装或实际设备通过证明；最终发布和切换门槛仍未关闭。
+
 D34：发行/切换前最后的实际设备门槛仍未关闭；按[双机手册](windows-device-drill-guide.md)运行新的隔离源码演练。支持Windows/Node24/Chrome或Edge，D34本机烟测使用Chrome，Edge及双机需实际报告。运行冻结源码、全新Designer、独立profile与专用TLS，不覆盖dist、不安装系统信任，不等同于新发行包安装复验或真实部署。总证据的preparation-passed-device-pending仅代表准备验证通过；新增扩展仍22/23。
 
 本文面向 Windows 实例所有者与发布维护者，配套[功能简介](overview.md)、[使用手册](user-guide.md)和[唯一验收台账](../security-v1-milestones.md)。研发验收与实际发布、实际服务切换分别记录。

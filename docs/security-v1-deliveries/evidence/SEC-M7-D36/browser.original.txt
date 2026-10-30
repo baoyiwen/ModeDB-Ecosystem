@@ -1,0 +1,53 @@
+TAP version 13
+# [modeldb-server] storage fingerprint (sha256): d66c39e539edb39bde18bcb6dd8703fe8a413b37ac21d27e7b70584f0ff4d3f3
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:53662
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:53662
+#     HTTP RPC:  https://modeldb-a.example.test:53662/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:53662/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-X6dKnJ\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:53662/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-X6dKnJ\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-X6dKnJ\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-X6dKnJ\\modeldb.config.json"
+# [modeldb-server] storage fingerprint (sha256): d66c39e539edb39bde18bcb6dd8703fe8a413b37ac21d27e7b70584f0ff4d3f3
+# [ModelDB] Engine is running
+#   Listen: 127.0.0.1:53662
+#   Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+#   Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+#   Transport: tls; source/Origin policy is enforced.
+#   Public base URL: https://modeldb-a.example.test:53662
+#     HTTP RPC:  https://modeldb-a.example.test:53662/api/v1/rpc
+#     WebSocket: wss://modeldb-a.example.test:53662/api/v1/stream
+#   Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+#     Status:      modeldb-server security status -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-X6dKnJ\\modeldb.config.json"
+#     Designer:    https://modeldb-a.example.test:53662/designer/ (same-origin; data permission still required)
+#     Management:  modeldb-server security security-open -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-X6dKnJ\\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+#     Credentials: modeldb-server security credentials -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-X6dKnJ\\modeldb.config.json"
+#     Help:        modeldb-server security help -c "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Designer-Identity-X6dKnJ\\modeldb.config.json"
+# [modeldb-server][catalog] synthetic_business: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] synthetic_business: metadataSource=synthetic_business displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] synthetic_business: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=1
+# [modeldb-server][catalog] synthetic_business: metadataSource=synthetic_business displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# [modeldb-server][catalog] synthetic_business: metadataSource=model_designer_workspace displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=1
+# [modeldb-server][catalog] synthetic_business: metadataSource=synthetic_business displayName=false modelLabels=0 fieldLabels=0 directFieldLabels=0 fallbackFieldLabels=0 snapshotFieldLabels=0 props=0
+# Subtest: formal Designer registration, pending/rejection/approval, Passkey login, library opening, recovery and localized layouts
+ok 1 - formal Designer registration, pending/rejection/approval, Passkey login, library opening, recovery and localized layouts
+  ---
+  duration_ms: 176283.658
+  type: 'test'
+  ...
+# {"format":"modeldb.designer-identity-browser.v1","ok":true,"browser":"Chrome/156.0.8078.48","screenshots":24,"hardwareAuthenticatorTested":false,"systemTrustInstalled":false,"liveMaterialRead":false,"checks":{"formalLibraryOpened":true,"designerBusinessIsolation":true,"dataOnlySourcePolicy":true,"syntheticSaveReadback":true,"freshDesignerBuild":true,"formalRegistration":true,"pendingNoAuthority":true,"rejectedState":true,"localOsApproval":true,"approvalRequiresLogin":true,"actualWebAuthnLogin":true,"syntheticDataScope":true,"managementDenied":true,"httpOnlySecureStrict":true,"reloadRestoresSession":true,"continuationNotPersisted":true,"logout":true,"expiredWindowLogin":true,"revocationDenied":true,"cancelledExplained":true,"localizedZhEnJa":true,"wideAndNarrow":true,"labelsAndFocus":true}}
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 182395.8459

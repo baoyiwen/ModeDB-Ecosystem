@@ -356,7 +356,44 @@ export function installRegistryEntrypoints(input: {
       networkSource,
     );
 
+  // Discovery belongs to the data plane. Keep the old management URLs as
+  // compatibility aliases subject to their original management source policy.
+  const discovery = async (request: FastifyRequest, reply: FastifyReply, database?: string) => {
+    reply.header('cache-control', 'no-store');
+    const requestId = randomUUID();
+    try {
+      const token = access(request);
+      const auth = authorize(token, () => guard(request));
+      if (database === undefined) {
+        const allowed = new Set(
+          verify(token)
+            .credential.grants.filter((g) => g.resource === '*' && g.actions.includes('model.read'))
+            .map((g) => g.database),
+        );
+        return reply.send({
+          databases: input.listDatabases().filter((db) => allowed.has(db.name)),
+        });
+      }
+      database = name(database);
+      auth.require(database, 'model.read');
+      const engine = await input.getEngine(database);
+      const recheck = await auth.operation(database, { op: 'executeQuery', snapshot: {} }, engine);
+      recheck();
+      const result = await input.catalog(database);
+      recheck();
+      return reply.send(result);
+    } catch (error) {
+      return sendFailure(reply, error, requestId, input.securityControl?.protection.retryAfter());
+    }
+  };
+
   if (input.listenerRole !== 'management') {
+    app.get('/api/v1/databases', { exposeHeadRoute: false }, (request, reply) =>
+      discovery(request, reply),
+    );
+    app.get('/api/v1/databases/:dbName/catalog', { exposeHeadRoute: false }, (request, reply) =>
+      discovery(request, reply, (request.params as { dbName: string }).dbName),
+    );
     app.get('/api/v1/security/context', async (request, reply) => {
       const requestId = randomUUID();
       try {
@@ -949,7 +986,10 @@ export function installRegistryEntrypoints(input: {
       path === '/api/v1/security/admin/control' ||
       path === '/api/v1/security/admin/audit' ||
       path === '/api/v1/security/admin/audit/export' ||
-      path === '/api/v1/stream'
+      path === '/api/v1/stream' ||
+      (input.listenerRole !== 'management' &&
+        request.method === 'GET' &&
+        (path === '/api/v1/databases' || /^\/api\/v1\/databases\/[^/]+\/catalog$/.test(path ?? '')))
     ) {
       return;
     }
@@ -958,30 +998,20 @@ export function installRegistryEntrypoints(input: {
       if (path === '/' || path?.startsWith('/v2/')) {
         throw new SecurityError('SECURITY_PROTOCOL_UNSUPPORTED');
       }
-      const token = access(request);
-      const auth = authorize(token, () => guard(request));
-      const verified = verify(token);
       if (request.method === 'GET' && path === '/api/v1/management/databases') {
-        const allowed = new Set(verified.credential.grants.map((g) => g.database));
+        // Preserve the legacy management listing of explicitly granted databases,
+        // including callable-only scopes. The new data route requires raw read scope.
+        const allowed = new Set(verify(access(request)).credential.grants.map((g) => g.database));
         return reply.send({
           databases: input.listDatabases().filter((db) => allowed.has(db.name)),
         });
       }
       const catalog = /^\/api\/v1\/management\/databases\/([^/]+)\/catalog$/.exec(path ?? '');
       if (request.method === 'GET' && catalog) {
-        const database = name(decodeURIComponent(catalog[1]!));
-        auth.require(database, 'model.read');
-        const engine = await input.getEngine(database);
-        const recheck = await auth.operation(
-          database,
-          { op: 'executeQuery', snapshot: {} },
-          engine,
-        );
-        recheck();
-        const result = await input.catalog(database);
-        recheck();
-        return reply.send(result);
+        return discovery(request, reply, name(decodeURIComponent(catalog[1]!)));
       }
+      const token = access(request);
+      const auth = authorize(token, () => guard(request));
       const callable = /^\/api\/v1\/databases\/([^/]+)\/query-interfaces\/([^/]+)$/.exec(
         path ?? '',
       );

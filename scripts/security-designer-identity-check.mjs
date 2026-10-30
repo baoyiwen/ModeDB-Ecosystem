@@ -92,7 +92,7 @@ export async function checkDesignerIdentity() {
   const timer = setTimeout(() => {
     timedOut = true;
     child.kill();
-  }, 300000);
+  }, 480000);
   const exitCode = await new Promise((done, fail) => {
     child.once('error', fail);
     child.once('close', done);

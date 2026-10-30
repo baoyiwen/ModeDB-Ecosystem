@@ -67,7 +67,7 @@ for(const header of ['forwarded','x-forwarded-for','x-forwarded-host','x-forward
 test('management APIs and page cannot be reached through data listener, even from loopback',async()=>{
   const x=await hostingFixture();try{
     for(const path of ['/security/','/api/v1/security/admin/overview','/api/v1/security/admin/control','/api/v1/security/admin/audit','/api/v1/security/admin/audit/export'])assert.equal((await call(x.origin,path)).status,404);
-    for(const path of ['/api/v1/rpc','/api/v1/stream','/api/v1/management/databases','/security/authentication/v1/capabilities','/designer/'])assert.equal((await call(x.managementOrigin,path)).status,404);
+    for(const path of ['/api/v1/rpc','/api/v1/stream','/api/v1/databases','/api/v1/databases/synthetic_business/catalog','/api/v1/management/databases','/security/authentication/v1/capabilities','/designer/'])assert.equal((await call(x.managementOrigin,path)).status,404);
     assert.equal((await call(x.managementOrigin,'/api/v1/security/admin/overview')).status,401);
     assert.equal((await call(x.managementOrigin,'/security/',undefined,{host:'localhost:'+new URL(x.managementOrigin).port})).status,403);
   }finally{await x.close();}

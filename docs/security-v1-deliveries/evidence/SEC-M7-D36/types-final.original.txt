@@ -1,0 +1,26 @@
+{
+  "format": "modeldb.registration-storage-types.v1",
+  "ok": true,
+  "node": "v24.15.0",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Storage-Types-AtyEZY",
+  "checks": {
+    "freshSharedDeclarations": true,
+    "freshCoreDeclarations": true,
+    "entireServerTypecheck": true,
+    "strictStorageTestTypecheck": true,
+    "strictSessionParentTypecheck": true,
+    "strictAuthenticationTypecheck": true,
+    "strictAuthenticationResilienceTypecheck": true,
+    "strictRegisteredRecoveryTypecheck": true,
+    "strictHostingTypecheck": true,
+    "strictDeploymentWizardTypecheck": true,
+    "strictIdentityAdminTypecheck": true,
+    "strictDesignerIdentityTypecheck": true,
+    "strictPublicClientsTypecheck": true,
+    "strictHostileBrowserTypecheck": true,
+    "strictRegistrationRuntimeTypecheck": true,
+    "strictRegistrationApprovalTypecheck": true,
+    "strictRegistrationIntegrationTypecheck": true,
+    "existingDistUnchanged": true
+  }
+}

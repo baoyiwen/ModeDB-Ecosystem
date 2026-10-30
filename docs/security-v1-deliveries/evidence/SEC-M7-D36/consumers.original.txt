@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "format": "modeldb.registration-consumer-check.v1",
+  "node": "v24.15.0",
+  "root": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Registration-Consumers-0YP0n9",
+  "checks": {
+    "freshSharedDeclarations": true,
+    "strictSdkConsumer": true,
+    "entireDesignerTypecheck": true,
+    "entireDataStudioTypecheck": true,
+    "entireWebTypecheck": true,
+    "publicIdentityClientConsumer": true,
+    "domTypesWithoutNode": true,
+    "sharedBrowserBundle": true,
+    "sdkBrowserBundle": true,
+    "serverLibraryExcluded": true
+  },
+  "bundles": [
+    {
+      "entry": "packages/shared/src/index.ts",
+      "bytes": 87716,
+      "sha256": "009ce78a29e501caf15595440d7182fa6bac48955babf6bef2f7dd841cb467db"
+    },
+    {
+      "entry": "packages/sdk/src/index.ts",
+      "bytes": 178299,
+      "sha256": "b86942d3e26e4ac04b02a6755ef601dcb3648cca47b836a4f48d5a263d3ba176"
+    }
+  ]
+}

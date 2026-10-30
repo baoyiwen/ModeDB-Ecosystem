@@ -1,0 +1,139 @@
+{
+  "format": "modeldb.security-fix-verification.v1",
+  "revision": "SEC-M7-D36",
+  "task": "DR-P4.6",
+  "status": "targeted-fix-passed-device-pending",
+  "taskComplete": false,
+  "tasks": {
+    "registration": "22/23",
+    "registrationP4": "5/6",
+    "registrationWorkPackages": "3/4"
+  },
+  "node": "v24.15.0",
+  "unit": {
+    "tests": 151,
+    "pass": 151,
+    "fail": 0,
+    "skip": 0
+  },
+  "browser": {
+    "pass": 1,
+    "fail": 0,
+    "hardwareAuthenticatorTested": false,
+    "checks": {
+      "formalLibraryOpened": true,
+      "designerBusinessIsolation": true,
+      "dataOnlySourcePolicy": true,
+      "syntheticSaveReadback": true,
+      "freshDesignerBuild": true,
+      "formalRegistration": true,
+      "pendingNoAuthority": true,
+      "rejectedState": true,
+      "localOsApproval": true,
+      "approvalRequiresLogin": true,
+      "actualWebAuthnLogin": true,
+      "syntheticDataScope": true,
+      "managementDenied": true,
+      "httpOnlySecureStrict": true,
+      "reloadRestoresSession": true,
+      "continuationNotPersisted": true,
+      "logout": true,
+      "expiredWindowLogin": true,
+      "revocationDenied": true,
+      "cancelledExplained": true,
+      "localizedZhEnJa": true,
+      "wideAndNarrow": true,
+      "labelsAndFocus": true
+    }
+  },
+  "smoke": {
+    "ok": true,
+    "actualHelloTested": false,
+    "twoDeviceTested": false
+  },
+  "types": true,
+  "consumersAndFrontendTypes": true,
+  "staticChecks": true,
+  "documentLinksChecked": 10,
+  "sourceManifest": "source-manifest.json",
+  "artifacts": [
+    {
+      "path": "browser-before-reload-repair.json",
+      "sha256": "92a43a4b3a05ae510d24e99709fd5ed2ff5ea6a34cbabdb955e7dd446183a179"
+    },
+    {
+      "path": "browser-before-reload-repair.original.txt",
+      "sha256": "9421844e97d9c60e6ea8d4da5a95a9c75a51aa420aebb9ade60da78f9871bcb6"
+    },
+    {
+      "path": "browser-before-selector-repair.json",
+      "sha256": "b5c403c7b74ec9c51377d294bd8e64c370bb39fc25a25b616aa02bdf7ce5e492"
+    },
+    {
+      "path": "browser-before-selector-repair.original.txt",
+      "sha256": "33368c52ebdbedbd4bec83754950d9ac7fb3e70de1d78c5479a91888127c9a90"
+    },
+    {
+      "path": "browser-before-status-repair.json",
+      "sha256": "ddb44993fb132ddd689b93d18f2e7a4e3df1b840399ef84fdb62468b347068dc"
+    },
+    {
+      "path": "browser-before-status-repair.original.txt",
+      "sha256": "c05865308cf08a7881b7839bac9a7096f421acd8f18ef1c64cfaf5d54993d1b2"
+    },
+    {
+      "path": "browser.json",
+      "sha256": "5a0216ee78c95456b010073e9afde9814cf505a16931c57da81c079efd78ac10"
+    },
+    {
+      "path": "browser.original.txt",
+      "sha256": "654612f6acf894f4ac35c8d8a2ce956c6af22711abf9f1d49de98b99c82bac5c"
+    },
+    {
+      "path": "consumers.original.txt",
+      "sha256": "f229174e779e5d1af705b814ac403f522a2ded7bc01feb10e0172ab0ff91d4e7"
+    },
+    {
+      "path": "smoke.json",
+      "sha256": "d99517b089b520dbfca14ebd408c57098b8c758f39abeaa2e04a2c98564d590e"
+    },
+    {
+      "path": "smoke.original.txt",
+      "sha256": "2b9103735eef9e832ad111cfbf2902cbadf3866aacd9d67b8829539ec2a94b4f"
+    },
+    {
+      "path": "source-manifest.json",
+      "sha256": "ff855d27938d1edea800897208e9cc58843d3c830243e92b0650b77444d5ffe6"
+    },
+    {
+      "path": "static.original.txt",
+      "sha256": "d5ce40e7571ddc9465dcd260c85d5f10d979ba5072e1c71fb0cfaededba09158"
+    },
+    {
+      "path": "types-final.original.txt",
+      "sha256": "445c5e73391c5dda3bc44316dbbc4f27aa1a0a375fd498d2e7fd322b8e07b942"
+    },
+    {
+      "path": "types.original.txt",
+      "sha256": "850a40f6d269da1d50ca891af8bac9614a69dbfc5d080d9a90aa30b6a743bea3"
+    },
+    {
+      "path": "unit-before-compatibility-repair.original.txt",
+      "sha256": "4a1b9ea9ea6cdae8f794dd535eeb6e950b207e5f3837c56917884faac5343bc5"
+    },
+    {
+      "path": "unit.original.txt",
+      "sha256": "7573adca135d0dc122b47063d09f5cb5ee1beefba6c31d41390866eb42953cab"
+    }
+  ],
+  "limits": [
+    "Focused D36 evidence; D34 receipt is unchanged and does not certify current sources.",
+    "No actual A/B Hello completion, production, full regression, install or performance acceptance."
+  ],
+  "scope": {
+    "temporarySyntheticOnly": true,
+    "liveMaterialRead": false,
+    "systemTrustInstalled": false,
+    "published": false
+  }
+}

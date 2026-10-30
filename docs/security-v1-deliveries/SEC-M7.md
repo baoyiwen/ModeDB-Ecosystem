@@ -1221,3 +1221,23 @@ Windows / Node v24.15.0，A→B→B→A 四个独立实例，固定1000行、正
 本次仅将已核对属于该修复的 `eslint.config.js`、`lint-staged.config.mjs`、`.prettierignore` 加入暂存区，保留用户原有暂存内容，不暂存其他文件或代为提交。三个配置的暂存内容与工作区一致；不存在部分暂存的检查配置，提交时不会再隐藏该修复。
 
 按当前2051个已暂存新增/修改路径进行只读验证：1802个归档路径从提交任务中过滤，归档脚本的ESLint与可格式化文件的Prettier忽略规则均命中；从Git暂存blob读取实际提交文本，ESLint检查98个源码文件，0错误、4条`no-console`警告；Prettier检查160个文件全部通过。验证前后Git索引条目摘要一致。三个源码守卫再次通过。未实际运行会自动改写文件的完整pre-commit/lint-staged，不重跑业务/安全或设备验收；本次没有新增产品源码改动。
+
+## D36：DR-P4.6 登录后开库与数据发现边界修复
+
+日期：2026-10-30。状态：**开库缺陷修复，实际双机完整验收仍进行中**。B 用户回报 Windows 11、本机操作、平台认证器能力 true，并给出 `state: approved`、`ready: true`、`issue: null`，确认申请审批和登录会话成功；截图的 `SECURITY_SOURCE_DENIED` 出现在继续访问模型库时。这些现场信息不能替代后续保存、刷新、停用、独立进程重启与丢失/恢复验收，也不能证明 TPM 或私钥不可导出。
+
+开始时 Git 工作区干净，读取专项规则/唯一台账/最新交付和相关 Server、SDK、前端规则。发现 SDK 列库/catalog 使用 management URL，而双机演练只允许 B 访问 data 来源；另演练仅授予业务库读写，缺少独立设计器库的初始化/导入权限。没有修改 management 来源规则、授予安全管理员或全部数据库权限。
+
+新增 registry 数据面 `GET /api/v1/databases` 和 `GET /api/v1/databases/:dbName/catalog`，复用认证、CSRF 会话读取、来源/限流和实时授权；列表仅返回有准确库名、全资源 `model.read` 的库，未授权 catalog 在打开引擎前拒绝，异步加载后重查来源/授权及停用状态。响应保留原显示名、字段标签/类型和自环策略。SDK registry Token/浏览器会话用新路径，legacy Token 保留原管理路径，无失败后跨平面回退。旧管理别名仍受 management 来源策略，旧管理列库继续包含准确授予的 callable-only 库；创建、删除、清除、备份和安全管理边界不变，专用本机管理监听器不暴露数据发现。
+
+演练 Prepare 本机预建 `synthetic_business` 和 `model_designer_workspace`，审批仅给前者模型读写、后者模型读写/schema 管理/导入；没有库生命周期、备份或安全管理权限。`sys_*` 独立保存在设计器库。Client `status` 增加 `editorReady`，记录 `formalLibraryOpened`，必须本人继续并打开库后才能执行 `save`。管理拒绝断言仅接受 404/`SECURITY_NOT_FOUND` 或 403/`SECURITY_SOURCE_DENIED`，拒绝把任意403/服务故障计作成功。简介、手册、协议、发布说明、AGENTS、测试说明及唯一台账同步；正式产品无页面布局或可见翻译修改，不新增人工视觉结论。
+
+受影响的九个测试文件 **151/151** 通过，0 fail/skip/cancelled/todo：数据发现、双机工具、托管隔离、动态授权、网络、原浏览器会话/授权及 Designer 身份/报告。新测试覆盖匿名/跨库/仅备份或发布权限不可读、管理路径仍拒、异步减权/停用与 SDK legacy 兼容。原生 Windows/Node24.15.0、全新 Designer/Chrome156 profile、随机回环 HTTPS、真实 DPAPI/Named Pipe 的正式页面 **1/1** 通过：实际点击继续→打开库→编辑器，重载恢复编辑器、合成保存读回、业务库无 sys 元模型、停用后会话/新登录拒绝；认证器为虚拟，非实际 Hello。原有 zh/en/ja、1280/390 共24张截图和标签/溢出断言通过。双库 Prepare/Serve、唯一 TLS、公钥 pin、可见独立 Chrome、安全上下文、本机管道及服务重建 smoke 另外通过，不计作实际双机。
+
+新 shared/Core 声明、整个 Server/限定测试严格类型，SDK 严格 DOM 消费、三个前端类型及 browser 依赖边界通过，不覆盖 dist。默认受限运行时首次消费者类型检查无法解析已安装 exceljs/dayjs，原生 Node 使用现有依赖复验通过，没有安装依赖或改类型规则。开发期新合成 Cookie 测试最初用了 HTTP scope，改为所用 proxy/TLS 的 HTTPS scope 后通过；新增管理列库过滤曾使原 callable-only 兼容测试失败，恢复旧管理语义后151项通过，保留失败日志。浏览器首次断言误期望已隐藏管理路由403、其次误选隐藏的连接按钮、第三次误等待开库重载后的登录页，分别修正测试选择/预期；第三次已实际进入编辑器，最终从新实例完整重跑1/1。失败报告/TAP与最终结果分开保存，没有放宽权限或删负例。
+
+本轮公开日志/报告及修复源码摘要位于 [D36证据目录](evidence/SEC-M7-D36/verification.json)。D34/D35及以前归档原字节保留，不更新旧 receipt 或把旧源码摘要改成当前结果；原总证据核验器最新 receipt 仍为 D34，其源码约束不能作为 D36 当前功能核验，使用本节明确列出的定向证据。未重新执行 D32 全量/六引擎、七包安装、性能容量、Node22、Edge 或完整实际 A/B；不宣称当前发行候选已通过最终总验收。
+
+只使用新临时合成实例与随机回环端口；未读取/修改真实配置、根 security/certs、真实凭据/密钥/Vault/业务库/ACL/系统信任，没有连接重启9091、提交、推送、发布或切换。A/B 旧轮保留；两端同步修复后从全新 Prepare 开始，使用新 ticket/证书/独立核对 pin 并重新注册审批，依[双机手册](../security-v1/windows-device-drill-guide.md)实际打开编辑器，再检查 status/save/refresh/offline、停用后旧会话及新证明、同进程和独立进程重启拒绝及取消/丢失/恢复策略。
+
+**DR-P4.6 保持进行中，新增扩展22/23、DR-P4为5/6、必需工作包3/4。下一步为用户完成修复后新轮 A/B 实际认证器验收并交回脱敏报告，不能以本机虚拟认证器回归关闭最后一项。**

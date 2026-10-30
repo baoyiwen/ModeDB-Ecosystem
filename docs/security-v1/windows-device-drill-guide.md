@@ -2,6 +2,8 @@
 
 这是 DR-P4.6 的隔离操作手册。D34 已提供重复演练工具；**真实 Windows Hello 和 A/B 双机验收尚未完成**，不能将 `Smoke` 或历史恢复报告计作完成。工具复用正式 Model Designer 页面及服务端认证/授权，不新增认证接口。当前支持 Windows、Node 24、已安装的 Chrome 或 Edge；其他平台、Node 22、本阶段 Edge 实际运行仍待对应验证。
 
+D36 修复登录后进入模型库的 `SECURITY_SOURCE_DENIED`：数据面列库/catalog 与管理操作分开，预建并准确授权业务库及设计器专属库。旧轮保留；A/B 同步本次源码后新建 Prepare，重新传公开 ticket/证书、独立核对新 pin、注册和审批，不修改旧轮摘要或放开 management 来源。
+
 ## 1. B 先确认 Windows Hello
 
 在 B 打开 **设置 → 账户 → 登录选项**，查看是否已设置“PIN（Windows Hello）”。已设置 PIN 即可，不要求购买指纹或人脸设备。未设置则按 Windows 指引添加，由你本人输入 Windows 账户验证信息和 PIN。若显示“此选项当前不可用”，记录非敏感错误文字，先解决设备/组织策略；不要改用文件签名冒充 Hello。
@@ -28,7 +30,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\security-devic
 $LASTEXITCODE
 ```
 
-成功退出码为 0，输出 `prepared: true`、`drillRoot`、`transferOnly`、`pin` 和到期时间。全新目录在 `%TEMP%\ModeDB-Device-Drill-*`；工具构建新的 Designer、创建合成 `synthetic_business`、生成专用 TLS 私钥/证书并冻结源码/页面。`taskComplete` 仍为 false。不要把“准备成功”当双机通过。
+成功退出码为 0，输出 `prepared: true`、`drillRoot`、`transferOnly`、`pin` 和到期时间。全新目录在 `%TEMP%\ModeDB-Device-Drill-*`；工具构建新的 Designer，预建合成业务库 `synthetic_business` 与元数据库 `model_designer_workspace`，生成专用 TLS 私钥/证书并冻结源码/页面。`taskComplete` 仍为 false。不要把“准备成功”当双机通过。
 
 保存 A 的输出路径：
 
@@ -69,9 +71,9 @@ approve <applicationId>
 credentials
 ```
 
-核对 `list` 中对应申请，准确 ID 审批。工具使用当前修订 CAS、本机 Windows 管道，只给 `synthetic_business` 的模型读/写权限。记录 `credentials` 中这次批准产生的准确凭据 UUID，后续停用它；不要随意选择其他条目。
+核对 `list` 中对应申请，准确 ID 审批。工具使用当前修订 CAS、本机 Windows 管道，给 `synthetic_business` 模型读/写，给 `model_designer_workspace` 模型读/写、schema 管理及导入权限，用于初始化和保存元数据；没有库创建/删除、备份或安全管理权限，`sys_*` 不写入业务库。记录 `credentials` 中本次准确凭据 UUID，后续停用它。
 
-B 页面显示批准后，先输入 `status`，记录批准尚未登录时仍无会话；再点击 Passkey 登录，完成一次 Windows Hello。**B 脚本窗口**依次输入：
+B 页面显示批准后，先输入 `status`，记录批准尚未登录时仍无会话；再点击 Passkey 登录，完成一次 Windows Hello。B 脚本输入 `status`，应有 `ready: true`。随后在页面点击“继续访问模型库”，选择 `synthetic_business` 并“打开库”。等建模编辑器出现，再在 **B 脚本窗口**依次输入：
 
 ```text
 status
@@ -81,7 +83,7 @@ offline
 online
 ```
 
-成功会在客户端报告记录 `formalLogin`、`syntheticSaveReadbackAndBoundaries`、`reloadReadback`、`simulatedOfflineRejected`。`save` 在正式页面会话中通过 RPC 保存一条固定合成行并读回，同时验证无 CSRF 与跨库写入拒绝、公共管理入口 404；不等同于人工完成整个建模画布业务。`refresh` 验证页面重载后保留短会话并读回该行。
+进入编辑器后的 `status` 应显示 `editorReady: true`，记录 `formalLibraryOpened`；未开库执行 `save` 会提示 `DEVICE_OPEN_LIBRARY_BEFORE_SAVE`。成功还会记录 `formalLogin`、`syntheticSaveReadbackAndBoundaries`、`reloadReadback`、`simulatedOfflineRejected`。`save` 通过正式会话 RPC 保存固定合成行并读回，验证无 CSRF、跨库拒绝和公共管理入口的准确拒绝（404/`SECURITY_NOT_FOUND` 或 403/`SECURITY_SOURCE_DENIED`，其他错误不算通过）。它不等同完整画布业务验收；`refresh` 验证重载后会话和合成行读回。
 
 `offline` 用当前隔离浏览器的 DevTools 网络仿真产生断网，网络请求必须失败；`online` 只恢复网络并检查会话，不自动补发写请求。这不等于拔网线或服务端断网测试。另可由操作者临时断开 B 的网络，观察失败再恢复，记录真实操作的结果；不要以误报成功或自动重试写入作为通过。
 

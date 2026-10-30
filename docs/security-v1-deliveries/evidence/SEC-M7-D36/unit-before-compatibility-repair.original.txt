@@ -1,0 +1,1044 @@
+TAP version 13
+# [ModeDB] START Connection: open websocket trace=e881bd93
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:61291/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=e881bd93 6.91ms
+#   结果: { ms: 6.91, url: 'ws://127.0.0.1:61291/api/v1/stream' }
+# Subtest: source expiry affects existing WS messages and queued writes before any new mutation
+ok 1 - source expiry affects existing WS messages and queued writes before any new mutation
+  ---
+  duration_ms: 392.8505
+  type: 'test'
+  ...
+# Subtest: browser pairing binds Origin, session CSRF, actual expiry and safe logout
+ok 2 - browser pairing binds Origin, session CSRF, actual expiry and safe logout
+  ---
+  duration_ms: 285.1867
+  type: 'test'
+  ...
+# Subtest: pins canonical releases, projects only published fields and denies cross-database/raw/sys/instance access
+not ok 3 - pins canonical releases, projects only published fields and denies cross-database/raw/sys/instance access
+  ---
+  duration_ms: 224.5847
+  type: 'test'
+  location: 'C:\\workspace\\web_code\\ModeDB-Ecosystem\\test\\unit\\security-authorization.test.ts:1:12585'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly deep-equal:
+    + actual - expected
+    
+    + []
+    - [
+    -   'business'
+    - ]
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+    0: 'business'
+  actual:
+  operator: 'deepStrictEqual'
+  stack: |-
+    <anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-authorization.test.ts:448:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    async fixture (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-authorization.test.ts:227:5)
+    async TestContext.<anonymous> (C:\workspace\web_code\ModeDB-Ecosystem\test\unit\security-authorization.test.ts:400:3)
+    async Test.run (node:internal/test_runner/test:1208:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:831:7)
+  ...
+# [ModeDB] START Connection: open websocket trace=7d7de7bf
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:56455/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=7d7de7bf 2.33ms
+#   结果: { ms: 2.33, url: 'ws://127.0.0.1:56455/api/v1/stream' }
+# Subtest: generated Postman/HTTP and native curl match SDK calls and report expiry, revocation and protocol failures
+ok 4 - generated Postman/HTTP and native curl match SDK calls and report expiry, revocation and protocol failures
+  ---
+  duration_ms: 457.4529
+  type: 'test'
+  ...
+# [ModeDB] START Connection: open websocket trace=694436ca
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:56475/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=694436ca 1.56ms
+#   结果: { ms: 1.56, url: 'ws://127.0.0.1:56475/api/v1/stream' }
+# Subtest: SDK short and stream authenticate before exposure, preserve revived rows and revoke existing sessions
+ok 5 - SDK short and stream authenticate before exposure, preserve revived rows and revoke existing sessions
+  ---
+  duration_ms: 230.8998
+  type: 'test'
+  ...
+# [ModeDB] START Management API: GET /api/v1/databases trace=9cdba31e
+#   说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+#   请求摘要: { url: 'http://127.0.0.1:56485/api/v1/databases' }
+# [ModeDB] OK Management API: GET /api/v1/databases trace=9cdba31e 1.73ms
+#   结果: { ms: 1.73, status: 200, path: '/api/v1/databases', databases: 1 }
+# [ModeDB] START Management API: GET /api/v1/databases/business/catalog trace=fc84030e
+#   说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+#   请求摘要: { url: 'http://127.0.0.1:56485/api/v1/databases/business/catalog' }
+# [ModeDB] OK Management API: GET /api/v1/databases/business/catalog trace=fc84030e 1.2ms
+#   结果: {
+#     ms: 1.2,
+#     status: 200,
+#     path: '/api/v1/databases/business/catalog',
+#     database: 'business',
+#     models: 1,
+#     relations: 0,
+#     hasDatabaseDisplayName: false,
+#     modelDisplayNames: 0,
+#     fieldLabels: 1
+#   }
+# [ModeDB] START Connection: open websocket trace=a2055317
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:56485/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=a2055317 3.5ms
+#   结果: { ms: 3.5, url: 'ws://127.0.0.1:56485/api/v1/stream' }
+# Subtest: browser SDK uses cookies for management, restored HTTP RPC and CSRF-protected WS with revocation
+ok 6 - browser SDK uses cookies for management, restored HTTP RPC and CSRF-protected WS with revocation
+  ---
+  duration_ms: 289.7208
+  type: 'test'
+  ...
+# [ModeDB] START Connection: open websocket trace=24c44843
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:56512/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=24c44843 2.11ms
+#   结果: { ms: 2.11, url: 'ws://127.0.0.1:56512/api/v1/stream' }
+# [ModeDB] START Connection: open websocket trace=220b6805
+#   说明: 前端正在建立与 ModelDB Engine 的连接或握手。
+#   请求摘要: { url: 'ws://127.0.0.1:56535/api/v1/stream' }
+# [ModeDB] OK Connection: open websocket trace=220b6805 1.72ms
+#   结果: { ms: 1.72, url: 'ws://127.0.0.1:56535/api/v1/stream' }
+# Subtest: SDK clients retry a failed handshake and share a successful concurrent ModelDB connection
+ok 7 - SDK clients retry a failed handshake and share a successful concurrent ModelDB connection
+  ---
+  duration_ms: 666.7097
+  type: 'test'
+  ...
+# Subtest: rechecks queued writes and requires explicit schema/import capabilities before any mutation
+ok 8 - rechecks queued writes and requires explicit schema/import capabilities before any mutation
+  ---
+  duration_ms: 197.3986
+  type: 'test'
+  ...
+# Subtest: checks publisher business permissions before changing any release row
+ok 9 - checks publisher business permissions before changing any release row
+  ---
+  duration_ms: 205.5859
+  type: 'test'
+  ...
+# Subtest: rechecks each published batch item after revocation and refuses unsupported atomic batches before writes
+ok 10 - rechecks each published batch item after revocation and refuses unsupported atomic batches before writes
+  ---
+  duration_ms: 232.2553
+  type: 'test'
+  ...
+# Subtest: a binding grant delegates neither child query nor child operation without separately pinned grants
+ok 11 - a binding grant delegates neither child query nor child operation without separately pinned grants
+  ---
+  duration_ms: 321.6239
+  type: 'test'
+  ...
+# Subtest: backup creation/list/download have distinct scoped checks and ordinary readers cannot create backups
+ok 12 - backup creation/list/download have distinct scoped checks and ordinary readers cannot create backups
+  ---
+  duration_ms: 301.0508
+  type: 'test'
+  ...
+# Subtest: an authorized restore disconnects existing database streams and preserves the access credential
+ok 13 - an authorized restore disconnects existing database streams and preserves the access credential
+  ---
+  duration_ms: 228.0963
+  type: 'test'
+  ...
+# Subtest: audit failure before execution denies writes and outcome failure reports uncertainty after a committed write
+ok 14 - audit failure before execution denies writes and outcome failure reports uncertainty after a committed write
+  ---
+  duration_ms: 151.99
+  type: 'test'
+  ...
+# Subtest: raw relation changes and indirect deletes require whole-database write scope
+ok 15 - raw relation changes and indirect deletes require whole-database write scope
+  ---
+  duration_ms: 394.9522
+  type: 'test'
+  ...
+# Subtest: one-time browser pairing mints, rotates and revokes short sessions
+ok 16 - one-time browser pairing mints, rotates and revokes short sessions
+  ---
+  duration_ms: 296.6471
+  type: 'test'
+  ...
+# Subtest: security-admin pairing has no database grants and exposes only secret-free metadata
+ok 17 - security-admin pairing has no database grants and exposes only secret-free metadata
+  ---
+  duration_ms: 96.6632
+  type: 'test'
+  ...
+# Subtest: data discovery admits an authenticated data-only source while all management paths remain denied
+ok 18 - data discovery admits an authenticated data-only source while all management paths remain denied
+  ---
+  duration_ms: 371.3152
+  type: 'test'
+  ...
+# Subtest: discovery refuses anonymous and ungranted reads before opening a database; data aliases cannot mutate
+ok 19 - discovery refuses anonymous and ungranted reads before opening a database; data aliases cannot mutate
+  ---
+  duration_ms: 201.9123
+  type: 'test'
+  ...
+# [ModeDB] START Management API: GET /api/v1/databases trace=58f4d055
+#   说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+#   请求摘要: { url: 'https://modeldb-a.example.test/api/v1/databases' }
+# [ModeDB] OK Management API: GET /api/v1/databases trace=58f4d055 10.01ms
+#   结果: { ms: 10.01, status: 200, path: '/api/v1/databases', databases: 0 }
+# [ModeDB] START Management API: GET /api/v1/databases/synthetic_business/catalog trace=c7f0f8d4
+#   说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+#   请求摘要: {
+#     url: 'https://modeldb-a.example.test/api/v1/databases/synthetic_business/catalog'
+#   }
+# [ModeDB] OK Management API: GET /api/v1/databases/synthetic_business/catalog trace=c7f0f8d4 0.28ms
+#   结果: {
+#     ms: 0.28,
+#     status: 200,
+#     path: '/api/v1/databases/synthetic_business/catalog',
+#     database: 'synthetic_business',
+#     models: 0,
+#     relations: 0,
+#     hasDatabaseDisplayName: false,
+#     modelDisplayNames: 0,
+#     fieldLabels: 0
+#   }
+# [ModeDB] START Management API: GET /api/v1/management/databases trace=78323407
+#   说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+#   请求摘要: { url: 'https://modeldb-a.example.test/api/v1/management/databases' }
+# [ModeDB] OK Management API: GET /api/v1/management/databases trace=78323407 0.16ms
+#   结果: {
+#     ms: 0.16,
+#     status: 200,
+#     path: '/api/v1/management/databases',
+#     databases: 0
+#   }
+# [ModeDB] START Management API: GET /api/v1/management/databases/synthetic_business/catalog trace=beb95167
+#   说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+#   请求摘要: {
+#     url: 'https://modeldb-a.example.test/api/v1/management/databases/synthetic_business/catalog'
+#   }
+# [ModeDB] OK Management API: GET /api/v1/management/databases/synthetic_business/catalog trace=beb95167 0.18ms
+#   结果: {
+#     ms: 0.18,
+#     status: 200,
+#     path: '/api/v1/management/databases/synthetic_business/catalog',
+#     database: 'synthetic_business',
+#     models: 0,
+#     relations: 0,
+#     hasDatabaseDisplayName: false,
+#     modelDisplayNames: 0,
+#     fieldLabels: 0
+#   }
+# [ModeDB] START Management API: GET /api/v1/databases trace=61e7736f
+#   说明: 前端正在调用引擎管理接口，用于读取数据库列表、catalog 或创建/删除库。
+#   请求摘要: { url: 'https://modeldb-a.example.test/api/v1/databases' }
+# [ModeDB] ERROR Management API: GET /api/v1/databases trace=61e7736f 0.39ms
+#   错误: { ms: 0.39, message: 'SECURITY_FORBIDDEN' }
+# Subtest: catalog rechecks grants and credential state after awaited metadata loading
+ok 20 - catalog rechecks grants and credential state after awaited metadata loading
+  ---
+  duration_ms: 390.7308
+  type: 'test'
+  ...
+# Subtest: SDK selects data discovery for registry credentials and retains legacy paths without denial fallback
+ok 21 - SDK selects data discovery for registry credentials and retains legacy paths without denial fallback
+  ---
+  duration_ms: 12.8929
+  type: 'test'
+  ...
+# Subtest: identity report accepts formal UI/native checks and accurate browser limits
+ok 22 - identity report accepts formal UI/native checks and accurate browser limits
+  ---
+  duration_ms: 1.0495
+  type: 'test'
+  ...
+# Subtest: identity report rejects incomplete, skipped or ambiguous TAP summaries
+ok 23 - identity report rejects incomplete, skipped or ambiguous TAP summaries
+  ---
+  duration_ms: 1.5348
+  type: 'test'
+  ...
+# Subtest: identity report requires every formal UI check and one browser record
+ok 24 - identity report requires every formal UI check and one browser record
+  ---
+  duration_ms: 1.2101
+  type: 'test'
+  ...
+# Subtest: identity report rejects hardware/trust inflation and missing layouts
+ok 25 - identity report rejects hardware/trust inflation and missing layouts
+  ---
+  duration_ms: 0.4614
+  type: 'test'
+  ...
+# Subtest: same-origin SDK registration uses real protocol, minimum polling, terminal states and memory-only continuation
+ok 26 - same-origin SDK registration uses real protocol, minimum polling, terminal states and memory-only continuation
+  ---
+  duration_ms: 345.7344
+  type: 'test'
+  ...
+# Subtest: SDK shows application registration.reject
+ok 27 - SDK shows application registration.reject
+  ---
+  duration_ms: 150.4174
+  type: 'test'
+  ...
+# Subtest: SDK shows application expired
+ok 28 - SDK shows application expired
+  ---
+  duration_ms: 150.8392
+  type: 'test'
+  ...
+# Subtest: import accepts strict live JSON and rejects scripts, extra fields, cross-instance/origin/RP/hash/TLS, expiry and oversized UTF-8
+ok 29 - import accepts strict live JSON and rejects scripts, extra fields, cross-instance/origin/RP/hash/TLS, expiry and oversized UTF-8
+  ---
+  duration_ms: 77.4661
+  type: 'test'
+  ...
+# Subtest: SDK refuses cross-origin destinations before fetch and binding drift before WebAuthn
+ok 30 - SDK refuses cross-origin destinations before fetch and binding drift before WebAuthn
+  ---
+  duration_ms: 81.7622
+  type: 'test'
+  ...
+# Subtest: SDK sanitizes unknown failures and bounds response size; registration code errors stay machine readable
+ok 31 - SDK sanitizes unknown failures and bounds response size; registration code errors stay machine readable
+  ---
+  duration_ms: 79.3816
+  type: 'test'
+  ...
+# Subtest: cancelled WebAuthn never completes or grants access; abort is passed to the browser
+ok 32 - cancelled WebAuthn never completes or grants access; abort is passed to the browser
+  ---
+  duration_ms: 88.7974
+  type: 'test'
+  ...
+# Subtest: public login binding survives registration expiry and contains no private identity material
+ok 33 - public login binding survives registration expiry and contains no private identity material
+  ---
+  duration_ms: 130.4366
+  type: 'test'
+  ...
+# Subtest: an aborted registration never submits the returned browser proof
+ok 34 - an aborted registration never submits the returned browser proof
+  ---
+  duration_ms: 82.4146
+  type: 'test'
+  ...
+# Subtest: stale begin binding is rejected before invoking the authenticator
+ok 35 - stale begin binding is rejected before invoking the authenticator
+  ---
+  duration_ms: 80.9772
+  type: 'test'
+  ...
+# Subtest: UI error category cancelled: {"name":"NotAllowedError"}
+ok 36 - UI error category cancelled: {"name":"NotAllowedError"}
+  ---
+  duration_ms: 0.1383
+  type: 'test'
+  ...
+# Subtest: UI error category cancelled: {"name":"AbortError"}
+ok 37 - UI error category cancelled: {"name":"AbortError"}
+  ---
+  duration_ms: 0.0331
+  type: 'test'
+  ...
+# Subtest: UI error category unsupported: {"name":"NotSupportedError"}
+ok 38 - UI error category unsupported: {"name":"NotSupportedError"}
+  ---
+  duration_ms: 0.0285
+  type: 'test'
+  ...
+# Subtest: UI error category rejected: {"code":"SECURITY_REGISTRATION_REJECTED"}
+ok 39 - UI error category rejected: {"code":"SECURITY_REGISTRATION_REJECTED"}
+  ---
+  duration_ms: 0.0781
+  type: 'test'
+  ...
+# Subtest: UI error category expired: {"code":"SECURITY_REGISTRATION_CHALLENGE_EXPIRED"}
+ok 40 - UI error category expired: {"code":"SECURITY_REGISTRATION_CHALLENGE_EXPIRED"}
+  ---
+  duration_ms: 0.0573
+  type: 'test'
+  ...
+# Subtest: UI error category descriptor: {"code":"SECURITY_REGISTRATION_INSTANCE_MISMATCH"}
+ok 41 - UI error category descriptor: {"code":"SECURITY_REGISTRATION_INSTANCE_MISMATCH"}
+  ---
+  duration_ms: 0.061
+  type: 'test'
+  ...
+# Subtest: UI error category identity: {"code":"SECURITY_AUTHENTICATION_PROOF_INVALID"}
+ok 42 - UI error category identity: {"code":"SECURITY_AUTHENTICATION_PROOF_INVALID"}
+  ---
+  duration_ms: 0.0423
+  type: 'test'
+  ...
+# Subtest: UI error category limited: {"code":"SECURITY_REGISTRATION_RATE_LIMITED"}
+ok 43 - UI error category limited: {"code":"SECURITY_REGISTRATION_RATE_LIMITED"}
+  ---
+  duration_ms: 0.0219
+  type: 'test'
+  ...
+# Subtest: UI error category closed: {"code":"SECURITY_REGISTRATION_DISABLED"}
+ok 44 - UI error category closed: {"code":"SECURITY_REGISTRATION_DISABLED"}
+  ---
+  duration_ms: 0.0314
+  type: 'test'
+  ...
+# Subtest: UI error category unavailable: {}
+ok 45 - UI error category unavailable: {}
+  ---
+  duration_ms: 0.0217
+  type: 'test'
+  ...
+# Subtest: public identity client shares discovery, strict import and pending lifecycle without revealing continuation
+ok 46 - public identity client shares discovery, strict import and pending lifecycle without revealing continuation
+  ---
+  duration_ms: 123.3044
+  type: 'test'
+  ...
+# Subtest: public client rejects cross-origin before sending any request
+ok 47 - public client rejects cross-origin before sending any request
+  ---
+  duration_ms: 78.2682
+  type: 'test'
+  ...
+# Subtest: public client serializes authenticator actions and never replays busy requests
+ok 48 - public client serializes authenticator actions and never replays busy requests
+  ---
+  duration_ms: 71.2967
+  type: 'test'
+  ...
+# Subtest: dispose rejects late discovery results even when fetch ignores AbortSignal
+ok 49 - dispose rejects late discovery results even when fetch ignores AbortSignal
+  ---
+  duration_ms: 75.2284
+  type: 'test'
+  ...
+# Subtest: parent abort before discovery performs no fetch and dispose is idempotent
+ok 50 - parent abort before discovery performs no fetch and dispose is idempotent
+  ---
+  duration_ms: 76.0267
+  type: 'test'
+  ...
+# Subtest: dispose while authenticator is open prevents registration submission
+ok 51 - dispose while authenticator is open prevents registration submission
+  ---
+  duration_ms: 90.3462
+  type: 'test'
+  ...
+# Subtest: public client rejects changed deployment before opening login ceremony
+ok 52 - public client rejects changed deployment before opening login ceremony
+  ---
+  duration_ms: 72.5783
+  type: 'test'
+  ...
+# Subtest: accepts an exact private A/B ticket and the explicit loopback smoke ticket
+ok 53 - accepts an exact private A/B ticket and the explicit loopback smoke ticket
+  ---
+  duration_ms: 3.0779
+  type: 'test'
+  ...
+# Subtest: rejects public, ambiguous, wildcard, multicast and special addresses
+ok 54 - rejects public, ambiguous, wildcard, multicast and special addresses
+  ---
+  duration_ms: 1.5852
+  type: 'test'
+  ...
+# Subtest: rejects mismatched origins, RP, credentials in URLs and the real service port
+ok 55 - rejects mismatched origins, RP, credentials in URLs and the real service port
+  ---
+  duration_ms: 1.1609
+  type: 'test'
+  ...
+# Subtest: rejects expired, far future and noncanonical time tickets
+ok 56 - rejects expired, far future and noncanonical time tickets
+  ---
+  duration_ms: 0.3512
+  type: 'test'
+  ...
+# Subtest: rejects extra secret fields, missing hashes and malformed run IDs
+ok 57 - rejects extra secret fields, missing hashes and malformed run IDs
+  ---
+  duration_ms: 1.0863
+  type: 'test'
+  ...
+# Subtest: requires only a bounded public connection file for B
+ok 58 - requires only a bounded public connection file for B
+  ---
+  duration_ms: 2.3778
+  type: 'test'
+  ...
+# Subtest: rejects existing workspace paths and traversal before opening a file
+ok 59 - rejects existing workspace paths and traversal before opening a file
+  ---
+  duration_ms: 10.1707
+  type: 'test'
+  ...
+# Subtest: rejects a directory junction even when its file exists
+ok 60 - rejects a directory junction even when its file exists
+  ---
+  duration_ms: 5.8109
+  type: 'test'
+  ...
+# Subtest: accepts the generated layout and rejects every path redirection or security override
+ok 61 - accepts the generated layout and rejects every path redirection or security override
+  ---
+  duration_ms: 0.7907
+  type: 'test'
+  ...
+# Subtest: requires all synthetic save and authorization boundary assertions
+ok 62 - requires all synthetic save and authorization boundary assertions
+  ---
+  duration_ms: 0.5642
+  type: 'test'
+  ...
+# Subtest: save probe accepts only the exact hosted or source-policy management refusal, never arbitrary errors
+ok 63 - save probe accepts only the exact hosted or source-policy management refusal, never arbitrary errors
+  ---
+  duration_ms: 14.6191
+  type: 'test'
+  ...
+# Subtest: generates unique TLS keys and verifies the exact DNS name in a real TLS handshake
+ok 64 - generates unique TLS keys and verifies the exact DNS name in a real TLS handshake
+  ---
+  duration_ms: 579.605
+  type: 'test'
+  ...
+# Subtest: the wrapper forwards Unicode paths as arguments without PowerShell JSON parsing
+ok 65 - the wrapper forwards Unicode paths as arguments without PowerShell JSON parsing
+  ---
+  duration_ms: 0.3191
+  type: 'test'
+  ...
+# Subtest: accepts preparation only and refuses to promote smoke to hardware or final acceptance
+ok 66 - accepts preparation only and refuses to promote smoke to hardware or final acceptance
+  ---
+  duration_ms: 0.4781
+  type: 'test'
+  ...
+# Subtest: refuses missing, false or extra smoke assertions
+ok 67 - refuses missing, false or extra smoke assertions
+  ---
+  duration_ms: 0.5886
+  type: 'test'
+  ...
+# Subtest: retains assertion codes while removing paths and actual or expected secret values
+ok 68 - retains assertion codes while removing paths and actual or expected secret values
+  ---
+  duration_ms: 0.2791
+  type: 'test'
+  ...
+# Subtest: binds preparation logs, source and command results while keeping device acceptance pending
+ok 69 - binds preparation logs, source and command results while keeping device acceptance pending
+  ---
+  duration_ms: 1.0169
+  type: 'test'
+  ...
+# Subtest: rejects evidence without logs, changed sources, duplicated TAP totals or inflated completion
+ok 70 - rejects evidence without logs, changed sources, duplicated TAP totals or inflated completion
+  ---
+  duration_ms: 0.998
+  type: 'test'
+  ...
+# Subtest: public-key HTTP/RPC uses live own grants and rejects raw cross-database, relations, import and management escalation
+ok 71 - public-key HTTP/RPC uses live own grants and rejects raw cross-database, relations, import and management escalation
+  ---
+  duration_ms: 662.5779
+  type: 'test'
+  ...
+# Subtest: restriction is local-only, CAS checked, cannot add scopes/change a digest and ordinary storage cannot mutate grants
+ok 72 - restriction is local-only, CAS checked, cannot add scopes/change a digest and ordinary storage cannot mutate grants
+  ---
+  duration_ms: 288.8556
+  type: 'test'
+  ...
+# Subtest: credential subscriptions isolate a key while user invalidation fans out to every key for that user
+ok 73 - credential subscriptions isolate a key while user invalidation fans out to every key for that user
+  ---
+  duration_ms: 321.5506
+  type: 'test'
+  ...
+# Subtest: durable disabled invalidates HTTP, new login, refresh and remains denied after reopen
+ok 74 - durable disabled invalidates HTTP, new login, refresh and remains denied after reopen
+  ---
+  duration_ms: 330.8468
+  type: 'test'
+  ...
+# Subtest: durable revoked invalidates HTTP, new login, refresh and remains denied after reopen
+ok 75 - durable revoked invalidates HTTP, new login, refresh and remains denied after reopen
+  ---
+  duration_ms: 326.0798
+  type: 'test'
+  ...
+# Subtest: durable user invalidates HTTP, new login, refresh and remains denied after reopen
+ok 76 - durable user invalidates HTTP, new login, refresh and remains denied after reopen
+  ---
+  duration_ms: 320.8424
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on restrict without receiving another message
+ok 77 - idle public-key WS closes on restrict without receiving another message
+  ---
+  duration_ms: 253.0562
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on disabled without receiving another message
+ok 78 - idle public-key WS closes on disabled without receiving another message
+  ---
+  duration_ms: 278.8516
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on revoked without receiving another message
+ok 79 - idle public-key WS closes on revoked without receiving another message
+  ---
+  duration_ms: 257.7351
+  type: 'test'
+  ...
+# Subtest: idle public-key WS closes on user without receiving another message
+ok 80 - idle public-key WS closes on user without receiving another message
+  ---
+  duration_ms: 270.6721
+  type: 'test'
+  ...
+# Subtest: idle public-key WS expires on the server deadline without a client message
+ok 81 - idle public-key WS expires on the server deadline without a client message
+  ---
+  duration_ms: 311.8221
+  type: 'test'
+  ...
+# Subtest: registry failure closes streams and denies the restriction; reopening preserves the last durable grant set
+ok 82 - registry failure closes streams and denies the restriction; reopening preserves the last durable grant set
+  ---
+  duration_ms: 271.0424
+  type: 'test'
+  ...
+# Subtest: queued raw write rechecks before opening an engine
+ok 83 - queued raw write rechecks before opening an engine
+  ---
+  duration_ms: 238.5548
+  type: 'test'
+  ...
+# Subtest: queued operation write rechecks before opening an engine
+ok 84 - queued operation write rechecks before opening an engine
+  ---
+  duration_ms: 251.4731
+  type: 'test'
+  ...
+# Subtest: queued binding write rechecks before opening an engine
+ok 85 - queued binding write rechecks before opening an engine
+  ---
+  duration_ms: 219.3422
+  type: 'test'
+  ...
+# Subtest: engine-await and asynchronous authorization microtask cannot preserve a removed write capability
+ok 86 - engine-await and asynchronous authorization microtask cannot preserve a removed write capability
+  ---
+  duration_ms: 435.7212
+  type: 'test'
+  ...
+# Subtest: published query rechecks exact release and parent after child engine waits
+ok 87 - published query rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 223.7851
+  type: 'test'
+  ...
+# Subtest: published operation rechecks exact release and parent after child engine waits
+ok 88 - published operation rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 230.7807
+  type: 'test'
+  ...
+# Subtest: published binding-read rechecks exact release and parent after child engine waits
+ok 89 - published binding-read rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 255.5789
+  type: 'test'
+  ...
+# Subtest: published binding-write rechecks exact release and parent after child engine waits
+ok 90 - published binding-write rechecks exact release and parent after child engine waits
+  ---
+  duration_ms: 237.4668
+  type: 'test'
+  ...
+# Subtest: publication batch rechecks every earlier business scope after all metadata awaits
+ok 91 - publication batch rechecks every earlier business scope after all metadata awaits
+  ---
+  duration_ms: 217.3195
+  type: 'test'
+  ...
+# Subtest: published batch preserves first commit and rejects later items after operation scope removal
+ok 92 - published batch preserves first commit and rejects later items after operation scope removal
+  ---
+  duration_ms: 348.8839
+  type: 'test'
+  ...
+# Subtest: published batch preserves first commit and rejects later items after parent surface scope removal
+ok 93 - published batch preserves first commit and rejects later items after parent surface scope removal
+  ---
+  duration_ms: 241.5584
+  type: 'test'
+  ...
+# Subtest: already committed single write remains successful after in-flight revocation with a durable success audit
+ok 94 - already committed single write remains successful after in-flight revocation with a durable success audit
+  ---
+  duration_ms: 367.5953
+  type: 'test'
+  ...
+# Subtest: permission reduction persists across reopen and signing counter updates do not invalidate streams
+ok 95 - permission reduction persists across reopen and signing counter updates do not invalidate streams
+  ---
+  duration_ms: 263.1074
+  type: 'test'
+  ...
+# Subtest: re-enabling disabled requires a new login and never revives an existing session
+ok 96 - re-enabling disabled requires a new login and never revives an existing session
+  ---
+  duration_ms: 254.0935
+  type: 'test'
+  ...
+# Subtest: re-enabling user requires a new login and never revives an existing session
+ok 97 - re-enabling user requires a new login and never revives an existing session
+  ---
+  duration_ms: 240.7943
+  type: 'test'
+  ...
+# Subtest: a registered key change leaves a sibling API stream and its independent session usable
+ok 98 - a registered key change leaves a sibling API stream and its independent session usable
+  ---
+  duration_ms: 245.6484
+  type: 'test'
+  ...
+# Subtest: queued WS mutation is rejected after revocation and its socket closes before another operation
+ok 99 - queued WS mutation is rejected after revocation and its socket closes before another operation
+  ---
+  duration_ms: 225.072
+  type: 'test'
+  ...
+# Subtest: raw query withholds results revoked during asynchronous execution
+ok 100 - raw query withholds results revoked during asynchronous execution
+  ---
+  duration_ms: 226.5178
+  type: 'test'
+  ...
+# Subtest: published query withholds results revoked during asynchronous execution
+ok 101 - published query withholds results revoked during asynchronous execution
+  ---
+  duration_ms: 248.7734
+  type: 'test'
+  ...
+# Subtest: binding read checks both pins after its asynchronous call log, while completed mutation keeps refreshFailed
+ok 102 - binding read checks both pins after its asynchronous call log, while completed mutation keeps refreshFailed
+  ---
+  duration_ms: 525.5676
+  type: 'test'
+  ...
+# Subtest: public-key callable HTTP route pins its release and cannot inherit raw or child grants
+ok 103 - public-key callable HTTP route pins its release and cannot inherit raw or child grants
+  ---
+  duration_ms: 265.4697
+  type: 'test'
+  ...
+# Subtest: public-key relation and bulk writes require live whole-database write/import scopes
+ok 104 - public-key relation and bulk writes require live whole-database write/import scopes
+  ---
+  duration_ms: 313.701
+  type: 'test'
+  ...
+# Subtest: audit failures reject before execution and report uncertainty after a committed public-key write
+ok 105 - audit failures reject before execution and report uncertainty after a committed public-key write
+  ---
+  duration_ms: 233.5627
+  type: 'test'
+  ...
+# Subtest: restriction staged failure closes the writer and recovers one atomic grant/audit outcome
+ok 106 - restriction staged failure closes the writer and recovers one atomic grant/audit outcome
+  ---
+  duration_ms: 215.2617
+  type: 'test'
+  ...
+# Subtest: restriction journaled failure closes the writer and recovers one atomic grant/audit outcome
+ok 107 - restriction journaled failure closes the writer and recovers one atomic grant/audit outcome
+  ---
+  duration_ms: 231.096
+  type: 'test'
+  ...
+# Subtest: restriction replaced failure closes the writer and recovers one atomic grant/audit outcome
+ok 108 - restriction replaced failure closes the writer and recovers one atomic grant/audit outcome
+  ---
+  duration_ms: 229.0971
+  type: 'test'
+  ...
+# Subtest: raw batchUpdate rechecks each independent item and reports committed partial counts
+ok 109 - raw batchUpdate rechecks each independent item and reports committed partial counts
+  ---
+  duration_ms: 246.1034
+  type: 'test'
+  ...
+# Subtest: raw batchDelete rechecks each independent item and reports committed partial counts
+ok 110 - raw batchDelete rechecks each independent item and reports committed partial counts
+  ---
+  duration_ms: 259.3901
+  type: 'test'
+  ...
+# Subtest: relation pair rechecks after asynchronous index preparation and before first mutation
+ok 111 - relation pair rechecks after asynchronous index preparation and before first mutation
+  ---
+  duration_ms: 253.3499
+  type: 'test'
+  ...
+# Subtest: relation import lookup rechecks after asynchronous index preparation and before first mutation
+ok 112 - relation import lookup rechecks after asynchronous index preparation and before first mutation
+  ---
+  duration_ms: 239.9619
+  type: 'test'
+  ...
+# Subtest: hosting remains explicit and validates every field without address or file discovery
+ok 113 - hosting remains explicit and validates every field without address or file discovery
+  ---
+  duration_ms: 13.5825
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses modeldb.config.json without serving it
+ok 114 - build snapshot refuses modeldb.config.json without serving it
+  ---
+  duration_ms: 3.5669
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses .env without serving it
+ok 115 - build snapshot refuses .env without serving it
+  ---
+  duration_ms: 2.5314
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses server.key without serving it
+ok 116 - build snapshot refuses server.key without serving it
+  ---
+  duration_ms: 2.351
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses bundle.js.map without serving it
+ok 117 - build snapshot refuses bundle.js.map without serving it
+  ---
+  duration_ms: 1.5071
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses source.ts without serving it
+ok 118 - build snapshot refuses source.ts without serving it
+  ---
+  duration_ms: 1.5511
+  type: 'test'
+  ...
+# Subtest: build snapshot refuses arbitrary.html without serving it
+ok 119 - build snapshot refuses arbitrary.html without serving it
+  ---
+  duration_ms: 2.236
+  type: 'test'
+  ...
+# Subtest: build snapshot rejects protected overlap, directory junctions, hardlinks and oversized files
+ok 120 - build snapshot rejects protected overlap, directory junctions, hardlinks and oversized files
+  ---
+  duration_ms: 11.8475
+  type: 'test'
+  ...
+# Subtest: public build serves only exact GET/HEAD snapshot paths with same-origin security headers
+ok 121 - public build serves only exact GET/HEAD snapshot paths with same-origin security headers
+  ---
+  duration_ms: 298.4047
+  type: 'test'
+  ...
+# Subtest: data listener refuses encoded traversal before static or API handlers
+ok 122 - data listener refuses encoded traversal before static or API handlers
+  ---
+  duration_ms: 134.7175
+  type: 'test'
+  ...
+# Subtest: data listener refuses double encoding before static or API handlers
+ok 123 - data listener refuses double encoding before static or API handlers
+  ---
+  duration_ms: 126.6962
+  type: 'test'
+  ...
+# Subtest: data listener refuses encoded slash before static or API handlers
+ok 124 - data listener refuses encoded slash before static or API handlers
+  ---
+  duration_ms: 118.7503
+  type: 'test'
+  ...
+# Subtest: data listener refuses raw traversal before static or API handlers
+ok 125 - data listener refuses raw traversal before static or API handlers
+  ---
+  duration_ms: 111.7448
+  type: 'test'
+  ...
+# Subtest: data listener refuses backslash before static or API handlers
+ok 126 - data listener refuses backslash before static or API handlers
+  ---
+  duration_ms: 100.3406
+  type: 'test'
+  ...
+# Subtest: data listener refuses rebinding before static or API handlers
+ok 127 - data listener refuses rebinding before static or API handlers
+  ---
+  duration_ms: 112.0181
+  type: 'test'
+  ...
+# Subtest: data listener refuses wrong port before static or API handlers
+ok 128 - data listener refuses wrong port before static or API handlers
+  ---
+  duration_ms: 110.083
+  type: 'test'
+  ...
+# Subtest: data listener refuses null origin before static or API handlers
+ok 129 - data listener refuses null origin before static or API handlers
+  ---
+  duration_ms: 107.8359
+  type: 'test'
+  ...
+# Subtest: data listener refuses cross-origin before static or API handlers
+ok 130 - data listener refuses cross-origin before static or API handlers
+  ---
+  duration_ms: 119.3959
+  type: 'test'
+  ...
+# Subtest: data listener refuses same-site ports before static or API handlers
+ok 131 - data listener refuses same-site ports before static or API handlers
+  ---
+  duration_ms: 110.7525
+  type: 'test'
+  ...
+# Subtest: management listener rejects forwarded even on its real loopback socket
+ok 132 - management listener rejects forwarded even on its real loopback socket
+  ---
+  duration_ms: 111.9977
+  type: 'test'
+  ...
+# Subtest: management listener rejects x-forwarded-for even on its real loopback socket
+ok 133 - management listener rejects x-forwarded-for even on its real loopback socket
+  ---
+  duration_ms: 112.0916
+  type: 'test'
+  ...
+# Subtest: management listener rejects x-forwarded-host even on its real loopback socket
+ok 134 - management listener rejects x-forwarded-host even on its real loopback socket
+  ---
+  duration_ms: 115.9497
+  type: 'test'
+  ...
+# Subtest: management listener rejects x-forwarded-proto even on its real loopback socket
+ok 135 - management listener rejects x-forwarded-proto even on its real loopback socket
+  ---
+  duration_ms: 105.9607
+  type: 'test'
+  ...
+# Subtest: management listener rejects x-real-ip even on its real loopback socket
+ok 136 - management listener rejects x-real-ip even on its real loopback socket
+  ---
+  duration_ms: 113.9125
+  type: 'test'
+  ...
+# Subtest: management listener rejects via even on its real loopback socket
+ok 137 - management listener rejects via even on its real loopback socket
+  ---
+  duration_ms: 102.2298
+  type: 'test'
+  ...
+# Subtest: management APIs and page cannot be reached through data listener, even from loopback
+ok 138 - management APIs and page cannot be reached through data listener, even from loopback
+  ---
+  duration_ms: 110.0907
+  type: 'test'
+  ...
+# Subtest: OS launch is exact, one-use, management-only and never consumed by a wrong session role
+ok 139 - OS launch is exact, one-use, management-only and never consumed by a wrong session role
+  ---
+  duration_ms: 167.5556
+  type: 'test'
+  ...
+# Subtest: hosted management idle 15 minutes and absolute 60 minutes survive refresh and restart
+ok 140 - hosted management idle 15 minutes and absolute 60 minutes survive refresh and restart
+  ---
+  duration_ms: 235.4445
+  type: 'test'
+  ...
+# Subtest: data pairings cannot create a management session and conflict binding never falls back
+ok 141 - data pairings cannot create a management session and conflict binding never falls back
+  ---
+  duration_ms: 115.7604
+  type: 'test'
+  ...
+# Subtest: old eight-hour management identities are refused by the hosted management listener
+ok 142 - old eight-hour management identities are refused by the hosted management listener
+  ---
+  duration_ms: 120.0746
+  type: 'test'
+  ...
+# Subtest: failed hosted rejection audit cannot report an ordinary denial or return static bytes
+ok 143 - failed hosted rejection audit cannot report an ordinary denial or return static bytes
+  ---
+  duration_ms: 90.7747
+  type: 'test'
+  ...
+# Subtest: management websocket upgrade cannot bypass its data-route allowlist
+ok 144 - management websocket upgrade cannot bypass its data-route allowlist
+  ---
+  duration_ms: 99.0007
+  type: 'test'
+  ...
+# Subtest: rejects unprotected remote binds, fake public TLS, bad proxy/origin/CIDR configuration
+ok 145 - rejects unprotected remote binds, fake public TLS, bad proxy/origin/CIDR configuration
+  ---
+  duration_ms: 8.5551
+  type: 'test'
+  ...
+# Subtest: normalizes IPv4/IPv6, enforces deny precedence, empty allow-lists, separate planes and expiry
+ok 146 - normalizes IPv4/IPv6, enforces deny precedence, empty allow-lists, separate planes and expiry
+  ---
+  duration_ms: 1.9567
+  type: 'test'
+  ...
+# Subtest: ignores forged forwarded headers on direct sockets and stops at the first untrusted proxy hop
+ok 147 - ignores forged forwarded headers on direct sockets and stops at the first untrusted proxy hop
+  ---
+  duration_ms: 0.8868
+  type: 'test'
+  ...
+# Subtest: rejects disallowed Origins before parsing bodies or executing handlers; CORS permits exact origins only
+ok 148 - rejects disallowed Origins before parsing bodies or executing handlers; CORS permits exact origins only
+  ---
+  duration_ms: 195.5701
+  type: 'test'
+  ...
+# Subtest: SDK endpoint handling preserves HTTPS/IPv6 and rejects remote plaintext before sending credentials
+ok 149 - SDK endpoint handling preserves HTTPS/IPv6 and rejects remote plaintext before sending credentials
+  ---
+  duration_ms: 0.9712
+  type: 'test'
+  ...
+# Subtest: real HTTPS/WSS SDK round trips require trusted certificates and reject mismatched certificate names
+ok 150 - real HTTPS/WSS SDK round trips require trusted certificates and reject mismatched certificate names
+  ---
+  duration_ms: 737.601
+  type: 'test'
+  ...
+# Subtest: SDK refuses redirects instead of following a secure request toward a different transport
+ok 151 - SDK refuses redirects instead of following a secure request toward a different transport
+  ---
+  duration_ms: 19.7606
+  type: 'test'
+  ...
+1..151
+# tests 151
+# suites 0
+# pass 150
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13451.9815

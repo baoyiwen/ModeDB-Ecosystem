@@ -185,6 +185,15 @@ export function assertProbe(result) {
     managementDenied: true,
   });
 }
+// Exact synthetic dual-database scopes; never database lifecycle or security administration.
+export const deviceDrillGrants = [
+  { database: 'synthetic_business', resource: '*', actions: ['model.read', 'model.write'] },
+  {
+    database: 'model_designer_workspace',
+    resource: '*',
+    actions: ['model.read', 'model.write', 'schema.manage', 'transfer.import'],
+  },
+];
 export function assertIsolatedConfig(config) {
   // Fixed freshly generated layout only; reject every additional configuration field.
   assert.deepEqual(
@@ -218,6 +227,8 @@ export function saveExpression(write) {
     const saved=${write}?(await rpc('synthetic_business',insert)).status===200:true;
     const query={op:'executeQuery',snapshot:{plan:{version:2,originModel:'SyntheticItem',start:{kind:'all'},hops:[],trailing:{type:'atom',field:'label',op:'eq',value:'device-drill-saved'}},execute:{},analysis:{groupBy:null,compute:null}}};
     const response=await rpc('synthetic_business',query),rows=await response.json();
-    return {saved,readBack:response.status===200&&JSON.stringify(rows).includes('device-drill-saved'),csrfDenied,crossDatabaseDenied:(await rpc('synthetic_other',query)).status===403,managementDenied:(await fetch('/api/v1/security/admin/overview')).status===404};
+    const management=await fetch('/api/v1/security/admin/overview'),managementBody=await management.json();
+    const managementDenied=(management.status===404&&managementBody.error==='SECURITY_NOT_FOUND')||(management.status===403&&managementBody.error==='SECURITY_SOURCE_DENIED');
+    return {saved,readBack:response.status===200&&JSON.stringify(rows).includes('device-drill-saved'),csrfDenied,crossDatabaseDenied:(await rpc('synthetic_other',query)).status===403,managementDenied};
   })()`;
 }

@@ -1,5 +1,7 @@
 # 设备注册公共协议与依赖契约
 
+D36 增补 registry 数据发现：`GET /api/v1/databases` 与 `GET /api/v1/databases/:name/catalog` 应用 data 网络规则和实时读授权，不开放管理写入。响应复用现有类型，保留显示名、字段标签/类型及关系自环策略。旧 management 路径与 legacy Token 保持原来源边界和列表语义；Server 与 SDK/托管页面一起更新，拒绝后不跨平面回退，见[运行说明](device-registration-runtime-guide.md)。
+
 DR-P1.2 冻结的公共技术约定，DR-P1.3 增加第 8 节的持久台账实现，DR-P1.4 增加第 9 节的注册 HTTP 与真实库校验。注册默认关闭，证明通过仅待审；DR-P1.5 已提供第 10 节的本机审批 CLI，批准只登记明确授权，公钥登录尚待实现。任务状态以[唯一台账](../security-v1-milestones.md#11-设备注册扩展开发计划)为准。部署遵守[可信部署契约](device-registration-deployment-contract.md)，操作见[接口使用说明](device-registration-runtime-guide.md)。
 
 ## 1. 库与运行时边界

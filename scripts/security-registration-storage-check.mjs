@@ -86,6 +86,7 @@ export function checkRegistrationStorageTypes() {
         join(repository, 'test/unit/security-session-parent.test.ts'),
         join(repository, 'test/unit/security-authentication.test.ts'),
         join(repository, 'test/unit/security-dynamic-authorization.test.ts'),
+        join(repository, 'test/unit/security-data-discovery.test.ts'),
         join(repository, 'test/unit/security-authentication-storage.test.ts'),
         join(repository, 'test/unit/security-authentication-resilience.test.ts'),
         join(repository, 'test/unit/security-hosting.test.ts'),

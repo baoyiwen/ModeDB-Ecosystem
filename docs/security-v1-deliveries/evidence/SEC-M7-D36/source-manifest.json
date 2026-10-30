@@ -1,0 +1,86 @@
+{
+  "format": "modeldb.security-fix-source.v1",
+  "normalization": "utf8-lf",
+  "files": [
+    {
+      "path": "docs/security-v1-deliveries/SEC-M7.md",
+      "sha256Lf": "2b70178efbab1809b7509b40ed48cd9ec4bf4239027361d67b0bdf4a3802e152"
+    },
+    {
+      "path": "docs/security-v1-milestones.md",
+      "sha256Lf": "5e1667b0a72e58c79e6cbca30a8c66a57406032b5128823c6e40b102c4e141e1"
+    },
+    {
+      "path": "docs/security-v1/AGENTS.md",
+      "sha256Lf": "5c9859ae3154533dc4058f69ebf7ab2e23ffb3503f5c5e896ad41d26ee7ee7d1"
+    },
+    {
+      "path": "docs/security-v1/device-registration-protocol-contract.md",
+      "sha256Lf": "5efb2c283026a7ee2da111ce000626c1db1045bd20a59edcd84b80f49326bc5e"
+    },
+    {
+      "path": "docs/security-v1/device-registration-runtime-guide.md",
+      "sha256Lf": "25064d851926b837a41642820f1278184ad84a9d81837a93a4c8c6b004485216"
+    },
+    {
+      "path": "docs/security-v1/overview.md",
+      "sha256Lf": "78619b326e9539335ff5ce10203f577255b699a22b7c9ae8d852f7ae3a8a311c"
+    },
+    {
+      "path": "docs/security-v1/release-guide.md",
+      "sha256Lf": "62573abbb28e47f6b88090ab2789790a742a75eb5a29943b42f71737b295ba6d"
+    },
+    {
+      "path": "docs/security-v1/user-guide.md",
+      "sha256Lf": "9560e46bf1bfa5b9e7f52595ef9b58324d2dcc85d0c075152bfcc0edb7ffc055"
+    },
+    {
+      "path": "docs/security-v1/windows-device-drill-guide.md",
+      "sha256Lf": "fd843ed85a35cb0c07f4a1598784016c84b843337b3bf7e5e27f96ba01af7fed"
+    },
+    {
+      "path": "packages/sdk/src/remote-client.ts",
+      "sha256Lf": "2b45a7ca8c68dbd6baed929cd289471e7c5a57e90ae34a112d3e68be3c3b047a"
+    },
+    {
+      "path": "packages/server/src/security/registry-entrypoints.ts",
+      "sha256Lf": "d9ee667edbe408ea9fb051c46ec43cf381b8f1e5a88308398f55942e10fc5713"
+    },
+    {
+      "path": "scripts/security-designer-identity-check.mjs",
+      "sha256Lf": "f8f78beb20508c962f31282f39e2a5607a1aeddc76966370bcec3fe47770c9db"
+    },
+    {
+      "path": "scripts/security-device-drill-contract.mjs",
+      "sha256Lf": "e7fa13bceab149a11ab74db6c5c5fc6db5e94eb2ae618dac3a0a31807c0fd810"
+    },
+    {
+      "path": "scripts/security-device-drill-runner.mjs",
+      "sha256Lf": "490285af9634b8fb40ea94ac1d13c367cf60221e1964648afae73153e1238cbc"
+    },
+    {
+      "path": "scripts/security-registration-storage-check.mjs",
+      "sha256Lf": "c11cb558ba24a6ffb140a5522b3a24c907435906cbceb14767f5802e3c8233c8"
+    },
+    {
+      "path": "test/README.md",
+      "sha256Lf": "860426513a415a1dc7f24753525feaf0c44a4ceab0e59ab14291f5727de397c3"
+    },
+    {
+      "path": "test/integration/security-designer-identity-browser.test.ts",
+      "sha256Lf": "7079daabbb2df49c37bada125ec769a81000dcc1678965f9fc4f602a8603bc06"
+    },
+    {
+      "path": "test/unit/security-data-discovery.test.ts",
+      "sha256Lf": "494967b243a0fee90cbfbb64dde9dcb049d374019b8845afb06014f364add6fc"
+    },
+    {
+      "path": "test/unit/security-device-drill.test.mjs",
+      "sha256Lf": "43c90138eb323758d0a71849e78c7d63155074011f116f43ffba184ecd0f0fd9"
+    },
+    {
+      "path": "test/unit/security-hosting.test.ts",
+      "sha256Lf": "e78e49d5e5c1cc86120af12c17e6798aaa36187aaf50f020c62724b2040b65bd"
+    }
+  ]
+}

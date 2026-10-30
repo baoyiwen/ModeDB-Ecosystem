@@ -1,0 +1,69 @@
+DrillRoot: C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca
+vite v6.4.3 building for production...
+transforming...
+✓ 290 modules transformed.
+rendering chunks...
+computing gzip size...
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca/designer/index.html                                          0.91 kB │ gzip:   0.55 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca/designer/assets/index-DhWdvLmj.css                         193.06 kB │ gzip:  31.47 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca/designer/assets/browser-DIAoS5Tw.js                          0.62 kB │ gzip:   0.43 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca/designer/assets/export-model-map-D3hTalQR.js                 3.66 kB │ gzip:   1.67 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca/designer/assets/workbook-CF0ixlqo.js                        12.03 kB │ gzip:   4.54 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca/designer/assets/OperationDesignerPanel-BAvmYQA_.js          24.57 kB │ gzip:   6.51 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca/designer/assets/BindingSurfaceDesignerPanel-CPpacMi8.js     49.01 kB │ gzip:  13.08 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca/designer/assets/exceljs.min-sXC454dQ.js                    939.80 kB │ gzip: 271.13 kB
+../../../../../Users/51153/AppData/Local/Temp/ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca/designer/assets/index-BQJy2GUQ.js                        1,179.00 kB │ gzip: 339.84 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 4.93s
+{
+  "prepared": true,
+  "drillRoot": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca",
+  "transferOnly": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca\\transfer",
+  "pin": "7d9cc8646efee5acaceac153a83fb40d48cc728e7cc1e592bbaf32be0808fbf8",
+  "report": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca\\prepare-report.json",
+  "expiresAtUtc": "2026-10-30T06:13:17.677Z",
+  "taskComplete": false
+}
+[modeldb-server] storage fingerprint (sha256): 6296ffdaaa9efc971bb0c35bcb1c3c6f3b2c36a865ac3961d8766dbd6dc0b602
+[ModelDB] Engine is running
+  Listen: 127.0.0.1:51994
+
+  Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+  Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+  Transport: tls; source/Origin policy is enforced.
+  Public base URL: https://drill-13d2d533-8de6-4675-b922-0b6aa98c0686.example.test:51994
+    HTTP RPC:  https://drill-13d2d533-8de6-4675-b922-0b6aa98c0686.example.test:51994/api/v1/rpc
+    WebSocket: wss://drill-13d2d533-8de6-4675-b922-0b6aa98c0686.example.test:51994/api/v1/stream
+  Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+    Status:      modeldb-server security status -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca\modeldb.config.json"
+    Designer:    https://drill-13d2d533-8de6-4675-b922-0b6aa98c0686.example.test:51994/designer/ (same-origin; data permission still required)
+    Management:  modeldb-server security security-open -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+    Credentials: modeldb-server security credentials -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca\modeldb.config.json"
+    Help:        modeldb-server security help -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca\modeldb.config.json"
+[modeldb-server] storage fingerprint (sha256): 6296ffdaaa9efc971bb0c35bcb1c3c6f3b2c36a865ac3961d8766dbd6dc0b602
+[ModelDB] Engine is running
+  Listen: 127.0.0.1:51994
+
+  Security: registry mode. Scoped Bearer credentials; JSON RPC /api/v1/rpc and WS /api/v1/stream.
+  Legacy /v2 transports are disabled. Browser pairing uses one-time codes and short HttpOnly sessions.
+  Transport: tls; source/Origin policy is enforced.
+  Public base URL: https://drill-13d2d533-8de6-4675-b922-0b6aa98c0686.example.test:51994
+    HTTP RPC:  https://drill-13d2d533-8de6-4675-b922-0b6aa98c0686.example.test:51994/api/v1/rpc
+    WebSocket: wss://drill-13d2d533-8de6-4675-b922-0b6aa98c0686.example.test:51994/api/v1/stream
+  Local maintenance: Windows-authenticated Named Pipe; no connect token in configuration.
+    Status:      modeldb-server security status -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca\modeldb.config.json"
+    Designer:    https://drill-13d2d533-8de6-4675-b922-0b6aa98c0686.example.test:51994/designer/ (same-origin; data permission still required)
+    Management:  modeldb-server security security-open -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca\modeldb.config.json" (OS-authenticated launcher; 127.0.0.1 only)
+    Credentials: modeldb-server security credentials -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca\modeldb.config.json"
+    Help:        modeldb-server security help -c "C:\Users\51153\AppData\Local\Temp\ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca\modeldb.config.json"
+{
+  "ok": true,
+  "report": "C:\\Users\\51153\\AppData\\Local\\Temp\\ModeDB-Device-Drill-296628c331ee4ca79bb79f79f50799ca\\smoke-report.json",
+  "taskComplete": false,
+  "actualHelloTested": false,
+  "twoDeviceTested": false
+}

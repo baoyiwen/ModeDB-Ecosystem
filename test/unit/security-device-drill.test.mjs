@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServer, request } from 'node:https';
 import { it } from 'node:test';
-import { assertIsolatedConfig, assertProbe, createDrillCertificate, digest, deviceFailureCode, drillRoot, ownFile, privateIPv4, readTicket, validateTicket } from '../../scripts/security-device-drill-contract.mjs';
+import { assertIsolatedConfig, assertProbe, createDrillCertificate, digest, deviceFailureCode, drillRoot, ownFile, privateIPv4, readTicket, saveExpression, validateTicket } from '../../scripts/security-device-drill-contract.mjs';
 import { assertDeviceSmoke, verifyDevicePreparationEvidence } from '../../scripts/security-device-drill-evidence.mjs';
 
 function ticket() {
@@ -65,6 +65,19 @@ it('requires all synthetic save and authorization boundary assertions', () => {
   assertProbe(probe);
   for (const key of Object.keys(probe)) assert.throws(() => assertProbe({ ...probe, [key]: false }));
   assert.throws(() => assertProbe({ ...probe, extra: true }));
+});
+it('save probe accepts only the exact hosted or source-policy management refusal, never arbitrary errors', async () => {
+  for (const [status, error, expected] of [[404,'SECURITY_NOT_FOUND',true],[403,'SECURITY_SOURCE_DENIED',true],[403,'SECURITY_FORBIDDEN',false],[401,'SECURITY_CREDENTIAL_INVALID',false],[503,'SECURITY_STORE_WRITE_FAILED',false],[404,'unexpected',false],[200,'SECURITY_NOT_FOUND',false]]) {
+    const fetch=async(path,options)=>{
+      if(path==='/api/v1/security/session')return Response.json({csrf:'synthetic'});
+      if(path==='/api/v1/security/admin/overview')return Response.json({error},{status});
+      const body=JSON.parse(options.body),denied=body.database==='synthetic_other'||!options.headers['x-modeldb-csrf'];
+      return Response.json(denied?{error:'SECURITY_FORBIDDEN'}:{result:'device-drill-saved'},{status:denied?403:200});
+    };
+    const result=await new Function('fetch','return '+saveExpression(true))(fetch);
+    assert.equal(result.managementDenied,expected);
+    if(expected)assertProbe(result);
+  }
 });
 it('generates unique TLS keys and verifies the exact DNS name in a real TLS handshake', async () => {
   const rpId = ticket().rpId;
